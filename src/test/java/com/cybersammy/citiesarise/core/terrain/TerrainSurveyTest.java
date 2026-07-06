@@ -81,6 +81,14 @@ final class TerrainSurveyTest {
     }
 
     @Test
+    void rejectsSurveyWithOverflowingCellCount() {
+        GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(Integer.MAX_VALUE, 2));
+        TerrainCell cell = flatCell(new GridPoint(0, 0)).orElseThrow();
+
+        assertThrows(IllegalArgumentException.class, () -> new TerrainSurvey(bounds, List.of(cell)));
+    }
+
+    @Test
     void rejectsMismatchedCellIndex() {
         GridPoint point = new GridPoint(0, 0);
         GridBounds bounds = new GridBounds(point, new GridSize(1, 1));

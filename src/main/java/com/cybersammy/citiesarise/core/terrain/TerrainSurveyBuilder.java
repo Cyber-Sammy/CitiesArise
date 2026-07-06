@@ -16,7 +16,7 @@ final class TerrainSurveyBuilder {
     }
 
     TerrainSurvey build() {
-        List<TerrainCell> cells = new ArrayList<>(bounds.size().width() * bounds.size().depth());
+        List<TerrainCell> cells = new ArrayList<>(TerrainSurveyCellCount.expectedCellCount(bounds));
 
         for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
             sampleRow(z, cells);

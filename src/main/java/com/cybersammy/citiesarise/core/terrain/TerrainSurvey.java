@@ -81,7 +81,7 @@ public record TerrainSurvey(GridBounds bounds, List<TerrainCell> cells, Map<Grid
     }
 
     private static void rejectIncompleteCells(GridBounds bounds, Map<GridPoint, TerrainCell> cellsByPoint) {
-        int expectedCellCount = bounds.size().width() * bounds.size().depth();
+        int expectedCellCount = TerrainSurveyCellCount.expectedCellCount(bounds);
 
         if (cellsByPoint.size() != expectedCellCount) {
             throw new IllegalArgumentException("terrain survey must contain every point inside bounds");

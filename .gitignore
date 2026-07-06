@@ -1,0 +1,15 @@
+URBAN_PLANNER_ROADMAP.md
+TECHNICAL_DEBT.md
+
+.gradle/
+build/
+out/
+run/
+runs/
+
+*.class
+*.log
+
+.idea/
+*.iml
+.vscode/

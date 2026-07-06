@@ -8,7 +8,7 @@ The long-term goal is to create suburbs, villages, towns, city fragments, indust
 
 - Minecraft version: 1.21.1
 - NeoForge version: 21.1.227
-- Current implementation: empty mod skeleton
+- Current implementation: core plan model foundation
 - Generation gameplay: not implemented yet
 
 ## How It Will Work
@@ -21,6 +21,8 @@ Cities Arise will follow a plan-first pipeline:
 4. Convert the final plan into Minecraft blocks, structures, and markers through placement providers.
 
 The core planner must stay independent from Minecraft and NeoForge. Loader-specific code belongs in adapter layers.
+
+The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, and simple plan properties. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels.
 
 ## Build
 

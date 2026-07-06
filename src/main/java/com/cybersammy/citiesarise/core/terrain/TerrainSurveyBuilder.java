@@ -32,7 +32,13 @@ final class TerrainSurveyBuilder {
     }
 
     private TerrainCell sampleCell(GridPoint point) {
-        return sampler.sample(point)
+        TerrainCell cell = sampler.sample(point)
                 .orElseThrow(() -> new IllegalStateException("Terrain sampler returned no cell for point: " + point));
+
+        if (cell.point().equals(point)) {
+            return cell;
+        }
+
+        throw new IllegalStateException("Terrain sampler returned cell for different point: " + cell.point());
     }
 }

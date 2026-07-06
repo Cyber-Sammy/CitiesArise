@@ -47,6 +47,16 @@ final class TerrainSurveyTest {
     }
 
     @Test
+    void failsWhenSamplerReturnsCellForDifferentPoint() {
+        GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(1, 1));
+
+        assertThrows(IllegalStateException.class, () -> TerrainSurvey.sample(
+                bounds,
+                point -> flatCell(new GridPoint(1, 0))
+        ));
+    }
+
+    @Test
     void rejectsOutOfBoundsCell() {
         GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(1, 1));
         TerrainCell cell = flatCell(new GridPoint(2, 2)).orElseThrow();
@@ -60,6 +70,14 @@ final class TerrainSurveyTest {
         TerrainCell cell = flatCell(new GridPoint(0, 0)).orElseThrow();
 
         assertThrows(IllegalArgumentException.class, () -> new TerrainSurvey(bounds, List.of(cell, cell)));
+    }
+
+    @Test
+    void rejectsIncompleteCellSet() {
+        GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(2, 2));
+        TerrainCell cell = flatCell(new GridPoint(0, 0)).orElseThrow();
+
+        assertThrows(IllegalArgumentException.class, () -> new TerrainSurvey(bounds, List.of(cell)));
     }
 
     @Test

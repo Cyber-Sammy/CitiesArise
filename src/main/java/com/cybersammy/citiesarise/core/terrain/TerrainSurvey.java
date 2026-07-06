@@ -19,6 +19,7 @@ public record TerrainSurvey(GridBounds bounds, List<TerrainCell> cells, Map<Grid
         rejectEmptyCells(cells);
         rejectOutOfBoundsCells(bounds, cells);
         rejectMismatchedCellIndex(cells, cellsByPoint);
+        rejectIncompleteCells(bounds, cellsByPoint);
         cells = List.copyOf(cells);
         cellsByPoint = Map.copyOf(cellsByPoint);
     }
@@ -77,5 +78,35 @@ public record TerrainSurvey(GridBounds bounds, List<TerrainCell> cells, Map<Grid
         }
 
         throw new IllegalArgumentException("cellsByPoint must match cells");
+    }
+
+    private static void rejectIncompleteCells(GridBounds bounds, Map<GridPoint, TerrainCell> cellsByPoint) {
+        int expectedCellCount = bounds.size().width() * bounds.size().depth();
+
+        if (cellsByPoint.size() != expectedCellCount) {
+            throw new IllegalArgumentException("terrain survey must contain every point inside bounds");
+        }
+
+        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
+            rejectMissingCellsInRow(bounds, cellsByPoint, z);
+        }
+    }
+
+    private static void rejectMissingCellsInRow(
+            GridBounds bounds,
+            Map<GridPoint, TerrainCell> cellsByPoint,
+            int z
+    ) {
+        for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
+            rejectMissingCell(cellsByPoint, new GridPoint(x, z));
+        }
+    }
+
+    private static void rejectMissingCell(Map<GridPoint, TerrainCell> cellsByPoint, GridPoint point) {
+        if (cellsByPoint.containsKey(point)) {
+            return;
+        }
+
+        throw new IllegalArgumentException("terrain survey is missing cell for point: " + point);
     }
 }

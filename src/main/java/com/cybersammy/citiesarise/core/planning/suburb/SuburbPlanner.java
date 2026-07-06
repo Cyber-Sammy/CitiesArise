@@ -47,7 +47,7 @@ public final class SuburbPlanner {
     public SuburbPlanningResult plan(SuburbPlanningRequest request) {
         Objects.requireNonNull(request, "request");
 
-        if (!hasEnoughSpace(request.survey().bounds())) {
+        if (!hasEnoughSpace(request)) {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.SURVEY_TOO_SMALL);
         }
 
@@ -75,12 +75,30 @@ public final class SuburbPlanner {
         return layout.parcelBounds().size() >= request.settings().targetParcelCount();
     }
 
-    private boolean hasEnoughSpace(GridBounds bounds) {
+    private boolean hasEnoughSpace(SuburbPlanningRequest request) {
+        GridBounds bounds = request.survey().bounds();
+
         if (bounds.size().width() < MIN_SURVEY_WIDTH) {
             return false;
         }
 
-        return bounds.size().depth() >= MIN_SURVEY_DEPTH;
+        if (bounds.size().depth() < MIN_SURVEY_DEPTH) {
+            return false;
+        }
+
+        return roadFitsSurvey(request.settings(), bounds);
+    }
+
+    private boolean roadFitsSurvey(SuburbPlanningSettings settings, GridBounds bounds) {
+        if (settings.roadWidth() > bounds.size().width()) {
+            return false;
+        }
+
+        if (settings.roadWidth() > bounds.size().depth()) {
+            return false;
+        }
+
+        return true;
     }
 
     private boolean isTerrainAccepted(SuburbPlanningRequest request, SuburbLayout layout) {

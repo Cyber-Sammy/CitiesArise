@@ -102,6 +102,24 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void rejectsRoadWidthWiderThanSurvey() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(41, 0.25, 6);
+        SuburbPlanningResult result = planner.plan(request(flatSurvey(40, 30), 100L, settings));
+
+        assertFalse(result.successful());
+        assertEquals(Optional.of(SuburbPlanningFailureReason.SURVEY_TOO_SMALL), result.failureReason());
+    }
+
+    @Test
+    void rejectsRoadWidthDeeperThanSurvey() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(31, 0.25, 6);
+        SuburbPlanningResult result = planner.plan(request(flatSurvey(40, 30), 100L, settings));
+
+        assertFalse(result.successful());
+        assertEquals(Optional.of(SuburbPlanningFailureReason.SURVEY_TOO_SMALL), result.failureReason());
+    }
+
+    @Test
     void generatedRoadGraphIsConnected() {
         SettlementPlan plan = planner.plan(request(flatSurvey(40, 30), 100L, SuburbPlanningSettings.defaults()))
                 .plan()

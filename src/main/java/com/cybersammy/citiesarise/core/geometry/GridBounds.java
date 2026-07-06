@@ -6,6 +6,7 @@ public record GridBounds(GridPoint origin, GridSize size) {
     public GridBounds {
         Objects.requireNonNull(origin, "origin");
         Objects.requireNonNull(size, "size");
+        validateCoordinateRange(origin, size);
     }
 
     public int minX() {
@@ -22,6 +23,19 @@ public record GridBounds(GridPoint origin, GridSize size) {
 
     public int maxZExclusive() {
         return Math.addExact(origin.z(), size.depth());
+    }
+
+    private static void validateCoordinateRange(GridPoint origin, GridSize size) {
+        requireValidExclusiveMax(origin.x(), size.width(), "x");
+        requireValidExclusiveMax(origin.z(), size.depth(), "z");
+    }
+
+    private static void requireValidExclusiveMax(int originCoordinate, int size, String axisName) {
+        try {
+            Math.addExact(originCoordinate, size);
+        } catch (ArithmeticException exception) {
+            throw new IllegalArgumentException(axisName + " bounds exceed integer coordinate range", exception);
+        }
     }
 
     public boolean contains(GridPoint point) {

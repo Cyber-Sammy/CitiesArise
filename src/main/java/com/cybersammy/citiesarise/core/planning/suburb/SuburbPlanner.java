@@ -19,6 +19,7 @@ import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityScorer;
 import com.cybersammy.citiesarise.core.validation.PlanValidationError;
 import com.cybersammy.citiesarise.core.validation.PlanValidator;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
@@ -50,16 +51,17 @@ public final class SuburbPlanner {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.SURVEY_TOO_SMALL);
         }
 
-        if (!isTerrainAccepted(request)) {
+        SuburbLayout layout = createLayout(request);
+
+        if (!isTerrainAccepted(request, layout)) {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN);
         }
 
-        SettlementPlan plan = createPlan(request);
-
-        if (!hasEnoughParcels(plan, request)) {
+        if (!hasEnoughParcels(layout, request)) {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_PARCEL_SPACE);
         }
 
+        SettlementPlan plan = createPlan(request, layout);
         List<PlanValidationError> validationErrors = planValidator.validate(plan);
 
         if (!validationErrors.isEmpty()) {
@@ -69,8 +71,8 @@ public final class SuburbPlanner {
         return SuburbPlanningResult.success(plan);
     }
 
-    private static boolean hasEnoughParcels(SettlementPlan plan, SuburbPlanningRequest request) {
-        return plan.parcels().size() >= request.settings().targetParcelCount();
+    private static boolean hasEnoughParcels(SuburbLayout layout, SuburbPlanningRequest request) {
+        return layout.parcelBounds().size() >= request.settings().targetParcelCount();
     }
 
     private boolean hasEnoughSpace(GridBounds bounds) {
@@ -81,16 +83,57 @@ public final class SuburbPlanner {
         return bounds.size().depth() >= MIN_SURVEY_DEPTH;
     }
 
-    private boolean isTerrainAccepted(SuburbPlanningRequest request) {
+    private boolean isTerrainAccepted(SuburbPlanningRequest request, SuburbLayout layout) {
         TerrainSuitabilityContext context = new TerrainSuitabilityContext(request.settings().maxBuildableSlope());
 
-        for (TerrainCell cell : request.survey().cells()) {
-            if (!isTerrainCellAccepted(cell, context)) {
+        for (GridBounds footprint : layout.plannedFootprints()) {
+            if (!isFootprintTerrainAccepted(request, footprint, context)) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    private boolean isFootprintTerrainAccepted(
+            SuburbPlanningRequest request,
+            GridBounds footprint,
+            TerrainSuitabilityContext context
+    ) {
+        for (int z = footprint.minZ(); z < footprint.maxZExclusive(); z++) {
+            if (!isFootprintRowAccepted(request, footprint, context, z)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isFootprintRowAccepted(
+            SuburbPlanningRequest request,
+            GridBounds footprint,
+            TerrainSuitabilityContext context,
+            int z
+    ) {
+        for (int x = footprint.minX(); x < footprint.maxXExclusive(); x++) {
+            if (!isFootprintPointAccepted(request, context, new GridPoint(x, z))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isFootprintPointAccepted(
+            SuburbPlanningRequest request,
+            TerrainSuitabilityContext context,
+            GridPoint point
+    ) {
+        TerrainCell cell = request.survey()
+                .findCell(point)
+                .orElseThrow(() -> new IllegalStateException("planned footprint is outside terrain survey: " + point));
+
+        return isTerrainCellAccepted(cell, context);
     }
 
     private boolean isTerrainCellAccepted(TerrainCell cell, TerrainSuitabilityContext context) {
@@ -103,13 +146,22 @@ public final class SuburbPlanner {
         return suitability.score() >= 0.25;
     }
 
-    private SettlementPlan createPlan(SuburbPlanningRequest request) {
+    private SuburbLayout createLayout(SuburbPlanningRequest request) {
         GridBounds bounds = request.survey().bounds();
         Random random = new Random(request.seed());
         int mainRoadZ = centerZ(bounds);
         List<Integer> sideRoadXs = sideRoadXs(bounds, random);
-        RoadGraph roadGraph = createRoadGraph(request, bounds, mainRoadZ, sideRoadXs);
-        List<Parcel> parcels = createParcels(request, bounds, mainRoadZ);
+        List<GridBounds> sideRoadCorridors = sideRoadCorridors(request, bounds, mainRoadZ, sideRoadXs);
+        List<GridBounds> parcelBounds = createParcelBounds(request, bounds, mainRoadZ, sideRoadCorridors);
+        List<GridBounds> plannedFootprints = plannedFootprints(request, bounds, mainRoadZ, sideRoadCorridors, parcelBounds);
+
+        return new SuburbLayout(mainRoadZ, sideRoadXs, parcelBounds, plannedFootprints);
+    }
+
+    private SettlementPlan createPlan(SuburbPlanningRequest request, SuburbLayout layout) {
+        GridBounds bounds = request.survey().bounds();
+        RoadGraph roadGraph = createRoadGraph(request, bounds, layout.mainRoadZ(), layout.sideRoadXs());
+        List<Parcel> parcels = createParcels(request, layout.parcelBounds());
         List<BuildingSlot> buildingSlots = createBuildingSlots(request, parcels);
 
         return new SettlementPlan(
@@ -243,21 +295,117 @@ public final class SuburbPlanner {
         return Math.min(bounds.maxZExclusive() - 3, mainRoadZ + 8);
     }
 
-    private List<Parcel> createParcels(SuburbPlanningRequest request, GridBounds bounds, int mainRoadZ) {
-        List<Parcel> parcels = new ArrayList<>();
+    private static List<GridBounds> createParcelBounds(
+            SuburbPlanningRequest request,
+            GridBounds bounds,
+            int mainRoadZ,
+            List<GridBounds> sideRoadCorridors
+    ) {
+        List<GridBounds> parcelBounds = new ArrayList<>();
         int northZ = mainRoadZ - request.settings().roadWidth() - PARCEL_DEPTH;
         int southZ = mainRoadZ + request.settings().roadWidth();
         int startX = bounds.minX() + request.settings().roadWidth();
+        int candidateIndex = 0;
 
-        while (parcels.size() < request.settings().targetParcelCount()) {
-            int nextIndex = parcels.size();
-            GridBounds parcelBounds = parcelBounds(startX, northZ, southZ, nextIndex);
+        while (parcelBounds.size() < request.settings().targetParcelCount()) {
+            GridBounds candidateBounds = parcelBounds(startX, northZ, southZ, candidateIndex);
+            candidateIndex++;
 
-            if (!bounds.contains(parcelBounds)) {
+            if (!bounds.contains(candidateBounds)) {
                 break;
             }
 
-            parcels.add(parcel(request, parcelBounds, nextIndex));
+            if (intersectsAny(candidateBounds, sideRoadCorridors)) {
+                continue;
+            }
+
+            parcelBounds.add(candidateBounds);
+        }
+
+        return List.copyOf(parcelBounds);
+    }
+
+    private static boolean intersectsAny(GridBounds bounds, List<GridBounds> otherBounds) {
+        for (GridBounds otherBound : otherBounds) {
+            if (bounds.intersects(otherBound)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static List<GridBounds> plannedFootprints(
+            SuburbPlanningRequest request,
+            GridBounds bounds,
+            int mainRoadZ,
+            List<GridBounds> sideRoadCorridors,
+            List<GridBounds> parcelBounds
+    ) {
+        List<GridBounds> footprints = new ArrayList<>();
+        footprints.add(mainRoadCorridor(request, bounds, mainRoadZ));
+        footprints.addAll(sideRoadCorridors);
+        footprints.addAll(parcelBounds);
+
+        return List.copyOf(footprints);
+    }
+
+    private static GridBounds mainRoadCorridor(SuburbPlanningRequest request, GridBounds bounds, int mainRoadZ) {
+        int roadWidth = request.settings().roadWidth();
+        int roadZ = clamp(mainRoadZ - (roadWidth / 2), bounds.minZ(), bounds.maxZExclusive() - roadWidth);
+
+        return new GridBounds(new GridPoint(bounds.minX(), roadZ), new GridSize(bounds.size().width(), roadWidth));
+    }
+
+    private static List<GridBounds> sideRoadCorridors(
+            SuburbPlanningRequest request,
+            GridBounds bounds,
+            int mainRoadZ,
+            List<Integer> sideRoadXs
+    ) {
+        List<GridBounds> corridors = new ArrayList<>();
+
+        for (int index = 0; index < sideRoadXs.size(); index++) {
+            corridors.add(sideRoadCorridor(request, bounds, mainRoadZ, sideRoadXs.get(index), index));
+        }
+
+        return List.copyOf(corridors);
+    }
+
+    private static GridBounds sideRoadCorridor(
+            SuburbPlanningRequest request,
+            GridBounds bounds,
+            int mainRoadZ,
+            int sideRoadX,
+            int sideRoadIndex
+    ) {
+        int roadWidth = request.settings().roadWidth();
+        boolean northbound = isNorthbound(sideRoadIndex);
+        int deadEndZ = deadEndZ(bounds, mainRoadZ, northbound);
+        int minZ = Math.min(mainRoadZ, deadEndZ);
+        int maxZ = Math.max(mainRoadZ, deadEndZ) + 1;
+        int roadX = clamp(sideRoadX - (roadWidth / 2), bounds.minX(), bounds.maxXExclusive() - roadWidth);
+
+        return new GridBounds(new GridPoint(roadX, minZ), new GridSize(roadWidth, maxZ - minZ));
+    }
+
+    private static int clamp(int value, int min, int max) {
+        if (value < min) {
+            return min;
+        }
+
+        if (value > max) {
+            return max;
+        }
+
+        return value;
+    }
+
+    private List<Parcel> createParcels(SuburbPlanningRequest request, List<GridBounds> parcelBounds) {
+        List<Parcel> parcels = new ArrayList<>();
+
+        for (int index = 0; index < parcelBounds.size(); index++) {
+            parcels.add(parcel(request, parcelBounds.get(index), index));
         }
 
         return List.copyOf(parcels);
@@ -324,12 +472,25 @@ public final class SuburbPlanner {
     }
 
     private static Set<PlanTag> tagSet(String... tags) {
-        Set<PlanTag> planTags = new java.util.HashSet<>();
+        Set<PlanTag> planTags = new HashSet<>();
 
         for (String tag : tags) {
             planTags.add(new PlanTag(tag));
         }
 
         return Set.copyOf(planTags);
+    }
+
+    private record SuburbLayout(
+            int mainRoadZ,
+            List<Integer> sideRoadXs,
+            List<GridBounds> parcelBounds,
+            List<GridBounds> plannedFootprints
+    ) {
+        private SuburbLayout {
+            sideRoadXs = List.copyOf(sideRoadXs);
+            parcelBounds = List.copyOf(parcelBounds);
+            plannedFootprints = List.copyOf(plannedFootprints);
+        }
     }
 }

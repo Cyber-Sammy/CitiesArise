@@ -8,9 +8,11 @@ import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.model.BuildingSlot;
+import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanTag;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
+import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
@@ -76,6 +78,14 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void ignoresBadTerrainOutsidePlannedFootprint() {
+        TerrainSurvey survey = surveyWithSingleWaterCell(40, 30, new GridPoint(0, 0));
+        SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
+
+        assertTrue(result.successful());
+    }
+
+    @Test
     void rejectsSteepTerrain() {
         SuburbPlanningResult result = planner.plan(request(steepSurvey(40, 30), 100L, SuburbPlanningSettings.defaults()));
 
@@ -117,6 +127,19 @@ final class SuburbPlannerTest {
 
         for (BuildingSlot buildingSlot : plan.buildingSlots()) {
             assertTrue(parcelContainsBuildingSlot(plan, buildingSlot));
+        }
+    }
+
+    @Test
+    void parcelsDoNotOverlapSideRoadCorridors() {
+        SuburbPlanningSettings settings = SuburbPlanningSettings.defaults();
+        SettlementPlan plan = planner.plan(request(flatSurvey(40, 30), 100L, settings))
+                .plan()
+                .orElseThrow();
+        List<GridBounds> sideRoadCorridors = sideRoadCorridors(plan.roadGraph(), settings.roadWidth());
+
+        for (Parcel parcel : plan.parcels()) {
+            assertFalse(intersectsAny(parcel.bounds(), sideRoadCorridors));
         }
     }
 
@@ -194,6 +217,53 @@ final class SuburbPlannerTest {
                 .anyMatch(parcel -> parcel.bounds().contains(buildingSlot.bounds()));
     }
 
+    private static List<GridBounds> sideRoadCorridors(RoadGraph roadGraph, int roadWidth) {
+        Map<PlanElementId, RoadNode> nodesById = nodesById(roadGraph);
+
+        return roadGraph.segments().stream()
+                .filter(SuburbPlannerTest::isSideRoadSegment)
+                .map(segment -> sideRoadCorridor(segment, nodesById, roadWidth))
+                .toList();
+    }
+
+    private static Map<PlanElementId, RoadNode> nodesById(RoadGraph roadGraph) {
+        Map<PlanElementId, RoadNode> nodesById = new HashMap<>();
+
+        for (RoadNode node : roadGraph.nodes()) {
+            nodesById.put(node.id(), node);
+        }
+
+        return nodesById;
+    }
+
+    private static boolean isSideRoadSegment(RoadSegment segment) {
+        return segment.tags().contains(new PlanTag("side_road"));
+    }
+
+    private static GridBounds sideRoadCorridor(
+            RoadSegment segment,
+            Map<PlanElementId, RoadNode> nodesById,
+            int roadWidth
+    ) {
+        RoadNode startNode = nodesById.get(segment.startNodeId());
+        RoadNode endNode = nodesById.get(segment.endNodeId());
+        int roadX = startNode.point().x() - (roadWidth / 2);
+        int minZ = Math.min(startNode.point().z(), endNode.point().z());
+        int maxZ = Math.max(startNode.point().z(), endNode.point().z()) + 1;
+
+        return new GridBounds(new GridPoint(roadX, minZ), new GridSize(roadWidth, maxZ - minZ));
+    }
+
+    private static boolean intersectsAny(GridBounds bounds, List<GridBounds> otherBounds) {
+        for (GridBounds otherBound : otherBounds) {
+            if (bounds.intersects(otherBound)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static SuburbPlanningRequest request(
             TerrainSurvey survey,
             long seed,
@@ -212,6 +282,22 @@ final class SuburbPlannerTest {
 
     private static TerrainSurvey steepSurvey(int width, int depth) {
         return survey(width, depth, false, 0.5, TerrainCategory.BUILDABLE);
+    }
+
+    private static TerrainSurvey surveyWithSingleWaterCell(int width, int depth, GridPoint waterPoint) {
+        GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(width, depth));
+
+        return TerrainSurvey.sample(
+                bounds,
+                point -> Optional.of(new TerrainCell(
+                        point,
+                        64,
+                        point.equals(waterPoint),
+                        0.0,
+                        BiomeCategory.PLAINS,
+                        TerrainCategory.BUILDABLE
+                ))
+        );
     }
 
     private static TerrainSurvey survey(

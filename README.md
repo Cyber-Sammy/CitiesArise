@@ -22,7 +22,7 @@ Cities Arise will follow a plan-first pipeline:
 
 The core planner must stay independent from Minecraft and NeoForge. Loader-specific code belongs in adapter layers.
 
-The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, and terrain surveys. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. Terrain suitability scoring can reject water, blocked terrain, and slopes that are too steep for planning.
+The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, and terrain surveys. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. Terrain suitability scoring can reject water, blocked terrain, and slopes that are too steep for planning. The core planner can now produce a minimal semantic suburb plan on accepted abstract terrain.
 
 ## Build
 

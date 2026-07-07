@@ -14,7 +14,18 @@ public record SettlementRegion(int x, int z) {
     }
 
     public GridBounds surveyBounds(GridSize surveySize) {
+        rejectOversizedSurvey(surveySize);
         return new GridBounds(surveyOrigin(surveySize), surveySize);
+    }
+
+    private static void rejectOversizedSurvey(GridSize surveySize) {
+        if (surveySize.width() > REGION_BLOCKS) {
+            throw new IllegalArgumentException("survey width must not exceed region width");
+        }
+
+        if (surveySize.depth() > REGION_BLOCKS) {
+            throw new IllegalArgumentException("survey depth must not exceed region depth");
+        }
     }
 
     private GridPoint surveyOrigin(GridSize surveySize) {

@@ -10,8 +10,10 @@ import java.util.Locale;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 public final class MinecraftTerrainSampler {
@@ -30,7 +32,7 @@ public final class MinecraftTerrainSampler {
         boolean water = isWater(point.x(), height, point.z());
         double slope = slope(point);
         BiomeCategory biomeCategory = biomeCategory(point.x(), height, point.z());
-        TerrainCategory terrainCategory = terrainCategory(water);
+        TerrainCategory terrainCategory = terrainCategory(point.x(), height, point.z(), water);
 
         return Optional.of(new TerrainCell(point, height, water, slope, biomeCategory, terrainCategory));
     }
@@ -60,7 +62,7 @@ public final class MinecraftTerrainSampler {
         maxDifference = Math.max(maxDifference, heightDifference(centerHeight, point.x(), point.z() + 1));
         maxDifference = Math.max(maxDifference, heightDifference(centerHeight, point.x(), point.z() - 1));
 
-        return maxDifference;
+        return MinecraftSlopeNormalizer.fromHeightDelta(maxDifference);
     }
 
     private int heightDifference(int centerHeight, int x, int z) {
@@ -153,11 +155,42 @@ public final class MinecraftTerrainSampler {
         return biomePath.contains("taiga");
     }
 
-    private TerrainCategory terrainCategory(boolean water) {
+    private TerrainCategory terrainCategory(int x, int height, int z, boolean water) {
         if (water) {
             return TerrainCategory.BLOCKED;
         }
 
+        if (isLava(x, height, z)) {
+            return TerrainCategory.BLOCKED;
+        }
+
+        BlockPos surfacePosition = new BlockPos(x, height - 1, z);
+        BlockState surfaceState = level.getBlockState(surfacePosition);
+
+        if (surfaceState.isAir()) {
+            return TerrainCategory.ROUGH;
+        }
+
+        if (surfaceState.is(BlockTags.LEAVES)) {
+            return TerrainCategory.BLOCKED;
+        }
+
+        if (surfaceState.is(BlockTags.LOGS)) {
+            return TerrainCategory.BLOCKED;
+        }
+
         return TerrainCategory.BUILDABLE;
+    }
+
+    private boolean isLava(int x, int height, int z) {
+        if (hasLavaAt(x, height, z)) {
+            return true;
+        }
+
+        return hasLavaAt(x, height - 1, z);
+    }
+
+    private boolean hasLavaAt(int x, int y, int z) {
+        return level.getFluidState(new BlockPos(x, y, z)).is(FluidTags.LAVA);
     }
 }

@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.minecraft.planning;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
@@ -28,5 +29,21 @@ final class SettlementRegionTest {
         GridBounds bounds = region.surveyBounds(new GridSize(40, 30));
 
         assertEquals(new GridBounds(new GridPoint(172, -79), new GridSize(40, 30)), bounds);
+    }
+
+    @Test
+    void rejectsSurveyWiderThanRegion() {
+        SettlementRegion region = new SettlementRegion(0, 0);
+        GridSize surveySize = new GridSize(SettlementRegion.REGION_BLOCKS + 1, 30);
+
+        assertThrows(IllegalArgumentException.class, () -> region.surveyBounds(surveySize));
+    }
+
+    @Test
+    void rejectsSurveyDeeperThanRegion() {
+        SettlementRegion region = new SettlementRegion(0, 0);
+        GridSize surveySize = new GridSize(40, SettlementRegion.REGION_BLOCKS + 1);
+
+        assertThrows(IllegalArgumentException.class, () -> region.surveyBounds(surveySize));
     }
 }

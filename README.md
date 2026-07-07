@@ -56,4 +56,10 @@ The generated jar is written to `build/libs`.
 
 Cities Arise creates a common config file with logging options. `debugLoggingEnabled` is the master switch. Terrain, planning, and command logs can be toggled separately and only emit debug details when the master switch is enabled.
 
+The debug suburb planner can also be tuned from the same common config:
+
+- `debugRoadWidth`: road width used by `/citiesarise debug plan`.
+- `debugMaxBuildableSlope`: maximum normalized slope accepted by the Minecraft debug planner. The default is `0.75`, which accepts gently uneven terrain while still rejecting sharper height changes.
+- `debugTargetParcelCount`: target number of parcels for the debug suburb plan.
+
 Datapack profiles and external integration points are not implemented yet. This document will be updated as those features become real.

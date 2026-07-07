@@ -9,7 +9,6 @@ import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanner;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningRequest;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
-import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftTerrainSampler;
 import net.minecraft.server.level.ServerLevel;
@@ -44,7 +43,7 @@ public final class MinecraftSuburbPlanningService {
                 settlementId,
                 survey,
                 seed,
-                SuburbPlanningSettings.defaults()
+                CitiesAriseConfig.debugSuburbPlanningSettings()
         );
         SuburbPlanningResult result = planner.plan(request);
         SuburbDebugPlanResult debugResult = SuburbDebugPlanResult.from(region, bounds, seed, result);

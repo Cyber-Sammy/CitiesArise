@@ -1,10 +1,14 @@
 package com.cybersammy.citiesarise.config;
 
+import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class CitiesAriseConfig {
     public static final ModConfigSpec SPEC;
 
+    private static final ModConfigSpec.IntValue DEBUG_ROAD_WIDTH;
+    private static final ModConfigSpec.DoubleValue DEBUG_MAX_BUILDABLE_SLOPE;
+    private static final ModConfigSpec.IntValue DEBUG_TARGET_PARCEL_COUNT;
     private static final ModConfigSpec.BooleanValue DEBUG_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue TERRAIN_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue PLANNING_LOGGING_ENABLED;
@@ -12,6 +16,23 @@ public final class CitiesAriseConfig {
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+
+        builder.push("planning");
+        DEBUG_ROAD_WIDTH = builder
+                .comment("Road width used by the Minecraft debug suburb planner.")
+                .defineInRange("debugRoadWidth", DebugSuburbPlanningConfig.DEFAULT_ROAD_WIDTH, 1, 16);
+        DEBUG_MAX_BUILDABLE_SLOPE = builder
+                .comment("Maximum normalized slope accepted by the Minecraft debug suburb planner.")
+                .defineInRange(
+                        "debugMaxBuildableSlope",
+                        DebugSuburbPlanningConfig.DEFAULT_MAX_BUILDABLE_SLOPE,
+                        0.0,
+                        8.0
+                );
+        DEBUG_TARGET_PARCEL_COUNT = builder
+                .comment("Target parcel count used by the Minecraft debug suburb planner.")
+                .defineInRange("debugTargetParcelCount", DebugSuburbPlanningConfig.DEFAULT_TARGET_PARCEL_COUNT, 1, 128);
+        builder.pop();
 
         builder.push("logging");
         DEBUG_LOGGING_ENABLED = builder
@@ -32,6 +53,14 @@ public final class CitiesAriseConfig {
     }
 
     private CitiesAriseConfig() {
+    }
+
+    public static SuburbPlanningSettings debugSuburbPlanningSettings() {
+        return new DebugSuburbPlanningConfig(
+                DEBUG_ROAD_WIDTH.get(),
+                DEBUG_MAX_BUILDABLE_SLOPE.get(),
+                DEBUG_TARGET_PARCEL_COUNT.get()
+        ).toSuburbPlanningSettings();
     }
 
     public static boolean terrainLoggingEnabled() {

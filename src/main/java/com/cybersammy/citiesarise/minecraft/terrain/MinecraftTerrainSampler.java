@@ -7,6 +7,7 @@ import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -20,7 +21,7 @@ public final class MinecraftTerrainSampler {
     private final LevelAccessor level;
 
     public MinecraftTerrainSampler(LevelAccessor level) {
-        this.level = level;
+        this.level = Objects.requireNonNull(level, "level");
     }
 
     public TerrainSurvey sample(GridBounds bounds) {

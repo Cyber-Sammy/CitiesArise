@@ -9,30 +9,44 @@ import java.util.Optional;
 public record SuburbPlanningResult(
         Optional<SettlementPlan> plan,
         Optional<SuburbPlanningFailureReason> failureReason,
-        List<PlanValidationError> validationErrors
+        List<PlanValidationError> validationErrors,
+        Optional<SuburbTerrainDiagnostic> terrainDiagnostic
 ) {
     public SuburbPlanningResult {
         Objects.requireNonNull(plan, "plan");
         Objects.requireNonNull(failureReason, "failureReason");
+        Objects.requireNonNull(terrainDiagnostic, "terrainDiagnostic");
         validationErrors = immutableValidationErrors(validationErrors);
         rejectAmbiguousResult(plan, failureReason);
+        rejectUnexpectedTerrainDiagnostic(failureReason, terrainDiagnostic);
     }
 
     public static SuburbPlanningResult success(SettlementPlan plan) {
         Objects.requireNonNull(plan, "plan");
-        return new SuburbPlanningResult(Optional.of(plan), Optional.empty(), List.of());
+        return new SuburbPlanningResult(Optional.of(plan), Optional.empty(), List.of(), Optional.empty());
     }
 
     public static SuburbPlanningResult rejected(SuburbPlanningFailureReason reason) {
         Objects.requireNonNull(reason, "reason");
-        return new SuburbPlanningResult(Optional.empty(), Optional.of(reason), List.of());
+        return new SuburbPlanningResult(Optional.empty(), Optional.of(reason), List.of(), Optional.empty());
+    }
+
+    public static SuburbPlanningResult rejectedTerrain(SuburbTerrainDiagnostic diagnostic) {
+        Objects.requireNonNull(diagnostic, "diagnostic");
+        return new SuburbPlanningResult(
+                Optional.empty(),
+                Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN),
+                List.of(),
+                Optional.of(diagnostic)
+        );
     }
 
     public static SuburbPlanningResult invalid(List<PlanValidationError> validationErrors) {
         return new SuburbPlanningResult(
                 Optional.empty(),
                 Optional.of(SuburbPlanningFailureReason.INVALID_PLAN),
-                validationErrors
+                validationErrors,
+                Optional.empty()
         );
     }
 
@@ -62,6 +76,21 @@ public record SuburbPlanningResult(
         if (failureReason.isEmpty()) {
             throw new IllegalArgumentException("failed result must have failure reason");
         }
+    }
+
+    private static void rejectUnexpectedTerrainDiagnostic(
+            Optional<SuburbPlanningFailureReason> failureReason,
+            Optional<SuburbTerrainDiagnostic> terrainDiagnostic
+    ) {
+        if (terrainDiagnostic.isEmpty()) {
+            return;
+        }
+
+        if (failureReason.equals(Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN))) {
+            return;
+        }
+
+        throw new IllegalArgumentException("terrainDiagnostic is only allowed for unsuitable terrain");
     }
 
     private static List<PlanValidationError> immutableValidationErrors(List<PlanValidationError> validationErrors) {

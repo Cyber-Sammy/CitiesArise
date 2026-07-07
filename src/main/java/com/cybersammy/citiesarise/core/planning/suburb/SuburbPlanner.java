@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
@@ -52,9 +53,10 @@ public final class SuburbPlanner {
         }
 
         SuburbLayout layout = createLayout(request);
+        Optional<SuburbTerrainDiagnostic> terrainDiagnostic = findTerrainDiagnostic(request, layout);
 
-        if (!isTerrainAccepted(request, layout)) {
-            return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN);
+        if (terrainDiagnostic.isPresent()) {
+            return SuburbPlanningResult.rejectedTerrain(terrainDiagnostic.orElseThrow());
         }
 
         if (!hasEnoughParcels(layout, request)) {
@@ -101,48 +103,58 @@ public final class SuburbPlanner {
         return true;
     }
 
-    private boolean isTerrainAccepted(SuburbPlanningRequest request, SuburbLayout layout) {
+    private Optional<SuburbTerrainDiagnostic> findTerrainDiagnostic(SuburbPlanningRequest request, SuburbLayout layout) {
         TerrainSuitabilityContext context = new TerrainSuitabilityContext(request.settings().maxBuildableSlope());
 
         for (GridBounds footprint : layout.plannedFootprints()) {
-            if (!isFootprintTerrainAccepted(request, footprint, context)) {
-                return false;
+            Optional<SuburbTerrainDiagnostic> diagnostic = findFootprintTerrainDiagnostic(request, footprint, context);
+
+            if (diagnostic.isPresent()) {
+                return diagnostic;
             }
         }
 
-        return true;
+        return Optional.empty();
     }
 
-    private boolean isFootprintTerrainAccepted(
+    private Optional<SuburbTerrainDiagnostic> findFootprintTerrainDiagnostic(
             SuburbPlanningRequest request,
             GridBounds footprint,
             TerrainSuitabilityContext context
     ) {
         for (int z = footprint.minZ(); z < footprint.maxZExclusive(); z++) {
-            if (!isFootprintRowAccepted(request, footprint, context, z)) {
-                return false;
+            Optional<SuburbTerrainDiagnostic> diagnostic = findFootprintRowTerrainDiagnostic(request, footprint, context, z);
+
+            if (diagnostic.isPresent()) {
+                return diagnostic;
             }
         }
 
-        return true;
+        return Optional.empty();
     }
 
-    private boolean isFootprintRowAccepted(
+    private Optional<SuburbTerrainDiagnostic> findFootprintRowTerrainDiagnostic(
             SuburbPlanningRequest request,
             GridBounds footprint,
             TerrainSuitabilityContext context,
             int z
     ) {
         for (int x = footprint.minX(); x < footprint.maxXExclusive(); x++) {
-            if (!isFootprintPointAccepted(request, context, new GridPoint(x, z))) {
-                return false;
+            Optional<SuburbTerrainDiagnostic> diagnostic = findFootprintPointTerrainDiagnostic(
+                    request,
+                    context,
+                    new GridPoint(x, z)
+            );
+
+            if (diagnostic.isPresent()) {
+                return diagnostic;
             }
         }
 
-        return true;
+        return Optional.empty();
     }
 
-    private boolean isFootprintPointAccepted(
+    private Optional<SuburbTerrainDiagnostic> findFootprintPointTerrainDiagnostic(
             SuburbPlanningRequest request,
             TerrainSuitabilityContext context,
             GridPoint point
@@ -151,12 +163,16 @@ public final class SuburbPlanner {
                 .findCell(point)
                 .orElseThrow(() -> new IllegalStateException("planned footprint is outside terrain survey: " + point));
 
-        return isTerrainCellAccepted(cell, context);
-    }
-
-    private boolean isTerrainCellAccepted(TerrainCell cell, TerrainSuitabilityContext context) {
         TerrainSuitability suitability = terrainScorer.score(cell, context);
 
+        if (isTerrainCellAccepted(suitability)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(new SuburbTerrainDiagnostic(cell, suitability));
+    }
+
+    private boolean isTerrainCellAccepted(TerrainSuitability suitability) {
         if (suitability.rejected()) {
             return false;
         }

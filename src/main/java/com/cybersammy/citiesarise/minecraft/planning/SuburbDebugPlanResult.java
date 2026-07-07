@@ -4,6 +4,9 @@ import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningFailureReason;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
+import com.cybersammy.citiesarise.core.planning.suburb.SuburbTerrainDiagnostic;
+import com.cybersammy.citiesarise.core.terrain.TerrainCell;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -13,7 +16,8 @@ public record SuburbDebugPlanResult(
         long seed,
         boolean successful,
         SettlementPlan plan,
-        SuburbPlanningFailureReason failureReason
+        SuburbPlanningFailureReason failureReason,
+        SuburbTerrainDiagnostic terrainDiagnostic
 ) {
     public SuburbDebugPlanResult {
         Objects.requireNonNull(region, "region");
@@ -35,7 +39,8 @@ public record SuburbDebugPlanResult(
                 seed,
                 result.successful(),
                 result.plan().orElse(null),
-                result.failureReason().orElse(null)
+                result.failureReason().orElse(null),
+                result.terrainDiagnostic().orElse(null)
         );
     }
 
@@ -45,6 +50,10 @@ public record SuburbDebugPlanResult(
 
     public Optional<SuburbPlanningFailureReason> optionalFailureReason() {
         return Optional.ofNullable(failureReason);
+    }
+
+    public Optional<SuburbTerrainDiagnostic> optionalTerrainDiagnostic() {
+        return Optional.ofNullable(terrainDiagnostic);
     }
 
     public String summary() {
@@ -60,7 +69,7 @@ public record SuburbDebugPlanResult(
                 .map(Enum::name)
                 .orElse("UNKNOWN");
 
-        return baseSummary() + ", rejected=" + reason;
+        return baseSummary() + ", rejected=" + reason + terrainDiagnosticSummary();
     }
 
     private String successSummary() {
@@ -78,6 +87,29 @@ public record SuburbDebugPlanResult(
                 + ", bounds=(" + surveyBounds.minX() + ", " + surveyBounds.minZ() + ", "
                 + surveyBounds.size().width() + "x" + surveyBounds.size().depth() + ")"
                 + ", seed=" + seed;
+    }
+
+    private String terrainDiagnosticSummary() {
+        return optionalTerrainDiagnostic()
+                .map(this::formatTerrainDiagnostic)
+                .orElse("");
+    }
+
+    private String formatTerrainDiagnostic(SuburbTerrainDiagnostic diagnostic) {
+        TerrainCell cell = diagnostic.cell();
+        String reason = diagnostic.primaryRejectionReason()
+                .map(Enum::name)
+                .orElse("LOW_SCORE");
+        String slope = String.format(Locale.ROOT, "%.3f", cell.slope());
+
+        return ", terrainDiagnostic=(reason=" + reason
+                + ", point=(" + cell.point().x() + ", " + cell.point().z() + ")"
+                + ", height=" + cell.height()
+                + ", slope=" + slope
+                + ", water=" + cell.water()
+                + ", terrainCategory=" + cell.terrainCategory()
+                + ", biomeCategory=" + cell.biomeCategory()
+                + ")";
     }
 
     private static void rejectMissingOutcome(

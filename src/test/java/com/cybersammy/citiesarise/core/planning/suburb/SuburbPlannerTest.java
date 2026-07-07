@@ -19,6 +19,7 @@ import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
 import com.cybersammy.citiesarise.core.validation.PlanValidator;
 import java.util.ArrayDeque;
 import java.util.HashMap;
@@ -75,6 +76,7 @@ final class SuburbPlannerTest {
 
         assertFalse(result.successful());
         assertEquals(Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN), result.failureReason());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.WATER);
     }
 
     @Test
@@ -91,6 +93,16 @@ final class SuburbPlannerTest {
 
         assertFalse(result.successful());
         assertEquals(Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN), result.failureReason());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.STEEP_SLOPE);
+    }
+
+    @Test
+    void reportsBlockedTerrainDiagnostic() {
+        SuburbPlanningResult result = planner.plan(request(blockedSurvey(40, 30), 100L, SuburbPlanningSettings.defaults()));
+
+        assertFalse(result.successful());
+        assertEquals(Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN), result.failureReason());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.BLOCKED_TERRAIN);
     }
 
     @Test
@@ -167,6 +179,7 @@ final class SuburbPlannerTest {
         SuburbPlanningResult result = planner.plan(request(flatSurvey(40, 30), 100L, settings));
 
         assertTrue(result.successful());
+        assertTrue(result.terrainDiagnostic().isEmpty());
         assertEquals(1, result.plan().orElseThrow().parcels().size());
     }
 
@@ -300,6 +313,19 @@ final class SuburbPlannerTest {
 
     private static TerrainSurvey steepSurvey(int width, int depth) {
         return survey(width, depth, false, 0.5, TerrainCategory.BUILDABLE);
+    }
+
+    private static TerrainSurvey blockedSurvey(int width, int depth) {
+        return survey(width, depth, false, 0.0, TerrainCategory.BLOCKED);
+    }
+
+    private static void assertTerrainDiagnostic(
+            SuburbPlanningResult result,
+            TerrainRejectionReason expectedReason
+    ) {
+        SuburbTerrainDiagnostic diagnostic = result.terrainDiagnostic().orElseThrow();
+
+        assertEquals(Optional.of(expectedReason), diagnostic.primaryRejectionReason());
     }
 
     private static TerrainSurvey surveyWithSingleWaterCell(int width, int depth, GridPoint waterPoint) {

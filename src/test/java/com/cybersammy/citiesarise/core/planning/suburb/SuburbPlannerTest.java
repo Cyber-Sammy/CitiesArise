@@ -101,6 +101,14 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void acceptsGentleSlopeWhenSettingsAllowIt() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6);
+        SuburbPlanningResult result = planner.plan(request(steepSurvey(40, 30), 100L, settings));
+
+        assertTrue(result.successful());
+    }
+
+    @Test
     void reportsBlockedTerrainDiagnostic() {
         SuburbPlanningResult result = planner.plan(request(blockedSurvey(40, 30), 100L, SuburbPlanningSettings.defaults()));
 

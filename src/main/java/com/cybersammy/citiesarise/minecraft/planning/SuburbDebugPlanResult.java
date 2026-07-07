@@ -23,6 +23,7 @@ public record SuburbDebugPlanResult(
         Objects.requireNonNull(region, "region");
         Objects.requireNonNull(surveyBounds, "surveyBounds");
         rejectMissingOutcome(successful, plan, failureReason);
+        rejectUnexpectedTerrainDiagnostic(successful, failureReason, terrainDiagnostic);
     }
 
     public static SuburbDebugPlanResult from(
@@ -139,5 +140,25 @@ public record SuburbDebugPlanResult(
         }
 
         throw new IllegalArgumentException("rejected result must contain failure reason");
+    }
+
+    private static void rejectUnexpectedTerrainDiagnostic(
+            boolean successful,
+            SuburbPlanningFailureReason failureReason,
+            SuburbTerrainDiagnostic terrainDiagnostic
+    ) {
+        if (terrainDiagnostic == null) {
+            return;
+        }
+
+        if (successful) {
+            throw new IllegalArgumentException("successful debug result must not contain terrain diagnostic");
+        }
+
+        if (failureReason == SuburbPlanningFailureReason.UNSUITABLE_TERRAIN) {
+            return;
+        }
+
+        throw new IllegalArgumentException("terrainDiagnostic is only allowed for unsuitable terrain");
     }
 }

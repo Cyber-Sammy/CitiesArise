@@ -7,6 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
+import com.cybersammy.citiesarise.core.model.PlanElementId;
+import com.cybersammy.citiesarise.core.model.PlanProperties;
+import com.cybersammy.citiesarise.core.model.RoadGraph;
+import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningFailureReason;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbTerrainDiagnostic;
@@ -66,6 +70,32 @@ final class SuburbDebugPlanResultTest {
         ));
     }
 
+    @Test
+    void rejectsSuccessfulResultWithTerrainDiagnostic() {
+        assertThrows(IllegalArgumentException.class, () -> new SuburbDebugPlanResult(
+                new SettlementRegion(0, 0),
+                new GridBounds(new GridPoint(0, 0), new GridSize(40, 30)),
+                1L,
+                true,
+                emptyPlan(),
+                null,
+                waterDiagnostic()
+        ));
+    }
+
+    @Test
+    void rejectsNonTerrainFailureWithTerrainDiagnostic() {
+        assertThrows(IllegalArgumentException.class, () -> new SuburbDebugPlanResult(
+                new SettlementRegion(0, 0),
+                new GridBounds(new GridPoint(0, 0), new GridSize(40, 30)),
+                1L,
+                false,
+                null,
+                SuburbPlanningFailureReason.SURVEY_TOO_SMALL,
+                waterDiagnostic()
+        ));
+    }
+
     private static SuburbTerrainDiagnostic waterDiagnostic() {
         TerrainCell cell = new TerrainCell(
                 new GridPoint(12, 22),
@@ -78,5 +108,16 @@ final class SuburbDebugPlanResultTest {
         TerrainSuitability suitability = new TerrainSuitability(0.0, Set.of(TerrainRejectionReason.WATER), List.of());
 
         return new SuburbTerrainDiagnostic(cell, suitability);
+    }
+
+    private static SettlementPlan emptyPlan() {
+        return new SettlementPlan(
+                new PlanElementId("settlement/test"),
+                new RoadGraph(List.of(), List.of()),
+                List.of(),
+                List.of(),
+                Set.of(),
+                PlanProperties.empty()
+        );
     }
 }

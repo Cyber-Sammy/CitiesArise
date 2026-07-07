@@ -19,7 +19,11 @@ import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityContribution;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
+import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityContext;
+import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityRule;
+import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityScorer;
 import com.cybersammy.citiesarise.core.validation.PlanValidator;
 import java.util.ArrayDeque;
 import java.util.HashMap;
@@ -103,6 +107,19 @@ final class SuburbPlannerTest {
         assertFalse(result.successful());
         assertEquals(Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN), result.failureReason());
         assertTerrainDiagnostic(result, TerrainRejectionReason.BLOCKED_TERRAIN);
+    }
+
+    @Test
+    void reportsLowScoreTerrainDiagnostic() {
+        SuburbPlanner lowScorePlanner = new SuburbPlanner(
+                new TerrainSuitabilityScorer(List.of(lowScoreRule())),
+                validator
+        );
+        SuburbPlanningResult result = lowScorePlanner.plan(request(flatSurvey(40, 30), 100L, SuburbPlanningSettings.defaults()));
+
+        assertFalse(result.successful());
+        assertEquals(Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN), result.failureReason());
+        assertEquals(Optional.empty(), result.terrainDiagnostic().orElseThrow().primaryRejectionReason());
     }
 
     @Test
@@ -317,6 +334,20 @@ final class SuburbPlannerTest {
 
     private static TerrainSurvey blockedSurvey(int width, int depth) {
         return survey(width, depth, false, 0.0, TerrainCategory.BLOCKED);
+    }
+
+    private static TerrainSuitabilityRule lowScoreRule() {
+        return new TerrainSuitabilityRule() {
+            @Override
+            public String name() {
+                return "low_score";
+            }
+
+            @Override
+            public TerrainSuitabilityContribution evaluate(TerrainCell cell, TerrainSuitabilityContext context) {
+                return TerrainSuitabilityContribution.multiplier(0.2);
+            }
+        };
     }
 
     private static void assertTerrainDiagnostic(

@@ -135,12 +135,16 @@ public final class CitiesAriseConfigScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        renderForeground(guiGraphics);
+    }
+
+    private void renderForeground(GuiGraphics guiGraphics) {
         guiGraphics.drawCenteredString(font, title, width / 2, 16, 0xFFFFFF);
         renderLabels(guiGraphics);
         guiGraphics.drawString(font, LOCAL_CONFIG_NOTE, contentLeft(), 26, NOTE_COLOR);
         guiGraphics.drawString(font, WARNING, contentLeft() + COLUMN_WIDTH, 42 + ROW_HEIGHT * 7, WARNING_COLOR);
         guiGraphics.drawCenteredString(font, status, width / 2, Math.min(height - 56, 42 + ROW_HEIGHT * 9), statusColor);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
     @Override

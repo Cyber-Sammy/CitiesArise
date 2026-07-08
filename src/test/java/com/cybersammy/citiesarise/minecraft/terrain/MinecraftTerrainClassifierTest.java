@@ -17,6 +17,16 @@ final class MinecraftTerrainClassifierTest {
     }
 
     @Test
+    void waterTakesPriorityOverLeaves() {
+        assertEquals(TerrainCategory.BLOCKED, classifyWaterWithLeaves());
+    }
+
+    @Test
+    void lavaTakesPriorityOverLogs() {
+        assertEquals(TerrainCategory.BLOCKED, classifyLavaWithLogs());
+    }
+
+    @Test
     void treatsLeavesAsRoughTerrain() {
         assertEquals(TerrainCategory.ROUGH, classifyLeaves());
     }
@@ -42,6 +52,14 @@ final class MinecraftTerrainClassifierTest {
 
     private static TerrainCategory classifyLava() {
         return MinecraftTerrainClassifier.classify(false, true, false, false, false);
+    }
+
+    private static TerrainCategory classifyWaterWithLeaves() {
+        return MinecraftTerrainClassifier.classify(true, false, false, true, false);
+    }
+
+    private static TerrainCategory classifyLavaWithLogs() {
+        return MinecraftTerrainClassifier.classify(false, true, false, false, true);
     }
 
     private static TerrainCategory classifyLeaves() {

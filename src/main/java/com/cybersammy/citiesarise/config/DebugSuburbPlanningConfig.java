@@ -8,13 +8,19 @@ public record DebugSuburbPlanningConfig(
         int surveyDepth,
         int roadWidth,
         double maxBuildableSlope,
-        int targetParcelCount
+        int targetParcelCount,
+        int parcelWidth,
+        int parcelDepth,
+        int buildingMargin
 ) {
-    public static final int DEFAULT_SURVEY_WIDTH = 40;
-    public static final int DEFAULT_SURVEY_DEPTH = 30;
-    public static final int DEFAULT_ROAD_WIDTH = 3;
+    public static final int DEFAULT_SURVEY_WIDTH = 72;
+    public static final int DEFAULT_SURVEY_DEPTH = 48;
+    public static final int DEFAULT_ROAD_WIDTH = 5;
     public static final double DEFAULT_MAX_BUILDABLE_SLOPE = 0.75;
-    public static final int DEFAULT_TARGET_PARCEL_COUNT = 6;
+    public static final int DEFAULT_TARGET_PARCEL_COUNT = 8;
+    public static final int DEFAULT_PARCEL_WIDTH = 12;
+    public static final int DEFAULT_PARCEL_DEPTH = 14;
+    public static final int DEFAULT_BUILDING_MARGIN = 3;
 
     public DebugSuburbPlanningConfig {
         requirePositive(surveyWidth, "surveyWidth");
@@ -22,6 +28,10 @@ public record DebugSuburbPlanningConfig(
         requirePositive(roadWidth, "roadWidth");
         requireFiniteNonNegative(maxBuildableSlope, "maxBuildableSlope");
         requirePositive(targetParcelCount, "targetParcelCount");
+        requirePositive(parcelWidth, "parcelWidth");
+        requirePositive(parcelDepth, "parcelDepth");
+        requireNonNegative(buildingMargin, "buildingMargin");
+        requireBuildingFitsParcel(parcelWidth, parcelDepth, buildingMargin);
     }
 
     public static DebugSuburbPlanningConfig defaults() {
@@ -30,7 +40,10 @@ public record DebugSuburbPlanningConfig(
                 DEFAULT_SURVEY_DEPTH,
                 DEFAULT_ROAD_WIDTH,
                 DEFAULT_MAX_BUILDABLE_SLOPE,
-                DEFAULT_TARGET_PARCEL_COUNT
+                DEFAULT_TARGET_PARCEL_COUNT,
+                DEFAULT_PARCEL_WIDTH,
+                DEFAULT_PARCEL_DEPTH,
+                DEFAULT_BUILDING_MARGIN
         );
     }
 
@@ -39,12 +52,25 @@ public record DebugSuburbPlanningConfig(
     }
 
     public SuburbPlanningSettings toSuburbPlanningSettings() {
-        return new SuburbPlanningSettings(roadWidth, maxBuildableSlope, targetParcelCount);
+        return new SuburbPlanningSettings(
+                roadWidth,
+                maxBuildableSlope,
+                targetParcelCount,
+                parcelWidth,
+                parcelDepth,
+                buildingMargin
+        );
     }
 
     private static void requirePositive(int value, String name) {
         if (value <= 0) {
             throw new IllegalArgumentException(name + " must be positive");
+        }
+    }
+
+    private static void requireNonNegative(int value, String name) {
+        if (value < 0) {
+            throw new IllegalArgumentException(name + " must not be negative");
         }
     }
 
@@ -56,5 +82,19 @@ public record DebugSuburbPlanningConfig(
         if (value < 0.0) {
             throw new IllegalArgumentException(name + " must not be negative");
         }
+    }
+
+    private static void requireBuildingFitsParcel(int parcelWidth, int parcelDepth, int buildingMargin) {
+        if (buildingSize(parcelWidth, buildingMargin) <= 0) {
+            throw new IllegalArgumentException("building width must be positive");
+        }
+
+        if (buildingSize(parcelDepth, buildingMargin) <= 0) {
+            throw new IllegalArgumentException("building depth must be positive");
+        }
+    }
+
+    private static int buildingSize(int parcelSize, int buildingMargin) {
+        return parcelSize - (buildingMargin * 2);
     }
 }

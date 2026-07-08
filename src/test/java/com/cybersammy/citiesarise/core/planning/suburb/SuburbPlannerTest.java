@@ -140,7 +140,7 @@ final class SuburbPlannerTest {
 
     @Test
     void rejectsTooSmallSurvey() {
-        SuburbPlanningResult result = planner.plan(request(flatSurvey(20, 20), 100L, SuburbPlanningSettings.defaults()));
+        SuburbPlanningResult result = planner.plan(request(flatSurvey(8, 12), 100L, SuburbPlanningSettings.defaults()));
 
         assertFalse(result.successful());
         assertEquals(Optional.of(SuburbPlanningFailureReason.SURVEY_TOO_SMALL), result.failureReason());
@@ -191,6 +191,29 @@ final class SuburbPlannerTest {
         for (BuildingSlot buildingSlot : plan.buildingSlots()) {
             assertTrue(parcelContainsBuildingSlot(plan, buildingSlot));
         }
+    }
+
+    @Test
+    void customScaleControlsParcelAndBuildingSlotSize() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(5, 0.75, 4, 12, 14, 3);
+        SettlementPlan plan = planner.plan(request(flatSurvey(72, 48), 100L, settings))
+                .plan()
+                .orElseThrow();
+
+        Parcel parcel = plan.parcels().getFirst();
+        BuildingSlot buildingSlot = plan.buildingSlots().getFirst();
+
+        assertEquals(new GridSize(12, 14), parcel.bounds().size());
+        assertEquals(new GridSize(6, 8), buildingSlot.bounds().size());
+    }
+
+    @Test
+    void rejectsSurveyTooSmallForConfiguredScale() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(5, 0.75, 4, 30, 28, 4);
+        SuburbPlanningResult result = planner.plan(request(flatSurvey(32, 32), 100L, settings));
+
+        assertFalse(result.successful());
+        assertEquals(Optional.of(SuburbPlanningFailureReason.SURVEY_TOO_SMALL), result.failureReason());
     }
 
     @Test

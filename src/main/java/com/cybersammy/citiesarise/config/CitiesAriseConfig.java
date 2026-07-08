@@ -13,6 +13,9 @@ public final class CitiesAriseConfig {
     private static final ModConfigSpec.IntValue DEBUG_ROAD_WIDTH;
     private static final ModConfigSpec.DoubleValue DEBUG_MAX_BUILDABLE_SLOPE;
     private static final ModConfigSpec.IntValue DEBUG_TARGET_PARCEL_COUNT;
+    private static final ModConfigSpec.IntValue DEBUG_PARCEL_WIDTH;
+    private static final ModConfigSpec.IntValue DEBUG_PARCEL_DEPTH;
+    private static final ModConfigSpec.IntValue DEBUG_BUILDING_MARGIN;
     private static final ModConfigSpec.BooleanValue DEBUG_PLACEMENT_ENABLED;
     private static final ModConfigSpec.BooleanValue DEBUG_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue TERRAIN_LOGGING_ENABLED;
@@ -54,8 +57,17 @@ public final class CitiesAriseConfig {
         DEBUG_TARGET_PARCEL_COUNT = builder
                 .comment("Target parcel count used by the Minecraft debug suburb planner.")
                 .defineInRange("debugTargetParcelCount", DebugSuburbPlanningConfig.DEFAULT_TARGET_PARCEL_COUNT, 1, 128);
+        DEBUG_PARCEL_WIDTH = builder
+                .comment("Parcel width used by the Minecraft debug suburb planner.")
+                .defineInRange("debugParcelWidth", DebugSuburbPlanningConfig.DEFAULT_PARCEL_WIDTH, 3, 64);
+        DEBUG_PARCEL_DEPTH = builder
+                .comment("Parcel depth used by the Minecraft debug suburb planner.")
+                .defineInRange("debugParcelDepth", DebugSuburbPlanningConfig.DEFAULT_PARCEL_DEPTH, 3, 64);
+        DEBUG_BUILDING_MARGIN = builder
+                .comment("Empty parcel margin around each debug placeholder building.")
+                .defineInRange("debugBuildingMargin", DebugSuburbPlanningConfig.DEFAULT_BUILDING_MARGIN, 0, 16);
         DEBUG_PLACEMENT_ENABLED = builder
-                .comment("Allows /citiesarise debug place to permanently place vanilla marker blocks.")
+                .comment("Allows /citiesarise debug place to permanently place vanilla debug blocks.")
                 .define("debugPlacementEnabled", false);
         builder.pop();
 
@@ -89,7 +101,10 @@ public final class CitiesAriseConfig {
                 DEBUG_SURVEY_DEPTH.get(),
                 DEBUG_ROAD_WIDTH.get(),
                 DEBUG_MAX_BUILDABLE_SLOPE.get(),
-                DEBUG_TARGET_PARCEL_COUNT.get()
+                DEBUG_TARGET_PARCEL_COUNT.get(),
+                DEBUG_PARCEL_WIDTH.get(),
+                DEBUG_PARCEL_DEPTH.get(),
+                DEBUG_BUILDING_MARGIN.get()
         );
     }
 

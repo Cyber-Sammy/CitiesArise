@@ -3,21 +3,21 @@ package com.cybersammy.citiesarise.minecraft.terrain;
 import java.util.Objects;
 import java.util.function.IntFunction;
 
-final class MinecraftSurfaceScanner {
+public final class MinecraftSurfaceScanner {
     private MinecraftSurfaceScanner() {
     }
 
-    static MinecraftSurfaceSample scan(
+    public static SurfaceSample scan(
             int topHeight,
             int minBuildHeight,
-            IntFunction<MinecraftSurfaceBlock> blockAt
+            IntFunction<SurfaceBlock> blockAt
     ) {
         Objects.requireNonNull(blockAt, "blockAt");
         boolean leaves = false;
         boolean logs = false;
 
         for (int y = topHeight - 1; y >= minBuildHeight; y--) {
-            MinecraftSurfaceBlock block = blockAt.apply(y);
+            SurfaceBlock block = blockAt.apply(y);
 
             if (block.air()) {
                 continue;
@@ -33,15 +33,15 @@ final class MinecraftSurfaceScanner {
                 continue;
             }
 
-            return new MinecraftSurfaceSample(y + 1, leaves, logs);
+            return new SurfaceSample(y + 1, leaves, logs);
         }
 
-        return new MinecraftSurfaceSample(topHeight, leaves, logs);
+        return new SurfaceSample(topHeight, leaves, logs);
     }
-}
 
-record MinecraftSurfaceBlock(boolean air, boolean leaves, boolean logs) {
-}
+    public record SurfaceBlock(boolean air, boolean leaves, boolean logs) {
+    }
 
-record MinecraftSurfaceSample(int height, boolean leaves, boolean logs) {
+    public record SurfaceSample(int height, boolean leaves, boolean logs) {
+    }
 }

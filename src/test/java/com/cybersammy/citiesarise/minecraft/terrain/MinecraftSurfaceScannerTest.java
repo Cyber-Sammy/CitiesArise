@@ -4,12 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
+import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceSample;
 import org.junit.jupiter.api.Test;
 
 final class MinecraftSurfaceScannerTest {
     @Test
     void skipsVegetationWhenResolvingPlanningSurfaceHeight() {
-        MinecraftSurfaceSample sample = MinecraftSurfaceScanner.scan(
+        SurfaceSample sample = MinecraftSurfaceScanner.scan(
                 80,
                 60,
                 y -> blockAt(y, 79, 78, 77)
@@ -22,7 +24,7 @@ final class MinecraftSurfaceScannerTest {
 
     @Test
     void keepsSolidSurfaceHeightWhenNoVegetationIsAboveIt() {
-        MinecraftSurfaceSample sample = MinecraftSurfaceScanner.scan(
+        SurfaceSample sample = MinecraftSurfaceScanner.scan(
                 70,
                 60,
                 y -> blockAt(y, 80, 81, 69)
@@ -35,7 +37,7 @@ final class MinecraftSurfaceScannerTest {
 
     @Test
     void fallsBackToTopHeightWhenNoPlanningSurfaceExists() {
-        MinecraftSurfaceSample sample = MinecraftSurfaceScanner.scan(
+        SurfaceSample sample = MinecraftSurfaceScanner.scan(
                 70,
                 68,
                 y -> blockAt(y, 69, 68, 80)
@@ -46,7 +48,7 @@ final class MinecraftSurfaceScannerTest {
         assertTrue(sample.logs());
     }
 
-    private static MinecraftSurfaceBlock blockAt(int y, int leavesY, int logsY, int solidY) {
+    private static SurfaceBlock blockAt(int y, int leavesY, int logsY, int solidY) {
         if (y == leavesY) {
             return leaves();
         }
@@ -62,19 +64,19 @@ final class MinecraftSurfaceScannerTest {
         return air();
     }
 
-    private static MinecraftSurfaceBlock leaves() {
-        return new MinecraftSurfaceBlock(false, true, false);
+    private static SurfaceBlock leaves() {
+        return new SurfaceBlock(false, true, false);
     }
 
-    private static MinecraftSurfaceBlock logs() {
-        return new MinecraftSurfaceBlock(false, false, true);
+    private static SurfaceBlock logs() {
+        return new SurfaceBlock(false, false, true);
     }
 
-    private static MinecraftSurfaceBlock solid() {
-        return new MinecraftSurfaceBlock(false, false, false);
+    private static SurfaceBlock solid() {
+        return new SurfaceBlock(false, false, false);
     }
 
-    private static MinecraftSurfaceBlock air() {
-        return new MinecraftSurfaceBlock(true, false, false);
+    private static SurfaceBlock air() {
+        return new SurfaceBlock(true, false, false);
     }
 }

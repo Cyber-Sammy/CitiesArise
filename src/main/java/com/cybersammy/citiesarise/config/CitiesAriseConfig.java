@@ -16,6 +16,7 @@ public final class CitiesAriseConfig {
     private static final ModConfigSpec.BooleanValue DEBUG_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue TERRAIN_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue PLANNING_LOGGING_ENABLED;
+    private static final ModConfigSpec.BooleanValue PLACEMENT_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue COMMAND_LOGGING_ENABLED;
 
     static {
@@ -64,6 +65,9 @@ public final class CitiesAriseConfig {
         PLANNING_LOGGING_ENABLED = builder
                 .comment("Enables planner result logs when debug logging is enabled.")
                 .define("planningLoggingEnabled", true);
+        PLACEMENT_LOGGING_ENABLED = builder
+                .comment("Enables debug placement logs when debug logging is enabled.")
+                .define("placementLoggingEnabled", true);
         COMMAND_LOGGING_ENABLED = builder
                 .comment("Enables debug command logs when debug logging is enabled.")
                 .define("commandLoggingEnabled", true);
@@ -103,6 +107,14 @@ public final class CitiesAriseConfig {
         }
 
         return PLANNING_LOGGING_ENABLED.get();
+    }
+
+    public static boolean placementLoggingEnabled() {
+        if (!debugLoggingEnabled()) {
+            return false;
+        }
+
+        return PLACEMENT_LOGGING_ENABLED.get();
     }
 
     public static boolean commandLoggingEnabled() {

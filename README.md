@@ -32,6 +32,12 @@ The mod also includes a debug command that samples real Minecraft terrain around
 
 The command reports whether a semantic suburb plan was accepted or rejected, along with the region, survey bounds, deterministic seed, and plan element counts.
 
+The debug placement command applies the accepted plan as simple vanilla marker blocks:
+
+```text
+/citiesarise debug place
+```
+
 ## Build
 
 Requirements:
@@ -54,7 +60,7 @@ The generated jar is written to `build/libs`.
 
 ## Configuration And Integration
 
-Cities Arise creates a common config file with logging options. `debugLoggingEnabled` is the master switch. Terrain, planning, and command logs can be toggled separately and only emit debug details when the master switch is enabled.
+Cities Arise creates a common config file with logging options. `debugLoggingEnabled` is the master switch. Terrain, planning, placement, and command logs can be toggled separately and only emit debug details when the master switch is enabled.
 
 The debug suburb planner can also be tuned from the same common config:
 

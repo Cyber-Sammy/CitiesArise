@@ -14,39 +14,74 @@ public final class DebugPlacementApplier {
     private static final int UPDATE_FLAGS = 3;
 
     private final DebugBlockMaterialProvider materialProvider;
+    private final DebugPlacementUndoStore undoStore;
 
     public DebugPlacementApplier() {
-        this(new VanillaDebugBlockMaterialProvider());
+        this(new VanillaDebugBlockMaterialProvider(), new DebugPlacementUndoStore());
     }
 
     public DebugPlacementApplier(DebugBlockMaterialProvider materialProvider) {
-        this.materialProvider = Objects.requireNonNull(materialProvider, "materialProvider");
+        this(materialProvider, new DebugPlacementUndoStore());
     }
 
-    public int apply(ServerLevel level, DebugPlacementPlan placementPlan) {
+    public DebugPlacementApplier(DebugBlockMaterialProvider materialProvider, DebugPlacementUndoStore undoStore) {
+        this.materialProvider = Objects.requireNonNull(materialProvider, "materialProvider");
+        this.undoStore = Objects.requireNonNull(undoStore, "undoStore");
+    }
+
+    public int apply(ServerLevel level, DebugPlacementPlan placementPlan, boolean undoEnabled) {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(placementPlan, "placementPlan");
 
         int placedBlocks = 0;
+        DebugPlacementSnapshotBuilder snapshotBuilder = new DebugPlacementSnapshotBuilder();
 
         for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
-            applyOperation(level, operation);
+            applyOperation(level, operation, snapshotBuilder);
             placedBlocks++;
         }
 
+        saveUndoSnapshot(level, snapshotBuilder, undoEnabled);
         return placedBlocks;
     }
 
-    private void applyOperation(ServerLevel level, DebugBlockPlacementOperation operation) {
+    public int undoLast(ServerLevel level) {
+        return undoStore.undoLast(level).restoredBlocks();
+    }
+
+    public DebugPlacementUndoResult undoLastPlacement(ServerLevel level) {
+        return undoStore.undoLast(level);
+    }
+
+    private void saveUndoSnapshot(
+            ServerLevel level,
+            DebugPlacementSnapshotBuilder snapshotBuilder,
+            boolean undoEnabled
+    ) {
+        if (!undoEnabled) {
+            undoStore.clear();
+            return;
+        }
+
+        undoStore.save(level, snapshotBuilder.build());
+    }
+
+    private void applyOperation(
+            ServerLevel level,
+            DebugBlockPlacementOperation operation,
+            DebugPlacementSnapshotBuilder snapshotBuilder
+    ) {
         int x = operation.point().x();
         int z = operation.point().z();
         int topHeight = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z);
         int baseY = placementY(level, x, z, topHeight);
         int targetY = targetY(level, baseY, operation.verticalOffset());
         BlockState state = materialProvider.blockState(operation.role());
+        BlockPos position = new BlockPos(x, targetY, z);
 
-        level.setBlock(new BlockPos(x, targetY, z), state, UPDATE_FLAGS);
-        clearVegetationAbove(level, x, baseY, z, topHeight);
+        snapshotBuilder.capture(position, level.getBlockState(position));
+        level.setBlock(position, state, UPDATE_FLAGS);
+        clearVegetationAbove(level, x, baseY, z, topHeight, snapshotBuilder);
     }
 
     private int placementY(ServerLevel level, int x, int z, int topHeight) {
@@ -73,13 +108,26 @@ public final class DebugPlacementApplier {
         return targetY;
     }
 
-    private void clearVegetationAbove(ServerLevel level, int x, int placementY, int z, int topHeight) {
+    private void clearVegetationAbove(
+            ServerLevel level,
+            int x,
+            int placementY,
+            int z,
+            int topHeight,
+            DebugPlacementSnapshotBuilder snapshotBuilder
+    ) {
         for (int y = placementY + 1; y < topHeight; y++) {
-            clearVegetationBlock(level, x, y, z);
+            clearVegetationBlock(level, x, y, z, snapshotBuilder);
         }
     }
 
-    private void clearVegetationBlock(ServerLevel level, int x, int y, int z) {
+    private void clearVegetationBlock(
+            ServerLevel level,
+            int x,
+            int y,
+            int z,
+            DebugPlacementSnapshotBuilder snapshotBuilder
+    ) {
         BlockPos position = new BlockPos(x, y, z);
         BlockState state = level.getBlockState(position);
 
@@ -87,6 +135,7 @@ public final class DebugPlacementApplier {
             return;
         }
 
+        snapshotBuilder.capture(position, state);
         level.setBlock(position, Blocks.AIR.defaultBlockState(), UPDATE_FLAGS);
     }
 

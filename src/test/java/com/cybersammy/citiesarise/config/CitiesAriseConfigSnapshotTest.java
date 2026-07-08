@@ -21,6 +21,7 @@ final class CitiesAriseConfigSnapshotTest {
         assertEquals(DebugSuburbPlanningConfig.DEFAULT_PARCEL_DEPTH, snapshot.debugParcelDepth());
         assertEquals(DebugSuburbPlanningConfig.DEFAULT_BUILDING_MARGIN, snapshot.debugBuildingMargin());
         assertFalse(snapshot.debugPlacementEnabled());
+        assertTrue(snapshot.debugPlacementUndoEnabled());
         assertFalse(snapshot.debugLoggingEnabled());
         assertTrue(snapshot.terrainLoggingEnabled());
         assertTrue(snapshot.planningLoggingEnabled());
@@ -57,6 +58,7 @@ final class CitiesAriseConfigSnapshotTest {
                 depth,
                 margin,
                 defaults.debugPlacementEnabled(),
+                defaults.debugPlacementUndoEnabled(),
                 defaults.debugLoggingEnabled(),
                 defaults.terrainLoggingEnabled(),
                 defaults.planningLoggingEnabled(),
@@ -78,6 +80,7 @@ final class CitiesAriseConfigSnapshotTest {
                 defaults.debugParcelDepth(),
                 defaults.debugBuildingMargin(),
                 defaults.debugPlacementEnabled(),
+                defaults.debugPlacementUndoEnabled(),
                 defaults.debugLoggingEnabled(),
                 defaults.terrainLoggingEnabled(),
                 defaults.planningLoggingEnabled(),
@@ -99,6 +102,7 @@ final class CitiesAriseConfigSnapshotTest {
                 defaults.debugParcelDepth(),
                 defaults.debugBuildingMargin(),
                 defaults.debugPlacementEnabled(),
+                defaults.debugPlacementUndoEnabled(),
                 defaults.debugLoggingEnabled(),
                 defaults.terrainLoggingEnabled(),
                 defaults.planningLoggingEnabled(),
@@ -120,6 +124,7 @@ final class CitiesAriseConfigSnapshotTest {
                 defaults.debugParcelDepth(),
                 buildingMargin,
                 defaults.debugPlacementEnabled(),
+                defaults.debugPlacementUndoEnabled(),
                 defaults.debugLoggingEnabled(),
                 defaults.terrainLoggingEnabled(),
                 defaults.planningLoggingEnabled(),

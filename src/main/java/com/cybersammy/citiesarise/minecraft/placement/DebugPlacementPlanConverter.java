@@ -6,6 +6,7 @@ import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
+import com.cybersammy.citiesarise.core.model.PlanTags;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
@@ -61,6 +62,7 @@ public final class DebugPlacementPlanConverter {
         RoadNode startNode = requiredNode(nodesById, segment.startNodeId());
         RoadNode endNode = requiredNode(nodesById, segment.endNodeId());
         GridBounds roadBounds = roadBounds(startNode.point(), endNode.point(), segment.width());
+        DebugPlacementRole roadSurfaceRole = roadSurfaceRole(segment);
 
         addFilledBoundsOperations(
                 roadBounds,
@@ -72,10 +74,18 @@ public final class DebugPlacementPlanConverter {
         addFilledBoundsOperations(
                 roadBounds,
                 SURFACE_OFFSET,
-                DebugPlacementRole.ROAD_SURFACE,
+                roadSurfaceRole,
                 segment.id(),
                 operationsByPosition
         );
+    }
+
+    private static DebugPlacementRole roadSurfaceRole(RoadSegment segment) {
+        if (segment.tags().contains(PlanTags.WORN)) {
+            return DebugPlacementRole.WORN_ROAD_SURFACE;
+        }
+
+        return DebugPlacementRole.ROAD_SURFACE;
     }
 
     private static RoadNode requiredNode(Map<PlanElementId, RoadNode> nodesById, PlanElementId nodeId) {
@@ -150,6 +160,9 @@ public final class DebugPlacementPlanConverter {
             Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (BuildingSlot buildingSlot : plan.buildingSlots()) {
+            DebugPlacementRole wallRole = buildingWallRole(buildingSlot);
+            DebugPlacementRole roofRole = buildingRoofRole(buildingSlot);
+
             addFilledBoundsOperations(
                     buildingSlot.bounds(),
                     FOUNDATION_OFFSET,
@@ -164,27 +177,44 @@ public final class DebugPlacementPlanConverter {
                     buildingSlot.id(),
                     operationsByPosition
             );
-            addWallOperations(buildingSlot.bounds(), buildingSlot.id(), operationsByPosition);
+            addWallOperations(buildingSlot.bounds(), buildingSlot.id(), wallRole, operationsByPosition);
             addFilledBoundsOperations(
                     buildingSlot.bounds(),
                     ROOF_OFFSET,
-                    DebugPlacementRole.BUILDING_ROOF,
+                    roofRole,
                     buildingSlot.id(),
                     operationsByPosition
             );
         }
     }
 
+    private static DebugPlacementRole buildingWallRole(BuildingSlot buildingSlot) {
+        if (buildingSlot.tags().contains(PlanTags.DECAYED)) {
+            return DebugPlacementRole.DECAYED_BUILDING_WALL;
+        }
+
+        return DebugPlacementRole.BUILDING_WALL;
+    }
+
+    private static DebugPlacementRole buildingRoofRole(BuildingSlot buildingSlot) {
+        if (buildingSlot.tags().contains(PlanTags.DECAYED)) {
+            return DebugPlacementRole.DECAYED_BUILDING_ROOF;
+        }
+
+        return DebugPlacementRole.BUILDING_ROOF;
+    }
+
     private static void addWallOperations(
             GridBounds bounds,
             PlanElementId sourceElementId,
+            DebugPlacementRole role,
             Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (int offset = FIRST_WALL_OFFSET; offset <= LAST_WALL_OFFSET; offset++) {
             addOutlineOperations(
                     bounds,
                     offset,
-                    DebugPlacementRole.BUILDING_WALL,
+                    role,
                     sourceElementId,
                     operationsByPosition
             );

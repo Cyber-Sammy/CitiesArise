@@ -22,7 +22,7 @@ Cities Arise will follow a plan-first pipeline:
 
 The core planner must stay independent from Minecraft and NeoForge. Loader-specific code belongs in adapter layers.
 
-The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, and terrain surveys. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. Terrain suitability scoring can reject water, blocked terrain, and slopes that are too steep for planning. The core planner can now produce a minimal semantic suburb plan on accepted abstract terrain.
+The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, terrain surveys, and semantic plan transforms. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. Terrain suitability scoring can reject water, blocked terrain, and slopes that are too steep for planning. The core planner can now produce a minimal semantic suburb plan on accepted abstract terrain.
 
 The mod also includes a debug command that samples real Minecraft terrain around the player's region and runs the suburb planner without placing blocks:
 
@@ -38,7 +38,7 @@ The debug placement command applies the accepted plan as simple vanilla blocks:
 /citiesarise debug place
 ```
 
-This command permanently changes the world. It is disabled by default and requires `debugPlacementEnabled=true` in the common config. The current debug output uses vanilla roads, simple yards, foundations, and placeholder house shapes. It is still a development preview rather than final settlement content.
+This command permanently changes the world. It is disabled by default and requires `debugPlacementEnabled=true` in the common config. The current debug output uses vanilla roads, simple yards, foundations, placeholder house shapes, and simple markers for light decay transforms. It is still a development preview rather than final settlement content.
 
 The current debug config can also be edited in game:
 

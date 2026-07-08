@@ -7,9 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
+import com.cybersammy.citiesarise.core.model.BuildingSlot;
+import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanProperties;
+import com.cybersammy.citiesarise.core.model.PlanTags;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
+import com.cybersammy.citiesarise.core.model.RoadNode;
+import com.cybersammy.citiesarise.core.model.RoadSegment;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningFailureReason;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
@@ -24,6 +29,24 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class SuburbDebugPlanResultTest {
+    @Test
+    void includesTransformCountsInSuccessfulSummary() {
+        SuburbDebugPlanResult result = SuburbDebugPlanResult.from(
+                new SettlementRegion(1, -2),
+                new GridBounds(new GridPoint(10, 20), new GridSize(40, 30)),
+                123L,
+                SuburbPlanningResult.success(transformedPlan())
+        );
+
+        assertEquals(1, result.wornRoadCount());
+        assertEquals(1, result.decayedBuildingSlotCount());
+        assertEquals(
+                "region=(1, -2), bounds=(10, 20, 40x30), seed=123"
+                        + ", roads=1, parcels=1, buildingSlots=1, wornRoads=1, decayedBuildingSlots=1",
+                result.summary()
+        );
+    }
+
     @Test
     void createsRejectedSummaryFromPlannerResult() {
         SuburbDebugPlanResult result = SuburbDebugPlanResult.from(
@@ -119,5 +142,43 @@ final class SuburbDebugPlanResultTest {
                 Set.of(),
                 PlanProperties.empty()
         );
+    }
+
+    private static SettlementPlan transformedPlan() {
+        PlanElementId startId = new PlanElementId("road/start");
+        PlanElementId endId = new PlanElementId("road/end");
+        PlanElementId parcelId = new PlanElementId("parcel/test");
+
+        return new SettlementPlan(
+                new PlanElementId("settlement/test"),
+                new RoadGraph(
+                        List.of(
+                                new RoadNode(startId, new GridPoint(0, 0), Set.of(), PlanProperties.empty()),
+                                new RoadNode(endId, new GridPoint(8, 0), Set.of(), PlanProperties.empty())
+                        ),
+                        List.of(new RoadSegment(
+                                new PlanElementId("road/test"),
+                                startId,
+                                endId,
+                                5,
+                                Set.of(PlanTags.WORN),
+                                PlanProperties.empty()
+                        ))
+                ),
+                List.of(new Parcel(parcelId, bounds(0, 2, 8, 8), Set.of(), PlanProperties.empty())),
+                List.of(new BuildingSlot(
+                        new PlanElementId("building/test"),
+                        parcelId,
+                        bounds(1, 3, 4, 4),
+                        Set.of(PlanTags.DECAYED),
+                        PlanProperties.empty()
+                )),
+                Set.of(),
+                PlanProperties.empty()
+        );
+    }
+
+    private static GridBounds bounds(int x, int z, int width, int depth) {
+        return new GridBounds(new GridPoint(x, z), new GridSize(width, depth));
     }
 }

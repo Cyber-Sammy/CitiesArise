@@ -1,5 +1,6 @@
 package com.cybersammy.citiesarise.core.model;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -25,6 +26,13 @@ public record PlanProperties(Map<PlanPropertyKey, String> values) {
     public Optional<String> find(PlanPropertyKey key) {
         Objects.requireNonNull(key, "key");
         return Optional.ofNullable(values.get(key));
+    }
+
+    public PlanProperties with(PlanPropertyKey key, String value) {
+        Objects.requireNonNull(key, "key");
+        Map<PlanPropertyKey, String> updatedValues = new LinkedHashMap<>(values);
+        updatedValues.put(key, requireValue(value));
+        return new PlanProperties(updatedValues);
     }
 
     private static void rejectNullValues(Map<PlanPropertyKey, String> values) {

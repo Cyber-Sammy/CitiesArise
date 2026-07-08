@@ -10,6 +10,8 @@ import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanProperties;
+import com.cybersammy.citiesarise.core.model.PlanTag;
+import com.cybersammy.citiesarise.core.model.PlanTags;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
@@ -38,6 +40,17 @@ final class DebugPlacementPlanConverterTest {
     }
 
     @Test
+    void convertsWornRoadSegmentToWornSurfaceOperations() {
+        PlanElementId roadId = id("road");
+        SettlementPlan plan = planWithRoad(roadId, point(0, 0), point(4, 0), 3, Set.of(PlanTags.WORN));
+
+        DebugPlacementPlan placementPlan = converter.convert(plan);
+
+        assertOperation(placementPlan, point(0, -1), 0, DebugPlacementRole.WORN_ROAD_SURFACE, roadId);
+        assertOperation(placementPlan, point(4, 1), 0, DebugPlacementRole.WORN_ROAD_SURFACE, roadId);
+    }
+
+    @Test
     void convertsParcelsAndBuildingSlotsToFoundationAndHouseOperations() {
         Parcel parcel = parcel(id("parcel"), bounds(10, 10, 4, 4));
         BuildingSlot buildingSlot = buildingSlot(id("slot"), parcel.id(), bounds(11, 11, 2, 2));
@@ -51,6 +64,18 @@ final class DebugPlacementPlanConverterTest {
         assertOperation(placementPlan, point(11, 11), -1, DebugPlacementRole.FOUNDATION, buildingSlot.id());
         assertOperation(placementPlan, point(11, 11), 1, DebugPlacementRole.BUILDING_WALL, buildingSlot.id());
         assertOperation(placementPlan, point(12, 12), 3, DebugPlacementRole.BUILDING_ROOF, buildingSlot.id());
+    }
+
+    @Test
+    void convertsDecayedBuildingSlotToDecayedHouseOperations() {
+        Parcel parcel = parcel(id("parcel"), bounds(10, 10, 4, 4));
+        BuildingSlot buildingSlot = decayedBuildingSlot(id("slot"), parcel.id(), bounds(11, 11, 2, 2));
+        SettlementPlan plan = plan(RoadGraph.empty(), List.of(parcel), List.of(buildingSlot));
+
+        DebugPlacementPlan placementPlan = converter.convert(plan);
+
+        assertOperation(placementPlan, point(11, 11), 1, DebugPlacementRole.DECAYED_BUILDING_WALL, buildingSlot.id());
+        assertOperation(placementPlan, point(12, 12), 3, DebugPlacementRole.DECAYED_BUILDING_ROOF, buildingSlot.id());
     }
 
     @Test
@@ -96,16 +121,36 @@ final class DebugPlacementPlanConverterTest {
     }
 
     private static SettlementPlan planWithRoad(PlanElementId roadId, GridPoint start, GridPoint end, int width) {
-        return plan(roadGraph(roadId, start, end, width), List.of(), List.of());
+        return planWithRoad(roadId, start, end, width, Set.of());
+    }
+
+    private static SettlementPlan planWithRoad(
+            PlanElementId roadId,
+            GridPoint start,
+            GridPoint end,
+            int width,
+            Set<PlanTag> roadTags
+    ) {
+        return plan(roadGraph(roadId, start, end, width, roadTags), List.of(), List.of());
     }
 
     private static RoadGraph roadGraph(PlanElementId roadId, GridPoint start, GridPoint end, int width) {
+        return roadGraph(roadId, start, end, width, Set.of());
+    }
+
+    private static RoadGraph roadGraph(
+            PlanElementId roadId,
+            GridPoint start,
+            GridPoint end,
+            int width,
+            Set<PlanTag> roadTags
+    ) {
         PlanElementId startId = id("start");
         PlanElementId endId = id("end");
 
         return new RoadGraph(
                 List.of(roadNode(startId, start), roadNode(endId, end)),
-                List.of(roadSegment(roadId, startId, endId, width))
+                List.of(roadSegment(roadId, startId, endId, width, roadTags))
         );
     }
 
@@ -130,7 +175,17 @@ final class DebugPlacementPlanConverterTest {
             PlanElementId endNodeId,
             int width
     ) {
-        return new RoadSegment(id, startNodeId, endNodeId, width, Set.of(), PlanProperties.empty());
+        return roadSegment(id, startNodeId, endNodeId, width, Set.of());
+    }
+
+    private static RoadSegment roadSegment(
+            PlanElementId id,
+            PlanElementId startNodeId,
+            PlanElementId endNodeId,
+            int width,
+            Set<PlanTag> tags
+    ) {
+        return new RoadSegment(id, startNodeId, endNodeId, width, tags, PlanProperties.empty());
     }
 
     private static Parcel parcel(PlanElementId id, GridBounds bounds) {
@@ -139,6 +194,10 @@ final class DebugPlacementPlanConverterTest {
 
     private static BuildingSlot buildingSlot(PlanElementId id, PlanElementId parcelId, GridBounds bounds) {
         return new BuildingSlot(id, parcelId, bounds, Set.of(), PlanProperties.empty());
+    }
+
+    private static BuildingSlot decayedBuildingSlot(PlanElementId id, PlanElementId parcelId, GridBounds bounds) {
+        return new BuildingSlot(id, parcelId, bounds, Set.of(PlanTags.DECAYED), PlanProperties.empty());
     }
 
     private static GridBounds bounds(int x, int z, int width, int depth) {

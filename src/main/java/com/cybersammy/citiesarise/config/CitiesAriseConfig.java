@@ -13,6 +13,7 @@ public final class CitiesAriseConfig {
     private static final ModConfigSpec.IntValue DEBUG_ROAD_WIDTH;
     private static final ModConfigSpec.DoubleValue DEBUG_MAX_BUILDABLE_SLOPE;
     private static final ModConfigSpec.IntValue DEBUG_TARGET_PARCEL_COUNT;
+    private static final ModConfigSpec.BooleanValue DEBUG_PLACEMENT_ENABLED;
     private static final ModConfigSpec.BooleanValue DEBUG_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue TERRAIN_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue PLANNING_LOGGING_ENABLED;
@@ -53,6 +54,9 @@ public final class CitiesAriseConfig {
         DEBUG_TARGET_PARCEL_COUNT = builder
                 .comment("Target parcel count used by the Minecraft debug suburb planner.")
                 .defineInRange("debugTargetParcelCount", DebugSuburbPlanningConfig.DEFAULT_TARGET_PARCEL_COUNT, 1, 128);
+        DEBUG_PLACEMENT_ENABLED = builder
+                .comment("Allows /citiesarise debug place to permanently place vanilla marker blocks.")
+                .define("debugPlacementEnabled", false);
         builder.pop();
 
         builder.push("logging");
@@ -91,6 +95,10 @@ public final class CitiesAriseConfig {
 
     public static SuburbPlanningSettings debugSuburbPlanningSettings() {
         return debugSuburbPlanningConfig().toSuburbPlanningSettings();
+    }
+
+    public static boolean debugPlacementEnabled() {
+        return DEBUG_PLACEMENT_ENABLED.get();
     }
 
     public static boolean terrainLoggingEnabled() {

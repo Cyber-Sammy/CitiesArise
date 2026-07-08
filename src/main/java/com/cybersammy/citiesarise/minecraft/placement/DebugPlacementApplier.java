@@ -26,14 +26,15 @@ public final class DebugPlacementApplier {
     private void applyOperation(ServerLevel level, DebugBlockPlacementOperation operation) {
         int x = operation.point().x();
         int z = operation.point().z();
-        int y = placementY(level, x, z);
+        int topHeight = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z);
+        int y = placementY(level, x, z, topHeight);
         BlockState state = blockState(operation.role());
 
         level.setBlock(new BlockPos(x, y, z), state, UPDATE_FLAGS);
+        clearVegetationAbove(level, x, y, z, topHeight);
     }
 
-    private int placementY(ServerLevel level, int x, int z) {
-        int topHeight = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z);
+    private int placementY(ServerLevel level, int x, int z, int topHeight) {
         MinecraftSurfaceScanner.SurfaceSample surfaceSample = MinecraftSurfaceScanner.scan(
                 topHeight,
                 level.getMinBuildHeight(),
@@ -41,6 +42,31 @@ public final class DebugPlacementApplier {
         );
 
         return Math.max(level.getMinBuildHeight(), surfaceSample.height() - 1);
+    }
+
+    private void clearVegetationAbove(ServerLevel level, int x, int placementY, int z, int topHeight) {
+        for (int y = placementY + 1; y < topHeight; y++) {
+            clearVegetationBlock(level, x, y, z);
+        }
+    }
+
+    private void clearVegetationBlock(ServerLevel level, int x, int y, int z) {
+        BlockPos position = new BlockPos(x, y, z);
+        BlockState state = level.getBlockState(position);
+
+        if (!isVegetation(state)) {
+            return;
+        }
+
+        level.setBlock(position, Blocks.AIR.defaultBlockState(), UPDATE_FLAGS);
+    }
+
+    private static boolean isVegetation(BlockState state) {
+        if (state.is(BlockTags.LEAVES)) {
+            return true;
+        }
+
+        return state.is(BlockTags.LOGS);
     }
 
     private SurfaceBlock surfaceBlock(ServerLevel level, int x, int y, int z) {

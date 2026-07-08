@@ -38,6 +38,8 @@ The debug placement command applies the accepted plan as simple vanilla marker b
 /citiesarise debug place
 ```
 
+This command permanently changes the world. It is disabled by default and requires `debugPlacementEnabled=true` in the common config.
+
 ## Build
 
 Requirements:
@@ -69,5 +71,6 @@ The debug suburb planner can also be tuned from the same common config:
 - `debugRoadWidth`: road width used by `/citiesarise debug plan`.
 - `debugMaxBuildableSlope`: maximum normalized slope accepted by the Minecraft debug planner. The default is `0.75`, which accepts gently uneven terrain while still rejecting sharper height changes.
 - `debugTargetParcelCount`: target number of parcels for the debug suburb plan.
+- `debugPlacementEnabled`: enables `/citiesarise debug place`, which permanently places vanilla marker blocks.
 
 Datapack profiles and external integration points are not implemented yet. This document will be updated as those features become real.

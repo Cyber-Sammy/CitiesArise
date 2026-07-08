@@ -52,6 +52,13 @@ public final class CitiesAriseCommands {
     }
 
     private int runDebugPlace(CommandSourceStack source) {
+        if (!CitiesAriseConfig.debugPlacementEnabled()) {
+            String summary = "Cities Arise debug placement is disabled by config.";
+            source.sendFailure(Component.literal(summary));
+            logCommandResult(summary);
+            return 0;
+        }
+
         SuburbDebugPlanResult result = planningService.planAt(source.getLevel(), source.getPosition());
 
         if (!result.successful()) {

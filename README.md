@@ -32,13 +32,13 @@ The mod also includes a debug command that samples real Minecraft terrain around
 
 The command reports whether a semantic suburb plan was accepted or rejected, along with the region, survey bounds, deterministic seed, and plan element counts.
 
-The debug placement command applies the accepted plan as simple vanilla marker blocks:
+The debug placement command applies the accepted plan as simple vanilla blocks:
 
 ```text
 /citiesarise debug place
 ```
 
-This command permanently changes the world. It is disabled by default and requires `debugPlacementEnabled=true` in the common config.
+This command permanently changes the world. It is disabled by default and requires `debugPlacementEnabled=true` in the common config. The current debug output uses vanilla roads, simple yards, foundations, and placeholder house shapes. It is still a development preview rather than final settlement content.
 
 ## Build
 

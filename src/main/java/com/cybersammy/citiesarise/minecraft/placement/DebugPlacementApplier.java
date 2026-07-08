@@ -2,6 +2,7 @@ package com.cybersammy.citiesarise.minecraft.placement;
 
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
+import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
@@ -11,6 +12,16 @@ import net.minecraft.world.level.levelgen.Heightmap;
 
 public final class DebugPlacementApplier {
     private static final int UPDATE_FLAGS = 3;
+
+    private final DebugBlockMaterialProvider materialProvider;
+
+    public DebugPlacementApplier() {
+        this(new VanillaDebugBlockMaterialProvider());
+    }
+
+    public DebugPlacementApplier(DebugBlockMaterialProvider materialProvider) {
+        this.materialProvider = Objects.requireNonNull(materialProvider, "materialProvider");
+    }
 
     public int apply(ServerLevel level, DebugPlacementPlan placementPlan) {
         int placedBlocks = 0;
@@ -27,11 +38,12 @@ public final class DebugPlacementApplier {
         int x = operation.point().x();
         int z = operation.point().z();
         int topHeight = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z);
-        int y = placementY(level, x, z, topHeight);
-        BlockState state = blockState(operation.role());
+        int baseY = placementY(level, x, z, topHeight);
+        int targetY = targetY(level, baseY, operation.verticalOffset());
+        BlockState state = materialProvider.blockState(operation.role());
 
-        level.setBlock(new BlockPos(x, y, z), state, UPDATE_FLAGS);
-        clearVegetationAbove(level, x, y, z, topHeight);
+        level.setBlock(new BlockPos(x, targetY, z), state, UPDATE_FLAGS);
+        clearVegetationAbove(level, x, baseY, z, topHeight);
     }
 
     private int placementY(ServerLevel level, int x, int z, int topHeight) {
@@ -42,6 +54,10 @@ public final class DebugPlacementApplier {
         );
 
         return Math.max(level.getMinBuildHeight(), surfaceSample.height() - 1);
+    }
+
+    private static int targetY(ServerLevel level, int baseY, int verticalOffset) {
+        return Math.max(level.getMinBuildHeight(), baseY + verticalOffset);
     }
 
     private void clearVegetationAbove(ServerLevel level, int x, int placementY, int z, int topHeight) {
@@ -77,13 +93,5 @@ public final class DebugPlacementApplier {
                 state.is(BlockTags.LEAVES),
                 state.is(BlockTags.LOGS)
         );
-    }
-
-    private static BlockState blockState(DebugPlacementRole role) {
-        return switch (role) {
-            case ROAD_SURFACE -> Blocks.STONE_BRICKS.defaultBlockState();
-            case PARCEL_MARKER -> Blocks.OAK_PLANKS.defaultBlockState();
-            case BUILDING_SLOT_MARKER -> Blocks.YELLOW_CONCRETE.defaultBlockState();
-        };
     }
 }

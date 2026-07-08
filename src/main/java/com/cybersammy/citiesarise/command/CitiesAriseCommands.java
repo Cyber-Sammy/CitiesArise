@@ -4,6 +4,8 @@ import com.cybersammy.citiesarise.config.CitiesAriseConfig;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementApplier;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlan;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlanConverter;
+import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementUndoResult;
+import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementUndoStatus;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanResult;
 import com.mojang.brigadier.CommandDispatcher;
@@ -94,15 +96,23 @@ public final class CitiesAriseCommands {
             return 0;
         }
 
-        int restoredBlocks = placementApplier.undoLast(source.getLevel());
+        DebugPlacementUndoResult result = placementApplier.undoLastPlacement(source.getLevel());
 
-        if (restoredBlocks == 0) {
+        if (result.status() == DebugPlacementUndoStatus.EMPTY) {
             String summary = "Cities Arise debug placement undo has no stored placement.";
             source.sendFailure(Component.literal(summary));
             logCommandResult(summary);
             return 0;
         }
 
+        if (result.status() == DebugPlacementUndoStatus.WRONG_DIMENSION) {
+            String summary = "Cities Arise debug placement undo belongs to another dimension.";
+            source.sendFailure(Component.literal(summary));
+            logCommandResult(summary);
+            return 0;
+        }
+
+        int restoredBlocks = result.restoredBlocks();
         String summary = "Cities Arise debug placement undo restored " + restoredBlocks + " blocks.";
         source.sendSuccess(() -> Component.literal(summary), false);
         logPlacementResult(summary);

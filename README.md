@@ -47,6 +47,7 @@ When `debugPlacementUndoEnabled=true`, the mod stores the previous world state f
 ```
 
 Running another debug placement replaces the stored undo state.
+The current undo is a best-effort block-state restore. It does not restore block entity data such as container contents, sign text, or modded block entity NBT. It also restores the saved state unconditionally, so player edits made after debug placement may be overwritten by undo.
 
 The current debug config can also be edited in game:
 

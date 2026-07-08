@@ -41,21 +41,29 @@ public final class DebugPlacementApplier {
             placedBlocks++;
         }
 
-        saveUndoSnapshot(snapshotBuilder, undoEnabled);
+        saveUndoSnapshot(level, snapshotBuilder, undoEnabled);
         return placedBlocks;
     }
 
     public int undoLast(ServerLevel level) {
+        return undoStore.undoLast(level).restoredBlocks();
+    }
+
+    public DebugPlacementUndoResult undoLastPlacement(ServerLevel level) {
         return undoStore.undoLast(level);
     }
 
-    private void saveUndoSnapshot(DebugPlacementSnapshotBuilder snapshotBuilder, boolean undoEnabled) {
+    private void saveUndoSnapshot(
+            ServerLevel level,
+            DebugPlacementSnapshotBuilder snapshotBuilder,
+            boolean undoEnabled
+    ) {
         if (!undoEnabled) {
             undoStore.clear();
             return;
         }
 
-        undoStore.save(snapshotBuilder.build());
+        undoStore.save(level, snapshotBuilder.build());
     }
 
     private void applyOperation(

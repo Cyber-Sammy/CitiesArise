@@ -71,6 +71,9 @@ The debug suburb planner can also be tuned from the same common config:
 - `debugRoadWidth`: road width used by `/citiesarise debug plan`.
 - `debugMaxBuildableSlope`: maximum normalized slope accepted by the Minecraft debug planner. The default is `0.75`, which accepts gently uneven terrain while still rejecting sharper height changes.
 - `debugTargetParcelCount`: target number of parcels for the debug suburb plan.
-- `debugPlacementEnabled`: enables `/citiesarise debug place`, which permanently places vanilla marker blocks.
+- `debugParcelWidth`: parcel width used by the debug suburb planner.
+- `debugParcelDepth`: parcel depth used by the debug suburb planner.
+- `debugBuildingMargin`: empty parcel margin around each debug placeholder building. It is limited by the current parcel size so building footprints remain valid.
+- `debugPlacementEnabled`: enables `/citiesarise debug place`, which permanently places vanilla debug blocks.
 
 Datapack profiles and external integration points are not implemented yet. This document will be updated as those features become real.

@@ -5,6 +5,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class CitiesAriseConfig {
     private static final int MAX_DEBUG_SURVEY_SIZE = 128;
+    private static final int MAX_DEBUG_BUILDING_MARGIN = 8;
 
     public static final ModConfigSpec SPEC;
 
@@ -13,6 +14,9 @@ public final class CitiesAriseConfig {
     private static final ModConfigSpec.IntValue DEBUG_ROAD_WIDTH;
     private static final ModConfigSpec.DoubleValue DEBUG_MAX_BUILDABLE_SLOPE;
     private static final ModConfigSpec.IntValue DEBUG_TARGET_PARCEL_COUNT;
+    private static final ModConfigSpec.IntValue DEBUG_PARCEL_WIDTH;
+    private static final ModConfigSpec.IntValue DEBUG_PARCEL_DEPTH;
+    private static final ModConfigSpec.IntValue DEBUG_BUILDING_MARGIN;
     private static final ModConfigSpec.BooleanValue DEBUG_PLACEMENT_ENABLED;
     private static final ModConfigSpec.BooleanValue DEBUG_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue TERRAIN_LOGGING_ENABLED;
@@ -54,8 +58,22 @@ public final class CitiesAriseConfig {
         DEBUG_TARGET_PARCEL_COUNT = builder
                 .comment("Target parcel count used by the Minecraft debug suburb planner.")
                 .defineInRange("debugTargetParcelCount", DebugSuburbPlanningConfig.DEFAULT_TARGET_PARCEL_COUNT, 1, 128);
+        DEBUG_PARCEL_WIDTH = builder
+                .comment("Parcel width used by the Minecraft debug suburb planner.")
+                .defineInRange("debugParcelWidth", DebugSuburbPlanningConfig.DEFAULT_PARCEL_WIDTH, 3, 64);
+        DEBUG_PARCEL_DEPTH = builder
+                .comment("Parcel depth used by the Minecraft debug suburb planner.")
+                .defineInRange("debugParcelDepth", DebugSuburbPlanningConfig.DEFAULT_PARCEL_DEPTH, 3, 64);
+        DEBUG_BUILDING_MARGIN = builder
+                .comment("Empty parcel margin around each debug placeholder building.")
+                .defineInRange(
+                        "debugBuildingMargin",
+                        DebugSuburbPlanningConfig.DEFAULT_BUILDING_MARGIN,
+                        0,
+                        MAX_DEBUG_BUILDING_MARGIN
+                );
         DEBUG_PLACEMENT_ENABLED = builder
-                .comment("Allows /citiesarise debug place to permanently place vanilla marker blocks.")
+                .comment("Allows /citiesarise debug place to permanently place vanilla debug blocks.")
                 .define("debugPlacementEnabled", false);
         builder.pop();
 
@@ -84,13 +102,36 @@ public final class CitiesAriseConfig {
     }
 
     public static DebugSuburbPlanningConfig debugSuburbPlanningConfig() {
+        int parcelWidth = DEBUG_PARCEL_WIDTH.get();
+        int parcelDepth = DEBUG_PARCEL_DEPTH.get();
+        int buildingMargin = safeBuildingMargin(DEBUG_BUILDING_MARGIN.get(), parcelWidth, parcelDepth);
+
         return new DebugSuburbPlanningConfig(
                 DEBUG_SURVEY_WIDTH.get(),
                 DEBUG_SURVEY_DEPTH.get(),
                 DEBUG_ROAD_WIDTH.get(),
                 DEBUG_MAX_BUILDABLE_SLOPE.get(),
-                DEBUG_TARGET_PARCEL_COUNT.get()
+                DEBUG_TARGET_PARCEL_COUNT.get(),
+                parcelWidth,
+                parcelDepth,
+                buildingMargin
         );
+    }
+
+    private static int safeBuildingMargin(int configuredMargin, int parcelWidth, int parcelDepth) {
+        int maxWidthMargin = maxBuildingMargin(parcelWidth);
+        int maxDepthMargin = maxBuildingMargin(parcelDepth);
+        int maxMargin = Math.min(maxWidthMargin, maxDepthMargin);
+
+        if (configuredMargin > maxMargin) {
+            return maxMargin;
+        }
+
+        return configuredMargin;
+    }
+
+    private static int maxBuildingMargin(int parcelSize) {
+        return (parcelSize - 1) / 2;
     }
 
     public static SuburbPlanningSettings debugSuburbPlanningSettings() {

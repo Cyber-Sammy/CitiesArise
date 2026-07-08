@@ -3,21 +3,59 @@ package com.cybersammy.citiesarise.core.planning.suburb;
 public record SuburbPlanningSettings(
         int roadWidth,
         double maxBuildableSlope,
-        int targetParcelCount
+        int targetParcelCount,
+        int parcelWidth,
+        int parcelDepth,
+        int buildingMargin
 ) {
+    public static final int DEFAULT_ROAD_WIDTH = 3;
+    public static final double DEFAULT_MAX_BUILDABLE_SLOPE = 0.25;
+    public static final int DEFAULT_TARGET_PARCEL_COUNT = 6;
+    public static final int DEFAULT_PARCEL_WIDTH = 6;
+    public static final int DEFAULT_PARCEL_DEPTH = 7;
+    public static final int DEFAULT_BUILDING_MARGIN = 1;
+
+    public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, int targetParcelCount) {
+        this(
+                roadWidth,
+                maxBuildableSlope,
+                targetParcelCount,
+                DEFAULT_PARCEL_WIDTH,
+                DEFAULT_PARCEL_DEPTH,
+                DEFAULT_BUILDING_MARGIN
+        );
+    }
+
     public SuburbPlanningSettings {
         requirePositive(roadWidth, "roadWidth");
         requireFiniteNonNegative(maxBuildableSlope, "maxBuildableSlope");
         requirePositive(targetParcelCount, "targetParcelCount");
+        requirePositive(parcelWidth, "parcelWidth");
+        requirePositive(parcelDepth, "parcelDepth");
+        requireNonNegative(buildingMargin, "buildingMargin");
+        requireBuildingFitsParcel(parcelWidth, parcelDepth, buildingMargin);
     }
 
     public static SuburbPlanningSettings defaults() {
-        return new SuburbPlanningSettings(3, 0.25, 6);
+        return new SuburbPlanningSettings(
+                DEFAULT_ROAD_WIDTH,
+                DEFAULT_MAX_BUILDABLE_SLOPE,
+                DEFAULT_TARGET_PARCEL_COUNT,
+                DEFAULT_PARCEL_WIDTH,
+                DEFAULT_PARCEL_DEPTH,
+                DEFAULT_BUILDING_MARGIN
+        );
     }
 
     private static void requirePositive(int value, String name) {
         if (value <= 0) {
             throw new IllegalArgumentException(name + " must be positive");
+        }
+    }
+
+    private static void requireNonNegative(int value, String name) {
+        if (value < 0) {
+            throw new IllegalArgumentException(name + " must not be negative");
         }
     }
 
@@ -29,5 +67,19 @@ public record SuburbPlanningSettings(
         if (value < 0.0) {
             throw new IllegalArgumentException(name + " must not be negative");
         }
+    }
+
+    private static void requireBuildingFitsParcel(int parcelWidth, int parcelDepth, int buildingMargin) {
+        if (buildingSize(parcelWidth, buildingMargin) <= 0) {
+            throw new IllegalArgumentException("building width must be positive");
+        }
+
+        if (buildingSize(parcelDepth, buildingMargin) <= 0) {
+            throw new IllegalArgumentException("building depth must be positive");
+        }
+    }
+
+    private static int buildingSize(int parcelSize, int buildingMargin) {
+        return parcelSize - (buildingMargin * 2);
     }
 }

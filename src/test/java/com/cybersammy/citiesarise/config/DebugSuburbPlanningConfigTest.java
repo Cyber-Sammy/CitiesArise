@@ -13,24 +13,27 @@ final class DebugSuburbPlanningConfigTest {
     void usesMinecraftFacingDefaults() {
         SuburbPlanningSettings settings = DebugSuburbPlanningConfig.defaults().toSuburbPlanningSettings();
 
-        assertEquals(3, settings.roadWidth());
+        assertEquals(5, settings.roadWidth());
         assertEquals(0.75, settings.maxBuildableSlope());
-        assertEquals(6, settings.targetParcelCount());
+        assertEquals(8, settings.targetParcelCount());
+        assertEquals(12, settings.parcelWidth());
+        assertEquals(14, settings.parcelDepth());
+        assertEquals(3, settings.buildingMargin());
     }
 
     @Test
     void usesDefaultSurveySize() {
         GridSize surveySize = DebugSuburbPlanningConfig.defaults().toSurveySize();
 
-        assertEquals(new GridSize(40, 30), surveySize);
+        assertEquals(new GridSize(72, 48), surveySize);
     }
 
     @Test
     void mapsCustomValuesToRuntimeSettings() {
-        DebugSuburbPlanningConfig config = new DebugSuburbPlanningConfig(48, 36, 5, 1.25, 12);
+        DebugSuburbPlanningConfig config = new DebugSuburbPlanningConfig(80, 56, 5, 1.25, 12, 14, 16, 4);
 
-        assertEquals(new GridSize(48, 36), config.toSurveySize());
-        assertEquals(new SuburbPlanningSettings(5, 1.25, 12), config.toSuburbPlanningSettings());
+        assertEquals(new GridSize(80, 56), config.toSurveySize());
+        assertEquals(new SuburbPlanningSettings(5, 1.25, 12, 14, 16, 4), config.toSuburbPlanningSettings());
     }
 
     @Test
@@ -43,11 +46,15 @@ final class DebugSuburbPlanningConfigTest {
 
     @Test
     void rejectsInvalidSettings() {
-        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(0, 30, 3, 0.75, 6));
-        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(40, 0, 3, 0.75, 6));
-        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(40, 30, 0, 0.75, 6));
-        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(40, 30, 3, -0.1, 6));
-        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(40, 30, 3, Double.NaN, 6));
-        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(40, 30, 3, 0.75, 0));
+        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(0, 48, 5, 0.75, 8, 12, 14, 3));
+        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 0, 5, 0.75, 8, 12, 14, 3));
+        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 0, 0.75, 8, 12, 14, 3));
+        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 5, -0.1, 8, 12, 14, 3));
+        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 5, Double.NaN, 8, 12, 14, 3));
+        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 5, 0.75, 0, 12, 14, 3));
+        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 5, 0.75, 8, 0, 14, 3));
+        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 5, 0.75, 8, 12, 0, 3));
+        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 5, 0.75, 8, 12, 14, -1));
+        assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 5, 0.75, 8, 6, 14, 3));
     }
 }

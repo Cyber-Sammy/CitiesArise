@@ -27,12 +27,6 @@ import java.util.Random;
 import java.util.Set;
 
 public final class SuburbPlanner {
-    private static final int MIN_SURVEY_WIDTH = 28;
-    private static final int MIN_SURVEY_DEPTH = 24;
-    private static final int PARCEL_WIDTH = 6;
-    private static final int PARCEL_DEPTH = 7;
-    private static final int BUILDING_MARGIN = 1;
-
     private final TerrainSuitabilityScorer terrainScorer;
     private final PlanValidator planValidator;
 
@@ -80,15 +74,23 @@ public final class SuburbPlanner {
     private boolean hasEnoughSpace(SuburbPlanningRequest request) {
         GridBounds bounds = request.survey().bounds();
 
-        if (bounds.size().width() < MIN_SURVEY_WIDTH) {
+        if (bounds.size().width() < minimumSurveyWidth(request.settings())) {
             return false;
         }
 
-        if (bounds.size().depth() < MIN_SURVEY_DEPTH) {
+        if (bounds.size().depth() < minimumSurveyDepth(request.settings())) {
             return false;
         }
 
         return roadFitsSurvey(request.settings(), bounds);
+    }
+
+    private static int minimumSurveyWidth(SuburbPlanningSettings settings) {
+        return settings.roadWidth() + settings.parcelWidth();
+    }
+
+    private static int minimumSurveyDepth(SuburbPlanningSettings settings) {
+        return 2 * (settings.roadWidth() + settings.parcelDepth());
     }
 
     private boolean roadFitsSurvey(SuburbPlanningSettings settings, GridBounds bounds) {
@@ -298,7 +300,7 @@ public final class SuburbPlanner {
     ) {
         PlanElementId roadsId = request.settlementId().child("roads");
         boolean northbound = isNorthbound(index);
-        int deadEndZ = deadEndZ(request.survey().bounds(), mainRoadZ, northbound);
+        int deadEndZ = deadEndZ(request.survey().bounds(), request.settings(), mainRoadZ, northbound);
 
         nodes.add(roadNode(roadsId.child("side-" + index + "-junction"), x, mainRoadZ, "side_road"));
         nodes.add(roadNode(roadsId.child("side-" + index + "-dead-end"), x, deadEndZ, "dead_end"));
@@ -321,12 +323,19 @@ public final class SuburbPlanner {
         return index % 2 == 0;
     }
 
-    private static int deadEndZ(GridBounds bounds, int mainRoadZ, boolean northbound) {
+    private static int deadEndZ(
+            GridBounds bounds,
+            SuburbPlanningSettings settings,
+            int mainRoadZ,
+            boolean northbound
+    ) {
+        int reach = settings.parcelDepth() + settings.roadWidth();
+
         if (northbound) {
-            return Math.max(bounds.minZ() + 2, mainRoadZ - 8);
+            return Math.max(bounds.minZ() + settings.roadWidth(), mainRoadZ - reach);
         }
 
-        return Math.min(bounds.maxZExclusive() - 3, mainRoadZ + 8);
+        return Math.min(bounds.maxZExclusive() - settings.roadWidth(), mainRoadZ + reach);
     }
 
     private static List<GridBounds> createParcelBounds(
@@ -336,13 +345,13 @@ public final class SuburbPlanner {
             List<GridBounds> sideRoadCorridors
     ) {
         List<GridBounds> parcelBounds = new ArrayList<>();
-        int northZ = mainRoadZ - request.settings().roadWidth() - PARCEL_DEPTH;
+        int northZ = mainRoadZ - request.settings().roadWidth() - request.settings().parcelDepth();
         int southZ = mainRoadZ + request.settings().roadWidth();
         int startX = bounds.minX() + request.settings().roadWidth();
         int candidateIndex = 0;
 
         while (parcelBounds.size() < request.settings().targetParcelCount()) {
-            GridBounds candidateBounds = parcelBounds(startX, northZ, southZ, candidateIndex);
+            GridBounds candidateBounds = parcelBounds(request.settings(), startX, northZ, southZ, candidateIndex);
             candidateIndex++;
 
             if (!bounds.contains(candidateBounds)) {
@@ -415,7 +424,7 @@ public final class SuburbPlanner {
     ) {
         int roadWidth = request.settings().roadWidth();
         boolean northbound = isNorthbound(sideRoadIndex);
-        int deadEndZ = deadEndZ(bounds, mainRoadZ, northbound);
+        int deadEndZ = deadEndZ(bounds, request.settings(), mainRoadZ, northbound);
         int minZ = Math.min(mainRoadZ, deadEndZ);
         int maxZ = Math.max(mainRoadZ, deadEndZ) + 1;
         int roadX = clamp(sideRoadX - (roadWidth / 2), bounds.minX(), bounds.maxXExclusive() - roadWidth);
@@ -445,15 +454,21 @@ public final class SuburbPlanner {
         return List.copyOf(parcels);
     }
 
-    private static GridBounds parcelBounds(int startX, int northZ, int southZ, int nextIndex) {
-        int x = startX + ((nextIndex / 2) * PARCEL_WIDTH);
+    private static GridBounds parcelBounds(
+            SuburbPlanningSettings settings,
+            int startX,
+            int northZ,
+            int southZ,
+            int nextIndex
+    ) {
+        int x = startX + ((nextIndex / 2) * settings.parcelWidth());
         int z = northZ;
 
         if (nextIndex % 2 == 1) {
             z = southZ;
         }
 
-        return new GridBounds(new GridPoint(x, z), new GridSize(PARCEL_WIDTH, PARCEL_DEPTH));
+        return new GridBounds(new GridPoint(x, z), new GridSize(settings.parcelWidth(), settings.parcelDepth()));
     }
 
     private static Parcel parcel(SuburbPlanningRequest request, GridBounds bounds, int index) {
@@ -477,9 +492,13 @@ public final class SuburbPlanner {
 
     private static BuildingSlot buildingSlot(SuburbPlanningRequest request, Parcel parcel, int index) {
         GridBounds parcelBounds = parcel.bounds();
+        int buildingMargin = request.settings().buildingMargin();
         GridBounds buildingBounds = new GridBounds(
-                new GridPoint(parcelBounds.minX() + BUILDING_MARGIN, parcelBounds.minZ() + BUILDING_MARGIN),
-                new GridSize(parcelBounds.size().width() - 2, parcelBounds.size().depth() - 2)
+                new GridPoint(parcelBounds.minX() + buildingMargin, parcelBounds.minZ() + buildingMargin),
+                new GridSize(
+                        parcelBounds.size().width() - (buildingMargin * 2),
+                        parcelBounds.size().depth() - (buildingMargin * 2)
+                )
         );
 
         return new BuildingSlot(

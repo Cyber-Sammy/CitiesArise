@@ -42,6 +42,7 @@ public final class CitiesAriseConfigScreen extends Screen {
     private IntField debugParcelDepth;
     private IntField debugBuildingMargin;
     private ToggleField debugPlacementEnabled;
+    private ToggleField debugPlacementUndoEnabled;
     private ToggleField debugLoggingEnabled;
     private ToggleField terrainLoggingEnabled;
     private ToggleField planningLoggingEnabled;
@@ -94,30 +95,36 @@ public final class CitiesAriseConfigScreen extends Screen {
                 rightX,
                 topY
         );
-        debugLoggingEnabled = addToggle("Debug logging", snapshot.debugLoggingEnabled(), rightX, topY + ROW_HEIGHT);
+        debugPlacementUndoEnabled = addToggle(
+                "Placement undo",
+                snapshot.debugPlacementUndoEnabled(),
+                rightX,
+                topY + ROW_HEIGHT
+        );
+        debugLoggingEnabled = addToggle("Debug logging", snapshot.debugLoggingEnabled(), rightX, topY + ROW_HEIGHT * 2);
         terrainLoggingEnabled = addToggle(
                 "Terrain logging",
                 snapshot.terrainLoggingEnabled(),
                 rightX,
-                topY + ROW_HEIGHT * 2
+                topY + ROW_HEIGHT * 3
         );
         planningLoggingEnabled = addToggle(
                 "Planning logging",
                 snapshot.planningLoggingEnabled(),
                 rightX,
-                topY + ROW_HEIGHT * 3
+                topY + ROW_HEIGHT * 4
         );
         placementLoggingEnabled = addToggle(
                 "Placement logging",
                 snapshot.placementLoggingEnabled(),
                 rightX,
-                topY + ROW_HEIGHT * 4
+                topY + ROW_HEIGHT * 5
         );
         commandLoggingEnabled = addToggle(
                 "Command logging",
                 snapshot.commandLoggingEnabled(),
                 rightX,
-                topY + ROW_HEIGHT * 5
+                topY + ROW_HEIGHT * 6
         );
 
         int buttonY = Math.min(height - 32, topY + ROW_HEIGHT * 10);
@@ -143,7 +150,7 @@ public final class CitiesAriseConfigScreen extends Screen {
         guiGraphics.drawCenteredString(font, title, width / 2, 16, 0xFFFFFF);
         renderLabels(guiGraphics);
         guiGraphics.drawString(font, LOCAL_CONFIG_NOTE, contentLeft(), 26, NOTE_COLOR);
-        guiGraphics.drawString(font, WARNING, contentLeft() + COLUMN_WIDTH, 42 + ROW_HEIGHT * 7, WARNING_COLOR);
+        guiGraphics.drawString(font, WARNING, contentLeft() + COLUMN_WIDTH, 42 + ROW_HEIGHT * 8, WARNING_COLOR);
         guiGraphics.drawCenteredString(font, status, width / 2, Math.min(height - 56, 42 + ROW_HEIGHT * 9), statusColor);
     }
 
@@ -241,6 +248,7 @@ public final class CitiesAriseConfigScreen extends Screen {
                 debugParcelDepth.value(),
                 debugBuildingMargin.value(),
                 debugPlacementEnabled.value(),
+                debugPlacementUndoEnabled.value(),
                 debugLoggingEnabled.value(),
                 terrainLoggingEnabled.value(),
                 planningLoggingEnabled.value(),
@@ -265,6 +273,7 @@ public final class CitiesAriseConfigScreen extends Screen {
         debugParcelDepth.setValue(snapshot.debugParcelDepth());
         debugBuildingMargin.setValue(snapshot.debugBuildingMargin());
         debugPlacementEnabled.setValue(snapshot.debugPlacementEnabled());
+        debugPlacementUndoEnabled.setValue(snapshot.debugPlacementUndoEnabled());
         debugLoggingEnabled.setValue(snapshot.debugLoggingEnabled());
         terrainLoggingEnabled.setValue(snapshot.terrainLoggingEnabled());
         planningLoggingEnabled.setValue(snapshot.planningLoggingEnabled());

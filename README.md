@@ -40,6 +40,14 @@ The debug placement command applies the accepted plan as simple vanilla blocks:
 
 This command permanently changes the world. It is disabled by default and requires `debugPlacementEnabled=true` in the common config. The current debug output uses vanilla roads, simple yards, foundations, placeholder house shapes, and simple markers for light decay transforms. It is still a development preview rather than final settlement content.
 
+When `debugPlacementUndoEnabled=true`, the mod stores the previous world state for the last debug placement only:
+
+```text
+/citiesarise debug undo
+```
+
+Running another debug placement replaces the stored undo state.
+
 The current debug config can also be edited in game:
 
 ```mcfunction
@@ -83,5 +91,6 @@ The debug suburb planner can also be tuned from the same common config:
 - `debugParcelDepth`: parcel depth used by the debug suburb planner.
 - `debugBuildingMargin`: empty parcel margin around each debug placeholder building. It is limited by the current parcel size so building footprints remain valid.
 - `debugPlacementEnabled`: enables `/citiesarise debug place`, which permanently places vanilla debug blocks.
+- `debugPlacementUndoEnabled`: stores one previous debug placement state for `/citiesarise debug undo`.
 
 Datapack profiles and external integration points are not implemented yet. This document will be updated as those features become real.

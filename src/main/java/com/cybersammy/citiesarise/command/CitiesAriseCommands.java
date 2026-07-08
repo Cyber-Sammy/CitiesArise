@@ -39,7 +39,9 @@ public final class CitiesAriseCommands {
                         .then(Commands.literal("plan")
                                 .executes(context -> runDebugPlan(context.getSource())))
                         .then(Commands.literal("place")
-                                .executes(context -> runDebugPlace(context.getSource())))));
+                                .executes(context -> runDebugPlace(context.getSource())))
+                        .then(Commands.literal("undo")
+                                .executes(context -> runDebugUndo(context.getSource())))));
     }
 
     private int runDebugPlan(CommandSourceStack source) {
@@ -69,7 +71,11 @@ public final class CitiesAriseCommands {
         }
 
         DebugPlacementPlan placementPlan = placementPlanConverter.convert(result.plan());
-        int placedBlocks = placementApplier.apply(source.getLevel(), placementPlan);
+        int placedBlocks = placementApplier.apply(
+                source.getLevel(),
+                placementPlan,
+                CitiesAriseConfig.debugPlacementUndoEnabled()
+        );
         String summary = "Cities Arise debug placement: " + result.summary()
                 + ", placementOperations=" + placementPlan.size()
                 + ", placedBlocks=" + placedBlocks;
@@ -78,6 +84,30 @@ public final class CitiesAriseCommands {
         logPlacementResult(summary);
         logCommandResult(summary);
         return placedBlocks;
+    }
+
+    private int runDebugUndo(CommandSourceStack source) {
+        if (!CitiesAriseConfig.debugPlacementUndoEnabled()) {
+            String summary = "Cities Arise debug placement undo is disabled by config.";
+            source.sendFailure(Component.literal(summary));
+            logCommandResult(summary);
+            return 0;
+        }
+
+        int restoredBlocks = placementApplier.undoLast(source.getLevel());
+
+        if (restoredBlocks == 0) {
+            String summary = "Cities Arise debug placement undo has no stored placement.";
+            source.sendFailure(Component.literal(summary));
+            logCommandResult(summary);
+            return 0;
+        }
+
+        String summary = "Cities Arise debug placement undo restored " + restoredBlocks + " blocks.";
+        source.sendSuccess(() -> Component.literal(summary), false);
+        logPlacementResult(summary);
+        logCommandResult(summary);
+        return restoredBlocks;
     }
 
     private void logPlacementResult(String summary) {

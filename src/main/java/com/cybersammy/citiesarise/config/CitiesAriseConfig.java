@@ -19,6 +19,7 @@ public final class CitiesAriseConfig {
     private static final ModConfigSpec.IntValue DEBUG_PARCEL_DEPTH;
     private static final ModConfigSpec.IntValue DEBUG_BUILDING_MARGIN;
     private static final ModConfigSpec.BooleanValue DEBUG_PLACEMENT_ENABLED;
+    private static final ModConfigSpec.BooleanValue DEBUG_PLACEMENT_UNDO_ENABLED;
     private static final ModConfigSpec.BooleanValue DEBUG_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue TERRAIN_LOGGING_ENABLED;
     private static final ModConfigSpec.BooleanValue PLANNING_LOGGING_ENABLED;
@@ -76,6 +77,9 @@ public final class CitiesAriseConfig {
         DEBUG_PLACEMENT_ENABLED = builder
                 .comment("Allows /citiesarise debug place to permanently place vanilla debug blocks.")
                 .define("debugPlacementEnabled", false);
+        DEBUG_PLACEMENT_UNDO_ENABLED = builder
+                .comment("Stores one previous debug placement state for /citiesarise debug undo.")
+                .define("debugPlacementUndoEnabled", true);
         builder.pop();
 
         builder.push("logging");
@@ -134,6 +138,7 @@ public final class CitiesAriseConfig {
                 DEBUG_PARCEL_DEPTH.get(),
                 DEBUG_BUILDING_MARGIN.get(),
                 DEBUG_PLACEMENT_ENABLED.get(),
+                DEBUG_PLACEMENT_UNDO_ENABLED.get(),
                 DEBUG_LOGGING_ENABLED.get(),
                 TERRAIN_LOGGING_ENABLED.get(),
                 PLANNING_LOGGING_ENABLED.get(),
@@ -154,6 +159,7 @@ public final class CitiesAriseConfig {
         DEBUG_PARCEL_DEPTH.set(safeSnapshot.debugParcelDepth());
         DEBUG_BUILDING_MARGIN.set(safeSnapshot.debugBuildingMargin());
         DEBUG_PLACEMENT_ENABLED.set(safeSnapshot.debugPlacementEnabled());
+        DEBUG_PLACEMENT_UNDO_ENABLED.set(safeSnapshot.debugPlacementUndoEnabled());
         DEBUG_LOGGING_ENABLED.set(safeSnapshot.debugLoggingEnabled());
         TERRAIN_LOGGING_ENABLED.set(safeSnapshot.terrainLoggingEnabled());
         PLANNING_LOGGING_ENABLED.set(safeSnapshot.planningLoggingEnabled());
@@ -168,6 +174,10 @@ public final class CitiesAriseConfig {
 
     public static boolean debugPlacementEnabled() {
         return DEBUG_PLACEMENT_ENABLED.get();
+    }
+
+    public static boolean debugPlacementUndoEnabled() {
+        return DEBUG_PLACEMENT_UNDO_ENABLED.get();
     }
 
     public static boolean terrainLoggingEnabled() {

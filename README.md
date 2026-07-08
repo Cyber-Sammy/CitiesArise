@@ -38,7 +38,7 @@ The debug placement command applies the accepted plan as simple vanilla blocks:
 /citiesarise debug place
 ```
 
-This command permanently changes the world. It is disabled by default and requires `debugPlacementEnabled=true` in the common config. The current debug output uses vanilla roads, simple yards, foundations, placeholder house shapes, and simple markers for light decay transforms. It is still a development preview rather than final settlement content.
+This command permanently changes the world. It is disabled by default and requires `debugPlacementEnabled=true` in the common config. The current debug output uses vanilla roads, simple yards, foundations, larger placeholder houses, and simple markers for light decay transforms. Placeholder houses are rendered from semantic building slot footprints with simple walls, doorways, and roofs. They are still a development preview rather than final settlement content or final building assets.
 
 When `debugPlacementUndoEnabled=true`, the mod stores the previous world state for the last debug placement only:
 

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -205,6 +206,24 @@ final class SuburbPlannerTest {
 
         assertEquals(new GridSize(12, 14), parcel.bounds().size());
         assertEquals(new GridSize(6, 8), buildingSlot.bounds().size());
+    }
+
+    @Test
+    void debugDefaultsCreateHabitableBuildingSlots() {
+        DebugSuburbPlanningConfig config = DebugSuburbPlanningConfig.defaults();
+        SuburbPlanningResult result = planner.plan(request(
+                flatSurvey(config.surveyWidth(), config.surveyDepth()),
+                100L,
+                config.toSuburbPlanningSettings()
+        ));
+
+        assertTrue(result.successful());
+
+        SettlementPlan plan = result.plan().orElseThrow();
+        BuildingSlot buildingSlot = plan.buildingSlots().getFirst();
+
+        assertEquals(8, plan.parcels().size());
+        assertEquals(new GridSize(10, 12), buildingSlot.bounds().size());
     }
 
     @Test

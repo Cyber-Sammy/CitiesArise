@@ -16,16 +16,24 @@ final class DebugSuburbPlanningConfigTest {
         assertEquals(5, settings.roadWidth());
         assertEquals(0.75, settings.maxBuildableSlope());
         assertEquals(8, settings.targetParcelCount());
-        assertEquals(12, settings.parcelWidth());
-        assertEquals(14, settings.parcelDepth());
-        assertEquals(3, settings.buildingMargin());
+        assertEquals(18, settings.parcelWidth());
+        assertEquals(20, settings.parcelDepth());
+        assertEquals(4, settings.buildingMargin());
     }
 
     @Test
     void usesDefaultSurveySize() {
         GridSize surveySize = DebugSuburbPlanningConfig.defaults().toSurveySize();
 
-        assertEquals(new GridSize(72, 48), surveySize);
+        assertEquals(new GridSize(120, 72), surveySize);
+    }
+
+    @Test
+    void defaultsCreateHabitablePlaceholderFootprint() {
+        DebugSuburbPlanningConfig defaults = DebugSuburbPlanningConfig.defaults();
+
+        assertTrue(buildingWidth(defaults) >= 10);
+        assertTrue(buildingDepth(defaults) >= 10);
     }
 
     @Test
@@ -56,5 +64,17 @@ final class DebugSuburbPlanningConfigTest {
         assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 5, 0.75, 8, 12, 0, 3));
         assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 5, 0.75, 8, 12, 14, -1));
         assertThrows(IllegalArgumentException.class, () -> new DebugSuburbPlanningConfig(72, 48, 5, 0.75, 8, 6, 14, 3));
+    }
+
+    private static int buildingWidth(DebugSuburbPlanningConfig config) {
+        return buildingSize(config.parcelWidth(), config.buildingMargin());
+    }
+
+    private static int buildingDepth(DebugSuburbPlanningConfig config) {
+        return buildingSize(config.parcelDepth(), config.buildingMargin());
+    }
+
+    private static int buildingSize(int parcelSize, int buildingMargin) {
+        return parcelSize - (buildingMargin * 2);
     }
 }

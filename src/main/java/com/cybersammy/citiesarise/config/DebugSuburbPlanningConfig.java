@@ -13,14 +13,14 @@ public record DebugSuburbPlanningConfig(
         int parcelDepth,
         int buildingMargin
 ) {
-    public static final int DEFAULT_SURVEY_WIDTH = 72;
-    public static final int DEFAULT_SURVEY_DEPTH = 48;
+    public static final int DEFAULT_SURVEY_WIDTH = 120;
+    public static final int DEFAULT_SURVEY_DEPTH = 72;
     public static final int DEFAULT_ROAD_WIDTH = 5;
     public static final double DEFAULT_MAX_BUILDABLE_SLOPE = 0.75;
     public static final int DEFAULT_TARGET_PARCEL_COUNT = 8;
-    public static final int DEFAULT_PARCEL_WIDTH = 12;
-    public static final int DEFAULT_PARCEL_DEPTH = 14;
-    public static final int DEFAULT_BUILDING_MARGIN = 3;
+    public static final int DEFAULT_PARCEL_WIDTH = 18;
+    public static final int DEFAULT_PARCEL_DEPTH = 20;
+    public static final int DEFAULT_BUILDING_MARGIN = 4;
 
     public DebugSuburbPlanningConfig {
         requirePositive(surveyWidth, "surveyWidth");

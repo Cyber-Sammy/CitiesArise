@@ -8,6 +8,7 @@ public enum DebugPlacementRole {
     PARCEL_BOUNDARY,
     BUILDING_FLOOR,
     BUILDING_WALL,
+    BUILDING_DOORWAY,
     BUILDING_ROOF,
     DECAYED_BUILDING_WALL,
     DECAYED_BUILDING_ROOF;
@@ -20,6 +21,7 @@ public enum DebugPlacementRole {
             case BUILDING_FLOOR -> 30;
             case BUILDING_WALL -> 40;
             case DECAYED_BUILDING_WALL -> 40;
+            case BUILDING_DOORWAY -> 45;
             case BUILDING_ROOF -> 50;
             case DECAYED_BUILDING_ROOF -> 50;
             case ROAD_SURFACE -> 60;

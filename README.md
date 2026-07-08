@@ -40,6 +40,14 @@ The debug placement command applies the accepted plan as simple vanilla blocks:
 
 This command permanently changes the world. It is disabled by default and requires `debugPlacementEnabled=true` in the common config. The current debug output uses vanilla roads, simple yards, foundations, and placeholder house shapes. It is still a development preview rather than final settlement content.
 
+The current debug config can also be edited in game:
+
+```mcfunction
+/citiesarise config
+```
+
+The screen edits a temporary copy of the values and writes them only when Save is pressed. Debug placement is marked in the screen because it enables permanent marker placement.
+
 ## Build
 
 Requirements:

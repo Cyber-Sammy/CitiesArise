@@ -29,16 +29,33 @@ public final class MinecraftTerrainSampler {
     }
 
     private Optional<TerrainCell> sampleCell(GridPoint point) {
-        int height = surfaceHeight(point.x(), point.z());
+        MinecraftSurfaceSample surfaceSample = surfaceSample(point.x(), point.z());
+        int height = surfaceSample.height();
         boolean water = isWater(point.x(), height, point.z());
-        double slope = slope(point);
+        double slope = slope(point, height);
         BiomeCategory biomeCategory = biomeCategory(point.x(), height, point.z());
-        TerrainCategory terrainCategory = terrainCategory(point.x(), height, point.z(), water);
+        TerrainCategory terrainCategory = terrainCategory(point.x(), height, point.z(), water, surfaceSample);
 
         return Optional.of(new TerrainCell(point, height, water, slope, biomeCategory, terrainCategory));
     }
 
-    private int surfaceHeight(int x, int z) {
+    private MinecraftSurfaceSample surfaceSample(int x, int z) {
+        int topHeight = topSurfaceHeight(x, z);
+
+        return MinecraftSurfaceScanner.scan(topHeight, level.getMinBuildHeight(), y -> surfaceBlock(x, y, z));
+    }
+
+    private MinecraftSurfaceBlock surfaceBlock(int x, int y, int z) {
+        BlockState state = level.getBlockState(new BlockPos(x, y, z));
+
+        return new MinecraftSurfaceBlock(
+                state.isAir(),
+                state.is(BlockTags.LEAVES),
+                state.is(BlockTags.LOGS)
+        );
+    }
+
+    private int topSurfaceHeight(int x, int z) {
         return level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z);
     }
 
@@ -54,8 +71,7 @@ public final class MinecraftTerrainSampler {
         return level.getFluidState(new BlockPos(x, y, z)).is(FluidTags.WATER);
     }
 
-    private double slope(GridPoint point) {
-        int centerHeight = surfaceHeight(point.x(), point.z());
+    private double slope(GridPoint point, int centerHeight) {
         int maxDifference = 0;
 
         maxDifference = Math.max(maxDifference, heightDifference(centerHeight, point.x() + 1, point.z()));
@@ -67,7 +83,7 @@ public final class MinecraftTerrainSampler {
     }
 
     private int heightDifference(int centerHeight, int x, int z) {
-        return Math.abs(centerHeight - surfaceHeight(x, z));
+        return Math.abs(centerHeight - surfaceSample(x, z).height());
     }
 
     private BiomeCategory biomeCategory(int x, int height, int z) {
@@ -156,31 +172,33 @@ public final class MinecraftTerrainSampler {
         return biomePath.contains("taiga");
     }
 
-    private TerrainCategory terrainCategory(int x, int height, int z, boolean water) {
-        if (water) {
-            return TerrainCategory.BLOCKED;
-        }
-
-        if (isLava(x, height, z)) {
-            return TerrainCategory.BLOCKED;
-        }
-
+    private TerrainCategory terrainCategory(int x, int height, int z, boolean water, MinecraftSurfaceSample surfaceSample) {
         BlockPos surfacePosition = new BlockPos(x, height - 1, z);
         BlockState surfaceState = level.getBlockState(surfacePosition);
 
-        if (surfaceState.isAir()) {
-            return TerrainCategory.ROUGH;
+        return MinecraftTerrainClassifier.classify(
+                water,
+                isLava(x, height, z),
+                surfaceState.isAir(),
+                hasLeaves(surfaceState, surfaceSample),
+                hasLogs(surfaceState, surfaceSample)
+        );
+    }
+
+    private boolean hasLeaves(BlockState surfaceState, MinecraftSurfaceSample surfaceSample) {
+        if (surfaceSample.leaves()) {
+            return true;
         }
 
-        if (surfaceState.is(BlockTags.LEAVES)) {
-            return TerrainCategory.BLOCKED;
+        return surfaceState.is(BlockTags.LEAVES);
+    }
+
+    private boolean hasLogs(BlockState surfaceState, MinecraftSurfaceSample surfaceSample) {
+        if (surfaceSample.logs()) {
+            return true;
         }
 
-        if (surfaceState.is(BlockTags.LOGS)) {
-            return TerrainCategory.BLOCKED;
-        }
-
-        return TerrainCategory.BUILDABLE;
+        return surfaceState.is(BlockTags.LOGS);
     }
 
     private boolean isLava(int x, int height, int z) {

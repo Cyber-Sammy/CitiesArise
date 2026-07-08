@@ -46,7 +46,7 @@ The current debug config can also be edited in game:
 /citiesarise config
 ```
 
-The screen edits a temporary copy of the values and writes them only when Save is pressed. Debug placement is marked in the screen because it enables permanent marker placement.
+The screen edits a temporary copy of the values and writes them only when Save is pressed. This is a local client config screen: in singleplayer it is useful for debug iteration, while dedicated servers still use their server-side config file. Debug placement is marked in the screen because it enables permanent marker placement.
 
 ## Build
 

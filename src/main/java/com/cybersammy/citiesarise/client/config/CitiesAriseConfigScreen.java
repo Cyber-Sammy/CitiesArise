@@ -13,7 +13,14 @@ import net.minecraft.network.chat.Component;
 
 public final class CitiesAriseConfigScreen extends Screen {
     private static final Component TITLE = Component.literal("Cities Arise Config");
+    private static final Component LOCAL_CONFIG_NOTE = Component.literal(
+            "Local config. Dedicated servers use their server-side config."
+    );
     private static final Component WARNING = Component.literal("Debug placement permanently changes the world.");
+    private static final int ERROR_COLOR = 0xFF5555;
+    private static final int INFO_COLOR = 0x55FF55;
+    private static final int NOTE_COLOR = 0xAAAAAA;
+    private static final int WARNING_COLOR = 0xFFAA33;
     private static final int FIELD_WIDTH = 86;
     private static final int LABEL_WIDTH = 152;
     private static final int ROW_HEIGHT = 24;
@@ -24,6 +31,7 @@ public final class CitiesAriseConfigScreen extends Screen {
     private final List<DoubleField> doubleFields = new ArrayList<>();
     private final List<ToggleField> toggleFields = new ArrayList<>();
     private Component status = Component.empty();
+    private int statusColor = INFO_COLOR;
 
     private IntField debugSurveyWidth;
     private IntField debugSurveyDepth;
@@ -129,8 +137,9 @@ public final class CitiesAriseConfigScreen extends Screen {
         renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         guiGraphics.drawCenteredString(font, title, width / 2, 16, 0xFFFFFF);
         renderLabels(guiGraphics);
-        guiGraphics.drawString(font, WARNING, contentLeft() + COLUMN_WIDTH, 42 + ROW_HEIGHT * 7, 0xFFAA33);
-        guiGraphics.drawCenteredString(font, status, width / 2, Math.min(height - 56, 42 + ROW_HEIGHT * 9), 0xFF5555);
+        guiGraphics.drawString(font, LOCAL_CONFIG_NOTE, contentLeft(), 26, NOTE_COLOR);
+        guiGraphics.drawString(font, WARNING, contentLeft() + COLUMN_WIDTH, 42 + ROW_HEIGHT * 7, WARNING_COLOR);
+        guiGraphics.drawCenteredString(font, status, width / 2, Math.min(height - 56, 42 + ROW_HEIGHT * 9), statusColor);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
@@ -207,10 +216,13 @@ public final class CitiesAriseConfigScreen extends Screen {
 
     private void save() {
         try {
-            CitiesAriseConfig.applySnapshot(createSnapshot());
-            status = Component.literal("Saved.");
+            int requestedBuildingMargin = debugBuildingMargin.value();
+            CitiesAriseConfigSnapshot snapshot = createSnapshot();
+            CitiesAriseConfig.applySnapshot(snapshot);
+            loadSnapshot(snapshot);
+            updateSavedStatus(snapshot, requestedBuildingMargin);
         } catch (IllegalArgumentException exception) {
-            status = Component.literal(exception.getMessage());
+            setStatus(exception.getMessage(), ERROR_COLOR);
         }
     }
 
@@ -235,21 +247,39 @@ public final class CitiesAriseConfigScreen extends Screen {
 
     private void loadDefaults() {
         CitiesAriseConfigSnapshot defaults = CitiesAriseConfigSnapshot.defaults();
-        debugSurveyWidth.setValue(defaults.debugSurveyWidth());
-        debugSurveyDepth.setValue(defaults.debugSurveyDepth());
-        debugRoadWidth.setValue(defaults.debugRoadWidth());
-        debugMaxBuildableSlope.setValue(defaults.debugMaxBuildableSlope());
-        debugTargetParcelCount.setValue(defaults.debugTargetParcelCount());
-        debugParcelWidth.setValue(defaults.debugParcelWidth());
-        debugParcelDepth.setValue(defaults.debugParcelDepth());
-        debugBuildingMargin.setValue(defaults.debugBuildingMargin());
-        debugPlacementEnabled.setValue(defaults.debugPlacementEnabled());
-        debugLoggingEnabled.setValue(defaults.debugLoggingEnabled());
-        terrainLoggingEnabled.setValue(defaults.terrainLoggingEnabled());
-        planningLoggingEnabled.setValue(defaults.planningLoggingEnabled());
-        placementLoggingEnabled.setValue(defaults.placementLoggingEnabled());
-        commandLoggingEnabled.setValue(defaults.commandLoggingEnabled());
-        status = Component.literal("Defaults loaded. Press Save to apply.");
+        loadSnapshot(defaults);
+        setStatus("Defaults loaded. Press Save to apply.", INFO_COLOR);
+    }
+
+    private void loadSnapshot(CitiesAriseConfigSnapshot snapshot) {
+        debugSurveyWidth.setValue(snapshot.debugSurveyWidth());
+        debugSurveyDepth.setValue(snapshot.debugSurveyDepth());
+        debugRoadWidth.setValue(snapshot.debugRoadWidth());
+        debugMaxBuildableSlope.setValue(snapshot.debugMaxBuildableSlope());
+        debugTargetParcelCount.setValue(snapshot.debugTargetParcelCount());
+        debugParcelWidth.setValue(snapshot.debugParcelWidth());
+        debugParcelDepth.setValue(snapshot.debugParcelDepth());
+        debugBuildingMargin.setValue(snapshot.debugBuildingMargin());
+        debugPlacementEnabled.setValue(snapshot.debugPlacementEnabled());
+        debugLoggingEnabled.setValue(snapshot.debugLoggingEnabled());
+        terrainLoggingEnabled.setValue(snapshot.terrainLoggingEnabled());
+        planningLoggingEnabled.setValue(snapshot.planningLoggingEnabled());
+        placementLoggingEnabled.setValue(snapshot.placementLoggingEnabled());
+        commandLoggingEnabled.setValue(snapshot.commandLoggingEnabled());
+    }
+
+    private void updateSavedStatus(CitiesAriseConfigSnapshot snapshot, int requestedBuildingMargin) {
+        if (snapshot.debugBuildingMargin() == requestedBuildingMargin) {
+            setStatus("Saved.", INFO_COLOR);
+            return;
+        }
+
+        setStatus("Saved. Building margin was clamped to fit the parcel.", WARNING_COLOR);
+    }
+
+    private void setStatus(String message, int color) {
+        status = Component.literal(message);
+        statusColor = color;
     }
 
     private void closeScreen() {

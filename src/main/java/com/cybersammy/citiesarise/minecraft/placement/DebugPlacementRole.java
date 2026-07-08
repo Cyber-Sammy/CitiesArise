@@ -3,6 +3,7 @@ package com.cybersammy.citiesarise.minecraft.placement;
 public enum DebugPlacementRole {
     FOUNDATION,
     ROAD_SURFACE,
+    WORN_ROAD_SURFACE,
     PARCEL_YARD,
     PARCEL_BOUNDARY,
     BUILDING_FLOOR,
@@ -22,6 +23,7 @@ public enum DebugPlacementRole {
             case BUILDING_ROOF -> 50;
             case DECAYED_BUILDING_ROOF -> 50;
             case ROAD_SURFACE -> 60;
+            case WORN_ROAD_SURFACE -> 60;
         };
     }
 }

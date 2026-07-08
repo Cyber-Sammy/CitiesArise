@@ -62,6 +62,7 @@ public final class DebugPlacementPlanConverter {
         RoadNode startNode = requiredNode(nodesById, segment.startNodeId());
         RoadNode endNode = requiredNode(nodesById, segment.endNodeId());
         GridBounds roadBounds = roadBounds(startNode.point(), endNode.point(), segment.width());
+        DebugPlacementRole roadSurfaceRole = roadSurfaceRole(segment);
 
         addFilledBoundsOperations(
                 roadBounds,
@@ -73,10 +74,18 @@ public final class DebugPlacementPlanConverter {
         addFilledBoundsOperations(
                 roadBounds,
                 SURFACE_OFFSET,
-                DebugPlacementRole.ROAD_SURFACE,
+                roadSurfaceRole,
                 segment.id(),
                 operationsByPosition
         );
+    }
+
+    private static DebugPlacementRole roadSurfaceRole(RoadSegment segment) {
+        if (segment.tags().contains(PlanTags.WORN)) {
+            return DebugPlacementRole.WORN_ROAD_SURFACE;
+        }
+
+        return DebugPlacementRole.ROAD_SURFACE;
     }
 
     private static RoadNode requiredNode(Map<PlanElementId, RoadNode> nodesById, PlanElementId nodeId) {

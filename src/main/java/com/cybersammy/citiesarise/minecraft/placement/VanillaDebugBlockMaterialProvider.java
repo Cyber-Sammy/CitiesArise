@@ -9,6 +9,7 @@ public final class VanillaDebugBlockMaterialProvider implements DebugBlockMateri
         return switch (role) {
             case FOUNDATION -> Blocks.COBBLESTONE.defaultBlockState();
             case ROAD_SURFACE -> Blocks.STONE_BRICKS.defaultBlockState();
+            case WORN_ROAD_SURFACE -> Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
             case PARCEL_YARD -> Blocks.GRASS_BLOCK.defaultBlockState();
             case PARCEL_BOUNDARY -> Blocks.OAK_PLANKS.defaultBlockState();
             case BUILDING_FLOOR -> Blocks.SPRUCE_PLANKS.defaultBlockState();

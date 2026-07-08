@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.config;
 
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
+import java.util.Objects;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class CitiesAriseConfig {
@@ -104,7 +105,11 @@ public final class CitiesAriseConfig {
     public static DebugSuburbPlanningConfig debugSuburbPlanningConfig() {
         int parcelWidth = DEBUG_PARCEL_WIDTH.get();
         int parcelDepth = DEBUG_PARCEL_DEPTH.get();
-        int buildingMargin = safeBuildingMargin(DEBUG_BUILDING_MARGIN.get(), parcelWidth, parcelDepth);
+        int buildingMargin = CitiesAriseConfigSnapshot.safeBuildingMargin(
+                DEBUG_BUILDING_MARGIN.get(),
+                parcelWidth,
+                parcelDepth
+        );
 
         return new DebugSuburbPlanningConfig(
                 DEBUG_SURVEY_WIDTH.get(),
@@ -118,20 +123,43 @@ public final class CitiesAriseConfig {
         );
     }
 
-    private static int safeBuildingMargin(int configuredMargin, int parcelWidth, int parcelDepth) {
-        int maxWidthMargin = maxBuildingMargin(parcelWidth);
-        int maxDepthMargin = maxBuildingMargin(parcelDepth);
-        int maxMargin = Math.min(maxWidthMargin, maxDepthMargin);
-
-        if (configuredMargin > maxMargin) {
-            return maxMargin;
-        }
-
-        return configuredMargin;
+    public static CitiesAriseConfigSnapshot snapshot() {
+        return new CitiesAriseConfigSnapshot(
+                DEBUG_SURVEY_WIDTH.get(),
+                DEBUG_SURVEY_DEPTH.get(),
+                DEBUG_ROAD_WIDTH.get(),
+                DEBUG_MAX_BUILDABLE_SLOPE.get(),
+                DEBUG_TARGET_PARCEL_COUNT.get(),
+                DEBUG_PARCEL_WIDTH.get(),
+                DEBUG_PARCEL_DEPTH.get(),
+                DEBUG_BUILDING_MARGIN.get(),
+                DEBUG_PLACEMENT_ENABLED.get(),
+                DEBUG_LOGGING_ENABLED.get(),
+                TERRAIN_LOGGING_ENABLED.get(),
+                PLANNING_LOGGING_ENABLED.get(),
+                PLACEMENT_LOGGING_ENABLED.get(),
+                COMMAND_LOGGING_ENABLED.get()
+        );
     }
 
-    private static int maxBuildingMargin(int parcelSize) {
-        return (parcelSize - 1) / 2;
+    public static void applySnapshot(CitiesAriseConfigSnapshot snapshot) {
+        CitiesAriseConfigSnapshot safeSnapshot = Objects.requireNonNull(snapshot, "snapshot");
+
+        DEBUG_SURVEY_WIDTH.set(safeSnapshot.debugSurveyWidth());
+        DEBUG_SURVEY_DEPTH.set(safeSnapshot.debugSurveyDepth());
+        DEBUG_ROAD_WIDTH.set(safeSnapshot.debugRoadWidth());
+        DEBUG_MAX_BUILDABLE_SLOPE.set(safeSnapshot.debugMaxBuildableSlope());
+        DEBUG_TARGET_PARCEL_COUNT.set(safeSnapshot.debugTargetParcelCount());
+        DEBUG_PARCEL_WIDTH.set(safeSnapshot.debugParcelWidth());
+        DEBUG_PARCEL_DEPTH.set(safeSnapshot.debugParcelDepth());
+        DEBUG_BUILDING_MARGIN.set(safeSnapshot.debugBuildingMargin());
+        DEBUG_PLACEMENT_ENABLED.set(safeSnapshot.debugPlacementEnabled());
+        DEBUG_LOGGING_ENABLED.set(safeSnapshot.debugLoggingEnabled());
+        TERRAIN_LOGGING_ENABLED.set(safeSnapshot.terrainLoggingEnabled());
+        PLANNING_LOGGING_ENABLED.set(safeSnapshot.planningLoggingEnabled());
+        PLACEMENT_LOGGING_ENABLED.set(safeSnapshot.placementLoggingEnabled());
+        COMMAND_LOGGING_ENABLED.set(safeSnapshot.commandLoggingEnabled());
+        SPEC.save();
     }
 
     public static SuburbPlanningSettings debugSuburbPlanningSettings() {
@@ -174,7 +202,7 @@ public final class CitiesAriseConfig {
         return COMMAND_LOGGING_ENABLED.get();
     }
 
-    private static boolean debugLoggingEnabled() {
+    public static boolean debugLoggingEnabled() {
         return DEBUG_LOGGING_ENABLED.get();
     }
 }

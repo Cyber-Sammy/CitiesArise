@@ -24,6 +24,9 @@ public final class DebugPlacementApplier {
     }
 
     public int apply(ServerLevel level, DebugPlacementPlan placementPlan) {
+        Objects.requireNonNull(level, "level");
+        Objects.requireNonNull(placementPlan, "placementPlan");
+
         int placedBlocks = 0;
 
         for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
@@ -57,7 +60,17 @@ public final class DebugPlacementApplier {
     }
 
     private static int targetY(ServerLevel level, int baseY, int verticalOffset) {
-        return Math.max(level.getMinBuildHeight(), baseY + verticalOffset);
+        int targetY = baseY + verticalOffset;
+
+        if (targetY < level.getMinBuildHeight()) {
+            return level.getMinBuildHeight();
+        }
+
+        if (targetY >= level.getMaxBuildHeight()) {
+            return level.getMaxBuildHeight() - 1;
+        }
+
+        return targetY;
     }
 
     private void clearVegetationAbove(ServerLevel level, int x, int placementY, int z, int topHeight) {

@@ -6,6 +6,8 @@ import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
+import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceSample;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,7 +31,7 @@ public final class MinecraftTerrainSampler {
     }
 
     private Optional<TerrainCell> sampleCell(GridPoint point) {
-        MinecraftSurfaceSample surfaceSample = surfaceSample(point.x(), point.z());
+        SurfaceSample surfaceSample = surfaceSample(point.x(), point.z());
         int height = surfaceSample.height();
         boolean water = isWater(point.x(), height, point.z());
         double slope = slope(point, height);
@@ -39,16 +41,16 @@ public final class MinecraftTerrainSampler {
         return Optional.of(new TerrainCell(point, height, water, slope, biomeCategory, terrainCategory));
     }
 
-    private MinecraftSurfaceSample surfaceSample(int x, int z) {
+    private SurfaceSample surfaceSample(int x, int z) {
         int topHeight = topSurfaceHeight(x, z);
 
         return MinecraftSurfaceScanner.scan(topHeight, level.getMinBuildHeight(), y -> surfaceBlock(x, y, z));
     }
 
-    private MinecraftSurfaceBlock surfaceBlock(int x, int y, int z) {
+    private SurfaceBlock surfaceBlock(int x, int y, int z) {
         BlockState state = level.getBlockState(new BlockPos(x, y, z));
 
-        return new MinecraftSurfaceBlock(
+        return new SurfaceBlock(
                 state.isAir(),
                 state.is(BlockTags.LEAVES),
                 state.is(BlockTags.LOGS)
@@ -172,7 +174,7 @@ public final class MinecraftTerrainSampler {
         return biomePath.contains("taiga");
     }
 
-    private TerrainCategory terrainCategory(int x, int height, int z, boolean water, MinecraftSurfaceSample surfaceSample) {
+    private TerrainCategory terrainCategory(int x, int height, int z, boolean water, SurfaceSample surfaceSample) {
         BlockPos surfacePosition = new BlockPos(x, height - 1, z);
         BlockState surfaceState = level.getBlockState(surfacePosition);
 
@@ -185,7 +187,7 @@ public final class MinecraftTerrainSampler {
         );
     }
 
-    private boolean hasLeaves(BlockState surfaceState, MinecraftSurfaceSample surfaceSample) {
+    private boolean hasLeaves(BlockState surfaceState, SurfaceSample surfaceSample) {
         if (surfaceSample.leaves()) {
             return true;
         }
@@ -193,7 +195,7 @@ public final class MinecraftTerrainSampler {
         return surfaceState.is(BlockTags.LEAVES);
     }
 
-    private boolean hasLogs(BlockState surfaceState, MinecraftSurfaceSample surfaceSample) {
+    private boolean hasLogs(BlockState surfaceState, SurfaceSample surfaceSample) {
         if (surfaceSample.logs()) {
             return true;
         }

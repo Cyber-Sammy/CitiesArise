@@ -32,6 +32,14 @@ The mod also includes a debug command that samples real Minecraft terrain around
 
 The command reports whether a semantic suburb plan was accepted or rejected, along with the region, survey bounds, deterministic seed, and plan element counts.
 
+The debug placement command applies the accepted plan as simple vanilla marker blocks:
+
+```text
+/citiesarise debug place
+```
+
+This command permanently changes the world. It is disabled by default and requires `debugPlacementEnabled=true` in the common config.
+
 ## Build
 
 Requirements:
@@ -54,7 +62,7 @@ The generated jar is written to `build/libs`.
 
 ## Configuration And Integration
 
-Cities Arise creates a common config file with logging options. `debugLoggingEnabled` is the master switch. Terrain, planning, and command logs can be toggled separately and only emit debug details when the master switch is enabled.
+Cities Arise creates a common config file with logging options. `debugLoggingEnabled` is the master switch. Terrain, planning, placement, and command logs can be toggled separately and only emit debug details when the master switch is enabled.
 
 The debug suburb planner can also be tuned from the same common config:
 
@@ -63,5 +71,6 @@ The debug suburb planner can also be tuned from the same common config:
 - `debugRoadWidth`: road width used by `/citiesarise debug plan`.
 - `debugMaxBuildableSlope`: maximum normalized slope accepted by the Minecraft debug planner. The default is `0.75`, which accepts gently uneven terrain while still rejecting sharper height changes.
 - `debugTargetParcelCount`: target number of parcels for the debug suburb plan.
+- `debugPlacementEnabled`: enables `/citiesarise debug place`, which permanently places vanilla marker blocks.
 
 Datapack profiles and external integration points are not implemented yet. This document will be updated as those features become real.

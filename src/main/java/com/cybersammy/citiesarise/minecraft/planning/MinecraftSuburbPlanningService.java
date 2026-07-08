@@ -2,8 +2,8 @@ package com.cybersammy.citiesarise.minecraft.planning;
 
 import com.cybersammy.citiesarise.CitiesAriseMod;
 import com.cybersammy.citiesarise.config.CitiesAriseConfig;
+import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
-import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanner;
@@ -16,8 +16,6 @@ import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 
 public final class MinecraftSuburbPlanningService {
-    private static final GridSize DEBUG_SURVEY_SIZE = new GridSize(40, 30);
-
     private final SuburbPlanner planner;
     private final Logger logger;
 
@@ -32,8 +30,9 @@ public final class MinecraftSuburbPlanningService {
 
     public SuburbDebugPlanResult planAt(ServerLevel level, Vec3 position) {
         SettlementRegion region = SettlementRegion.fromBlockPosition(blockCoordinate(position.x()), blockCoordinate(position.z()));
+        DebugSuburbPlanningConfig config = CitiesAriseConfig.debugSuburbPlanningConfig();
         PlanElementId settlementId = settlementId(region);
-        GridBounds bounds = region.surveyBounds(DEBUG_SURVEY_SIZE);
+        GridBounds bounds = region.surveyBounds(config.toSurveySize());
         long seed = SettlementSeed.forRegion(level.getSeed(), region, settlementId);
 
         logTerrainStart(region, bounds, seed, settlementId);
@@ -43,7 +42,7 @@ public final class MinecraftSuburbPlanningService {
                 settlementId,
                 survey,
                 seed,
-                CitiesAriseConfig.debugSuburbPlanningSettings()
+                config.toSuburbPlanningSettings()
         );
         SuburbPlanningResult result = planner.plan(request);
         SuburbDebugPlanResult debugResult = SuburbDebugPlanResult.from(region, bounds, seed, result);

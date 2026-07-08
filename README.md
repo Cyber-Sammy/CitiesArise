@@ -58,6 +58,8 @@ Cities Arise creates a common config file with logging options. `debugLoggingEna
 
 The debug suburb planner can also be tuned from the same common config:
 
+- `debugSurveyWidth`: terrain survey width used by `/citiesarise debug plan`.
+- `debugSurveyDepth`: terrain survey depth used by `/citiesarise debug plan`.
 - `debugRoadWidth`: road width used by `/citiesarise debug plan`.
 - `debugMaxBuildableSlope`: maximum normalized slope accepted by the Minecraft debug planner. The default is `0.75`, which accepts gently uneven terrain while still rejecting sharper height changes.
 - `debugTargetParcelCount`: target number of parcels for the debug suburb plan.

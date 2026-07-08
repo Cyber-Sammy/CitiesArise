@@ -4,8 +4,12 @@ import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class CitiesAriseConfig {
+    private static final int MAX_DEBUG_SURVEY_SIZE = 128;
+
     public static final ModConfigSpec SPEC;
 
+    private static final ModConfigSpec.IntValue DEBUG_SURVEY_WIDTH;
+    private static final ModConfigSpec.IntValue DEBUG_SURVEY_DEPTH;
     private static final ModConfigSpec.IntValue DEBUG_ROAD_WIDTH;
     private static final ModConfigSpec.DoubleValue DEBUG_MAX_BUILDABLE_SLOPE;
     private static final ModConfigSpec.IntValue DEBUG_TARGET_PARCEL_COUNT;
@@ -18,6 +22,22 @@ public final class CitiesAriseConfig {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
         builder.push("planning");
+        DEBUG_SURVEY_WIDTH = builder
+                .comment("Survey width used by the Minecraft debug suburb planner.")
+                .defineInRange(
+                        "debugSurveyWidth",
+                        DebugSuburbPlanningConfig.DEFAULT_SURVEY_WIDTH,
+                        1,
+                        MAX_DEBUG_SURVEY_SIZE
+                );
+        DEBUG_SURVEY_DEPTH = builder
+                .comment("Survey depth used by the Minecraft debug suburb planner.")
+                .defineInRange(
+                        "debugSurveyDepth",
+                        DebugSuburbPlanningConfig.DEFAULT_SURVEY_DEPTH,
+                        1,
+                        MAX_DEBUG_SURVEY_SIZE
+                );
         DEBUG_ROAD_WIDTH = builder
                 .comment("Road width used by the Minecraft debug suburb planner.")
                 .defineInRange("debugRoadWidth", DebugSuburbPlanningConfig.DEFAULT_ROAD_WIDTH, 1, 16);
@@ -55,12 +75,18 @@ public final class CitiesAriseConfig {
     private CitiesAriseConfig() {
     }
 
-    public static SuburbPlanningSettings debugSuburbPlanningSettings() {
+    public static DebugSuburbPlanningConfig debugSuburbPlanningConfig() {
         return new DebugSuburbPlanningConfig(
+                DEBUG_SURVEY_WIDTH.get(),
+                DEBUG_SURVEY_DEPTH.get(),
                 DEBUG_ROAD_WIDTH.get(),
                 DEBUG_MAX_BUILDABLE_SLOPE.get(),
                 DEBUG_TARGET_PARCEL_COUNT.get()
-        ).toSuburbPlanningSettings();
+        );
+    }
+
+    public static SuburbPlanningSettings debugSuburbPlanningSettings() {
+        return debugSuburbPlanningConfig().toSuburbPlanningSettings();
     }
 
     public static boolean terrainLoggingEnabled() {

@@ -31,36 +31,39 @@ final class DebugPlacementPlanConverterTest {
 
         DebugPlacementPlan placementPlan = converter.convert(plan);
 
-        assertEquals(15, placementPlan.size());
-        assertOperation(placementPlan, point(0, -1), DebugPlacementRole.ROAD_SURFACE, roadId);
-        assertOperation(placementPlan, point(4, 1), DebugPlacementRole.ROAD_SURFACE, roadId);
+        assertEquals(30, placementPlan.size());
+        assertOperation(placementPlan, point(0, -1), 0, DebugPlacementRole.ROAD_SURFACE, roadId);
+        assertOperation(placementPlan, point(4, 1), 0, DebugPlacementRole.ROAD_SURFACE, roadId);
+        assertOperation(placementPlan, point(0, -1), -1, DebugPlacementRole.FOUNDATION, roadId);
     }
 
     @Test
-    void convertsParcelsAndBuildingSlotsToOutlineOperations() {
+    void convertsParcelsAndBuildingSlotsToFoundationAndHouseOperations() {
         Parcel parcel = parcel(id("parcel"), bounds(10, 10, 4, 4));
         BuildingSlot buildingSlot = buildingSlot(id("slot"), parcel.id(), bounds(11, 11, 2, 2));
         SettlementPlan plan = plan(RoadGraph.empty(), List.of(parcel), List.of(buildingSlot));
 
         DebugPlacementPlan placementPlan = converter.convert(plan);
 
-        assertEquals(16, placementPlan.size());
-        assertOperation(placementPlan, point(10, 10), DebugPlacementRole.PARCEL_MARKER, parcel.id());
-        assertOperation(placementPlan, point(13, 13), DebugPlacementRole.PARCEL_MARKER, parcel.id());
-        assertOperation(placementPlan, point(11, 11), DebugPlacementRole.BUILDING_SLOT_MARKER, buildingSlot.id());
-        assertOperation(placementPlan, point(12, 12), DebugPlacementRole.BUILDING_SLOT_MARKER, buildingSlot.id());
+        assertEquals(32, placementPlan.size());
+        assertOperation(placementPlan, point(10, 10), 0, DebugPlacementRole.PARCEL_BOUNDARY, parcel.id());
+        assertOperation(placementPlan, point(12, 12), 0, DebugPlacementRole.BUILDING_FLOOR, buildingSlot.id());
+        assertOperation(placementPlan, point(11, 11), -1, DebugPlacementRole.FOUNDATION, buildingSlot.id());
+        assertOperation(placementPlan, point(11, 11), 1, DebugPlacementRole.BUILDING_WALL, buildingSlot.id());
+        assertOperation(placementPlan, point(12, 12), 3, DebugPlacementRole.BUILDING_ROOF, buildingSlot.id());
     }
 
     @Test
-    void keepsFirstOperationWhenPlacementPointsOverlap() {
+    void keepsRoadSurfaceWhenPlacementPointsOverlap() {
         PlanElementId roadId = id("road");
         Parcel parcel = parcel(id("parcel"), bounds(0, -1, 5, 3));
         SettlementPlan plan = plan(roadGraph(roadId, point(0, 0), point(4, 0), 3), List.of(parcel), List.of());
 
         DebugPlacementPlan placementPlan = converter.convert(plan);
 
-        assertEquals(15, placementPlan.size());
-        assertOperation(placementPlan, point(0, -1), DebugPlacementRole.ROAD_SURFACE, roadId);
+        assertEquals(30, placementPlan.size());
+        assertOperation(placementPlan, point(0, -1), 0, DebugPlacementRole.ROAD_SURFACE, roadId);
+        assertOperation(placementPlan, point(0, -1), -1, DebugPlacementRole.FOUNDATION, roadId);
     }
 
     @Test
@@ -73,19 +76,23 @@ final class DebugPlacementPlanConverterTest {
     private static void assertOperation(
             DebugPlacementPlan placementPlan,
             GridPoint point,
+            int verticalOffset,
             DebugPlacementRole role,
             PlanElementId sourceElementId
     ) {
-        DebugBlockPlacementOperation operation = operationsByPoint(placementPlan).get(point);
+        DebugBlockPlacementOperation operation = operationsByPosition(placementPlan)
+                .get(new DebugPlacementPosition(point, verticalOffset));
 
         assertEquals(role, operation.role());
         assertEquals(sourceElementId, operation.sourceElementId());
     }
 
-    private static Map<GridPoint, DebugBlockPlacementOperation> operationsByPoint(DebugPlacementPlan placementPlan) {
+    private static Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition(
+            DebugPlacementPlan placementPlan
+    ) {
         return placementPlan.operations()
                 .stream()
-                .collect(Collectors.toMap(DebugBlockPlacementOperation::point, Function.identity()));
+                .collect(Collectors.toMap(DebugBlockPlacementOperation::position, Function.identity()));
     }
 
     private static SettlementPlan planWithRoad(PlanElementId roadId, GridPoint start, GridPoint end, int width) {

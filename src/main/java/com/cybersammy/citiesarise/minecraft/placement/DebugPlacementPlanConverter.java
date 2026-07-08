@@ -15,25 +15,31 @@ import java.util.Map;
 import java.util.Objects;
 
 public final class DebugPlacementPlanConverter {
+    private static final int SURFACE_OFFSET = 0;
+    private static final int FOUNDATION_OFFSET = -1;
+    private static final int FIRST_WALL_OFFSET = 1;
+    private static final int LAST_WALL_OFFSET = 2;
+    private static final int ROOF_OFFSET = 3;
+
     public DebugPlacementPlan convert(SettlementPlan plan) {
         Objects.requireNonNull(plan, "plan");
-        Map<GridPoint, DebugBlockPlacementOperation> operationsByPoint = new LinkedHashMap<>();
+        Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition = new LinkedHashMap<>();
 
-        addRoadOperations(plan.roadGraph(), operationsByPoint);
-        addParcelOperations(plan, operationsByPoint);
-        addBuildingSlotOperations(plan, operationsByPoint);
+        addRoadOperations(plan.roadGraph(), operationsByPosition);
+        addParcelOperations(plan, operationsByPosition);
+        addBuildingSlotOperations(plan, operationsByPosition);
 
-        return new DebugPlacementPlan(operationsByPoint.values().stream().toList());
+        return new DebugPlacementPlan(operationsByPosition.values().stream().toList());
     }
 
     private static void addRoadOperations(
             RoadGraph roadGraph,
-            Map<GridPoint, DebugBlockPlacementOperation> operationsByPoint
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         Map<PlanElementId, RoadNode> nodesById = nodesById(roadGraph);
 
         for (RoadSegment segment : roadGraph.segments()) {
-            addRoadSegmentOperations(segment, nodesById, operationsByPoint);
+            addRoadSegmentOperations(segment, nodesById, operationsByPosition);
         }
     }
 
@@ -50,13 +56,26 @@ public final class DebugPlacementPlanConverter {
     private static void addRoadSegmentOperations(
             RoadSegment segment,
             Map<PlanElementId, RoadNode> nodesById,
-            Map<GridPoint, DebugBlockPlacementOperation> operationsByPoint
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         RoadNode startNode = requiredNode(nodesById, segment.startNodeId());
         RoadNode endNode = requiredNode(nodesById, segment.endNodeId());
         GridBounds roadBounds = roadBounds(startNode.point(), endNode.point(), segment.width());
 
-        addFilledBoundsOperations(roadBounds, DebugPlacementRole.ROAD_SURFACE, segment.id(), operationsByPoint);
+        addFilledBoundsOperations(
+                roadBounds,
+                FOUNDATION_OFFSET,
+                DebugPlacementRole.FOUNDATION,
+                segment.id(),
+                operationsByPosition
+        );
+        addFilledBoundsOperations(
+                roadBounds,
+                SURFACE_OFFSET,
+                DebugPlacementRole.ROAD_SURFACE,
+                segment.id(),
+                operationsByPosition
+        );
     }
 
     private static RoadNode requiredNode(Map<PlanElementId, RoadNode> nodesById, PlanElementId nodeId) {
@@ -106,64 +125,112 @@ public final class DebugPlacementPlanConverter {
 
     private static void addParcelOperations(
             SettlementPlan plan,
-            Map<GridPoint, DebugBlockPlacementOperation> operationsByPoint
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (Parcel parcel : plan.parcels()) {
-            addOutlineOperations(parcel.bounds(), DebugPlacementRole.PARCEL_MARKER, parcel.id(), operationsByPoint);
+            addFilledBoundsOperations(
+                    parcel.bounds(),
+                    SURFACE_OFFSET,
+                    DebugPlacementRole.PARCEL_YARD,
+                    parcel.id(),
+                    operationsByPosition
+            );
+            addOutlineOperations(
+                    parcel.bounds(),
+                    SURFACE_OFFSET,
+                    DebugPlacementRole.PARCEL_BOUNDARY,
+                    parcel.id(),
+                    operationsByPosition
+            );
         }
     }
 
     private static void addBuildingSlotOperations(
             SettlementPlan plan,
-            Map<GridPoint, DebugBlockPlacementOperation> operationsByPoint
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (BuildingSlot buildingSlot : plan.buildingSlots()) {
-            addOutlineOperations(
+            addFilledBoundsOperations(
                     buildingSlot.bounds(),
-                    DebugPlacementRole.BUILDING_SLOT_MARKER,
+                    FOUNDATION_OFFSET,
+                    DebugPlacementRole.FOUNDATION,
                     buildingSlot.id(),
-                    operationsByPoint
+                    operationsByPosition
+            );
+            addFilledBoundsOperations(
+                    buildingSlot.bounds(),
+                    SURFACE_OFFSET,
+                    DebugPlacementRole.BUILDING_FLOOR,
+                    buildingSlot.id(),
+                    operationsByPosition
+            );
+            addWallOperations(buildingSlot.bounds(), buildingSlot.id(), operationsByPosition);
+            addFilledBoundsOperations(
+                    buildingSlot.bounds(),
+                    ROOF_OFFSET,
+                    DebugPlacementRole.BUILDING_ROOF,
+                    buildingSlot.id(),
+                    operationsByPosition
+            );
+        }
+    }
+
+    private static void addWallOperations(
+            GridBounds bounds,
+            PlanElementId sourceElementId,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
+    ) {
+        for (int offset = FIRST_WALL_OFFSET; offset <= LAST_WALL_OFFSET; offset++) {
+            addOutlineOperations(
+                    bounds,
+                    offset,
+                    DebugPlacementRole.BUILDING_WALL,
+                    sourceElementId,
+                    operationsByPosition
             );
         }
     }
 
     private static void addFilledBoundsOperations(
             GridBounds bounds,
+            int verticalOffset,
             DebugPlacementRole role,
             PlanElementId sourceElementId,
-            Map<GridPoint, DebugBlockPlacementOperation> operationsByPoint
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
             for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
-                addOperation(new GridPoint(x, z), role, sourceElementId, operationsByPoint);
+                addOperation(new GridPoint(x, z), verticalOffset, role, sourceElementId, operationsByPosition);
             }
         }
     }
 
     private static void addOutlineOperations(
             GridBounds bounds,
+            int verticalOffset,
             DebugPlacementRole role,
             PlanElementId sourceElementId,
-            Map<GridPoint, DebugBlockPlacementOperation> operationsByPoint
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
-            addOutlineRowOperations(bounds, z, role, sourceElementId, operationsByPoint);
+            addOutlineRowOperations(bounds, z, verticalOffset, role, sourceElementId, operationsByPosition);
         }
     }
 
     private static void addOutlineRowOperations(
             GridBounds bounds,
             int z,
+            int verticalOffset,
             DebugPlacementRole role,
             PlanElementId sourceElementId,
-            Map<GridPoint, DebugBlockPlacementOperation> operationsByPoint
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
             if (!isOutlinePoint(bounds, x, z)) {
                 continue;
             }
 
-            addOperation(new GridPoint(x, z), role, sourceElementId, operationsByPoint);
+            addOperation(new GridPoint(x, z), verticalOffset, role, sourceElementId, operationsByPosition);
         }
     }
 
@@ -185,10 +252,34 @@ public final class DebugPlacementPlanConverter {
 
     private static void addOperation(
             GridPoint point,
+            int verticalOffset,
             DebugPlacementRole role,
             PlanElementId sourceElementId,
-            Map<GridPoint, DebugBlockPlacementOperation> operationsByPoint
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
-        operationsByPoint.putIfAbsent(point, new DebugBlockPlacementOperation(point, role, sourceElementId));
+        DebugBlockPlacementOperation operation = new DebugBlockPlacementOperation(
+                point,
+                verticalOffset,
+                role,
+                sourceElementId
+        );
+        DebugBlockPlacementOperation existingOperation = operationsByPosition.get(operation.position());
+
+        if (shouldKeepExistingOperation(existingOperation, operation)) {
+            return;
+        }
+
+        operationsByPosition.put(operation.position(), operation);
+    }
+
+    private static boolean shouldKeepExistingOperation(
+            DebugBlockPlacementOperation existingOperation,
+            DebugBlockPlacementOperation newOperation
+    ) {
+        if (existingOperation == null) {
+            return false;
+        }
+
+        return existingOperation.role().priority() >= newOperation.role().priority();
     }
 }

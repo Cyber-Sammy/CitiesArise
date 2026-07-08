@@ -6,6 +6,7 @@ import java.util.Objects;
 
 public record DebugBlockPlacementOperation(
         GridPoint point,
+        int verticalOffset,
         DebugPlacementRole role,
         PlanElementId sourceElementId
 ) {
@@ -13,5 +14,9 @@ public record DebugBlockPlacementOperation(
         Objects.requireNonNull(point, "point");
         Objects.requireNonNull(role, "role");
         Objects.requireNonNull(sourceElementId, "sourceElementId");
+    }
+
+    public DebugPlacementPosition position() {
+        return new DebugPlacementPosition(point, verticalOffset);
     }
 }

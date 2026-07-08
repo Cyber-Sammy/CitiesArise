@@ -157,30 +157,16 @@ public final class MinecraftTerrainSampler {
     }
 
     private TerrainCategory terrainCategory(int x, int height, int z, boolean water) {
-        if (water) {
-            return TerrainCategory.BLOCKED;
-        }
-
-        if (isLava(x, height, z)) {
-            return TerrainCategory.BLOCKED;
-        }
-
         BlockPos surfacePosition = new BlockPos(x, height - 1, z);
         BlockState surfaceState = level.getBlockState(surfacePosition);
 
-        if (surfaceState.isAir()) {
-            return TerrainCategory.ROUGH;
-        }
-
-        if (surfaceState.is(BlockTags.LEAVES)) {
-            return TerrainCategory.BLOCKED;
-        }
-
-        if (surfaceState.is(BlockTags.LOGS)) {
-            return TerrainCategory.BLOCKED;
-        }
-
-        return TerrainCategory.BUILDABLE;
+        return MinecraftTerrainClassifier.classify(
+                water,
+                isLava(x, height, z),
+                surfaceState.isAir(),
+                surfaceState.is(BlockTags.LEAVES),
+                surfaceState.is(BlockTags.LOGS)
+        );
     }
 
     private boolean isLava(int x, int height, int z) {

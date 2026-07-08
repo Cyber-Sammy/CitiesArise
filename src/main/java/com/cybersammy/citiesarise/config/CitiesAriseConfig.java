@@ -5,6 +5,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class CitiesAriseConfig {
     private static final int MAX_DEBUG_SURVEY_SIZE = 128;
+    private static final int MAX_DEBUG_BUILDING_MARGIN = 8;
 
     public static final ModConfigSpec SPEC;
 
@@ -65,7 +66,12 @@ public final class CitiesAriseConfig {
                 .defineInRange("debugParcelDepth", DebugSuburbPlanningConfig.DEFAULT_PARCEL_DEPTH, 3, 64);
         DEBUG_BUILDING_MARGIN = builder
                 .comment("Empty parcel margin around each debug placeholder building.")
-                .defineInRange("debugBuildingMargin", DebugSuburbPlanningConfig.DEFAULT_BUILDING_MARGIN, 0, 16);
+                .defineInRange(
+                        "debugBuildingMargin",
+                        DebugSuburbPlanningConfig.DEFAULT_BUILDING_MARGIN,
+                        0,
+                        MAX_DEBUG_BUILDING_MARGIN
+                );
         DEBUG_PLACEMENT_ENABLED = builder
                 .comment("Allows /citiesarise debug place to permanently place vanilla debug blocks.")
                 .define("debugPlacementEnabled", false);
@@ -96,16 +102,36 @@ public final class CitiesAriseConfig {
     }
 
     public static DebugSuburbPlanningConfig debugSuburbPlanningConfig() {
+        int parcelWidth = DEBUG_PARCEL_WIDTH.get();
+        int parcelDepth = DEBUG_PARCEL_DEPTH.get();
+        int buildingMargin = safeBuildingMargin(DEBUG_BUILDING_MARGIN.get(), parcelWidth, parcelDepth);
+
         return new DebugSuburbPlanningConfig(
                 DEBUG_SURVEY_WIDTH.get(),
                 DEBUG_SURVEY_DEPTH.get(),
                 DEBUG_ROAD_WIDTH.get(),
                 DEBUG_MAX_BUILDABLE_SLOPE.get(),
                 DEBUG_TARGET_PARCEL_COUNT.get(),
-                DEBUG_PARCEL_WIDTH.get(),
-                DEBUG_PARCEL_DEPTH.get(),
-                DEBUG_BUILDING_MARGIN.get()
+                parcelWidth,
+                parcelDepth,
+                buildingMargin
         );
+    }
+
+    private static int safeBuildingMargin(int configuredMargin, int parcelWidth, int parcelDepth) {
+        int maxWidthMargin = maxBuildingMargin(parcelWidth);
+        int maxDepthMargin = maxBuildingMargin(parcelDepth);
+        int maxMargin = Math.min(maxWidthMargin, maxDepthMargin);
+
+        if (configuredMargin > maxMargin) {
+            return maxMargin;
+        }
+
+        return configuredMargin;
+    }
+
+    private static int maxBuildingMargin(int parcelSize) {
+        return (parcelSize - 1) / 2;
     }
 
     public static SuburbPlanningSettings debugSuburbPlanningSettings() {

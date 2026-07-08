@@ -217,6 +217,15 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void rejectsSurveyTooShallowForNorthAndSouthParcels() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(5, 0.75, 2, 12, 14, 3);
+        SuburbPlanningResult result = planner.plan(request(flatSurvey(72, 30), 100L, settings));
+
+        assertFalse(result.successful());
+        assertEquals(Optional.of(SuburbPlanningFailureReason.SURVEY_TOO_SMALL), result.failureReason());
+    }
+
+    @Test
     void parcelsDoNotOverlapSideRoadCorridors() {
         SuburbPlanningSettings settings = SuburbPlanningSettings.defaults();
         SettlementPlan plan = planner.plan(request(flatSurvey(40, 30), 100L, settings))

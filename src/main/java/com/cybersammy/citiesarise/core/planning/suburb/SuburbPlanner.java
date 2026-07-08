@@ -90,7 +90,7 @@ public final class SuburbPlanner {
     }
 
     private static int minimumSurveyDepth(SuburbPlanningSettings settings) {
-        return (settings.roadWidth() * 2) + settings.parcelDepth();
+        return 2 * (settings.roadWidth() + settings.parcelDepth());
     }
 
     private boolean roadFitsSurvey(SuburbPlanningSettings settings, GridBounds bounds) {

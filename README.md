@@ -73,7 +73,7 @@ The debug suburb planner can also be tuned from the same common config:
 - `debugTargetParcelCount`: target number of parcels for the debug suburb plan.
 - `debugParcelWidth`: parcel width used by the debug suburb planner.
 - `debugParcelDepth`: parcel depth used by the debug suburb planner.
-- `debugBuildingMargin`: empty parcel margin around each debug placeholder building.
+- `debugBuildingMargin`: empty parcel margin around each debug placeholder building. It is limited by the current parcel size so building footprints remain valid.
 - `debugPlacementEnabled`: enables `/citiesarise debug place`, which permanently places vanilla debug blocks.
 
 Datapack profiles and external integration points are not implemented yet. This document will be updated as those features become real.

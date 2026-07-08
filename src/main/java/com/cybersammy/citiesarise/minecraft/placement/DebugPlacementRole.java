@@ -7,7 +7,9 @@ public enum DebugPlacementRole {
     PARCEL_BOUNDARY,
     BUILDING_FLOOR,
     BUILDING_WALL,
-    BUILDING_ROOF;
+    BUILDING_ROOF,
+    DECAYED_BUILDING_WALL,
+    DECAYED_BUILDING_ROOF;
 
     int priority() {
         return switch (this) {
@@ -16,7 +18,9 @@ public enum DebugPlacementRole {
             case PARCEL_BOUNDARY -> 20;
             case BUILDING_FLOOR -> 30;
             case BUILDING_WALL -> 40;
+            case DECAYED_BUILDING_WALL -> 40;
             case BUILDING_ROOF -> 50;
+            case DECAYED_BUILDING_ROOF -> 50;
             case ROAD_SURFACE -> 60;
         };
     }

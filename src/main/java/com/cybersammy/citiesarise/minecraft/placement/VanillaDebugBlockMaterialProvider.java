@@ -14,6 +14,8 @@ public final class VanillaDebugBlockMaterialProvider implements DebugBlockMateri
             case BUILDING_FLOOR -> Blocks.SPRUCE_PLANKS.defaultBlockState();
             case BUILDING_WALL -> Blocks.STRIPPED_OAK_LOG.defaultBlockState();
             case BUILDING_ROOF -> Blocks.YELLOW_TERRACOTTA.defaultBlockState();
+            case DECAYED_BUILDING_WALL -> Blocks.MOSSY_COBBLESTONE.defaultBlockState();
+            case DECAYED_BUILDING_ROOF -> Blocks.BROWN_TERRACOTTA.defaultBlockState();
         };
     }
 }

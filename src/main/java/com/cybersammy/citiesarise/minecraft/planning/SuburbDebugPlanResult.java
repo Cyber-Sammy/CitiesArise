@@ -1,6 +1,9 @@
 package com.cybersammy.citiesarise.minecraft.planning;
 
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
+import com.cybersammy.citiesarise.core.model.BuildingSlot;
+import com.cybersammy.citiesarise.core.model.PlanTags;
+import com.cybersammy.citiesarise.core.model.RoadSegment;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningFailureReason;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
@@ -57,6 +60,26 @@ public record SuburbDebugPlanResult(
         return Optional.ofNullable(terrainDiagnostic);
     }
 
+    public long wornRoadCount() {
+        if (!successful) {
+            return 0;
+        }
+
+        return optionalPlan()
+                .map(SuburbDebugPlanResult::wornRoadCount)
+                .orElse(0L);
+    }
+
+    public long decayedBuildingSlotCount() {
+        if (!successful) {
+            return 0;
+        }
+
+        return optionalPlan()
+                .map(SuburbDebugPlanResult::decayedBuildingSlotCount)
+                .orElse(0L);
+    }
+
     public String summary() {
         if (!successful) {
             return rejectionSummary();
@@ -80,7 +103,32 @@ public record SuburbDebugPlanResult(
         return baseSummary()
                 + ", roads=" + settlementPlan.roadGraph().segments().size()
                 + ", parcels=" + settlementPlan.parcels().size()
-                + ", buildingSlots=" + settlementPlan.buildingSlots().size();
+                + ", buildingSlots=" + settlementPlan.buildingSlots().size()
+                + ", wornRoads=" + wornRoadCount()
+                + ", decayedBuildingSlots=" + decayedBuildingSlotCount();
+    }
+
+    private static long wornRoadCount(SettlementPlan plan) {
+        return plan.roadGraph()
+                .segments()
+                .stream()
+                .filter(SuburbDebugPlanResult::isWornRoad)
+                .count();
+    }
+
+    private static boolean isWornRoad(RoadSegment segment) {
+        return segment.tags().contains(PlanTags.WORN);
+    }
+
+    private static long decayedBuildingSlotCount(SettlementPlan plan) {
+        return plan.buildingSlots()
+                .stream()
+                .filter(SuburbDebugPlanResult::isDecayedBuildingSlot)
+                .count();
+    }
+
+    private static boolean isDecayedBuildingSlot(BuildingSlot buildingSlot) {
+        return buildingSlot.tags().contains(PlanTags.DECAYED);
     }
 
     private String baseSummary() {

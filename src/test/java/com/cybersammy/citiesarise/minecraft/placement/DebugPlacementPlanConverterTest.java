@@ -10,6 +10,7 @@ import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanProperties;
+import com.cybersammy.citiesarise.core.model.PlanTags;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
@@ -51,6 +52,18 @@ final class DebugPlacementPlanConverterTest {
         assertOperation(placementPlan, point(11, 11), -1, DebugPlacementRole.FOUNDATION, buildingSlot.id());
         assertOperation(placementPlan, point(11, 11), 1, DebugPlacementRole.BUILDING_WALL, buildingSlot.id());
         assertOperation(placementPlan, point(12, 12), 3, DebugPlacementRole.BUILDING_ROOF, buildingSlot.id());
+    }
+
+    @Test
+    void convertsDecayedBuildingSlotToDecayedHouseOperations() {
+        Parcel parcel = parcel(id("parcel"), bounds(10, 10, 4, 4));
+        BuildingSlot buildingSlot = decayedBuildingSlot(id("slot"), parcel.id(), bounds(11, 11, 2, 2));
+        SettlementPlan plan = plan(RoadGraph.empty(), List.of(parcel), List.of(buildingSlot));
+
+        DebugPlacementPlan placementPlan = converter.convert(plan);
+
+        assertOperation(placementPlan, point(11, 11), 1, DebugPlacementRole.DECAYED_BUILDING_WALL, buildingSlot.id());
+        assertOperation(placementPlan, point(12, 12), 3, DebugPlacementRole.DECAYED_BUILDING_ROOF, buildingSlot.id());
     }
 
     @Test
@@ -139,6 +152,10 @@ final class DebugPlacementPlanConverterTest {
 
     private static BuildingSlot buildingSlot(PlanElementId id, PlanElementId parcelId, GridBounds bounds) {
         return new BuildingSlot(id, parcelId, bounds, Set.of(), PlanProperties.empty());
+    }
+
+    private static BuildingSlot decayedBuildingSlot(PlanElementId id, PlanElementId parcelId, GridBounds bounds) {
+        return new BuildingSlot(id, parcelId, bounds, Set.of(PlanTags.DECAYED), PlanProperties.empty());
     }
 
     private static GridBounds bounds(int x, int z, int width, int depth) {

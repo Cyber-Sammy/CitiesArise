@@ -10,22 +10,36 @@ import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanner;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningRequest;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.transform.LightDecayTransform;
+import com.cybersammy.citiesarise.core.transform.TransformContext;
+import com.cybersammy.citiesarise.core.transform.TransformPipeline;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftTerrainSampler;
+import java.util.Objects;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 
 public final class MinecraftSuburbPlanningService {
     private final SuburbPlanner planner;
+    private final TransformPipeline transformPipeline;
     private final Logger logger;
 
     public MinecraftSuburbPlanningService(SuburbPlanner planner, Logger logger) {
-        this.planner = planner;
-        this.logger = logger;
+        this(planner, TransformPipeline.empty(), logger);
+    }
+
+    public MinecraftSuburbPlanningService(SuburbPlanner planner, TransformPipeline transformPipeline, Logger logger) {
+        this.planner = Objects.requireNonNull(planner, "planner");
+        this.transformPipeline = Objects.requireNonNull(transformPipeline, "transformPipeline");
+        this.logger = Objects.requireNonNull(logger, "logger");
     }
 
     public static MinecraftSuburbPlanningService defaults(Logger logger) {
-        return new MinecraftSuburbPlanningService(SuburbPlanner.defaults(), logger);
+        return new MinecraftSuburbPlanningService(
+                SuburbPlanner.defaults(),
+                TransformPipeline.of(LightDecayTransform.defaults()),
+                logger
+        );
     }
 
     public SuburbDebugPlanResult planAt(ServerLevel level, Vec3 position) {
@@ -45,10 +59,22 @@ public final class MinecraftSuburbPlanningService {
                 config.toSuburbPlanningSettings()
         );
         SuburbPlanningResult result = planner.plan(request);
-        SuburbDebugPlanResult debugResult = SuburbDebugPlanResult.from(region, bounds, seed, result);
+        SuburbPlanningResult transformedResult = applyTransforms(result, seed);
+        SuburbDebugPlanResult debugResult = SuburbDebugPlanResult.from(region, bounds, seed, transformedResult);
 
         logPlanningResult(debugResult);
         return debugResult;
+    }
+
+    private SuburbPlanningResult applyTransforms(SuburbPlanningResult result, long seed) {
+        if (!result.successful()) {
+            return result;
+        }
+
+        SettlementPlan plan = result.plan()
+                .orElseThrow(() -> new IllegalStateException("successful planning result is missing plan"));
+        SettlementPlan transformedPlan = transformPipeline.apply(plan, new TransformContext(seed));
+        return SuburbPlanningResult.success(transformedPlan);
     }
 
     private static PlanElementId settlementId(SettlementRegion region) {
@@ -89,11 +115,13 @@ public final class MinecraftSuburbPlanningService {
 
         SettlementPlan plan = result.plan();
         logger.info(
-                "Suburb planning accepted: {}, roads={}, parcels={}, buildingSlots={}.",
+                "Suburb planning accepted: {}, roads={}, parcels={}, buildingSlots={}, wornRoads={}, decayedBuildingSlots={}.",
                 result.summary(),
                 plan.roadGraph().segments().size(),
                 plan.parcels().size(),
-                plan.buildingSlots().size()
+                plan.buildingSlots().size(),
+                result.wornRoadCount(),
+                result.decayedBuildingSlotCount()
         );
     }
 }

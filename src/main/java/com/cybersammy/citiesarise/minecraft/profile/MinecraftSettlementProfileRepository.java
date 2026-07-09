@@ -13,7 +13,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 
-public final class MinecraftSettlementProfileRepository {
+public final class MinecraftSettlementProfileRepository implements SettlementProfileSource {
     private static final String PROFILE_DIRECTORY = "settlement_profiles";
     private static final String JSON_EXTENSION = ".json";
 
@@ -27,6 +27,7 @@ public final class MinecraftSettlementProfileRepository {
         this.parser = Objects.requireNonNull(parser, "parser");
     }
 
+    @Override
     public Optional<SettlementProfile> find(ServerLevel level, SettlementProfileId profileId) {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(profileId, "profileId");

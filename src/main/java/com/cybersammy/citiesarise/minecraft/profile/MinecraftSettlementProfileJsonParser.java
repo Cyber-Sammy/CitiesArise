@@ -11,6 +11,16 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 public final class MinecraftSettlementProfileJsonParser {
+    private final MinecraftSettlementProfileLimits limits;
+
+    public MinecraftSettlementProfileJsonParser() {
+        this(MinecraftSettlementProfileLimits.defaults());
+    }
+
+    MinecraftSettlementProfileJsonParser(MinecraftSettlementProfileLimits limits) {
+        this.limits = Objects.requireNonNull(limits, "limits");
+    }
+
     public SettlementProfile parse(SettlementProfileId id, JsonObject json) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(json, "json");
@@ -18,11 +28,13 @@ public final class MinecraftSettlementProfileJsonParser {
         JsonObject survey = requiredObject(json, "survey");
         JsonObject planning = requiredObject(json, "planning");
 
-        return new SettlementProfile(
+        SettlementProfile profile = new SettlementProfile(
                 id,
                 parseSurveySize(survey),
                 parseSuburbPlanningSettings(planning)
         );
+        limits.validate(profile);
+        return profile;
     }
 
     private static GridSize parseSurveySize(JsonObject survey) {

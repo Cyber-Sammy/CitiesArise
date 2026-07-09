@@ -71,9 +71,27 @@ final class MinecraftSettlementProfileJsonParserTest {
     @Test
     void rejectsInvalidPlanningValuesThroughCoreValidation() {
         JsonObject json = validJson();
-        json.getAsJsonObject("planning").addProperty("buildingMargin", 10);
+        json.getAsJsonObject("planning").addProperty("parcelWidth", 8);
 
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), json));
+    }
+
+    @Test
+    void rejectsSurveySizeAboveMinecraftDebugLimit() {
+        JsonObject json = validJson();
+        json.getAsJsonObject("survey").addProperty("width", 129);
+
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), json));
+    }
+
+    @Test
+    void rejectsPlanningValuesAboveMinecraftDebugLimits() {
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("roadWidth", 17)));
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("maxBuildableSlope", 8.1)));
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("targetParcelCount", 129)));
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("parcelWidth", 65)));
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("parcelDepth", 65)));
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("buildingMargin", 9)));
     }
 
     private static JsonObject validJson() {
@@ -93,6 +111,12 @@ final class MinecraftSettlementProfileJsonParserTest {
                   }
                 }
                 """);
+    }
+
+    private static JsonObject jsonWithPlanningValue(String name, Number value) {
+        JsonObject json = validJson();
+        json.getAsJsonObject("planning").addProperty(name, value);
+        return json;
     }
 
     private static JsonObject json(String value) {

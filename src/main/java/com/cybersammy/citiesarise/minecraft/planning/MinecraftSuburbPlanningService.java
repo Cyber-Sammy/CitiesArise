@@ -4,20 +4,19 @@ import com.cybersammy.citiesarise.CitiesAriseMod;
 import com.cybersammy.citiesarise.config.CitiesAriseConfig;
 import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
-import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanTransformService;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanner;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningRequest;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
-import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.core.transform.LightDecayTransform;
 import com.cybersammy.citiesarise.core.transform.TransformPipeline;
 import com.cybersammy.citiesarise.minecraft.profile.MinecraftSettlementProfileRepository;
+import com.cybersammy.citiesarise.minecraft.profile.SettlementProfileSource;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftTerrainSampler;
 import java.util.Objects;
 import java.util.Optional;
@@ -28,7 +27,7 @@ import org.slf4j.Logger;
 public final class MinecraftSuburbPlanningService {
     private final SuburbPlanner planner;
     private final SuburbPlanTransformService transformService;
-    private final MinecraftSettlementProfileRepository profileRepository;
+    private final SettlementProfileSource profileSource;
     private final Logger logger;
 
     public MinecraftSuburbPlanningService(SuburbPlanner planner, Logger logger) {
@@ -55,12 +54,12 @@ public final class MinecraftSuburbPlanningService {
     public MinecraftSuburbPlanningService(
             SuburbPlanner planner,
             SuburbPlanTransformService transformService,
-            MinecraftSettlementProfileRepository profileRepository,
+            SettlementProfileSource profileSource,
             Logger logger
     ) {
         this.planner = Objects.requireNonNull(planner, "planner");
         this.transformService = Objects.requireNonNull(transformService, "transformService");
-        this.profileRepository = Objects.requireNonNull(profileRepository, "profileRepository");
+        this.profileSource = Objects.requireNonNull(profileSource, "profileSource");
         this.logger = Objects.requireNonNull(logger, "logger");
     }
 
@@ -75,8 +74,8 @@ public final class MinecraftSuburbPlanningService {
     public SuburbDebugPlanResult planAt(ServerLevel level, Vec3 position) {
         SettlementRegion region = SettlementRegion.fromBlockPosition(blockCoordinate(position.x()), blockCoordinate(position.z()));
         DebugSuburbPlanningConfig config = CitiesAriseConfig.debugSuburbPlanningConfig();
-        Optional<SettlementProfile> profile = activeProfile(level);
-        GridBounds bounds = region.surveyBounds(surveySize(config, profile));
+        Optional<SettlementProfile> profile = activeProfile(level, new SettlementProfileId(CitiesAriseConfig.debugSettlementProfileId()));
+        GridBounds bounds = region.surveyBounds(DebugSettlementProfileSelection.surveySize(config, profile));
         PlanElementId settlementId = settlementId(region);
         long seed = SettlementSeed.forRegion(level.getSeed(), region, settlementId);
 
@@ -87,7 +86,7 @@ public final class MinecraftSuburbPlanningService {
                 settlementId,
                 survey,
                 seed,
-                suburbPlanningSettings(config, profile)
+                DebugSettlementProfileSelection.suburbPlanningSettings(config, profile)
         );
         SuburbPlanningResult result = planner.plan(request);
         SuburbPlanningResult transformedResult = transformService.apply(result, seed);
@@ -97,35 +96,10 @@ public final class MinecraftSuburbPlanningService {
         return debugResult;
     }
 
-    private Optional<SettlementProfile> activeProfile(ServerLevel level) {
-        SettlementProfileId profileId = new SettlementProfileId(CitiesAriseConfig.debugSettlementProfileId());
-
-        try {
-            Optional<SettlementProfile> profile = profileRepository.find(level, profileId);
-            logProfileResult(profileId, profile);
-            return profile;
-        } catch (RuntimeException exception) {
-            logger.warn("Failed to load settlement profile {}. Falling back to debug config.", profileId.value(), exception);
-            return Optional.empty();
-        }
-    }
-
-    private static GridSize surveySize(
-            DebugSuburbPlanningConfig config,
-            Optional<SettlementProfile> profile
-    ) {
-        return profile
-                .map(SettlementProfile::surveySize)
-                .orElseGet(config::toSurveySize);
-    }
-
-    private static SuburbPlanningSettings suburbPlanningSettings(
-            DebugSuburbPlanningConfig config,
-            Optional<SettlementProfile> profile
-    ) {
-        return profile
-                .map(SettlementProfile::suburbPlanningSettings)
-                .orElseGet(config::toSuburbPlanningSettings);
+    Optional<SettlementProfile> activeProfile(ServerLevel level, SettlementProfileId profileId) {
+        Optional<SettlementProfile> profile = DebugSettlementProfileSelection.load(() -> profileSource.find(level, profileId));
+        logProfileResult(profileId, profile);
+        return profile;
     }
 
     private static PlanElementId settlementId(SettlementRegion region) {

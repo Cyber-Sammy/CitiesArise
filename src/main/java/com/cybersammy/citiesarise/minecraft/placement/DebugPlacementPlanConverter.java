@@ -19,8 +19,10 @@ public final class DebugPlacementPlanConverter {
     private static final int SURFACE_OFFSET = 0;
     private static final int FOUNDATION_OFFSET = -1;
     private static final int FIRST_WALL_OFFSET = 1;
-    private static final int LAST_WALL_OFFSET = 2;
-    private static final int ROOF_OFFSET = 3;
+    private static final int DOORWAY_TOP_OFFSET = 2;
+    private static final int LAST_WALL_OFFSET = 3;
+    private static final int ROOF_BASE_OFFSET = 4;
+    private static final int ROOF_RIDGE_OFFSET = 5;
 
     public DebugPlacementPlan convert(SettlementPlan plan) {
         Objects.requireNonNull(plan, "plan");
@@ -178,13 +180,8 @@ public final class DebugPlacementPlanConverter {
                     operationsByPosition
             );
             addWallOperations(buildingSlot.bounds(), buildingSlot.id(), wallRole, operationsByPosition);
-            addFilledBoundsOperations(
-                    buildingSlot.bounds(),
-                    ROOF_OFFSET,
-                    roofRole,
-                    buildingSlot.id(),
-                    operationsByPosition
-            );
+            addDoorwayOperations(buildingSlot.bounds(), buildingSlot.id(), operationsByPosition);
+            addRoofOperations(buildingSlot.bounds(), buildingSlot.id(), roofRole, operationsByPosition);
         }
     }
 
@@ -219,6 +216,90 @@ public final class DebugPlacementPlanConverter {
                     operationsByPosition
             );
         }
+    }
+
+    private static void addDoorwayOperations(
+            GridBounds bounds,
+            PlanElementId sourceElementId,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
+    ) {
+        GridPoint doorwayPoint = doorwayPoint(bounds);
+
+        for (int offset = FIRST_WALL_OFFSET; offset <= DOORWAY_TOP_OFFSET; offset++) {
+            addOperation(
+                    doorwayPoint,
+                    offset,
+                    DebugPlacementRole.BUILDING_DOORWAY,
+                    sourceElementId,
+                    operationsByPosition
+            );
+        }
+    }
+
+    private static GridPoint doorwayPoint(GridBounds bounds) {
+        return new GridPoint(centerX(bounds), bounds.minZ());
+    }
+
+    private static void addRoofOperations(
+            GridBounds bounds,
+            PlanElementId sourceElementId,
+            DebugPlacementRole roofRole,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
+    ) {
+        addFilledBoundsOperations(bounds, ROOF_BASE_OFFSET, roofRole, sourceElementId, operationsByPosition);
+        addRoofRidgeOperations(bounds, sourceElementId, roofRole, operationsByPosition);
+    }
+
+    private static void addRoofRidgeOperations(
+            GridBounds bounds,
+            PlanElementId sourceElementId,
+            DebugPlacementRole roofRole,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
+    ) {
+        if (isDepthLonger(bounds)) {
+            addVerticalRoofRidgeOperations(bounds, sourceElementId, roofRole, operationsByPosition);
+            return;
+        }
+
+        addHorizontalRoofRidgeOperations(bounds, sourceElementId, roofRole, operationsByPosition);
+    }
+
+    private static boolean isDepthLonger(GridBounds bounds) {
+        return bounds.size().depth() > bounds.size().width();
+    }
+
+    private static void addVerticalRoofRidgeOperations(
+            GridBounds bounds,
+            PlanElementId sourceElementId,
+            DebugPlacementRole roofRole,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
+    ) {
+        int x = centerX(bounds);
+
+        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
+            addOperation(new GridPoint(x, z), ROOF_RIDGE_OFFSET, roofRole, sourceElementId, operationsByPosition);
+        }
+    }
+
+    private static void addHorizontalRoofRidgeOperations(
+            GridBounds bounds,
+            PlanElementId sourceElementId,
+            DebugPlacementRole roofRole,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
+    ) {
+        int z = centerZ(bounds);
+
+        for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
+            addOperation(new GridPoint(x, z), ROOF_RIDGE_OFFSET, roofRole, sourceElementId, operationsByPosition);
+        }
+    }
+
+    private static int centerX(GridBounds bounds) {
+        return bounds.minX() + (bounds.size().width() / 2);
+    }
+
+    private static int centerZ(GridBounds bounds) {
+        return bounds.minZ() + (bounds.size().depth() / 2);
     }
 
     private static void addFilledBoundsOperations(

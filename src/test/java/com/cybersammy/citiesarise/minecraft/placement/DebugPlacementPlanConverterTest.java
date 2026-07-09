@@ -58,12 +58,15 @@ final class DebugPlacementPlanConverterTest {
 
         DebugPlacementPlan placementPlan = converter.convert(plan);
 
-        assertEquals(32, placementPlan.size());
+        assertEquals(38, placementPlan.size());
         assertOperation(placementPlan, point(10, 10), 0, DebugPlacementRole.PARCEL_BOUNDARY, parcel.id());
         assertOperation(placementPlan, point(12, 12), 0, DebugPlacementRole.BUILDING_FLOOR, buildingSlot.id());
         assertOperation(placementPlan, point(11, 11), -1, DebugPlacementRole.FOUNDATION, buildingSlot.id());
         assertOperation(placementPlan, point(11, 11), 1, DebugPlacementRole.BUILDING_WALL, buildingSlot.id());
-        assertOperation(placementPlan, point(12, 12), 3, DebugPlacementRole.BUILDING_ROOF, buildingSlot.id());
+        assertOperation(placementPlan, point(11, 11), 3, DebugPlacementRole.BUILDING_WALL, buildingSlot.id());
+        assertOperation(placementPlan, point(12, 11), 1, DebugPlacementRole.BUILDING_DOORWAY, buildingSlot.id());
+        assertOperation(placementPlan, point(12, 12), 4, DebugPlacementRole.BUILDING_ROOF, buildingSlot.id());
+        assertOperation(placementPlan, point(11, 12), 5, DebugPlacementRole.BUILDING_ROOF, buildingSlot.id());
     }
 
     @Test
@@ -75,7 +78,21 @@ final class DebugPlacementPlanConverterTest {
         DebugPlacementPlan placementPlan = converter.convert(plan);
 
         assertOperation(placementPlan, point(11, 11), 1, DebugPlacementRole.DECAYED_BUILDING_WALL, buildingSlot.id());
-        assertOperation(placementPlan, point(12, 12), 3, DebugPlacementRole.DECAYED_BUILDING_ROOF, buildingSlot.id());
+        assertOperation(placementPlan, point(12, 12), 4, DebugPlacementRole.DECAYED_BUILDING_ROOF, buildingSlot.id());
+        assertOperation(placementPlan, point(11, 12), 5, DebugPlacementRole.DECAYED_BUILDING_ROOF, buildingSlot.id());
+    }
+
+    @Test
+    void rendersRoofRidgeAlongLongerBuildingAxis() {
+        Parcel parcel = parcel(id("parcel"), bounds(10, 10, 14, 16));
+        BuildingSlot buildingSlot = buildingSlot(id("slot"), parcel.id(), bounds(12, 12, 10, 12));
+        SettlementPlan plan = plan(RoadGraph.empty(), List.of(parcel), List.of(buildingSlot));
+
+        DebugPlacementPlan placementPlan = converter.convert(plan);
+
+        assertOperation(placementPlan, point(17, 12), 5, DebugPlacementRole.BUILDING_ROOF, buildingSlot.id());
+        assertOperation(placementPlan, point(17, 23), 5, DebugPlacementRole.BUILDING_ROOF, buildingSlot.id());
+        assertOperation(placementPlan, point(17, 12), 1, DebugPlacementRole.BUILDING_DOORWAY, buildingSlot.id());
     }
 
     @Test

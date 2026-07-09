@@ -32,6 +32,14 @@ The mod also includes a debug command that samples real Minecraft terrain around
 
 The command reports whether a semantic suburb plan was accepted or rejected, along with the region, survey bounds, deterministic seed, and plan element counts.
 
+The accepted semantic plan can be exported as JSON for inspection:
+
+```text
+/citiesarise debug dump
+```
+
+The dump is written into the current world's `debug/cities_arise` directory. It contains debug metadata and semantic plan data such as roads, parcels, building slots, tags, and properties. It does not contain Minecraft placement operations or block snapshots.
+
 The debug placement command applies the accepted plan as simple vanilla blocks:
 
 ```text

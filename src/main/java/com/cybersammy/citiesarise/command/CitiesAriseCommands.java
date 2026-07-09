@@ -7,8 +7,11 @@ import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlanConverte
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementUndoResult;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementUndoStatus;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
+import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanDumpWriter;
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanResult;
 import com.mojang.brigadier.CommandDispatcher;
+import java.io.IOException;
+import java.nio.file.Path;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -21,12 +24,14 @@ public final class CitiesAriseCommands {
     private final MinecraftSuburbPlanningService planningService;
     private final DebugPlacementPlanConverter placementPlanConverter;
     private final DebugPlacementApplier placementApplier;
+    private final SuburbDebugPlanDumpWriter planDumpWriter;
     private final Logger logger;
 
     public CitiesAriseCommands(MinecraftSuburbPlanningService planningService, Logger logger) {
         this.planningService = planningService;
         this.placementPlanConverter = new DebugPlacementPlanConverter();
         this.placementApplier = new DebugPlacementApplier();
+        this.planDumpWriter = new SuburbDebugPlanDumpWriter();
         this.logger = logger;
     }
 
@@ -40,6 +45,8 @@ public final class CitiesAriseCommands {
                 .then(Commands.literal("debug")
                         .then(Commands.literal("plan")
                                 .executes(context -> runDebugPlan(context.getSource())))
+                        .then(Commands.literal("dump")
+                                .executes(context -> runDebugDump(context.getSource())))
                         .then(Commands.literal("place")
                                 .executes(context -> runDebugPlace(context.getSource())))
                         .then(Commands.literal("undo")
@@ -53,6 +60,31 @@ public final class CitiesAriseCommands {
         source.sendSuccess(() -> Component.literal(summary), false);
         logCommandResult(summary);
         return 1;
+    }
+
+    private int runDebugDump(CommandSourceStack source) {
+        SuburbDebugPlanResult result = planningService.planAt(source.getLevel(), source.getPosition());
+
+        if (!result.successful()) {
+            String summary = "Cities Arise debug plan dump rejected: " + result.summary();
+            source.sendFailure(Component.literal(summary));
+            logCommandResult(summary);
+            return 0;
+        }
+
+        try {
+            Path dumpPath = planDumpWriter.write(source.getLevel(), result);
+            String summary = "Cities Arise debug plan dump written: " + dumpPath;
+            source.sendSuccess(() -> Component.literal(summary), false);
+            logCommandResult(summary);
+            return 1;
+        } catch (IOException exception) {
+            String summary = "Cities Arise debug plan dump failed: " + exception.getMessage();
+            source.sendFailure(Component.literal(summary));
+            logger.error("Cities Arise debug plan dump failed.", exception);
+            logCommandResult(summary);
+            return 0;
+        }
     }
 
     private int runDebugPlace(CommandSourceStack source) {

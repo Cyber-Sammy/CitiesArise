@@ -1,6 +1,8 @@
 package com.cybersammy.citiesarise.minecraft.planning;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
@@ -15,42 +17,47 @@ final class DebugSettlementProfileSelectionTest {
     @Test
     void usesLoadedProfileValues() {
         SettlementProfile profile = profile();
-        Optional<SettlementProfile> loadedProfile = DebugSettlementProfileSelection.load(() -> Optional.of(profile));
+        DebugSettlementProfileSelection.SelectionResult selection = DebugSettlementProfileSelection.load(() -> Optional.of(profile));
         DebugSuburbPlanningConfig fallbackConfig = DebugSuburbPlanningConfig.defaults();
 
-        assertEquals(Optional.of(profile), loadedProfile);
-        assertEquals(profile.surveySize(), DebugSettlementProfileSelection.surveySize(fallbackConfig, loadedProfile));
+        assertEquals(Optional.of(profile), selection.profile());
+        assertFalse(selection.failed());
+        assertEquals(profile.surveySize(), DebugSettlementProfileSelection.surveySize(fallbackConfig, selection.profile()));
         assertEquals(
                 profile.suburbPlanningSettings(),
-                DebugSettlementProfileSelection.suburbPlanningSettings(fallbackConfig, loadedProfile)
+                DebugSettlementProfileSelection.suburbPlanningSettings(fallbackConfig, selection.profile())
         );
     }
 
     @Test
     void fallsBackToDebugConfigWhenProfileIsMissing() {
-        Optional<SettlementProfile> loadedProfile = DebugSettlementProfileSelection.load(Optional::empty);
+        DebugSettlementProfileSelection.SelectionResult selection = DebugSettlementProfileSelection.load(Optional::empty);
         DebugSuburbPlanningConfig fallbackConfig = DebugSuburbPlanningConfig.defaults();
 
-        assertTrue(loadedProfile.isEmpty());
-        assertEquals(fallbackConfig.toSurveySize(), DebugSettlementProfileSelection.surveySize(fallbackConfig, loadedProfile));
+        assertTrue(selection.profile().isEmpty());
+        assertFalse(selection.failed());
+        assertEquals(fallbackConfig.toSurveySize(), DebugSettlementProfileSelection.surveySize(fallbackConfig, selection.profile()));
         assertEquals(
                 fallbackConfig.toSuburbPlanningSettings(),
-                DebugSettlementProfileSelection.suburbPlanningSettings(fallbackConfig, loadedProfile)
+                DebugSettlementProfileSelection.suburbPlanningSettings(fallbackConfig, selection.profile())
         );
     }
 
     @Test
-    void fallsBackToDebugConfigWhenProfileLoadingThrows() {
-        Optional<SettlementProfile> loadedProfile = DebugSettlementProfileSelection.load(() -> {
-            throw new IllegalArgumentException("invalid profile");
+    void fallsBackToDebugConfigAndKeepsErrorWhenProfileLoadingThrows() {
+        RuntimeException error = new IllegalArgumentException("invalid profile");
+        DebugSettlementProfileSelection.SelectionResult selection = DebugSettlementProfileSelection.load(() -> {
+            throw error;
         });
         DebugSuburbPlanningConfig fallbackConfig = DebugSuburbPlanningConfig.defaults();
 
-        assertTrue(loadedProfile.isEmpty());
-        assertEquals(fallbackConfig.toSurveySize(), DebugSettlementProfileSelection.surveySize(fallbackConfig, loadedProfile));
+        assertTrue(selection.profile().isEmpty());
+        assertTrue(selection.failed());
+        assertSame(error, selection.error());
+        assertEquals(fallbackConfig.toSurveySize(), DebugSettlementProfileSelection.surveySize(fallbackConfig, selection.profile()));
         assertEquals(
                 fallbackConfig.toSuburbPlanningSettings(),
-                DebugSettlementProfileSelection.suburbPlanningSettings(fallbackConfig, loadedProfile)
+                DebugSettlementProfileSelection.suburbPlanningSettings(fallbackConfig, selection.profile())
         );
     }
 

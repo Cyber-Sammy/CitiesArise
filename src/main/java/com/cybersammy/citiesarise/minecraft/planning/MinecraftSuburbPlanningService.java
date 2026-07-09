@@ -97,9 +97,11 @@ public final class MinecraftSuburbPlanningService {
     }
 
     Optional<SettlementProfile> activeProfile(ServerLevel level, SettlementProfileId profileId) {
-        Optional<SettlementProfile> profile = DebugSettlementProfileSelection.load(() -> profileSource.find(level, profileId));
-        logProfileResult(profileId, profile);
-        return profile;
+        DebugSettlementProfileSelection.SelectionResult result = DebugSettlementProfileSelection.load(
+                () -> profileSource.find(level, profileId)
+        );
+        logProfileResult(profileId, result);
+        return result.profile();
     }
 
     private static PlanElementId settlementId(SettlementRegion region) {
@@ -128,13 +130,25 @@ public final class MinecraftSuburbPlanningService {
         );
     }
 
-    private void logProfileResult(SettlementProfileId profileId, Optional<SettlementProfile> profile) {
+    private void logProfileResult(
+            SettlementProfileId profileId,
+            DebugSettlementProfileSelection.SelectionResult result
+    ) {
         if (!CitiesAriseConfig.planningLoggingEnabled()) {
             return;
         }
 
-        if (profile.isPresent()) {
+        if (result.profile().isPresent()) {
             logger.info("Loaded settlement profile {}.", profileId.value());
+            return;
+        }
+
+        if (result.failed()) {
+            logger.warn(
+                    "Failed to load settlement profile {}. Falling back to debug config.",
+                    profileId.value(),
+                    result.error()
+            );
             return;
         }
 

@@ -11,13 +11,13 @@ final class DebugSettlementProfileSelection {
     private DebugSettlementProfileSelection() {
     }
 
-    static Optional<SettlementProfile> load(ProfileLoadAction loadAction) {
+    static SelectionResult load(ProfileLoadAction loadAction) {
         Objects.requireNonNull(loadAction, "loadAction");
 
         try {
-            return loadAction.load();
+            return SelectionResult.loaded(loadAction.load());
         } catch (RuntimeException exception) {
-            return Optional.empty();
+            return SelectionResult.failed(exception);
         }
     }
 
@@ -48,5 +48,23 @@ final class DebugSettlementProfileSelection {
     @FunctionalInterface
     interface ProfileLoadAction {
         Optional<SettlementProfile> load();
+    }
+
+    record SelectionResult(Optional<SettlementProfile> profile, RuntimeException error) {
+        SelectionResult {
+            profile = Objects.requireNonNull(profile, "profile");
+        }
+
+        static SelectionResult loaded(Optional<SettlementProfile> profile) {
+            return new SelectionResult(profile, null);
+        }
+
+        static SelectionResult failed(RuntimeException error) {
+            return new SelectionResult(Optional.empty(), Objects.requireNonNull(error, "error"));
+        }
+
+        boolean failed() {
+            return error != null;
+        }
     }
 }

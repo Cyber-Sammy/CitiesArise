@@ -16,6 +16,8 @@ import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
+import com.cybersammy.citiesarise.core.profile.SettlementProfile;
+import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
 import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
@@ -223,6 +225,30 @@ final class SuburbPlannerTest {
         BuildingSlot buildingSlot = plan.buildingSlots().getFirst();
 
         assertEquals(8, plan.parcels().size());
+        assertEquals(new GridSize(10, 12), buildingSlot.bounds().size());
+    }
+
+    @Test
+    void settlementProfileControlsPlannerScale() {
+        SettlementProfile profile = new SettlementProfile(
+                new SettlementProfileId("test:large_suburb"),
+                new GridSize(96, 64),
+                new SuburbPlanningSettings(5, 0.75, 5, 18, 20, 4)
+        );
+        SuburbPlanningResult result = planner.plan(request(
+                flatSurvey(profile.surveySize().width(), profile.surveySize().depth()),
+                100L,
+                profile.suburbPlanningSettings()
+        ));
+
+        assertTrue(result.successful());
+
+        SettlementPlan plan = result.plan().orElseThrow();
+        Parcel parcel = plan.parcels().getFirst();
+        BuildingSlot buildingSlot = plan.buildingSlots().getFirst();
+
+        assertEquals(5, plan.parcels().size());
+        assertEquals(new GridSize(18, 20), parcel.bounds().size());
         assertEquals(new GridSize(10, 12), buildingSlot.bounds().size());
     }
 

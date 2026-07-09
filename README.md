@@ -65,6 +65,78 @@ The current debug config can also be edited in game:
 
 The screen edits a temporary copy of the values and writes them only when Save is pressed. This is a local client config screen: in singleplayer it is useful for debug iteration, while dedicated servers still use their server-side config file. Debug placement is marked in the screen because it enables permanent marker placement.
 
+The debug planner can load a settlement profile from data resources. The default profile id is:
+
+```text
+cities_arise:suburb
+```
+
+The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. For this MVP, profiles can change survey size, road width, max buildable slope, target parcel count, parcel size, and building margin. If the configured profile is missing or invalid, the planner falls back to the numeric debug config values.
+
+## Datapack Settlement Profiles
+
+Settlement profiles are datapack JSON files. For the current MVP they only change debug suburb planning numbers. They do not define house assets, structures, block palettes, loot, entities, or final placement providers yet.
+
+Create a datapack with this shape:
+
+```text
+MyDatapack/
+  pack.mcmeta
+  data/
+    my_pack/
+      settlement_profiles/
+        large_suburb.json
+```
+
+Example `pack.mcmeta`:
+
+```json
+{
+  "pack": {
+    "description": "Cities Arise profile examples",
+    "pack_format": 48
+  }
+}
+```
+
+Example `data/my_pack/settlement_profiles/large_suburb.json`:
+
+```json
+{
+  "survey": {
+    "width": 120,
+    "depth": 72
+  },
+  "planning": {
+    "roadWidth": 5,
+    "maxBuildableSlope": 0.75,
+    "targetParcelCount": 8,
+    "parcelWidth": 18,
+    "parcelDepth": 20,
+    "buildingMargin": 4
+  }
+}
+```
+
+Set `debugSettlementProfileId` to the profile id:
+
+```text
+my_pack:large_suburb
+```
+
+Then run:
+
+```text
+/reload
+/citiesarise debug plan
+```
+
+Use `/citiesarise debug dump` to inspect the generated plan and confirm that the profile changed the survey, parcel, and building slot scale.
+
+Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, target parcel count `128`, parcel width/depth `64`, and building margin `8`.
+
+House assets are future work. The intended direction is a separate provider layer where profiles can reference building pools, weights, footprints, tags, palettes, and structure/NBT assets. The core planner will still work with abstract building slots and provider ids; Minecraft-specific assets will stay in the Minecraft/content layer.
+
 ## Build
 
 Requirements:
@@ -91,6 +163,7 @@ Cities Arise creates a common config file with logging options. `debugLoggingEna
 
 The debug suburb planner can also be tuned from the same common config:
 
+- `debugSettlementProfileId`: settlement profile id used by the debug planner. The default is `cities_arise:suburb`. Datapacks can add profiles under `data/<namespace>/settlement_profiles/<path>.json`.
 - `debugSurveyWidth`: terrain survey width used by `/citiesarise debug plan`.
 - `debugSurveyDepth`: terrain survey depth used by `/citiesarise debug plan`.
 - `debugRoadWidth`: road width used by `/citiesarise debug plan`.
@@ -102,4 +175,4 @@ The debug suburb planner can also be tuned from the same common config:
 - `debugPlacementEnabled`: enables `/citiesarise debug place`, which permanently places vanilla debug blocks.
 - `debugPlacementUndoEnabled`: stores one previous debug placement state for `/citiesarise debug undo`.
 
-Datapack profiles and external integration points are not implemented yet. This document will be updated as those features become real.
+Full content providers, building asset pools, and external integration points are not implemented yet. This document will be updated as those features become real.

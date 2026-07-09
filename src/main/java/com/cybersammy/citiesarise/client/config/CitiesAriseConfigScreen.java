@@ -27,12 +27,14 @@ public final class CitiesAriseConfigScreen extends Screen {
     private static final int COLUMN_WIDTH = 270;
 
     private final Screen parent;
+    private final List<StringField> stringFields = new ArrayList<>();
     private final List<IntField> intFields = new ArrayList<>();
     private final List<DoubleField> doubleFields = new ArrayList<>();
     private final List<ToggleField> toggleFields = new ArrayList<>();
     private Component status = Component.empty();
     private int statusColor = INFO_COLOR;
 
+    private StringField debugSettlementProfileId;
     private IntField debugSurveyWidth;
     private IntField debugSurveyDepth;
     private IntField debugRoadWidth;
@@ -57,6 +59,7 @@ public final class CitiesAriseConfigScreen extends Screen {
     @Override
     protected void init() {
         intFields.clear();
+        stringFields.clear();
         doubleFields.clear();
         toggleFields.clear();
 
@@ -65,28 +68,29 @@ public final class CitiesAriseConfigScreen extends Screen {
         int rightX = leftX + COLUMN_WIDTH;
         int topY = 42;
 
-        debugSurveyWidth = addIntField("Survey width", snapshot.debugSurveyWidth(), leftX, topY);
-        debugSurveyDepth = addIntField("Survey depth", snapshot.debugSurveyDepth(), leftX, topY + ROW_HEIGHT);
-        debugRoadWidth = addIntField("Road width", snapshot.debugRoadWidth(), leftX, topY + ROW_HEIGHT * 2);
+        debugSettlementProfileId = addStringField("Debug profile id", snapshot.debugSettlementProfileId(), leftX, topY);
+        debugSurveyWidth = addIntField("Survey width", snapshot.debugSurveyWidth(), leftX, topY + ROW_HEIGHT);
+        debugSurveyDepth = addIntField("Survey depth", snapshot.debugSurveyDepth(), leftX, topY + ROW_HEIGHT * 2);
+        debugRoadWidth = addIntField("Road width", snapshot.debugRoadWidth(), leftX, topY + ROW_HEIGHT * 3);
         debugMaxBuildableSlope = addDoubleField(
                 "Max buildable slope",
                 snapshot.debugMaxBuildableSlope(),
                 leftX,
-                topY + ROW_HEIGHT * 3
+                topY + ROW_HEIGHT * 4
         );
         debugTargetParcelCount = addIntField(
                 "Target parcels",
                 snapshot.debugTargetParcelCount(),
                 leftX,
-                topY + ROW_HEIGHT * 4
+                topY + ROW_HEIGHT * 5
         );
-        debugParcelWidth = addIntField("Parcel width", snapshot.debugParcelWidth(), leftX, topY + ROW_HEIGHT * 5);
-        debugParcelDepth = addIntField("Parcel depth", snapshot.debugParcelDepth(), leftX, topY + ROW_HEIGHT * 6);
+        debugParcelWidth = addIntField("Parcel width", snapshot.debugParcelWidth(), leftX, topY + ROW_HEIGHT * 6);
+        debugParcelDepth = addIntField("Parcel depth", snapshot.debugParcelDepth(), leftX, topY + ROW_HEIGHT * 7);
         debugBuildingMargin = addIntField(
                 "Building margin",
                 snapshot.debugBuildingMargin(),
                 leftX,
-                topY + ROW_HEIGHT * 7
+                topY + ROW_HEIGHT * 8
         );
 
         debugPlacementEnabled = addToggle(
@@ -151,7 +155,7 @@ public final class CitiesAriseConfigScreen extends Screen {
         renderLabels(guiGraphics);
         guiGraphics.drawString(font, LOCAL_CONFIG_NOTE, contentLeft(), 26, NOTE_COLOR);
         guiGraphics.drawString(font, WARNING, contentLeft() + COLUMN_WIDTH, 42 + ROW_HEIGHT * 8, WARNING_COLOR);
-        guiGraphics.drawCenteredString(font, status, width / 2, Math.min(height - 56, 42 + ROW_HEIGHT * 9), statusColor);
+        guiGraphics.drawCenteredString(font, status, width / 2, Math.min(height - 56, 42 + ROW_HEIGHT * 10), statusColor);
     }
 
     @Override
@@ -165,6 +169,15 @@ public final class CitiesAriseConfigScreen extends Screen {
 
         IntField field = new IntField(label, editBox);
         intFields.add(field);
+        return field;
+    }
+
+    private StringField addStringField(String label, String value, int x, int y) {
+        EditBox editBox = createEditBox(x + LABEL_WIDTH, y, value);
+        addRenderableWidget(editBox);
+
+        StringField field = new StringField(label, editBox);
+        stringFields.add(field);
         return field;
     }
 
@@ -198,6 +211,10 @@ public final class CitiesAriseConfigScreen extends Screen {
     }
 
     private void renderLabels(GuiGraphics guiGraphics) {
+        for (StringField field : stringFields) {
+            renderFieldLabel(guiGraphics, field.label(), field.editBox());
+        }
+
         for (IntField field : intFields) {
             renderFieldLabel(guiGraphics, field.label(), field.editBox());
         }
@@ -239,6 +256,7 @@ public final class CitiesAriseConfigScreen extends Screen {
 
     private CitiesAriseConfigSnapshot createSnapshot() {
         return new CitiesAriseConfigSnapshot(
+                debugSettlementProfileId.value(),
                 debugSurveyWidth.value(),
                 debugSurveyDepth.value(),
                 debugRoadWidth.value(),
@@ -264,6 +282,7 @@ public final class CitiesAriseConfigScreen extends Screen {
     }
 
     private void loadSnapshot(CitiesAriseConfigSnapshot snapshot) {
+        debugSettlementProfileId.setValue(snapshot.debugSettlementProfileId());
         debugSurveyWidth.setValue(snapshot.debugSurveyWidth());
         debugSurveyDepth.setValue(snapshot.debugSurveyDepth());
         debugRoadWidth.setValue(snapshot.debugRoadWidth());
@@ -310,6 +329,22 @@ public final class CitiesAriseConfigScreen extends Screen {
 
         void setValue(int value) {
             editBox.setValue(Integer.toString(value));
+        }
+    }
+
+    private record StringField(String label, EditBox editBox) {
+        String value() {
+            String value = editBox.getValue().trim();
+
+            if (value.isEmpty()) {
+                throw new IllegalArgumentException(label + " must not be blank");
+            }
+
+            return value;
+        }
+
+        void setValue(String value) {
+            editBox.setValue(value);
         }
     }
 

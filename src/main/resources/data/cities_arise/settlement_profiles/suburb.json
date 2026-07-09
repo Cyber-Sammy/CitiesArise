@@ -1,0 +1,14 @@
+{
+  "survey": {
+    "width": 120,
+    "depth": 72
+  },
+  "planning": {
+    "roadWidth": 5,
+    "maxBuildableSlope": 0.75,
+    "targetParcelCount": 8,
+    "parcelWidth": 18,
+    "parcelDepth": 20,
+    "buildingMargin": 4
+  }
+}

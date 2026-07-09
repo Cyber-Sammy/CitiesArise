@@ -10,6 +10,7 @@ public final class CitiesAriseConfig {
 
     public static final ModConfigSpec SPEC;
 
+    private static final ModConfigSpec.ConfigValue<String> DEBUG_SETTLEMENT_PROFILE_ID;
     private static final ModConfigSpec.IntValue DEBUG_SURVEY_WIDTH;
     private static final ModConfigSpec.IntValue DEBUG_SURVEY_DEPTH;
     private static final ModConfigSpec.IntValue DEBUG_ROAD_WIDTH;
@@ -30,6 +31,9 @@ public final class CitiesAriseConfig {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
         builder.push("planning");
+        DEBUG_SETTLEMENT_PROFILE_ID = builder
+                .comment("Settlement profile id used by the Minecraft debug suburb planner.")
+                .define("debugSettlementProfileId", DebugSuburbPlanningConfig.DEFAULT_SETTLEMENT_PROFILE_ID);
         DEBUG_SURVEY_WIDTH = builder
                 .comment("Survey width used by the Minecraft debug suburb planner.")
                 .defineInRange(
@@ -129,6 +133,7 @@ public final class CitiesAriseConfig {
 
     public static CitiesAriseConfigSnapshot snapshot() {
         return new CitiesAriseConfigSnapshot(
+                DEBUG_SETTLEMENT_PROFILE_ID.get(),
                 DEBUG_SURVEY_WIDTH.get(),
                 DEBUG_SURVEY_DEPTH.get(),
                 DEBUG_ROAD_WIDTH.get(),
@@ -150,6 +155,7 @@ public final class CitiesAriseConfig {
     public static void applySnapshot(CitiesAriseConfigSnapshot snapshot) {
         CitiesAriseConfigSnapshot safeSnapshot = Objects.requireNonNull(snapshot, "snapshot");
 
+        DEBUG_SETTLEMENT_PROFILE_ID.set(safeSnapshot.debugSettlementProfileId());
         DEBUG_SURVEY_WIDTH.set(safeSnapshot.debugSurveyWidth());
         DEBUG_SURVEY_DEPTH.set(safeSnapshot.debugSurveyDepth());
         DEBUG_ROAD_WIDTH.set(safeSnapshot.debugRoadWidth());
@@ -170,6 +176,10 @@ public final class CitiesAriseConfig {
 
     public static SuburbPlanningSettings debugSuburbPlanningSettings() {
         return debugSuburbPlanningConfig().toSuburbPlanningSettings();
+    }
+
+    public static String debugSettlementProfileId() {
+        return DEBUG_SETTLEMENT_PROFILE_ID.get();
     }
 
     public static boolean debugPlacementEnabled() {

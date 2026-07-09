@@ -65,6 +65,14 @@ The current debug config can also be edited in game:
 
 The screen edits a temporary copy of the values and writes them only when Save is pressed. This is a local client config screen: in singleplayer it is useful for debug iteration, while dedicated servers still use their server-side config file. Debug placement is marked in the screen because it enables permanent marker placement.
 
+The debug planner can load a settlement profile from data resources. The default profile id is:
+
+```text
+cities_arise:suburb
+```
+
+The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. For this MVP, profiles can change survey size, road width, max buildable slope, target parcel count, parcel size, and building margin. If the configured profile is missing or invalid, the planner falls back to the numeric debug config values.
+
 ## Build
 
 Requirements:
@@ -91,6 +99,7 @@ Cities Arise creates a common config file with logging options. `debugLoggingEna
 
 The debug suburb planner can also be tuned from the same common config:
 
+- `debugSettlementProfileId`: settlement profile id used by the debug planner. The default is `cities_arise:suburb`.
 - `debugSurveyWidth`: terrain survey width used by `/citiesarise debug plan`.
 - `debugSurveyDepth`: terrain survey depth used by `/citiesarise debug plan`.
 - `debugRoadWidth`: road width used by `/citiesarise debug plan`.

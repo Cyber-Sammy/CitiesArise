@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.config;
 
 public record CitiesAriseConfigSnapshot(
+        String debugSettlementProfileId,
         int debugSurveyWidth,
         int debugSurveyDepth,
         int debugRoadWidth,
@@ -18,6 +19,7 @@ public record CitiesAriseConfigSnapshot(
         boolean commandLoggingEnabled
 ) {
     public CitiesAriseConfigSnapshot {
+        debugSettlementProfileId = requireIdentifier(debugSettlementProfileId, "debugSettlementProfileId");
         requirePositive(debugSurveyWidth, "debugSurveyWidth");
         requirePositive(debugSurveyDepth, "debugSurveyDepth");
         requirePositive(debugRoadWidth, "debugRoadWidth");
@@ -38,6 +40,7 @@ public record CitiesAriseConfigSnapshot(
         DebugSuburbPlanningConfig planningDefaults = DebugSuburbPlanningConfig.defaults();
 
         return new CitiesAriseConfigSnapshot(
+                DebugSuburbPlanningConfig.DEFAULT_SETTLEMENT_PROFILE_ID,
                 planningDefaults.surveyWidth(),
                 planningDefaults.surveyDepth(),
                 planningDefaults.roadWidth(),
@@ -83,6 +86,34 @@ public record CitiesAriseConfigSnapshot(
 
     private static int maxBuildingMargin(int parcelSize) {
         return (parcelSize - 1) / 2;
+    }
+
+    private static String requireIdentifier(String value, String name) {
+        if (value == null) {
+            throw new NullPointerException(name);
+        }
+
+        String normalized = value.trim();
+
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
+
+        if (containsWhitespace(normalized)) {
+            throw new IllegalArgumentException(name + " must not contain whitespace");
+        }
+
+        return normalized;
+    }
+
+    private static boolean containsWhitespace(String value) {
+        for (int index = 0; index < value.length(); index++) {
+            if (Character.isWhitespace(value.charAt(index))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void requirePositive(int value, String name) {

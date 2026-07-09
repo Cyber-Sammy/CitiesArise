@@ -12,6 +12,7 @@ final class CitiesAriseConfigSnapshotTest {
     void defaultsMirrorDebugPlanningDefaults() {
         CitiesAriseConfigSnapshot snapshot = CitiesAriseConfigSnapshot.defaults();
 
+        assertEquals(DebugSuburbPlanningConfig.DEFAULT_SETTLEMENT_PROFILE_ID, snapshot.debugSettlementProfileId());
         assertEquals(DebugSuburbPlanningConfig.DEFAULT_SURVEY_WIDTH, snapshot.debugSurveyWidth());
         assertEquals(DebugSuburbPlanningConfig.DEFAULT_SURVEY_DEPTH, snapshot.debugSurveyDepth());
         assertEquals(DebugSuburbPlanningConfig.DEFAULT_ROAD_WIDTH, snapshot.debugRoadWidth());
@@ -45,10 +46,40 @@ final class CitiesAriseConfigSnapshotTest {
         assertThrows(IllegalArgumentException.class, () -> snapshotWithBuildingMargin(-1));
     }
 
+    @Test
+    void rejectsInvalidProfileIds() {
+        assertThrows(IllegalArgumentException.class, () -> snapshotWithProfileId(""));
+        assertThrows(IllegalArgumentException.class, () -> snapshotWithProfileId("cities arise:suburb"));
+    }
+
+    private static CitiesAriseConfigSnapshot snapshotWithProfileId(String profileId) {
+        CitiesAriseConfigSnapshot defaults = CitiesAriseConfigSnapshot.defaults();
+
+        return new CitiesAriseConfigSnapshot(
+                profileId,
+                defaults.debugSurveyWidth(),
+                defaults.debugSurveyDepth(),
+                defaults.debugRoadWidth(),
+                defaults.debugMaxBuildableSlope(),
+                defaults.debugTargetParcelCount(),
+                defaults.debugParcelWidth(),
+                defaults.debugParcelDepth(),
+                defaults.debugBuildingMargin(),
+                defaults.debugPlacementEnabled(),
+                defaults.debugPlacementUndoEnabled(),
+                defaults.debugLoggingEnabled(),
+                defaults.terrainLoggingEnabled(),
+                defaults.planningLoggingEnabled(),
+                defaults.placementLoggingEnabled(),
+                defaults.commandLoggingEnabled()
+        );
+    }
+
     private static CitiesAriseConfigSnapshot snapshotWithParcel(int width, int depth, int margin) {
         CitiesAriseConfigSnapshot defaults = CitiesAriseConfigSnapshot.defaults();
 
         return new CitiesAriseConfigSnapshot(
+                defaults.debugSettlementProfileId(),
                 defaults.debugSurveyWidth(),
                 defaults.debugSurveyDepth(),
                 defaults.debugRoadWidth(),
@@ -71,6 +102,7 @@ final class CitiesAriseConfigSnapshotTest {
         CitiesAriseConfigSnapshot defaults = CitiesAriseConfigSnapshot.defaults();
 
         return new CitiesAriseConfigSnapshot(
+                defaults.debugSettlementProfileId(),
                 surveyWidth,
                 defaults.debugSurveyDepth(),
                 defaults.debugRoadWidth(),
@@ -93,6 +125,7 @@ final class CitiesAriseConfigSnapshotTest {
         CitiesAriseConfigSnapshot defaults = CitiesAriseConfigSnapshot.defaults();
 
         return new CitiesAriseConfigSnapshot(
+                defaults.debugSettlementProfileId(),
                 defaults.debugSurveyWidth(),
                 defaults.debugSurveyDepth(),
                 defaults.debugRoadWidth(),
@@ -115,6 +148,7 @@ final class CitiesAriseConfigSnapshotTest {
         CitiesAriseConfigSnapshot defaults = CitiesAriseConfigSnapshot.defaults();
 
         return new CitiesAriseConfigSnapshot(
+                defaults.debugSettlementProfileId(),
                 defaults.debugSurveyWidth(),
                 defaults.debugSurveyDepth(),
                 defaults.debugRoadWidth(),

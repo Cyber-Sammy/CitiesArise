@@ -21,6 +21,7 @@ public record DebugSuburbPlanningConfig(
     public static final int DEFAULT_PARCEL_WIDTH = 18;
     public static final int DEFAULT_PARCEL_DEPTH = 20;
     public static final int DEFAULT_BUILDING_MARGIN = 4;
+    public static final String DEFAULT_SETTLEMENT_PROFILE_ID = "cities_arise:suburb";
 
     public DebugSuburbPlanningConfig {
         requirePositive(surveyWidth, "surveyWidth");

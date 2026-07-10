@@ -9,6 +9,7 @@ public record RegionPlanCacheKey(
         String dimensionId,
         SettlementRegion region,
         long worldSeed,
+        TerrainSurveySource terrainSurveySource,
         SettlementProfileId profileId,
         GridSize surveySize,
         SuburbPlanningSettings planningSettings
@@ -16,6 +17,7 @@ public record RegionPlanCacheKey(
     public RegionPlanCacheKey {
         requireNonBlank(dimensionId, "dimensionId");
         Objects.requireNonNull(region, "region");
+        Objects.requireNonNull(terrainSurveySource, "terrainSurveySource");
         Objects.requireNonNull(profileId, "profileId");
         Objects.requireNonNull(surveySize, "surveySize");
         Objects.requireNonNull(planningSettings, "planningSettings");

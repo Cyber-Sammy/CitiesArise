@@ -36,6 +36,26 @@ final class RegionPlanCacheKeyTest {
     }
 
     @Test
+    void changesWhenTerrainSurveySourceChanges() {
+        assertNotEquals(
+                key(
+                        "minecraft:overworld",
+                        "cities_arise:suburb",
+                        1234L,
+                        TerrainSurveySource.LOADED_WORLD,
+                        SuburbPlanningSettings.defaults()
+                ),
+                key(
+                        "minecraft:overworld",
+                        "cities_arise:suburb",
+                        1234L,
+                        TerrainSurveySource.WORLDGEN_BASE,
+                        SuburbPlanningSettings.defaults()
+                )
+        );
+    }
+
+    @Test
     void changesWhenProfileChanges() {
         assertNotEquals(
                 key("minecraft:overworld", "cities_arise:suburb", 1234L, SuburbPlanningSettings.defaults()),
@@ -62,6 +82,7 @@ final class RegionPlanCacheKeyTest {
                 "minecraft:overworld",
                 null,
                 1234L,
+                TerrainSurveySource.LOADED_WORLD,
                 new SettlementProfileId("cities_arise:suburb"),
                 new GridSize(120, 72),
                 SuburbPlanningSettings.defaults()
@@ -74,10 +95,21 @@ final class RegionPlanCacheKeyTest {
             long worldSeed,
             SuburbPlanningSettings settings
     ) {
+        return key(dimensionId, profileId, worldSeed, TerrainSurveySource.LOADED_WORLD, settings);
+    }
+
+    private static RegionPlanCacheKey key(
+            String dimensionId,
+            String profileId,
+            long worldSeed,
+            TerrainSurveySource terrainSurveySource,
+            SuburbPlanningSettings settings
+    ) {
         return new RegionPlanCacheKey(
                 dimensionId,
                 new SettlementRegion(2, -3),
                 worldSeed,
+                terrainSurveySource,
                 new SettlementProfileId(profileId),
                 new GridSize(120, 72),
                 settings

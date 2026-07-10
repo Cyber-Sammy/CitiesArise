@@ -8,8 +8,8 @@ The long-term goal is to create suburbs, villages, towns, city fragments, indust
 
 - Minecraft version: 1.21.1
 - NeoForge version: 21.1.227
-- Current implementation: core planner with a Minecraft terrain debug adapter, region plan cache, and chunk-aware debug placement projection
-- Generation gameplay: not implemented yet
+- Current implementation: core planner with debug tools and config-gated experimental NeoForge worldgen placement
+- Generation gameplay: disabled by default and limited to vanilla placeholder suburb content
 
 ## How It Will Work
 
@@ -33,7 +33,25 @@ The mod also includes a debug command that samples real Minecraft terrain around
 The command reports whether a semantic suburb plan was accepted or rejected, along with the region, survey bounds, deterministic seed, and plan element counts.
 Repeated debug commands for the same dimension, region, world seed, selected profile id, survey size, and planning settings reuse the same in-memory region plan result. This cache is per process, is not saved to disk, and keeps at most 256 recently used plans. It is cleared after a global datapack reload and when the server stops. Manual world block edits do not invalidate an existing cached plan. The cache keeps debug plan, dump, and placement commands consistent while preparing the project for deterministic chunk-based generation later.
 
-Placement operations can be indexed once and projected onto individual 16x16 chunks without changing the complete plan. Chunk projection handles negative coordinates and exact chunk borders, preserves source plan element ids, and provides constant-time chunk slice lookup without reading, loading, or modifying the world. Automatic world generation placement is not connected yet.
+Placement operations can be indexed once and projected onto individual 16x16 chunks without changing the complete plan. Chunk projection handles negative coordinates and exact chunk borders, preserves source plan element ids, and provides indexed chunk slice lookup without reading, loading, or modifying neighboring chunks.
+
+## Experimental World Generation
+
+Automatic suburb placement is available as an experimental NeoForge worldgen feature. It is disabled by default. Enable it in the world's `serverconfig/cities_arise-server.toml` before generating new chunks:
+
+```toml
+[worldgen]
+enabled = true
+settlementProfileId = "cities_arise:suburb"
+```
+
+The setting requires a world restart. It only affects newly generated chunks and has no undo command. Back up important worlds before enabling it.
+
+The current MVP evaluates one deterministic suburb candidate per 128x128-block settlement region. It builds one semantic plan, indexes its placement operations, and writes only the slice belonging to the chunk currently being generated. It never intentionally writes to or force-loads neighboring chunks. Chunk generation order does not change the regional plan.
+
+Worldgen terrain planning uses a deterministic four-block interpolated base-height grid and noise biomes instead of reading neighboring chunks. Ocean and river surfaces at or below sea level are treated as water. This is intentionally lighter and less detailed than the loaded-world debug survey. Final placement resolves each operation against the actual surface of its own chunk and clears vanilla logs or leaves above affected columns before placing roads and placeholder buildings.
+
+The generated content is still a development preview: vanilla marker roads, yards, and placeholder houses are used instead of final building assets. Settlement density, richer water classification, final providers, and persistent plans remain future work.
 
 The accepted semantic plan can be exported as JSON for inspection:
 
@@ -78,7 +96,7 @@ The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.
 
 ## Datapack Settlement Profiles
 
-Settlement profiles are datapack JSON files. For the current MVP they only change debug suburb planning numbers. They do not define house assets, structures, block palettes, loot, entities, or final placement providers yet.
+Settlement profiles are datapack JSON files. For the current MVP they change debug and experimental worldgen suburb planning numbers. They do not define house assets, structures, block palettes, loot, entities, or final placement providers yet.
 
 Create a datapack with this shape:
 
@@ -126,6 +144,8 @@ Set `debugSettlementProfileId` to the profile id:
 ```text
 my_pack:large_suburb
 ```
+
+For automatic world generation, set `worldgen.settlementProfileId` in `cities_arise-server.toml` instead.
 
 Then run:
 

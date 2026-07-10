@@ -4,12 +4,14 @@ import com.cybersammy.citiesarise.CitiesAriseMod;
 import com.cybersammy.citiesarise.config.CitiesAriseConfig;
 import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
+import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanTransformService;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanner;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningRequest;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
+import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
@@ -28,6 +30,7 @@ public final class MinecraftSuburbPlanningService {
     private final SuburbPlanner planner;
     private final SuburbPlanTransformService transformService;
     private final SettlementProfileSource profileSource;
+    private final RegionPlanCache planCache;
     private final Logger logger;
 
     public MinecraftSuburbPlanningService(SuburbPlanner planner, Logger logger) {
@@ -39,6 +42,7 @@ public final class MinecraftSuburbPlanningService {
                 planner,
                 new SuburbPlanTransformService(transformPipeline),
                 new MinecraftSettlementProfileRepository(),
+                new InMemoryRegionPlanCache(),
                 logger
         );
     }
@@ -48,7 +52,7 @@ public final class MinecraftSuburbPlanningService {
             SuburbPlanTransformService transformService,
             Logger logger
     ) {
-        this(planner, transformService, new MinecraftSettlementProfileRepository(), logger);
+        this(planner, transformService, new MinecraftSettlementProfileRepository(), new InMemoryRegionPlanCache(), logger);
     }
 
     public MinecraftSuburbPlanningService(
@@ -57,9 +61,20 @@ public final class MinecraftSuburbPlanningService {
             SettlementProfileSource profileSource,
             Logger logger
     ) {
+        this(planner, transformService, profileSource, new InMemoryRegionPlanCache(), logger);
+    }
+
+    public MinecraftSuburbPlanningService(
+            SuburbPlanner planner,
+            SuburbPlanTransformService transformService,
+            SettlementProfileSource profileSource,
+            RegionPlanCache planCache,
+            Logger logger
+    ) {
         this.planner = Objects.requireNonNull(planner, "planner");
         this.transformService = Objects.requireNonNull(transformService, "transformService");
         this.profileSource = Objects.requireNonNull(profileSource, "profileSource");
+        this.planCache = Objects.requireNonNull(planCache, "planCache");
         this.logger = Objects.requireNonNull(logger, "logger");
     }
 
@@ -72,13 +87,45 @@ public final class MinecraftSuburbPlanningService {
     }
 
     public SuburbDebugPlanResult planAt(ServerLevel level, Vec3 position) {
+        Objects.requireNonNull(level, "level");
+        Objects.requireNonNull(position, "position");
+
         SettlementRegion region = SettlementRegion.fromBlockPosition(blockCoordinate(position.x()), blockCoordinate(position.z()));
         DebugSuburbPlanningConfig config = CitiesAriseConfig.debugSuburbPlanningConfig();
-        Optional<SettlementProfile> profile = activeProfile(level, new SettlementProfileId(CitiesAriseConfig.debugSettlementProfileId()));
-        GridBounds bounds = region.surveyBounds(DebugSettlementProfileSelection.surveySize(config, profile));
+        SettlementProfileId profileId = new SettlementProfileId(CitiesAriseConfig.debugSettlementProfileId());
+        Optional<SettlementProfile> profile = activeProfile(level, profileId);
+        GridSize surveySize = DebugSettlementProfileSelection.surveySize(config, profile);
+        SuburbPlanningSettings planningSettings = DebugSettlementProfileSelection.suburbPlanningSettings(config, profile);
+        GridBounds bounds = region.surveyBounds(surveySize);
         PlanElementId settlementId = settlementId(region);
         long seed = SettlementSeed.forRegion(level.getSeed(), region, settlementId);
+        RegionPlanCacheKey cacheKey = new RegionPlanCacheKey(
+                dimensionId(level),
+                region,
+                level.getSeed(),
+                profileId,
+                surveySize,
+                planningSettings
+        );
 
+        return planCache.getOrCreate(
+                cacheKey,
+                () -> createDebugPlan(level, region, bounds, settlementId, seed, planningSettings)
+        );
+    }
+
+    public void clearCache() {
+        planCache.clear();
+    }
+
+    private SuburbDebugPlanResult createDebugPlan(
+            ServerLevel level,
+            SettlementRegion region,
+            GridBounds bounds,
+            PlanElementId settlementId,
+            long seed,
+            SuburbPlanningSettings planningSettings
+    ) {
         logTerrainStart(region, bounds, seed, settlementId);
 
         TerrainSurvey survey = new MinecraftTerrainSampler(level).sample(bounds);
@@ -86,7 +133,7 @@ public final class MinecraftSuburbPlanningService {
                 settlementId,
                 survey,
                 seed,
-                DebugSettlementProfileSelection.suburbPlanningSettings(config, profile)
+                planningSettings
         );
         SuburbPlanningResult result = planner.plan(request);
         SuburbPlanningResult transformedResult = transformService.apply(result, seed);
@@ -110,6 +157,10 @@ public final class MinecraftSuburbPlanningService {
 
     private static int blockCoordinate(double coordinate) {
         return (int) Math.floor(coordinate);
+    }
+
+    private static String dimensionId(ServerLevel level) {
+        return level.dimension().location().toString();
     }
 
     private void logTerrainStart(SettlementRegion region, GridBounds bounds, long seed, PlanElementId settlementId) {

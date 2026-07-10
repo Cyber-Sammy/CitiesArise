@@ -3,6 +3,7 @@ package com.cybersammy.citiesarise;
 import com.cybersammy.citiesarise.command.CitiesAriseCommands;
 import com.cybersammy.citiesarise.config.CitiesAriseConfig;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
+import com.cybersammy.citiesarise.minecraft.planning.RegionPlanCacheLifecycle;
 import com.mojang.logging.LogUtils;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.ModContainer;
@@ -27,8 +28,11 @@ public final class CitiesAriseMod {
 
     private static void registerCommands() {
         MinecraftSuburbPlanningService planningService = MinecraftSuburbPlanningService.defaults(LOGGER);
+        RegionPlanCacheLifecycle cacheLifecycle = new RegionPlanCacheLifecycle(planningService);
         CitiesAriseCommands commands = new CitiesAriseCommands(planningService, LOGGER);
         NeoForge.EVENT_BUS.addListener(commands::register);
+        NeoForge.EVENT_BUS.addListener(cacheLifecycle::onDatapackSync);
+        NeoForge.EVENT_BUS.addListener(cacheLifecycle::onServerStopped);
     }
 
     private static void registerClientOnlyFeatures() {

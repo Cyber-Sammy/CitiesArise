@@ -84,6 +84,47 @@ final class InMemoryRegionPlanCacheTest {
     }
 
     @Test
+    void evictsLeastRecentlyUsedPlanAtCapacity() {
+        InMemoryRegionPlanCache cache = new InMemoryRegionPlanCache(2);
+        AtomicInteger calls = new AtomicInteger();
+        RegionPlanCacheKey firstKey = key("minecraft:overworld", "cities_arise:first", SuburbPlanningSettings.defaults());
+        RegionPlanCacheKey secondKey = key("minecraft:overworld", "cities_arise:second", SuburbPlanningSettings.defaults());
+        RegionPlanCacheKey thirdKey = key("minecraft:overworld", "cities_arise:third", SuburbPlanningSettings.defaults());
+
+        SuburbDebugPlanResult first = cache.getOrCreate(firstKey, () -> result(1L, calls));
+        cache.getOrCreate(secondKey, () -> result(2L, calls));
+        assertSame(first, cache.getOrCreate(firstKey, () -> result(3L, calls)));
+
+        cache.getOrCreate(thirdKey, () -> result(4L, calls));
+        SuburbDebugPlanResult recreatedSecond = cache.getOrCreate(secondKey, () -> result(5L, calls));
+
+        assertEquals(5L, recreatedSecond.seed());
+        assertEquals(4, calls.get());
+        assertEquals(2, cache.size());
+    }
+
+    @Test
+    void clearsCachedPlans() {
+        InMemoryRegionPlanCache cache = new InMemoryRegionPlanCache();
+        AtomicInteger calls = new AtomicInteger();
+        RegionPlanCacheKey key = key("minecraft:overworld", "cities_arise:suburb", SuburbPlanningSettings.defaults());
+
+        cache.getOrCreate(key, () -> result(1L, calls));
+        cache.clear();
+        SuburbDebugPlanResult recreated = cache.getOrCreate(key, () -> result(2L, calls));
+
+        assertEquals(2L, recreated.seed());
+        assertEquals(2, calls.get());
+        assertEquals(1, cache.size());
+    }
+
+    @Test
+    void rejectsNonPositiveCapacity() {
+        assertThrows(IllegalArgumentException.class, () -> new InMemoryRegionPlanCache(0));
+        assertThrows(IllegalArgumentException.class, () -> new InMemoryRegionPlanCache(-1));
+    }
+
+    @Test
     void rejectsNullKey() {
         InMemoryRegionPlanCache cache = new InMemoryRegionPlanCache();
 

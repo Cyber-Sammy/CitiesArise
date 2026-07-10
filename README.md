@@ -31,7 +31,7 @@ The mod also includes a debug command that samples real Minecraft terrain around
 ```
 
 The command reports whether a semantic suburb plan was accepted or rejected, along with the region, survey bounds, deterministic seed, and plan element counts.
-Repeated debug commands for the same dimension, region, world seed, selected profile id, survey size, and planning settings reuse the same in-memory region plan result. This cache is per process, is not saved to disk, and does not observe manual world block edits after a plan is cached. It keeps debug plan, dump, and placement commands consistent while preparing the project for deterministic chunk-based generation later.
+Repeated debug commands for the same dimension, region, world seed, selected profile id, survey size, and planning settings reuse the same in-memory region plan result. This cache is per process, is not saved to disk, and keeps at most 256 recently used plans. It is cleared after a global datapack reload and when the server stops. Manual world block edits do not invalidate an existing cached plan. The cache keeps debug plan, dump, and placement commands consistent while preparing the project for deterministic chunk-based generation later.
 
 The accepted semantic plan can be exported as JSON for inspection:
 

@@ -114,6 +114,10 @@ public final class MinecraftSuburbPlanningService {
         );
     }
 
+    public void clearCache() {
+        planCache.clear();
+    }
+
     private SuburbDebugPlanResult createDebugPlan(
             ServerLevel level,
             SettlementRegion region,

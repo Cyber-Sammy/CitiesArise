@@ -9,7 +9,10 @@ import com.cybersammy.citiesarise.core.model.PlanElementId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 final class DebugPlacementChunkProjectorTest {
@@ -22,7 +25,7 @@ final class DebugPlacementChunkProjectorTest {
         DebugBlockPlacementOperation outside = operation(16, 15, "outside");
         DebugPlacementPlan plan = new DebugPlacementPlan(List.of(first, second, outside));
 
-        DebugChunkPlacementPlan projected = projector.project(plan, new PlacementChunk(0, 0));
+        DebugChunkPlacementPlan projected = projector.partition(plan).slice(new PlacementChunk(0, 0));
 
         assertEquals(new PlacementChunk(0, 0), projected.chunk());
         assertEquals(List.of(first, second), projected.operations());
@@ -47,8 +50,7 @@ final class DebugPlacementChunkProjectorTest {
 
         List<DebugBlockPlacementOperation> combined = projectAll(plan, chunks);
 
-        assertEquals(operations.size(), combined.size());
-        assertEquals(new HashSet<>(operations), new HashSet<>(combined));
+        assertEquals(operationCounts(operations), operationCounts(combined));
     }
 
     @Test
@@ -83,8 +85,9 @@ final class DebugPlacementChunkProjectorTest {
         DebugBlockPlacementOperation eastPart = operation(16, 4, "crossing_road");
         DebugPlacementPlan plan = new DebugPlacementPlan(List.of(westPart, eastPart));
 
-        DebugChunkPlacementPlan westChunk = projector.project(plan, new PlacementChunk(0, 0));
-        DebugChunkPlacementPlan eastChunk = projector.project(plan, new PlacementChunk(1, 0));
+        DebugChunkPlacementIndex index = projector.partition(plan);
+        DebugChunkPlacementPlan westChunk = index.slice(new PlacementChunk(0, 0));
+        DebugChunkPlacementPlan eastChunk = index.slice(new PlacementChunk(1, 0));
 
         assertEquals(List.of(westPart), westChunk.operations());
         assertEquals(List.of(eastPart), eastChunk.operations());
@@ -103,8 +106,8 @@ final class DebugPlacementChunkProjectorTest {
         DebugPlacementPlan plan = new DebugPlacementPlan(operations);
         PlacementChunk chunk = new PlacementChunk(-2, 0);
 
-        DebugChunkPlacementPlan first = projector.project(plan, chunk);
-        DebugChunkPlacementPlan second = projector.project(plan, chunk);
+        DebugChunkPlacementPlan first = projector.partition(plan).slice(chunk);
+        DebugChunkPlacementPlan second = projector.partition(plan).slice(chunk);
 
         assertEquals(first, second);
         assertEquals(operations, plan.operations());
@@ -114,7 +117,7 @@ final class DebugPlacementChunkProjectorTest {
     void returnsEmptyPlanWhenChunkHasNoOperations() {
         DebugPlacementPlan plan = new DebugPlacementPlan(List.of(operation(0, 0, "source")));
 
-        DebugChunkPlacementPlan projected = projector.project(plan, new PlacementChunk(5, 5));
+        DebugChunkPlacementPlan projected = projector.partition(plan).slice(new PlacementChunk(5, 5));
 
         assertEquals(0, projected.size());
         assertEquals(List.of(), projected.operations());
@@ -122,22 +125,44 @@ final class DebugPlacementChunkProjectorTest {
 
     @Test
     void rejectsNullArguments() {
-        DebugPlacementPlan plan = new DebugPlacementPlan(List.of());
-        PlacementChunk chunk = new PlacementChunk(0, 0);
+        DebugChunkPlacementIndex index = projector.partition(new DebugPlacementPlan(List.of()));
 
-        assertThrows(NullPointerException.class, () -> projector.project(null, chunk));
-        assertThrows(NullPointerException.class, () -> projector.project(plan, null));
+        assertThrows(NullPointerException.class, () -> projector.partition(null));
+        assertThrows(NullPointerException.class, () -> index.slice(null));
+    }
+
+    @Test
+    void indexesPlanOnceForConstantTimeChunkLookup() {
+        DebugPlacementPlan plan = new DebugPlacementPlan(List.of(
+                operation(0, 0, "first"),
+                operation(16, 0, "second"),
+                operation(17, 0, "third")
+        ));
+
+        DebugChunkPlacementIndex index = projector.partition(plan);
+
+        assertEquals(2, index.chunkCount());
+        assertEquals(3, index.operationCount());
+        assertEquals(1, index.slice(new PlacementChunk(0, 0)).size());
+        assertEquals(2, index.slice(new PlacementChunk(1, 0)).size());
     }
 
     private List<DebugBlockPlacementOperation> projectAll(
             DebugPlacementPlan plan,
             List<PlacementChunk> chunks
     ) {
+        DebugChunkPlacementIndex index = projector.partition(plan);
         List<DebugBlockPlacementOperation> combined = new ArrayList<>();
         for (PlacementChunk chunk : chunks) {
-            combined.addAll(projector.project(plan, chunk).operations());
+            combined.addAll(index.slice(chunk).operations());
         }
         return combined;
+    }
+
+    private static Map<DebugBlockPlacementOperation, Long> operationCounts(
+            List<DebugBlockPlacementOperation> operations
+    ) {
+        return operations.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
     }
 
     private static DebugBlockPlacementOperation operation(int x, int z, String sourceId) {

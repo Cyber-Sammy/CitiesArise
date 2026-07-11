@@ -11,6 +11,7 @@ import com.cybersammy.citiesarise.minecraft.placement.PlacementChunk;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanResult;
 import java.util.Objects;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.chunk.ChunkGenerator;
@@ -62,7 +63,16 @@ public final class MinecraftSuburbWorldgenService {
         Objects.requireNonNull(chunkGenerator, "chunkGenerator");
         Objects.requireNonNull(origin, "origin");
 
-        SuburbDebugPlanResult planningResult = planningService.planForWorldgen(level, chunkGenerator, origin);
+        Optional<SuburbDebugPlanResult> optionalPlanningResult = planningService.planForWorldgen(
+                level,
+                chunkGenerator,
+                origin
+        );
+        if (optionalPlanningResult.isEmpty()) {
+            return false;
+        }
+
+        SuburbDebugPlanResult planningResult = optionalPlanningResult.get();
         if (!planningResult.successful()) {
             return false;
         }

@@ -112,7 +112,7 @@ public final class MinecraftSuburbPlanningService {
         );
     }
 
-    public SuburbDebugPlanResult planForWorldgen(
+    public Optional<SuburbDebugPlanResult> planForWorldgen(
             WorldGenLevel level,
             ChunkGenerator chunkGenerator,
             BlockPos position
@@ -128,15 +128,24 @@ public final class MinecraftSuburbPlanningService {
                 level
         );
         SettlementProfileId profileId = new SettlementProfileId(CitiesAriseWorldgenConfig.settlementProfileId());
+        Optional<WorldgenSettlementProfileSelection> selection = WorldgenSettlementProfileSelection.from(
+                activeProfile(serverLevel, profileId)
+        );
+        if (selection.isEmpty()) {
+            return Optional.empty();
+        }
 
-        return planAt(
+        WorldgenSettlementProfileSelection worldgenProfile = selection.get();
+        return Optional.of(planAt(
                 serverLevel,
                 position.getX(),
                 position.getZ(),
                 profileId,
+                worldgenProfile.surveySize(),
+                worldgenProfile.planningSettings(),
                 TerrainSurveySource.WORLDGEN_BASE,
                 terrainSampler::sample
-        );
+        ));
     }
 
     private SuburbDebugPlanResult planAt(
@@ -147,11 +156,33 @@ public final class MinecraftSuburbPlanningService {
             TerrainSurveySource terrainSurveySource,
             Function<GridBounds, TerrainSurvey> surveyFactory
     ) {
-        SettlementRegion region = SettlementRegion.fromBlockPosition(blockX, blockZ);
         DebugSuburbPlanningConfig config = CitiesAriseConfig.debugSuburbPlanningConfig();
         Optional<SettlementProfile> profile = activeProfile(level, profileId);
         GridSize surveySize = DebugSettlementProfileSelection.surveySize(config, profile);
         SuburbPlanningSettings planningSettings = DebugSettlementProfileSelection.suburbPlanningSettings(config, profile);
+        return planAt(
+                level,
+                blockX,
+                blockZ,
+                profileId,
+                surveySize,
+                planningSettings,
+                terrainSurveySource,
+                surveyFactory
+        );
+    }
+
+    private SuburbDebugPlanResult planAt(
+            ServerLevel level,
+            int blockX,
+            int blockZ,
+            SettlementProfileId profileId,
+            GridSize surveySize,
+            SuburbPlanningSettings planningSettings,
+            TerrainSurveySource terrainSurveySource,
+            Function<GridBounds, TerrainSurvey> surveyFactory
+    ) {
+        SettlementRegion region = SettlementRegion.fromBlockPosition(blockX, blockZ);
         GridBounds bounds = region.surveyBounds(surveySize);
         PlanElementId settlementId = settlementId(region);
         long seed = SettlementSeed.forRegion(level.getSeed(), region, settlementId);
@@ -265,14 +296,14 @@ public final class MinecraftSuburbPlanningService {
 
         if (result.failed()) {
             logger.warn(
-                    "Failed to load settlement profile {}. Falling back to debug config.",
+                    "Failed to load settlement profile {}.",
                     profileId.value(),
                     result.error()
             );
             return;
         }
 
-        logger.warn("Settlement profile {} was not found. Falling back to debug config.", profileId.value());
+        logger.warn("Settlement profile {} was not found.", profileId.value());
     }
 
     private void logPlanningResult(SuburbDebugPlanResult result) {

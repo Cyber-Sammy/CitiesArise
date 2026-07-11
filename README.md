@@ -47,6 +47,8 @@ settlementProfileId = "cities_arise:suburb"
 
 The setting requires a world restart. It only affects newly generated chunks and has no undo command. Back up important worlds before enabling it.
 
+The selected settlement profile is required for automatic generation. If it is missing or invalid, worldgen skips settlement placement and logs the profile error. Debug planning may still use its debug-config fallback, but worldgen never does.
+
 The current MVP evaluates one deterministic suburb candidate per 128x128-block settlement region. It builds one semantic plan, indexes its placement operations, and writes only the slice belonging to the chunk currently being generated. It never intentionally writes to or force-loads neighboring chunks. Chunk generation order does not change the regional plan.
 
 Worldgen terrain planning uses a deterministic four-block interpolated base-height grid and noise biomes instead of reading neighboring chunks. Ocean and river surfaces at or below sea level are treated as water. This is intentionally lighter and less detailed than the loaded-world debug survey. Final placement resolves each operation against the actual surface of its own chunk and clears vanilla logs or leaves above affected columns before placing roads and placeholder buildings.

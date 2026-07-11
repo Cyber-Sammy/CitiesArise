@@ -74,6 +74,25 @@ class WorldgenPlacementApplierTest {
         assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(16, 68, 0));
     }
 
+    @Test
+    void clearsVegetationAboveAStaleWorldgenSurfaceHeight() {
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(operation(8, 8, "forest_road")));
+        DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
+                .partition(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.surfaceHeight(8, 8, 65);
+        level.put(8, 73, 8, WorldgenSurfaceMaterial.LOGS);
+        level.put(8, 81, 8, WorldgenSurfaceMaterial.LEAVES);
+
+        new WorldgenChunkPlacement().apply(level, chunkPlan);
+
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(8, 73, 8));
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(8, 81, 8));
+        assertTrue(level.reads().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
+        assertTrue(level.writes().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
+    }
+
     private static DebugBlockPlacementOperation operation(int x, int z, String id) {
         return new DebugBlockPlacementOperation(
                 new GridPoint(x, z),

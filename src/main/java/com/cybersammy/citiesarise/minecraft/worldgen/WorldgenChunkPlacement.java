@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.Objects;
 
 final class WorldgenChunkPlacement {
+    private static final int VEGETATION_CLEARANCE = 48;
+
     int apply(WorldgenBlockAccess level, DebugChunkPlacementPlan placementPlan) {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(placementPlan, "placementPlan");
@@ -119,7 +121,8 @@ final class WorldgenChunkPlacement {
 
     private static void clearVegetation(WorldgenBlockAccess level, Map<GridPoint, SurfaceColumn> columns) {
         for (SurfaceColumn column : columns.values()) {
-            for (int y = column.placementY() + 1; y < column.topHeight(); y++) {
+            int clearanceTop = vegetationClearanceTop(level, column);
+            for (int y = column.placementY() + 1; y < clearanceTop; y++) {
                 WorldgenBlockPosition position = new WorldgenBlockPosition(column.point().x(), y, column.point().z());
                 if (!level.canWrite(position)) {
                     continue;
@@ -130,6 +133,12 @@ final class WorldgenChunkPlacement {
                 }
             }
         }
+    }
+
+    private static int vegetationClearanceTop(WorldgenBlockAccess level, SurfaceColumn column) {
+        int requiredTop = column.placementY() + VEGETATION_CLEARANCE + 1;
+        int detectedTop = Math.max(column.topHeight(), requiredTop);
+        return Math.min(level.maxBuildHeight(), detectedTop);
     }
 
     private static boolean isVegetation(WorldgenSurfaceMaterial material) {

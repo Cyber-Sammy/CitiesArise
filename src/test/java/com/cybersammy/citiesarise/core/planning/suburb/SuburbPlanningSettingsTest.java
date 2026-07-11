@@ -13,6 +13,8 @@ final class SuburbPlanningSettingsTest {
         assertEquals(SuburbPlanningSettings.DEFAULT_PARCEL_WIDTH, settings.parcelWidth());
         assertEquals(SuburbPlanningSettings.DEFAULT_PARCEL_DEPTH, settings.parcelDepth());
         assertEquals(SuburbPlanningSettings.DEFAULT_BUILDING_MARGIN, settings.buildingMargin());
+        assertEquals(SuburbPlanningSettings.DEFAULT_MAX_CUT_DEPTH, settings.maxCutDepth());
+        assertEquals(SuburbPlanningSettings.DEFAULT_MAX_FILL_DEPTH, settings.maxFillDepth());
     }
 
     @Test
@@ -25,5 +27,7 @@ final class SuburbPlanningSettingsTest {
         assertThrows(IllegalArgumentException.class, () -> new SuburbPlanningSettings(3, 0.25, 6, 10, 0, 2));
         assertThrows(IllegalArgumentException.class, () -> new SuburbPlanningSettings(3, 0.25, 6, 10, 12, -1));
         assertThrows(IllegalArgumentException.class, () -> new SuburbPlanningSettings(3, 0.25, 6, 4, 12, 2));
+        assertThrows(IllegalArgumentException.class, () -> new SuburbPlanningSettings(3, 0.25, 6, 10, 12, 2, 12, -1, 3));
+        assertThrows(IllegalArgumentException.class, () -> new SuburbPlanningSettings(3, 0.25, 6, 10, 12, 2, 12, 3, -1));
     }
 }

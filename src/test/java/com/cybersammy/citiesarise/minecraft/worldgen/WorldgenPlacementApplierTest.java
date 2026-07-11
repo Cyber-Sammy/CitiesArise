@@ -93,6 +93,26 @@ class WorldgenPlacementApplierTest {
         assertTrue(level.writes().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
     }
 
+    @Test
+    void clearsNearbyCanopyWithoutCrossingChunkBoundary() {
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(operation(10, 8, "forest_road")));
+        DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
+                .partition(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.put(14, 72, 8, WorldgenSurfaceMaterial.LEAVES);
+        level.put(4, 72, 8, WorldgenSurfaceMaterial.LEAVES);
+        level.put(16, 72, 8, WorldgenSurfaceMaterial.LEAVES);
+
+        new WorldgenChunkPlacement().apply(level, chunkPlan);
+
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(14, 72, 8));
+        assertEquals(WorldgenSurfaceMaterial.LEAVES, level.materialAt(4, 72, 8));
+        assertEquals(WorldgenSurfaceMaterial.LEAVES, level.materialAt(16, 72, 8));
+        assertTrue(level.reads().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
+        assertTrue(level.writes().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
+    }
+
     private static DebugBlockPlacementOperation operation(int x, int z, String id) {
         return new DebugBlockPlacementOperation(
                 new GridPoint(x, z),

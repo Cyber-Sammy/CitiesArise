@@ -1,6 +1,5 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
-import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -8,7 +7,6 @@ import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanProperties;
-import com.cybersammy.citiesarise.core.model.PlanPropertyKeys;
 import com.cybersammy.citiesarise.core.model.PlanTag;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
@@ -22,8 +20,6 @@ import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
 import com.cybersammy.citiesarise.core.validation.PlanValidationError;
 import com.cybersammy.citiesarise.core.validation.PlanValidator;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +60,12 @@ public final class SuburbPlanner {
         }
 
         SettlementPlan plan = createPlan(request, layout);
+        Optional<SuburbTerrainDiagnostic> earthworkDiagnostic = EarthworkValidator.findDiagnostic(request, plan);
+
+        if (earthworkDiagnostic.isPresent()) {
+            return SuburbPlanningResult.rejectedTerrain(earthworkDiagnostic.orElseThrow());
+        }
+
         List<PlanValidationError> validationErrors = planValidator.validate(plan);
 
         if (!validationErrors.isEmpty()) {
@@ -266,7 +268,7 @@ public final class SuburbPlanner {
     private SettlementPlan createPlan(SuburbPlanningRequest request, SuburbLayout layout) {
         GridBounds bounds = request.survey().bounds();
         RoadGraph roadGraph = createRoadGraph(request, bounds, layout.mainRoadZ(), layout.sideRoadXs());
-        roadGraph = withPlatformElevations(request, roadGraph);
+        roadGraph = RoadElevationPlanner.apply(request, roadGraph);
         List<Parcel> parcels = createParcels(request, layout.parcelBounds());
         List<BuildingSlot> buildingSlots = createBuildingSlots(request, parcels);
 
@@ -278,63 +280,6 @@ public final class SuburbPlanner {
                 Set.of(new PlanTag("suburban")),
                 PlanProperties.empty()
         );
-    }
-
-    private static RoadGraph withPlatformElevations(SuburbPlanningRequest request, RoadGraph roadGraph) {
-        Map<PlanElementId, RoadNode> nodesById = new HashMap<>();
-        for (RoadNode node : roadGraph.nodes()) {
-            nodesById.put(node.id(), node);
-        }
-
-        List<RoadSegment> elevatedSegments = new ArrayList<>();
-        for (RoadSegment segment : roadGraph.segments()) {
-            RoadNode start = requiredRoadNode(nodesById, segment.startNodeId());
-            RoadNode end = requiredRoadNode(nodesById, segment.endNodeId());
-            GridBounds bounds = AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
-            elevatedSegments.add(new RoadSegment(
-                    segment.id(),
-                    segment.startNodeId(),
-                    segment.endNodeId(),
-                    segment.width(),
-                    segment.tags(),
-                    platformProperties(segment.properties(), request, bounds)
-            ));
-        }
-
-        return new RoadGraph(roadGraph.nodes(), elevatedSegments);
-    }
-
-    private static RoadNode requiredRoadNode(Map<PlanElementId, RoadNode> nodesById, PlanElementId id) {
-        RoadNode node = nodesById.get(id);
-        if (node == null) {
-            throw new IllegalStateException("road segment references missing node: " + id.value());
-        }
-        return node;
-    }
-
-    private static PlanProperties platformProperties(
-            PlanProperties properties,
-            SuburbPlanningRequest request,
-            GridBounds bounds
-    ) {
-        int cellCount = Math.multiplyExact(bounds.size().width(), bounds.size().depth());
-        int[] heights = new int[cellCount];
-        int index = 0;
-
-        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
-            for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
-                heights[index] = requiredTerrainCell(request, new GridPoint(x, z)).height() - 1;
-                index++;
-            }
-        }
-
-        Arrays.sort(heights);
-        int platformY = heights[heights.length / 2];
-        return withPlatformY(properties, platformY);
-    }
-
-    static PlanProperties withPlatformY(PlanProperties properties, int platformY) {
-        return properties.with(PlanPropertyKeys.PLATFORM_Y, Integer.toString(platformY));
     }
 
     private static int centerZ(GridBounds bounds) {
@@ -633,7 +578,7 @@ public final class SuburbPlanner {
                 parcel.id(),
                 buildingBounds,
                 Set.of(new PlanTag("residential")),
-                platformProperties(PlanProperties.empty(), request, buildingBounds)
+                TerrainPlatform.withElevation(PlanProperties.empty(), request, buildingBounds)
         );
     }
 

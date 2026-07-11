@@ -138,7 +138,7 @@ final class SuburbPlannerTest {
     @Test
     void allowsProfileToIncreaseElevationRange() {
         TerrainSurvey survey = elevationSurvey(40, 30, 1);
-        SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.25, 6, 6, 7, 1, 40);
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.25, 6, 6, 7, 1, 40, 40, 40);
 
         SuburbPlanningResult result = planner.plan(request(survey, 100L, settings));
 
@@ -153,6 +153,48 @@ final class SuburbPlannerTest {
 
         assertTrue(plan.roadGraph().segments().stream().allMatch(segment -> hasPlatformElevation(segment.properties())));
         assertTrue(plan.buildingSlots().stream().allMatch(slot -> hasPlatformElevation(slot.properties())));
+    }
+
+    @Test
+    void rejectsPlatformThatWouldBridgeADeepRavine() {
+        TerrainSurvey survey = surveyWithHeightAt(40, 30, new GridPoint(10, 15), 40);
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 3);
+
+        SuburbPlanningResult result = planner.plan(request(survey, 100L, settings));
+
+        assertFalse(result.successful());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.EXCESSIVE_FILL);
+    }
+
+    @Test
+    void rejectsPlatformThatWouldRequireAnExcessiveCut() {
+        TerrainSurvey survey = surveyWithHeightAt(40, 30, new GridPoint(10, 15), 90);
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 3);
+
+        SuburbPlanningResult result = planner.plan(request(survey, 100L, settings));
+
+        assertFalse(result.successful());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.EXCESSIVE_CUT);
+    }
+
+    @Test
+    void keepsConnectedRoadSegmentsWithinOneBlock() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 40, 40, 40);
+        SettlementPlan plan = planner.plan(request(elevationSurvey(40, 30, 2), 100L, settings))
+                .plan()
+                .orElseThrow();
+
+        for (RoadSegment first : plan.roadGraph().segments()) {
+            for (RoadSegment second : plan.roadGraph().segments()) {
+                if (first.id().equals(second.id())) {
+                    continue;
+                }
+                if (segmentsConnect(first, second)) {
+                    int difference = Math.abs(platformY(first) - platformY(second));
+                    assertTrue(difference <= 1);
+                }
+            }
+        }
     }
 
     @Test
@@ -493,6 +535,38 @@ final class SuburbPlannerTest {
         );
     }
 
+    private static TerrainSurvey surveyWithHeightAt(int width, int depth, GridPoint target, int targetHeight) {
+        GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(width, depth));
+        return TerrainSurvey.sample(
+                bounds,
+                point -> Optional.of(new TerrainCell(
+                        point,
+                        point.equals(target) ? targetHeight : 64,
+                        false,
+                        0.0,
+                        BiomeCategory.PLAINS,
+                        TerrainCategory.BUILDABLE
+                ))
+        );
+    }
+
+    private static boolean segmentsConnect(RoadSegment first, RoadSegment second) {
+        if (first.startNodeId().equals(second.startNodeId())) {
+            return true;
+        }
+        if (first.startNodeId().equals(second.endNodeId())) {
+            return true;
+        }
+        if (first.endNodeId().equals(second.startNodeId())) {
+            return true;
+        }
+        return first.endNodeId().equals(second.endNodeId());
+    }
+
+    private static int platformY(RoadSegment segment) {
+        return Integer.parseInt(segment.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());
+    }
+
     private static TerrainSuitabilityRule lowScoreRule() {
         return new TerrainSuitabilityRule() {
             @Override
@@ -511,7 +585,7 @@ final class SuburbPlannerTest {
     void platformElevationPreservesExistingProperties() {
         PlanProperties properties = PlanProperties.of(EXISTING_PROPERTY, "kept");
 
-        PlanProperties elevated = SuburbPlanner.withPlatformY(properties, 72);
+        PlanProperties elevated = TerrainPlatform.withElevation(properties, 72);
 
         assertEquals("kept", elevated.find(EXISTING_PROPERTY).orElseThrow());
         assertEquals("72", elevated.find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());

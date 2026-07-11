@@ -10,6 +10,8 @@
     "parcelWidth": 18,
     "parcelDepth": 20,
     "buildingMargin": 4,
-    "maxElevationRange": 10
+    "maxElevationRange": 10,
+    "maxCutDepth": 3,
+    "maxFillDepth": 3
   }
 }

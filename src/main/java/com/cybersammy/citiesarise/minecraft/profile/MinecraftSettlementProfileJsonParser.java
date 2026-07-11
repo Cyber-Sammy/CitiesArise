@@ -52,7 +52,9 @@ public final class MinecraftSettlementProfileJsonParser {
                 requiredInt(planning, "parcelWidth"),
                 requiredInt(planning, "parcelDepth"),
                 requiredInt(planning, "buildingMargin"),
-                optionalInt(planning, "maxElevationRange", SuburbPlanningSettings.DEFAULT_MAX_ELEVATION_RANGE)
+                optionalInt(planning, "maxElevationRange", SuburbPlanningSettings.DEFAULT_MAX_ELEVATION_RANGE),
+                optionalInt(planning, "maxCutDepth", SuburbPlanningSettings.DEFAULT_MAX_CUT_DEPTH),
+                optionalInt(planning, "maxFillDepth", SuburbPlanningSettings.DEFAULT_MAX_FILL_DEPTH)
         );
     }
 

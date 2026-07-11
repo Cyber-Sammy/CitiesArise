@@ -12,6 +12,7 @@ import java.util.Objects;
 
 final class WorldgenChunkPlacement {
     private static final int VEGETATION_CLEARANCE = 48;
+    private static final int VEGETATION_CLEARANCE_RADIUS = 5;
 
     int apply(WorldgenBlockAccess level, DebugChunkPlacementPlan placementPlan) {
         Objects.requireNonNull(level, "level");
@@ -19,7 +20,7 @@ final class WorldgenChunkPlacement {
 
         Map<GridPoint, SurfaceColumn> surfaceColumns = surfaceColumns(level, placementPlan);
         preparePlatforms(level, placementPlan, surfaceColumns);
-        clearVegetation(level, surfaceColumns);
+        clearVegetation(level, vegetationColumns(level, placementPlan, surfaceColumns));
 
         int placedBlocks = 0;
         for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
@@ -108,6 +109,34 @@ final class WorldgenChunkPlacement {
         );
         int placementY = Math.max(level.minBuildHeight(), sample.height() - 1);
         return new SurfaceColumn(point, placementY, topHeight);
+    }
+
+    private static Map<GridPoint, SurfaceColumn> vegetationColumns(
+            WorldgenBlockAccess level,
+            DebugChunkPlacementPlan plan,
+            Map<GridPoint, SurfaceColumn> occupiedColumns
+    ) {
+        Map<GridPoint, SurfaceColumn> columns = new LinkedHashMap<>(occupiedColumns);
+        for (DebugBlockPlacementOperation operation : plan.operations()) {
+            addVegetationClearanceColumns(level, plan, columns, operation.point());
+        }
+        return Map.copyOf(columns);
+    }
+
+    private static void addVegetationClearanceColumns(
+            WorldgenBlockAccess level,
+            DebugChunkPlacementPlan plan,
+            Map<GridPoint, SurfaceColumn> columns,
+            GridPoint center
+    ) {
+        for (int zOffset = -VEGETATION_CLEARANCE_RADIUS; zOffset <= VEGETATION_CLEARANCE_RADIUS; zOffset++) {
+            for (int xOffset = -VEGETATION_CLEARANCE_RADIUS; xOffset <= VEGETATION_CLEARANCE_RADIUS; xOffset++) {
+                GridPoint point = new GridPoint(center.x() + xOffset, center.z() + zOffset);
+                if (plan.chunk().contains(point)) {
+                    columns.computeIfAbsent(point, ignored -> surfaceColumn(level, point));
+                }
+            }
+        }
     }
 
     private static SurfaceBlock surfaceBlock(WorldgenBlockAccess level, int x, int y, int z) {

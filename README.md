@@ -96,7 +96,7 @@ The debug planner can load a settlement profile from data resources. The default
 cities_arise:suburb
 ```
 
-The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. For this MVP, profiles can change survey size, road width, max buildable slope, maximum elevation range, target parcel count, parcel size, and building margin. If the configured profile is missing or invalid, the planner falls back to the numeric debug config values.
+The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. For this MVP, profiles can change survey size, road width, max buildable slope, maximum elevation range, cut/fill limits, target parcel count, parcel size, and building margin. If the configured profile is missing or invalid, the planner falls back to the numeric debug config values.
 
 ## Datapack Settlement Profiles
 
@@ -136,6 +136,8 @@ Example `data/my_pack/settlement_profiles/large_suburb.json`:
     "roadWidth": 5,
     "maxBuildableSlope": 0.75,
     "maxElevationRange": 10,
+    "maxCutDepth": 3,
+    "maxFillDepth": 3,
     "targetParcelCount": 8,
     "parcelWidth": 18,
     "parcelDepth": 20,
@@ -161,7 +163,9 @@ Then run:
 
 Use `/citiesarise debug dump` to inspect the generated plan and confirm that the profile changed the survey, parcel, and building slot scale.
 
-Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, target parcel count `128`, parcel width/depth `64`, and building margin `8`.
+`maxCutDepth` and `maxFillDepth` limit how many terrain blocks a flat road or building platform may remove or support. A plan is rejected before placement when any occupied column exceeds either limit, so the basic suburb profile does not bridge ravines with solid foundations or bury buildings into cliffs. Connected road segments are constrained to at most one block of elevation difference.
+
+Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, target parcel count `128`, parcel width/depth `64`, building margin `8`, and cut/fill depth `16`.
 
 House assets are future work. The intended direction is a separate provider layer where profiles can reference building pools, weights, footprints, tags, palettes, and structure/NBT assets. The core planner will still work with abstract building slots and provider ids; Minecraft-specific assets will stay in the Minecraft/content layer.
 

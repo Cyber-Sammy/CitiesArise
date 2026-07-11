@@ -112,6 +112,36 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void rejectsMountainScaleElevationRange() {
+        TerrainSurvey survey = elevationSurvey(40, 30, 1);
+
+        SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
+
+        assertFalse(result.successful());
+        assertEquals(Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN), result.failureReason());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.ELEVATION_RANGE);
+    }
+
+    @Test
+    void acceptsRollingTerrainWithinElevationRange() {
+        TerrainSurvey survey = elevationSurvey(40, 30, 5);
+
+        SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
+
+        assertTrue(result.successful());
+    }
+
+    @Test
+    void allowsProfileToIncreaseElevationRange() {
+        TerrainSurvey survey = elevationSurvey(40, 30, 1);
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.25, 6, 6, 7, 1, 40);
+
+        SuburbPlanningResult result = planner.plan(request(survey, 100L, settings));
+
+        assertTrue(result.successful());
+    }
+
+    @Test
     void acceptsRoughTerrainWhenScoreRemainsUsable() {
         SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6);
         SuburbPlanningResult result = planner.plan(request(roughSurvey(40, 30), 100L, settings));
@@ -431,6 +461,22 @@ final class SuburbPlannerTest {
 
     private static TerrainSurvey roughSurvey(int width, int depth) {
         return survey(width, depth, false, 0.5, TerrainCategory.ROUGH);
+    }
+
+    private static TerrainSurvey elevationSurvey(int width, int depth, int horizontalScale) {
+        GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(width, depth));
+
+        return TerrainSurvey.sample(
+                bounds,
+                point -> Optional.of(new TerrainCell(
+                        point,
+                        64 + (point.x() / horizontalScale),
+                        false,
+                        0.0,
+                        BiomeCategory.PLAINS,
+                        TerrainCategory.BUILDABLE
+                ))
+        );
     }
 
     private static TerrainSuitabilityRule lowScoreRule() {

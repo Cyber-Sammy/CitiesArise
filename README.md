@@ -94,7 +94,7 @@ The debug planner can load a settlement profile from data resources. The default
 cities_arise:suburb
 ```
 
-The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. For this MVP, profiles can change survey size, road width, max buildable slope, target parcel count, parcel size, and building margin. If the configured profile is missing or invalid, the planner falls back to the numeric debug config values.
+The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. For this MVP, profiles can change survey size, road width, max buildable slope, maximum elevation range, target parcel count, parcel size, and building margin. If the configured profile is missing or invalid, the planner falls back to the numeric debug config values.
 
 ## Datapack Settlement Profiles
 
@@ -133,6 +133,7 @@ Example `data/my_pack/settlement_profiles/large_suburb.json`:
   "planning": {
     "roadWidth": 5,
     "maxBuildableSlope": 0.75,
+    "maxElevationRange": 10,
     "targetParcelCount": 8,
     "parcelWidth": 18,
     "parcelDepth": 20,

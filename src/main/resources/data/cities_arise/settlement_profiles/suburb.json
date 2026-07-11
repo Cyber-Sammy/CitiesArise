@@ -9,6 +9,7 @@
     "targetParcelCount": 8,
     "parcelWidth": 18,
     "parcelDepth": 20,
-    "buildingMargin": 4
+    "buildingMargin": 4,
+    "maxElevationRange": 10
   }
 }

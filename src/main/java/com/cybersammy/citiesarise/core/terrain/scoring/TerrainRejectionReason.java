@@ -3,5 +3,6 @@ package com.cybersammy.citiesarise.core.terrain.scoring;
 public enum TerrainRejectionReason {
     WATER,
     BLOCKED_TERRAIN,
-    STEEP_SLOPE
+    STEEP_SLOPE,
+    ELEVATION_RANGE
 }

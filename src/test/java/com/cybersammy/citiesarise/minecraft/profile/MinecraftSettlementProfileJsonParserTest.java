@@ -53,6 +53,24 @@ final class MinecraftSettlementProfileJsonParserTest {
     }
 
     @Test
+    void parsesOptionalMaximumElevationRange() {
+        JsonObject json = validJson();
+        json.getAsJsonObject("planning").addProperty("maxElevationRange", 20);
+
+        SettlementProfile profile = parser.parse(id(), json);
+
+        assertEquals(20, profile.suburbPlanningSettings().maxElevationRange());
+    }
+
+    @Test
+    void rejectsNegativeMaximumElevationRange() {
+        JsonObject json = validJson();
+        json.getAsJsonObject("planning").addProperty("maxElevationRange", -1);
+
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), json));
+    }
+
+    @Test
     void rejectsStringNumbers() {
         JsonObject json = validJson();
         json.getAsJsonObject("survey").addProperty("width", "96");

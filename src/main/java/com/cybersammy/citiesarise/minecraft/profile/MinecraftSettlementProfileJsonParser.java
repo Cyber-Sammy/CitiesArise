@@ -51,8 +51,16 @@ public final class MinecraftSettlementProfileJsonParser {
                 requiredInt(planning, "targetParcelCount"),
                 requiredInt(planning, "parcelWidth"),
                 requiredInt(planning, "parcelDepth"),
-                requiredInt(planning, "buildingMargin")
+                requiredInt(planning, "buildingMargin"),
+                optionalInt(planning, "maxElevationRange", SuburbPlanningSettings.DEFAULT_MAX_ELEVATION_RANGE)
         );
+    }
+
+    private static int optionalInt(JsonObject parent, String name, int defaultValue) {
+        if (!parent.has(name)) {
+            return defaultValue;
+        }
+        return requiredInt(parent, name);
     }
 
     private static JsonObject requiredObject(JsonObject parent, String name) {

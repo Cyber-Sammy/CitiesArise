@@ -52,6 +52,14 @@ The selected settlement profile is required for automatic generation. If it is m
 
 The current MVP evaluates approximately one deterministic suburb candidate per `candidateRegionModulo` settlement regions. The default value is `16`; `1` evaluates every 128x128-block region. Candidate selection happens before terrain sampling. For an accepted candidate it builds one semantic plan, indexes its placement operations, and writes only the slice belonging to the chunk currently being generated. It never intentionally writes to or force-loads neighboring chunks. Chunk generation order does not change the regional plan.
 
+Operators can locate the nearest candidate that is accepted by the current worldgen planner:
+
+```mcfunction
+/citiesarise locate
+```
+
+The command uses the same world seed, candidate density, settlement profile, terrain survey, and plan cache as automatic generation. It does not load chunks. The reported coordinates are the center of an accepted settlement region, not proof that settlement blocks already exist there: chunks generated before Cities Arise worldgen was enabled cannot be retroactively populated. Standard `/locate structure` support requires a future migration from the current biome feature to Minecraft's Structure API.
+
 Worldgen terrain planning uses a deterministic four-block interpolated base-height grid and noise biomes instead of reading neighboring chunks. Ocean and river surfaces at or below sea level are treated as water. This is intentionally lighter and less detailed than the loaded-world debug survey. Final placement resolves each operation against the actual surface of its own chunk and clears vanilla logs or leaves above affected columns before placing roads and placeholder buildings.
 
 Road segments and building slots carry a deterministic semantic platform elevation selected from the median terrain height of their complete footprint. Worldgen cuts terrain above that elevation and fills lower columns with the vanilla foundation material before placement. Each building pad and each road segment is therefore flat even when it crosses chunk boundaries. Separate connected road segments may use different elevations; smooth transitions, stairs, retaining walls, tunnels, and switchbacks remain future terrain-aware road work.

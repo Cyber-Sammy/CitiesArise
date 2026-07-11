@@ -7,6 +7,7 @@ public final class CitiesAriseWorldgenConfig {
 
     private static final ModConfigSpec.BooleanValue ENABLED;
     private static final ModConfigSpec.ConfigValue<String> SETTLEMENT_PROFILE_ID;
+    private static final ModConfigSpec.IntValue CANDIDATE_REGION_MODULO;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -20,6 +21,10 @@ public final class CitiesAriseWorldgenConfig {
                 .comment("Settlement profile id used by automatic world generation.")
                 .worldRestart()
                 .define("settlementProfileId", DebugSuburbPlanningConfig.DEFAULT_SETTLEMENT_PROFILE_ID);
+        CANDIDATE_REGION_MODULO = builder
+                .comment("Plans one deterministic candidate per approximately this many settlement regions.")
+                .worldRestart()
+                .defineInRange("candidateRegionModulo", 16, 1, 1024);
         builder.pop();
 
         SPEC = builder.build();
@@ -34,5 +39,9 @@ public final class CitiesAriseWorldgenConfig {
 
     public static String settlementProfileId() {
         return SETTLEMENT_PROFILE_ID.get();
+    }
+
+    public static int candidateRegionModulo() {
+        return CANDIDATE_REGION_MODULO.get();
     }
 }

@@ -38,36 +38,36 @@ final class MinecraftWorldgenTerrainSamplerTest {
         assertTrue(waterCell.water());
         assertEquals(TerrainCategory.BLOCKED, waterCell.terrainCategory());
         assertEquals(BiomeCategory.OCEAN, waterCell.biomeCategory());
-        assertEquals(0.0, waterCell.slope());
+        assertEquals(0.25, waterCell.slope());
         assertFalse(plainsCell.water());
         assertEquals(TerrainCategory.BUILDABLE, plainsCell.terrainCategory());
         assertEquals(BiomeCategory.PLAINS, plainsCell.biomeCategory());
-        assertEquals(1.0, plainsCell.slope());
+        assertEquals(0.25, plainsCell.slope());
     }
 
     @Test
-    void cachesExactHeightSamplesWithinSurvey() {
+    void cachesSharedHeightSamplesWithinSurvey() {
         FakeTerrainSource source = new FakeTerrainSource();
         MinecraftWorldgenTerrainSampler sampler = new MinecraftWorldgenTerrainSampler(source);
 
         sampler.sample(new GridBounds(point(0, 0), new GridSize(8, 8)));
 
-        assertTrue(source.heightCalls.size() <= 100);
+        assertTrue(source.heightCalls.size() <= 25);
         for (int calls : source.heightCalls.values()) {
             assertEquals(1, calls);
         }
     }
 
     @Test
-    void preservesNarrowTerrainDepressions() {
+    void preservesDepressionsAtSparseSamplePoints() {
         FakeTerrainSource source = new FakeTerrainSource();
-        source.height(point(2, 2), 30);
+        source.height(point(4, 4), 30);
         MinecraftWorldgenTerrainSampler sampler = new MinecraftWorldgenTerrainSampler(source);
 
         TerrainSurvey survey = sampler.sample(new GridBounds(point(0, 0), new GridSize(5, 5)));
 
-        assertEquals(30, requiredCell(survey, point(2, 2)).height());
-        assertEquals(64, requiredCell(survey, point(1, 2)).height());
+        assertEquals(30, requiredCell(survey, point(4, 4)).height());
+        assertEquals(47, requiredCell(survey, point(2, 4)).height());
     }
 
     @Test

@@ -10,6 +10,7 @@ import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlanConverte
 import com.cybersammy.citiesarise.minecraft.placement.PlacementChunk;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanResult;
+import com.cybersammy.citiesarise.minecraft.planning.SettlementRegion;
 import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -25,6 +26,7 @@ public final class MinecraftSuburbWorldgenService {
     private final DebugPlacementChunkProjector chunkProjector;
     private final WorldgenPlacementApplier placementApplier;
     private final WorldgenPlacementIndexCache placementIndexCache;
+    private final WorldgenRegionCandidateSelector candidateSelector;
     private final Logger logger;
 
     public MinecraftSuburbWorldgenService(MinecraftSuburbPlanningService planningService, Logger logger) {
@@ -34,6 +36,7 @@ public final class MinecraftSuburbWorldgenService {
                 new DebugPlacementChunkProjector(),
                 new WorldgenPlacementApplier(),
                 new WorldgenPlacementIndexCache(MAX_CACHED_PLACEMENT_INDICES),
+                new WorldgenRegionCandidateSelector(),
                 logger
         );
     }
@@ -44,6 +47,7 @@ public final class MinecraftSuburbWorldgenService {
             DebugPlacementChunkProjector chunkProjector,
             WorldgenPlacementApplier placementApplier,
             WorldgenPlacementIndexCache placementIndexCache,
+            WorldgenRegionCandidateSelector candidateSelector,
             Logger logger
     ) {
         this.planningService = Objects.requireNonNull(planningService, "planningService");
@@ -51,6 +55,7 @@ public final class MinecraftSuburbWorldgenService {
         this.chunkProjector = Objects.requireNonNull(chunkProjector, "chunkProjector");
         this.placementApplier = Objects.requireNonNull(placementApplier, "placementApplier");
         this.placementIndexCache = Objects.requireNonNull(placementIndexCache, "placementIndexCache");
+        this.candidateSelector = Objects.requireNonNull(candidateSelector, "candidateSelector");
         this.logger = Objects.requireNonNull(logger, "logger");
     }
 
@@ -62,6 +67,15 @@ public final class MinecraftSuburbWorldgenService {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(chunkGenerator, "chunkGenerator");
         Objects.requireNonNull(origin, "origin");
+
+        SettlementRegion region = SettlementRegion.fromBlockPosition(origin.getX(), origin.getZ());
+        if (!candidateSelector.isCandidate(
+                level.getLevel().getSeed(),
+                region,
+                CitiesAriseWorldgenConfig.candidateRegionModulo()
+        )) {
+            return false;
+        }
 
         Optional<SuburbDebugPlanResult> optionalPlanningResult = planningService.planForWorldgen(
                 level,

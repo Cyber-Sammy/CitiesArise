@@ -20,6 +20,7 @@ public final class MinecraftWorldgenTerrainSampler {
 
     private final TerrainSource terrainSource;
     private final Map<GridPoint, Integer> heights = new HashMap<>();
+    private final Map<GridPoint, Integer> sampledHeights = new HashMap<>();
     private final Map<BiomeSampleKey, String> biomePaths = new HashMap<>();
 
     public MinecraftWorldgenTerrainSampler(
@@ -37,6 +38,7 @@ public final class MinecraftWorldgenTerrainSampler {
     public TerrainSurvey sample(GridBounds bounds) {
         Objects.requireNonNull(bounds, "bounds");
         heights.clear();
+        sampledHeights.clear();
         biomePaths.clear();
         return TerrainSurvey.sample(bounds, this::sampleCell);
     }
@@ -70,7 +72,25 @@ public final class MinecraftWorldgenTerrainSampler {
     }
 
     private int sampleHeight(GridPoint point) {
-        return terrainSource.height(point);
+        int minX = sampleCoordinate(point.x());
+        int minZ = sampleCoordinate(point.z());
+        int maxX = Math.addExact(minX, HEIGHT_SAMPLE_STEP);
+        int maxZ = Math.addExact(minZ, HEIGHT_SAMPLE_STEP);
+        int northWest = sampledHeight(minX, minZ);
+        int northEast = sampledHeight(maxX, minZ);
+        int southWest = sampledHeight(minX, maxZ);
+        int southEast = sampledHeight(maxX, maxZ);
+        double xProgress = progress(point.x(), minX);
+        double zProgress = progress(point.z(), minZ);
+        double north = interpolate(northWest, northEast, xProgress);
+        double south = interpolate(southWest, southEast, xProgress);
+
+        return (int) Math.round(interpolate(north, south, zProgress));
+    }
+
+    private int sampledHeight(int x, int z) {
+        GridPoint point = new GridPoint(x, z);
+        return sampledHeights.computeIfAbsent(point, terrainSource::height);
     }
 
     private String biomePath(GridPoint point, int height) {
@@ -87,6 +107,14 @@ public final class MinecraftWorldgenTerrainSampler {
 
     private static int sampleCoordinate(int coordinate) {
         return Math.multiplyExact(Math.floorDiv(coordinate, HEIGHT_SAMPLE_STEP), HEIGHT_SAMPLE_STEP);
+    }
+
+    private static double progress(int coordinate, int sampleMinimum) {
+        return (coordinate - sampleMinimum) / (double) HEIGHT_SAMPLE_STEP;
+    }
+
+    private static double interpolate(double start, double end, double progress) {
+        return start + ((end - start) * progress);
     }
 
     private double slope(GridPoint point, int centerHeight) {

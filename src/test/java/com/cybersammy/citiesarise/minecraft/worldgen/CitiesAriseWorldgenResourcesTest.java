@@ -20,7 +20,7 @@ class CitiesAriseWorldgenResourcesTest {
              InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
             JsonObject modifier = JsonParser.parseReader(reader).getAsJsonObject();
 
-            assertEquals("vegetal_decoration", modifier.get("step").getAsString());
+            assertEquals("top_layer_modification", modifier.get("step").getAsString());
         }
     }
 

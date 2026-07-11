@@ -11,6 +11,8 @@ import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
+import com.cybersammy.citiesarise.core.model.PlanProperties;
+import com.cybersammy.citiesarise.core.model.PlanPropertyKey;
 import com.cybersammy.citiesarise.core.model.PlanTag;
 import com.cybersammy.citiesarise.core.model.PlanPropertyKeys;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
@@ -41,6 +43,7 @@ import org.junit.jupiter.api.Test;
 
 final class SuburbPlannerTest {
     private static final PlanElementId SETTLEMENT_ID = new PlanElementId("settlement/test");
+    private static final PlanPropertyKey EXISTING_PROPERTY = new PlanPropertyKey("existing_property");
 
     private final SuburbPlanner planner = SuburbPlanner.defaults();
     private final PlanValidator validator = new PlanValidator();
@@ -504,7 +507,17 @@ final class SuburbPlannerTest {
         };
     }
 
-    private static boolean hasPlatformElevation(com.cybersammy.citiesarise.core.model.PlanProperties properties) {
+    @Test
+    void platformElevationPreservesExistingProperties() {
+        PlanProperties properties = PlanProperties.of(EXISTING_PROPERTY, "kept");
+
+        PlanProperties elevated = SuburbPlanner.withPlatformY(properties, 72);
+
+        assertEquals("kept", elevated.find(EXISTING_PROPERTY).orElseThrow());
+        assertEquals("72", elevated.find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());
+    }
+
+    private static boolean hasPlatformElevation(PlanProperties properties) {
         return properties.find(PlanPropertyKeys.PLATFORM_Y).isPresent();
     }
 

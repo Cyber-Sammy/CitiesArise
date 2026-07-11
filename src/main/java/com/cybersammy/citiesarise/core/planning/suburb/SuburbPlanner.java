@@ -297,7 +297,7 @@ public final class SuburbPlanner {
                     segment.endNodeId(),
                     segment.width(),
                     segment.tags(),
-                    platformProperties(request, bounds)
+                    platformProperties(segment.properties(), request, bounds)
             ));
         }
 
@@ -312,7 +312,11 @@ public final class SuburbPlanner {
         return node;
     }
 
-    private static PlanProperties platformProperties(SuburbPlanningRequest request, GridBounds bounds) {
+    private static PlanProperties platformProperties(
+            PlanProperties properties,
+            SuburbPlanningRequest request,
+            GridBounds bounds
+    ) {
         int cellCount = Math.multiplyExact(bounds.size().width(), bounds.size().depth());
         int[] heights = new int[cellCount];
         int index = 0;
@@ -326,7 +330,11 @@ public final class SuburbPlanner {
 
         Arrays.sort(heights);
         int platformY = heights[heights.length / 2];
-        return PlanProperties.of(PlanPropertyKeys.PLATFORM_Y, Integer.toString(platformY));
+        return withPlatformY(properties, platformY);
+    }
+
+    static PlanProperties withPlatformY(PlanProperties properties, int platformY) {
+        return properties.with(PlanPropertyKeys.PLATFORM_Y, Integer.toString(platformY));
     }
 
     private static int centerZ(GridBounds bounds) {
@@ -625,7 +633,7 @@ public final class SuburbPlanner {
                 parcel.id(),
                 buildingBounds,
                 Set.of(new PlanTag("residential")),
-                platformProperties(request, buildingBounds)
+                platformProperties(PlanProperties.empty(), request, buildingBounds)
         );
     }
 

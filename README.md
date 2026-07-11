@@ -53,6 +53,8 @@ The current MVP evaluates one deterministic suburb candidate per 128x128-block s
 
 Worldgen terrain planning uses a deterministic four-block interpolated base-height grid and noise biomes instead of reading neighboring chunks. Ocean and river surfaces at or below sea level are treated as water. This is intentionally lighter and less detailed than the loaded-world debug survey. Final placement resolves each operation against the actual surface of its own chunk and clears vanilla logs or leaves above affected columns before placing roads and placeholder buildings.
 
+Road segments and building slots carry a deterministic semantic platform elevation selected from the median terrain height of their complete footprint. Worldgen cuts terrain above that elevation and fills lower columns with the vanilla foundation material before placement. Each building pad and each road segment is therefore flat even when it crosses chunk boundaries. Separate connected road segments may use different elevations; smooth transitions, stairs, retaining walls, tunnels, and switchbacks remain future terrain-aware road work.
+
 The generated content is still a development preview: vanilla marker roads, yards, and placeholder houses are used instead of final building assets. Settlement density, richer water classification, final providers, and persistent plans remain future work.
 
 The accepted semantic plan can be exported as JSON for inspection:

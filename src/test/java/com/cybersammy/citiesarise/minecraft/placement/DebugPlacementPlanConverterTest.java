@@ -2,6 +2,7 @@ package com.cybersammy.citiesarise.minecraft.placement;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
@@ -10,6 +11,7 @@ import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanProperties;
+import com.cybersammy.citiesarise.core.model.PlanPropertyKeys;
 import com.cybersammy.citiesarise.core.model.PlanTag;
 import com.cybersammy.citiesarise.core.model.PlanTags;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
@@ -48,6 +50,59 @@ final class DebugPlacementPlanConverterTest {
 
         assertOperation(placementPlan, point(0, -1), 0, DebugPlacementRole.WORN_ROAD_SURFACE, roadId);
         assertOperation(placementPlan, point(4, 1), 0, DebugPlacementRole.WORN_ROAD_SURFACE, roadId);
+    }
+
+    @Test
+    void carriesSemanticPlatformElevationIntoPlacementOperations() {
+        PlanElementId roadId = id("road");
+        PlanElementId startId = id("start");
+        PlanElementId endId = id("end");
+        RoadSegment segment = new RoadSegment(
+                roadId,
+                startId,
+                endId,
+                3,
+                Set.of(),
+                PlanProperties.of(PlanPropertyKeys.PLATFORM_Y, "72")
+        );
+        SettlementPlan plan = plan(
+                new RoadGraph(
+                        List.of(roadNode(startId, point(0, 0)), roadNode(endId, point(4, 0))),
+                        List.of(segment)
+                ),
+                List.of(),
+                List.of()
+        );
+
+        DebugPlacementPlan placementPlan = converter.convert(plan);
+
+        assertEquals(72, placementPlan.operations().getFirst().platformY().orElseThrow());
+        assertTrue(placementPlan.operations().stream().allMatch(operation -> operation.platformY().orElseThrow() == 72));
+    }
+
+    @Test
+    void rejectsNonIntegerPlatformElevation() {
+        PlanElementId roadId = id("road");
+        PlanElementId startId = id("start");
+        PlanElementId endId = id("end");
+        RoadSegment segment = new RoadSegment(
+                roadId,
+                startId,
+                endId,
+                3,
+                Set.of(),
+                PlanProperties.of(PlanPropertyKeys.PLATFORM_Y, "invalid")
+        );
+        SettlementPlan plan = plan(
+                new RoadGraph(
+                        List.of(roadNode(startId, point(0, 0)), roadNode(endId, point(4, 0))),
+                        List.of(segment)
+                ),
+                List.of(),
+                List.of()
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> converter.convert(plan));
     }
 
     @Test

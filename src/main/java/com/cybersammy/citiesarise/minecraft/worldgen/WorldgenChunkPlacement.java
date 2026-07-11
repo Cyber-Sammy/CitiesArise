@@ -3,6 +3,7 @@ package com.cybersammy.citiesarise.minecraft.worldgen;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.minecraft.placement.DebugBlockPlacementOperation;
 import com.cybersammy.citiesarise.minecraft.placement.DebugChunkPlacementPlan;
+import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
 import java.util.LinkedHashMap;
@@ -15,6 +16,7 @@ final class WorldgenChunkPlacement {
         Objects.requireNonNull(placementPlan, "placementPlan");
 
         Map<GridPoint, SurfaceColumn> surfaceColumns = surfaceColumns(level, placementPlan);
+        preparePlatforms(level, placementPlan, surfaceColumns);
         clearVegetation(level, surfaceColumns);
 
         int placedBlocks = 0;
@@ -29,6 +31,62 @@ final class WorldgenChunkPlacement {
             }
         }
         return placedBlocks;
+    }
+
+    private static void preparePlatforms(
+            WorldgenBlockAccess level,
+            DebugChunkPlacementPlan plan,
+            Map<GridPoint, SurfaceColumn> columns
+    ) {
+        Map<GridPoint, Integer> platformElevations = platformElevations(plan);
+        for (Map.Entry<GridPoint, Integer> entry : platformElevations.entrySet()) {
+            preparePlatformColumn(level, columns.get(entry.getKey()), entry.getValue());
+        }
+    }
+
+    private static Map<GridPoint, Integer> platformElevations(DebugChunkPlacementPlan plan) {
+        Map<GridPoint, Integer> elevations = new LinkedHashMap<>();
+        for (DebugBlockPlacementOperation operation : plan.operations()) {
+            if (operation.platformY().isEmpty()) {
+                continue;
+            }
+            int platformY = operation.platformY().getAsInt();
+            Integer existing = elevations.putIfAbsent(operation.point(), platformY);
+            if (existing == null) {
+                continue;
+            }
+            if (existing != platformY) {
+                throw new IllegalStateException("conflicting platform elevations at " + operation.point());
+            }
+        }
+        return Map.copyOf(elevations);
+    }
+
+    private static void preparePlatformColumn(
+            WorldgenBlockAccess level,
+            SurfaceColumn column,
+            int platformY
+    ) {
+        clearAbovePlatform(level, column, platformY);
+        fillBelowPlatform(level, column, platformY);
+    }
+
+    private static void clearAbovePlatform(WorldgenBlockAccess level, SurfaceColumn column, int platformY) {
+        for (int y = platformY + 1; y < column.topHeight(); y++) {
+            WorldgenBlockPosition position = new WorldgenBlockPosition(column.point().x(), y, column.point().z());
+            if (level.canWrite(position)) {
+                level.clearBlock(position);
+            }
+        }
+    }
+
+    private static void fillBelowPlatform(WorldgenBlockAccess level, SurfaceColumn column, int platformY) {
+        for (int y = column.placementY() + 1; y < platformY; y++) {
+            WorldgenBlockPosition position = new WorldgenBlockPosition(column.point().x(), y, column.point().z());
+            if (level.canWrite(position)) {
+                level.placeBlock(position, DebugPlacementRole.FOUNDATION);
+            }
+        }
     }
 
     private static Map<GridPoint, SurfaceColumn> surfaceColumns(WorldgenBlockAccess level, DebugChunkPlacementPlan plan) {
@@ -86,7 +144,8 @@ final class WorldgenChunkPlacement {
             DebugBlockPlacementOperation operation,
             int placementY
     ) {
-        int targetY = clampedY(level, placementY + operation.verticalOffset());
+        int baseY = operation.platformY().orElse(placementY);
+        int targetY = clampedY(level, baseY + operation.verticalOffset());
         return new WorldgenBlockPosition(operation.point().x(), targetY, operation.point().z());
     }
 

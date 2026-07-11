@@ -12,6 +12,7 @@ import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanTag;
+import com.cybersammy.citiesarise.core.model.PlanPropertyKeys;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
@@ -139,6 +140,16 @@ final class SuburbPlannerTest {
         SuburbPlanningResult result = planner.plan(request(survey, 100L, settings));
 
         assertTrue(result.successful());
+    }
+
+    @Test
+    void assignsPlatformElevationToRoadSegmentsAndBuildingSlots() {
+        SettlementPlan plan = planner.plan(request(elevationSurvey(40, 30, 5), 100L, SuburbPlanningSettings.defaults()))
+                .plan()
+                .orElseThrow();
+
+        assertTrue(plan.roadGraph().segments().stream().allMatch(segment -> hasPlatformElevation(segment.properties())));
+        assertTrue(plan.buildingSlots().stream().allMatch(slot -> hasPlatformElevation(slot.properties())));
     }
 
     @Test
@@ -491,6 +502,10 @@ final class SuburbPlannerTest {
                 return TerrainSuitabilityContribution.multiplier(0.2);
             }
         };
+    }
+
+    private static boolean hasPlatformElevation(com.cybersammy.citiesarise.core.model.PlanProperties properties) {
+        return properties.find(PlanPropertyKeys.PLATFORM_Y).isPresent();
     }
 
     private static void assertTerrainDiagnostic(

@@ -37,7 +37,7 @@ Placement operations can be indexed once and projected onto individual 16x16 chu
 
 ## Experimental World Generation
 
-Automatic suburb placement is available as an experimental NeoForge worldgen feature. It is disabled by default. Enable it in the world's `serverconfig/cities_arise-server.toml` before generating new chunks:
+Automatic suburb placement is available as an experimental NeoForge worldgen feature. It is disabled by default. Enable it in `config/cities_arise-server.toml` before generating new chunks:
 
 ```toml
 [worldgen]
@@ -45,7 +45,7 @@ enabled = true
 settlementProfileId = "cities_arise:suburb"
 ```
 
-The setting requires a world restart. It only affects newly generated chunks and has no undo command. Back up important worlds before enabling it.
+NeoForge 21.1 stores this config in the physical client or dedicated server `config` directory, so the setting applies to every world started by that installation. It requires a world restart, only affects newly generated chunks, and has no undo command. Back up important worlds before enabling it and disable it again when testing is complete.
 
 The selected settlement profile is required for automatic generation. If it is missing or invalid, worldgen skips settlement placement and logs the profile error. Debug planning may still use its debug-config fallback, but worldgen never does.
 

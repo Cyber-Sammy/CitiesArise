@@ -175,6 +175,8 @@ Use `/citiesarise debug dump` to inspect the generated plan and confirm that the
 
 `maxCutDepth` and `maxFillDepth` limit how many terrain blocks a flat road or building platform may remove or support. `maxEarthworkVolume` limits the summed cut and fill volume across semantic road and building preparation areas. A plan is rejected before placement when a column or the total budget exceeds its profile limit, so the basic suburb profile does not bridge ravines with solid foundations or bury buildings into cliffs. Moderate correctable terrain is accepted with earthworks. Connected road segments are constrained to at most one block of elevation difference.
 
+`maxElevationRange` remains accepted in profile JSON for compatibility, but the suburb planner no longer rejects the total settlement height span globally. Long roads are divided into deterministic flat grading segments, while concrete cut, fill, road-transition, and total earthwork limits decide whether terrain is usable.
+
 Successful debug summaries report `terrain=ACCEPTED` when no cut or fill is required and `terrain=ACCEPTED_WITH_EARTHWORKS` with the calculated cut and fill volumes when preparation is required. `/citiesarise locate` treats both successful outcomes as valid settlement candidates.
 
 Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, target parcel count `128`, parcel width/depth `64`, building margin `8`, cut/fill depth `16`, and total earthwork volume `1000000`.

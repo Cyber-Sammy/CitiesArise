@@ -145,7 +145,9 @@ public final class CitiesAriseCommands {
             return 0;
         }
 
-        DebugPlacementPlan placementPlan = placementPlanConverter.convert(result.plan());
+        DebugPlacementPlan placementPlan = result.optionalTerrainPreparationPlan()
+                .map(preparationPlan -> placementPlanConverter.convert(result.plan(), preparationPlan))
+                .orElseGet(() -> placementPlanConverter.convert(result.plan()));
         int placedBlocks = placementApplier.apply(
                 source.getLevel(),
                 placementPlan,

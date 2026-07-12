@@ -67,11 +67,13 @@ final class MinecraftSettlementProfileJsonParserTest {
         JsonObject json = validJson();
         json.getAsJsonObject("planning").addProperty("maxCutDepth", 5);
         json.getAsJsonObject("planning").addProperty("maxFillDepth", 6);
+        json.getAsJsonObject("planning").addProperty("maxEarthworkVolume", 45_000L);
 
         SettlementProfile profile = parser.parse(id(), json);
 
         assertEquals(5, profile.suburbPlanningSettings().maxCutDepth());
         assertEquals(6, profile.suburbPlanningSettings().maxFillDepth());
+        assertEquals(45_000L, profile.suburbPlanningSettings().maxEarthworkVolume());
     }
 
     @Test
@@ -124,6 +126,10 @@ final class MinecraftSettlementProfileJsonParserTest {
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("buildingMargin", 9)));
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("maxCutDepth", 17)));
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("maxFillDepth", 17)));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> parser.parse(id(), jsonWithPlanningValue("maxEarthworkVolume", 1_000_001L))
+        );
     }
 
     private static JsonObject validJson() {

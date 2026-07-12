@@ -60,10 +60,9 @@ public final class SuburbPlanner {
         }
 
         SettlementPlan plan = createPlan(request, layout);
-        Optional<SuburbTerrainDiagnostic> earthworkDiagnostic = EarthworkValidator.findDiagnostic(request, plan);
-
-        if (earthworkDiagnostic.isPresent()) {
-            return SuburbPlanningResult.rejectedTerrain(earthworkDiagnostic.orElseThrow());
+        TerrainPreparationAssessment preparation = TerrainPreparationPlanner.plan(request, plan);
+        if (preparation.diagnostic().isPresent()) {
+            return SuburbPlanningResult.rejectedTerrain(preparation.diagnostic().orElseThrow());
         }
 
         List<PlanValidationError> validationErrors = planValidator.validate(plan);
@@ -72,7 +71,7 @@ public final class SuburbPlanner {
             return SuburbPlanningResult.invalid(validationErrors);
         }
 
-        return SuburbPlanningResult.success(plan);
+        return SuburbPlanningResult.success(plan, preparation.plan().orElseThrow());
     }
 
     private static boolean hasEnoughParcels(SuburbLayout layout, SuburbPlanningRequest request) {
@@ -247,10 +246,22 @@ public final class SuburbPlanner {
 
     private boolean isTerrainCellAccepted(TerrainSuitability suitability) {
         if (suitability.rejected()) {
-            return false;
+            return hasOnlyCorrectableRejections(suitability);
         }
 
         return suitability.score() >= 0.25;
+    }
+
+    private static boolean hasOnlyCorrectableRejections(TerrainSuitability suitability) {
+        if (suitability.rejectionReasons().isEmpty()) {
+            return false;
+        }
+        for (TerrainRejectionReason reason : suitability.rejectionReasons()) {
+            if (reason != TerrainRejectionReason.STEEP_SLOPE) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private SuburbLayout createLayout(SuburbPlanningRequest request) {

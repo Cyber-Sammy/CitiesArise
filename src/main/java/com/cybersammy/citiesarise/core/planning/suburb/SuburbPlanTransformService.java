@@ -37,6 +37,8 @@ public final class SuburbPlanTransformService {
             return SuburbPlanningResult.invalid(validationErrors);
         }
 
-        return SuburbPlanningResult.success(transformedPlan);
+        return result.terrainPreparationPlan()
+                .map(preparationPlan -> SuburbPlanningResult.success(transformedPlan, preparationPlan))
+                .orElseGet(() -> SuburbPlanningResult.success(transformedPlan));
     }
 }

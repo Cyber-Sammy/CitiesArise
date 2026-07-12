@@ -48,7 +48,21 @@ public final class SuburbDebugPlanJsonExporter {
         appendSurveyBounds(output, result);
         appendNumberField(output, "seed", result.seed(), false, "    ");
         appendStringField(output, "summary", result.summary(), false, "    ");
+        appendTerrainPreparation(output, result);
         output.append(LINE_SEPARATOR).append("  }");
+    }
+
+    private static void appendTerrainPreparation(StringBuilder output, SuburbDebugPlanResult result) {
+        result.optionalTerrainPreparationPlan().ifPresent(plan -> {
+            output.append(',').append(LINE_SEPARATOR).append("    ");
+            appendQuoted(output, "terrainPreparation");
+            output.append(": {");
+            appendInlineStringField(output, "status", plan.status().name(), true);
+            appendInlineNumberField(output, "cutVolume", plan.cutVolume(), false);
+            appendInlineNumberField(output, "fillVolume", plan.fillVolume(), false);
+            appendInlineNumberField(output, "totalVolume", plan.totalVolume(), false);
+            output.append(" }");
+        });
     }
 
     private static void appendRegion(StringBuilder output, SuburbDebugPlanResult result) {
@@ -102,6 +116,16 @@ public final class SuburbDebugPlanJsonExporter {
         output.append(' ');
         appendQuoted(output, name);
         output.append(": ").append(value);
+    }
+
+    private static void appendInlineStringField(StringBuilder output, String name, String value, boolean first) {
+        if (!first) {
+            output.append(',');
+        }
+        output.append(' ');
+        appendQuoted(output, name);
+        output.append(": ");
+        appendQuoted(output, value);
     }
 
     private static void appendOptionalComma(StringBuilder output, boolean first) {

@@ -1,6 +1,8 @@
 package com.cybersammy.citiesarise.minecraft.placement;
 
 import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationArea;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -41,6 +43,49 @@ public final class DebugPlacementPlanConverter {
                 .stream()
                 .map(operation -> withPlatformElevation(operation, platformElevations))
                 .toList());
+    }
+
+    public DebugPlacementPlan convert(SettlementPlan plan, TerrainPreparationPlan preparationPlan) {
+        Objects.requireNonNull(plan, "plan");
+        Objects.requireNonNull(preparationPlan, "preparationPlan");
+        validatePreparationPlan(plan, preparationPlan);
+        return convert(plan);
+    }
+
+    private static void validatePreparationPlan(
+            SettlementPlan plan,
+            TerrainPreparationPlan preparationPlan
+    ) {
+        Map<PlanElementId, TerrainPreparationArea> areasById = new LinkedHashMap<>();
+        for (TerrainPreparationArea area : preparationPlan.areas()) {
+            TerrainPreparationArea existing = areasById.putIfAbsent(area.sourceElementId(), area);
+            if (existing != null) {
+                throw new IllegalArgumentException("duplicate terrain preparation area: " + area.sourceElementId().value());
+            }
+        }
+        for (RoadSegment segment : plan.roadGraph().segments()) {
+            validatePreparedElement(segment.id(), segment.properties(), areasById);
+        }
+        for (BuildingSlot slot : plan.buildingSlots()) {
+            validatePreparedElement(slot.id(), slot.properties(), areasById);
+        }
+    }
+
+    private static void validatePreparedElement(
+            PlanElementId elementId,
+            PlanProperties properties,
+            Map<PlanElementId, TerrainPreparationArea> areasById
+    ) {
+        TerrainPreparationArea area = areasById.get(elementId);
+        if (area == null) {
+            throw new IllegalArgumentException("missing terrain preparation area: " + elementId.value());
+        }
+        int platformY = properties.find(PlanPropertyKeys.PLATFORM_Y)
+                .map(DebugPlacementPlanConverter::parsePlatformElevation)
+                .orElseThrow(() -> new IllegalArgumentException("prepared element is missing platform_y"));
+        if (platformY != area.targetElevation()) {
+            throw new IllegalArgumentException("terrain preparation elevation does not match platform_y");
+        }
     }
 
     private static Map<PlanElementId, Integer> platformElevations(SettlementPlan plan) {

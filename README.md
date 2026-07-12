@@ -22,7 +22,7 @@ Cities Arise will follow a plan-first pipeline:
 
 The core planner must stay independent from Minecraft and NeoForge. Loader-specific code belongs in adapter layers.
 
-The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, terrain surveys, and semantic plan transforms. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. Terrain suitability scoring can reject water, blocked terrain, and slopes that are too steep for planning. The core planner can now produce a minimal semantic suburb plan on accepted abstract terrain.
+The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, terrain surveys, semantic terrain preparation, and plan transforms. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. Water and blocked terrain remain hard rejections for the current suburb profile. A steep terrain sample is treated as correctable when the resulting flat platforms stay within profile cut, fill, and total earthwork limits.
 
 The mod also includes a debug command that samples real Minecraft terrain around the player's region and runs the suburb planner without placing blocks:
 
@@ -147,6 +147,7 @@ Example `data/my_pack/settlement_profiles/large_suburb.json`:
     "maxElevationRange": 10,
     "maxCutDepth": 3,
     "maxFillDepth": 3,
+    "maxEarthworkVolume": 20000,
     "targetParcelCount": 8,
     "parcelWidth": 18,
     "parcelDepth": 20,
@@ -172,9 +173,11 @@ Then run:
 
 Use `/citiesarise debug dump` to inspect the generated plan and confirm that the profile changed the survey, parcel, and building slot scale.
 
-`maxCutDepth` and `maxFillDepth` limit how many terrain blocks a flat road or building platform may remove or support. A plan is rejected before placement when any occupied column exceeds either limit, so the basic suburb profile does not bridge ravines with solid foundations or bury buildings into cliffs. Connected road segments are constrained to at most one block of elevation difference.
+`maxCutDepth` and `maxFillDepth` limit how many terrain blocks a flat road or building platform may remove or support. `maxEarthworkVolume` limits the summed cut and fill volume across semantic road and building preparation areas. A plan is rejected before placement when a column or the total budget exceeds its profile limit, so the basic suburb profile does not bridge ravines with solid foundations or bury buildings into cliffs. Moderate correctable terrain is accepted with earthworks. Connected road segments are constrained to at most one block of elevation difference.
 
-Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, target parcel count `128`, parcel width/depth `64`, building margin `8`, and cut/fill depth `16`.
+Successful debug summaries report `terrain=ACCEPTED` when no cut or fill is required and `terrain=ACCEPTED_WITH_EARTHWORKS` with the calculated cut and fill volumes when preparation is required. `/citiesarise locate` treats both successful outcomes as valid settlement candidates.
+
+Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, target parcel count `128`, parcel width/depth `64`, building margin `8`, cut/fill depth `16`, and total earthwork volume `1000000`.
 
 House assets are future work. The intended direction is a separate provider layer where profiles can reference building pools, weights, footprints, tags, palettes, and structure/NBT assets. The core planner will still work with abstract building slots and provider ids; Minecraft-specific assets will stay in the Minecraft/content layer.
 

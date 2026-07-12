@@ -12,6 +12,7 @@
     "buildingMargin": 4,
     "maxElevationRange": 10,
     "maxCutDepth": 3,
-    "maxFillDepth": 3
+    "maxFillDepth": 3,
+    "maxEarthworkVolume": 20000
   }
 }

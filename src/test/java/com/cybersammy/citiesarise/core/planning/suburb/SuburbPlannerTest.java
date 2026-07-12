@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationStatus;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -99,12 +100,11 @@ final class SuburbPlannerTest {
     }
 
     @Test
-    void rejectsSteepTerrain() {
+    void acceptsSteepTerrainWhenPlatformsStayWithinEarthworkLimits() {
         SuburbPlanningResult result = planner.plan(request(steepSurvey(40, 30), 100L, SuburbPlanningSettings.defaults()));
 
-        assertFalse(result.successful());
-        assertEquals(Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN), result.failureReason());
-        assertTerrainDiagnostic(result, TerrainRejectionReason.STEEP_SLOPE);
+        assertTrue(result.successful());
+        assertEquals(TerrainPreparationStatus.ACCEPTED, result.terrainPreparationPlan().orElseThrow().status());
     }
 
     @Test
@@ -133,6 +133,33 @@ final class SuburbPlannerTest {
         SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
 
         assertTrue(result.successful());
+        assertEquals(
+                TerrainPreparationStatus.ACCEPTED_WITH_EARTHWORKS,
+                result.terrainPreparationPlan().orElseThrow().status()
+        );
+        assertTrue(result.terrainPreparationPlan().orElseThrow().totalVolume() > 0L);
+    }
+
+    @Test
+    void rejectsTerrainWhenTotalEarthworkBudgetIsExceeded() {
+        TerrainSurvey survey = elevationSurvey(40, 30, 5);
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(
+                3,
+                0.25,
+                6,
+                6,
+                7,
+                1,
+                12,
+                3,
+                3,
+                0L
+        );
+
+        SuburbPlanningResult result = planner.plan(request(survey, 100L, settings));
+
+        assertFalse(result.successful());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.EXCESSIVE_EARTHWORK);
     }
 
     @Test

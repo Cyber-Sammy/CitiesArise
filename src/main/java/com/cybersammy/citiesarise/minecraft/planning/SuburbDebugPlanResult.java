@@ -1,5 +1,6 @@
 package com.cybersammy.citiesarise.minecraft.planning;
 
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.PlanTags;
@@ -20,8 +21,21 @@ public record SuburbDebugPlanResult(
         boolean successful,
         SettlementPlan plan,
         SuburbPlanningFailureReason failureReason,
-        SuburbTerrainDiagnostic terrainDiagnostic
+        SuburbTerrainDiagnostic terrainDiagnostic,
+        TerrainPreparationPlan terrainPreparationPlan
 ) {
+    public SuburbDebugPlanResult(
+            SettlementRegion region,
+            GridBounds surveyBounds,
+            long seed,
+            boolean successful,
+            SettlementPlan plan,
+            SuburbPlanningFailureReason failureReason,
+            SuburbTerrainDiagnostic terrainDiagnostic
+    ) {
+        this(region, surveyBounds, seed, successful, plan, failureReason, terrainDiagnostic, null);
+    }
+
     public SuburbDebugPlanResult {
         Objects.requireNonNull(region, "region");
         Objects.requireNonNull(surveyBounds, "surveyBounds");
@@ -44,7 +58,8 @@ public record SuburbDebugPlanResult(
                 result.successful(),
                 result.plan().orElse(null),
                 result.failureReason().orElse(null),
-                result.terrainDiagnostic().orElse(null)
+                result.terrainDiagnostic().orElse(null),
+                result.terrainPreparationPlan().orElse(null)
         );
     }
 
@@ -58,6 +73,10 @@ public record SuburbDebugPlanResult(
 
     public Optional<SuburbTerrainDiagnostic> optionalTerrainDiagnostic() {
         return Optional.ofNullable(terrainDiagnostic);
+    }
+
+    public Optional<TerrainPreparationPlan> optionalTerrainPreparationPlan() {
+        return Optional.ofNullable(terrainPreparationPlan);
     }
 
     public long wornRoadCount() {
@@ -105,7 +124,16 @@ public record SuburbDebugPlanResult(
                 + ", parcels=" + settlementPlan.parcels().size()
                 + ", buildingSlots=" + settlementPlan.buildingSlots().size()
                 + ", wornRoads=" + wornRoadCount()
-                + ", decayedBuildingSlots=" + decayedBuildingSlotCount();
+                + ", decayedBuildingSlots=" + decayedBuildingSlotCount()
+                + terrainPreparationSummary();
+    }
+
+    private String terrainPreparationSummary() {
+        return optionalTerrainPreparationPlan()
+                .map(plan -> ", terrain=" + plan.status()
+                        + ", cutVolume=" + plan.cutVolume()
+                        + ", fillVolume=" + plan.fillVolume())
+                .orElse("");
     }
 
     private static long wornRoadCount(SettlementPlan plan) {

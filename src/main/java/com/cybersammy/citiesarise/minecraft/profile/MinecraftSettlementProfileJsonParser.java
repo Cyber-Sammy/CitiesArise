@@ -54,7 +54,12 @@ public final class MinecraftSettlementProfileJsonParser {
                 requiredInt(planning, "buildingMargin"),
                 optionalInt(planning, "maxElevationRange", SuburbPlanningSettings.DEFAULT_MAX_ELEVATION_RANGE),
                 optionalInt(planning, "maxCutDepth", SuburbPlanningSettings.DEFAULT_MAX_CUT_DEPTH),
-                optionalInt(planning, "maxFillDepth", SuburbPlanningSettings.DEFAULT_MAX_FILL_DEPTH)
+                optionalInt(planning, "maxFillDepth", SuburbPlanningSettings.DEFAULT_MAX_FILL_DEPTH),
+                optionalLong(
+                        planning,
+                        "maxEarthworkVolume",
+                        SuburbPlanningSettings.DEFAULT_MAX_EARTHWORK_VOLUME
+                )
         );
     }
 
@@ -63,6 +68,13 @@ public final class MinecraftSettlementProfileJsonParser {
             return defaultValue;
         }
         return requiredInt(parent, name);
+    }
+
+    private static long optionalLong(JsonObject parent, String name, long defaultValue) {
+        if (!parent.has(name)) {
+            return defaultValue;
+        }
+        return requiredLong(parent, name);
     }
 
     private static JsonObject requiredObject(JsonObject parent, String name) {
@@ -106,6 +118,22 @@ public final class MinecraftSettlementProfileJsonParser {
             return element.getAsDouble();
         } catch (NumberFormatException | UnsupportedOperationException exception) {
             throw new IllegalArgumentException(name + " must be a number", exception);
+        }
+    }
+
+    private static long requiredLong(JsonObject parent, String name) {
+        JsonElement element = requiredElement(parent, name);
+        if (!isNumber(element)) {
+            throw new IllegalArgumentException(name + " must be an integer");
+        }
+        BigDecimal value = element.getAsBigDecimal();
+        if (value.stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException(name + " must be an integer");
+        }
+        try {
+            return value.longValueExact();
+        } catch (ArithmeticException exception) {
+            throw new IllegalArgumentException(name + " must fit long range", exception);
         }
     }
 

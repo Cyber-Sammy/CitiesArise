@@ -112,7 +112,9 @@ public final class MinecraftSuburbWorldgenService {
     }
 
     private DebugChunkPlacementIndex createPlacementIndex(SuburbDebugPlanResult planningResult) {
-        DebugPlacementPlan placementPlan = planConverter.convert(planningResult.plan());
+        DebugPlacementPlan placementPlan = planningResult.optionalTerrainPreparationPlan()
+                .map(preparationPlan -> planConverter.convert(planningResult.plan(), preparationPlan))
+                .orElseGet(() -> planConverter.convert(planningResult.plan()));
         return chunkProjector.partition(placementPlan);
     }
 

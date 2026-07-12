@@ -1,0 +1,110 @@
+package com.cybersammy.citiesarise.core.planning.suburb;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import com.cybersammy.citiesarise.core.geometry.GridBounds;
+import com.cybersammy.citiesarise.core.geometry.GridPoint;
+import com.cybersammy.citiesarise.core.geometry.GridSize;
+import com.cybersammy.citiesarise.core.model.PlanElementId;
+import com.cybersammy.citiesarise.core.model.PlanProperties;
+import com.cybersammy.citiesarise.core.model.PlanPropertyKeys;
+import com.cybersammy.citiesarise.core.model.RoadGraph;
+import com.cybersammy.citiesarise.core.model.RoadNode;
+import com.cybersammy.citiesarise.core.model.RoadSegment;
+import com.cybersammy.citiesarise.core.model.SettlementPlan;
+import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
+import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
+import com.cybersammy.citiesarise.core.terrain.TerrainCell;
+import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+
+final class TerrainPreparationPlannerTest {
+    @Test
+    void countsIntersectingRoadColumnsOnce() {
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                flatSurvey(),
+                42L,
+                new SuburbPlanningSettings(1, 1.0, 1, 3, 3, 0, 20, 3, 3, 13L)
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(request, crossingRoadPlan());
+
+        assertEquals(13L, assessment.plan().orElseThrow().fillVolume());
+        assertEquals(13, assessment.plan().orElseThrow().columns().size());
+    }
+
+    @Test
+    void reportsMostExpensiveColumnWhenTotalBudgetIsExceeded() {
+        GridPoint lowestPoint = new GridPoint(2, 5);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithLowPoint(lowestPoint),
+                42L,
+                new SuburbPlanningSettings(1, 1.0, 1, 3, 3, 0, 20, 3, 3, 0L)
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(request, crossingRoadPlan());
+
+        assertEquals(lowestPoint, assessment.diagnostic().orElseThrow().cell().point());
+    }
+
+    private static SettlementPlan crossingRoadPlan() {
+        RoadNode west = node("west", 2, 5);
+        RoadNode east = node("east", 8, 5);
+        RoadNode north = node("north", 5, 2);
+        RoadNode south = node("south", 5, 8);
+        return new SettlementPlan(
+                id("settlement"),
+                new RoadGraph(
+                        List.of(west, east, north, south),
+                        List.of(segment("horizontal", west, east), segment("vertical", north, south))
+                ),
+                List.of(),
+                List.of(),
+                Set.of(),
+                PlanProperties.empty()
+        );
+    }
+
+    private static RoadNode node(String name, int x, int z) {
+        return new RoadNode(id(name), new GridPoint(x, z), Set.of(), PlanProperties.empty());
+    }
+
+    private static RoadSegment segment(String name, RoadNode start, RoadNode end) {
+        return new RoadSegment(
+                id(name),
+                start.id(),
+                end.id(),
+                1,
+                Set.of(),
+                PlanProperties.of(PlanPropertyKeys.PLATFORM_Y, "64")
+        );
+    }
+
+    private static TerrainSurvey flatSurvey() {
+        return surveyWithLowPoint(null);
+    }
+
+    private static TerrainSurvey surveyWithLowPoint(GridPoint lowPoint) {
+        GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(12, 12));
+        return TerrainSurvey.sample(
+                bounds,
+                point -> Optional.of(new TerrainCell(
+                        point,
+                        point.equals(lowPoint) ? 63 : 64,
+                        false,
+                        0.0,
+                        BiomeCategory.PLAINS,
+                        TerrainCategory.BUILDABLE
+                ))
+        );
+    }
+
+    private static PlanElementId id(String value) {
+        return new PlanElementId("test/" + value);
+    }
+}

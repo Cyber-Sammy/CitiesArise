@@ -1,5 +1,6 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.validation.PlanValidationError;
 import java.util.List;
@@ -10,25 +11,61 @@ public record SuburbPlanningResult(
         Optional<SettlementPlan> plan,
         Optional<SuburbPlanningFailureReason> failureReason,
         List<PlanValidationError> validationErrors,
-        Optional<SuburbTerrainDiagnostic> terrainDiagnostic
+        Optional<SuburbTerrainDiagnostic> terrainDiagnostic,
+        Optional<TerrainPreparationPlan> terrainPreparationPlan
 ) {
+    public SuburbPlanningResult(
+            Optional<SettlementPlan> plan,
+            Optional<SuburbPlanningFailureReason> failureReason,
+            List<PlanValidationError> validationErrors,
+            Optional<SuburbTerrainDiagnostic> terrainDiagnostic
+    ) {
+        this(plan, failureReason, validationErrors, terrainDiagnostic, Optional.empty());
+    }
+
     public SuburbPlanningResult {
         Objects.requireNonNull(plan, "plan");
         Objects.requireNonNull(failureReason, "failureReason");
         Objects.requireNonNull(terrainDiagnostic, "terrainDiagnostic");
+        Objects.requireNonNull(terrainPreparationPlan, "terrainPreparationPlan");
         validationErrors = immutableValidationErrors(validationErrors);
         rejectAmbiguousResult(plan, failureReason);
         rejectUnexpectedTerrainDiagnostic(failureReason, terrainDiagnostic);
+        rejectUnexpectedPreparationPlan(plan, terrainPreparationPlan);
     }
 
     public static SuburbPlanningResult success(SettlementPlan plan) {
         Objects.requireNonNull(plan, "plan");
-        return new SuburbPlanningResult(Optional.of(plan), Optional.empty(), List.of(), Optional.empty());
+        return new SuburbPlanningResult(
+                Optional.of(plan),
+                Optional.empty(),
+                List.of(),
+                Optional.empty(),
+                Optional.empty()
+        );
+    }
+
+    public static SuburbPlanningResult success(SettlementPlan plan, TerrainPreparationPlan terrainPreparationPlan) {
+        Objects.requireNonNull(plan, "plan");
+        Objects.requireNonNull(terrainPreparationPlan, "terrainPreparationPlan");
+        return new SuburbPlanningResult(
+                Optional.of(plan),
+                Optional.empty(),
+                List.of(),
+                Optional.empty(),
+                Optional.of(terrainPreparationPlan)
+        );
     }
 
     public static SuburbPlanningResult rejected(SuburbPlanningFailureReason reason) {
         Objects.requireNonNull(reason, "reason");
-        return new SuburbPlanningResult(Optional.empty(), Optional.of(reason), List.of(), Optional.empty());
+        return new SuburbPlanningResult(
+                Optional.empty(),
+                Optional.of(reason),
+                List.of(),
+                Optional.empty(),
+                Optional.empty()
+        );
     }
 
     public static SuburbPlanningResult rejectedTerrain(SuburbTerrainDiagnostic diagnostic) {
@@ -37,7 +74,8 @@ public record SuburbPlanningResult(
                 Optional.empty(),
                 Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN),
                 List.of(),
-                Optional.of(diagnostic)
+                Optional.of(diagnostic),
+                Optional.empty()
         );
     }
 
@@ -46,6 +84,7 @@ public record SuburbPlanningResult(
                 Optional.empty(),
                 Optional.of(SuburbPlanningFailureReason.INVALID_PLAN),
                 validationErrors,
+                Optional.empty(),
                 Optional.empty()
         );
     }
@@ -101,6 +140,18 @@ public record SuburbPlanningResult(
         }
 
         return List.copyOf(validationErrors);
+    }
+
+    private static void rejectUnexpectedPreparationPlan(
+            Optional<SettlementPlan> plan,
+            Optional<TerrainPreparationPlan> terrainPreparationPlan
+    ) {
+        if (terrainPreparationPlan.isEmpty()) {
+            return;
+        }
+        if (plan.isEmpty()) {
+            throw new IllegalArgumentException("terrainPreparationPlan is only allowed for successful result");
+        }
     }
 
     private static void rejectNullValidationError(PlanValidationError validationError) {

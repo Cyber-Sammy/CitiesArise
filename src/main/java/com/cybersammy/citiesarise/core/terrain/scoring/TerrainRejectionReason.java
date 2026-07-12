@@ -6,5 +6,6 @@ public enum TerrainRejectionReason {
     STEEP_SLOPE,
     ELEVATION_RANGE,
     EXCESSIVE_CUT,
-    EXCESSIVE_FILL
+    EXCESSIVE_FILL,
+    EXCESSIVE_EARTHWORK
 }

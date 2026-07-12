@@ -9,7 +9,8 @@ public record SuburbPlanningSettings(
         int buildingMargin,
         int maxElevationRange,
         int maxCutDepth,
-        int maxFillDepth
+        int maxFillDepth,
+        long maxEarthworkVolume
 ) {
     public static final int DEFAULT_ROAD_WIDTH = 3;
     public static final double DEFAULT_MAX_BUILDABLE_SLOPE = 0.25;
@@ -20,6 +21,7 @@ public record SuburbPlanningSettings(
     public static final int DEFAULT_MAX_ELEVATION_RANGE = 12;
     public static final int DEFAULT_MAX_CUT_DEPTH = 3;
     public static final int DEFAULT_MAX_FILL_DEPTH = 3;
+    public static final long DEFAULT_MAX_EARTHWORK_VOLUME = 20_000L;
 
     public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, int targetParcelCount) {
         this(
@@ -31,7 +33,8 @@ public record SuburbPlanningSettings(
                 DEFAULT_BUILDING_MARGIN,
                 DEFAULT_MAX_ELEVATION_RANGE,
                 DEFAULT_MAX_CUT_DEPTH,
-                DEFAULT_MAX_FILL_DEPTH
+                DEFAULT_MAX_FILL_DEPTH,
+                DEFAULT_MAX_EARTHWORK_VOLUME
         );
     }
 
@@ -52,7 +55,8 @@ public record SuburbPlanningSettings(
                 buildingMargin,
                 DEFAULT_MAX_ELEVATION_RANGE,
                 DEFAULT_MAX_CUT_DEPTH,
-                DEFAULT_MAX_FILL_DEPTH
+                DEFAULT_MAX_FILL_DEPTH,
+                DEFAULT_MAX_EARTHWORK_VOLUME
         );
     }
 
@@ -74,7 +78,33 @@ public record SuburbPlanningSettings(
                 buildingMargin,
                 maxElevationRange,
                 DEFAULT_MAX_CUT_DEPTH,
-                DEFAULT_MAX_FILL_DEPTH
+                DEFAULT_MAX_FILL_DEPTH,
+                DEFAULT_MAX_EARTHWORK_VOLUME
+        );
+    }
+
+    public SuburbPlanningSettings(
+            int roadWidth,
+            double maxBuildableSlope,
+            int targetParcelCount,
+            int parcelWidth,
+            int parcelDepth,
+            int buildingMargin,
+            int maxElevationRange,
+            int maxCutDepth,
+            int maxFillDepth
+    ) {
+        this(
+                roadWidth,
+                maxBuildableSlope,
+                targetParcelCount,
+                parcelWidth,
+                parcelDepth,
+                buildingMargin,
+                maxElevationRange,
+                maxCutDepth,
+                maxFillDepth,
+                DEFAULT_MAX_EARTHWORK_VOLUME
         );
     }
 
@@ -88,6 +118,7 @@ public record SuburbPlanningSettings(
         requireNonNegative(maxElevationRange, "maxElevationRange");
         requireNonNegative(maxCutDepth, "maxCutDepth");
         requireNonNegative(maxFillDepth, "maxFillDepth");
+        requireNonNegative(maxEarthworkVolume, "maxEarthworkVolume");
         requireBuildingFitsParcel(parcelWidth, parcelDepth, buildingMargin);
     }
 
@@ -101,7 +132,8 @@ public record SuburbPlanningSettings(
                 DEFAULT_BUILDING_MARGIN,
                 DEFAULT_MAX_ELEVATION_RANGE,
                 DEFAULT_MAX_CUT_DEPTH,
-                DEFAULT_MAX_FILL_DEPTH
+                DEFAULT_MAX_FILL_DEPTH,
+                DEFAULT_MAX_EARTHWORK_VOLUME
         );
     }
 
@@ -113,6 +145,12 @@ public record SuburbPlanningSettings(
 
     private static void requireNonNegative(int value, String name) {
         if (value < 0) {
+            throw new IllegalArgumentException(name + " must not be negative");
+        }
+    }
+
+    private static void requireNonNegative(long value, String name) {
+        if (value < 0L) {
             throw new IllegalArgumentException(name + " must not be negative");
         }
     }

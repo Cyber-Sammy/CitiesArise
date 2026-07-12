@@ -1,6 +1,9 @@
 package com.cybersammy.citiesarise.minecraft.placement;
 
 import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -14,7 +17,9 @@ import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
+import com.cybersammy.citiesarise.core.validation.PlanValidationError;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
@@ -41,6 +46,46 @@ public final class DebugPlacementPlanConverter {
                 .stream()
                 .map(operation -> withPlatformElevation(operation, platformElevations))
                 .toList());
+    }
+
+    public DebugPlacementPlan convert(SettlementPlan plan, TerrainPreparationPlan preparationPlan) {
+        Objects.requireNonNull(plan, "plan");
+        Objects.requireNonNull(preparationPlan, "preparationPlan");
+        List<PlanValidationError> errors = new TerrainPreparationPlanValidator().validate(plan, preparationPlan);
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(errors.getFirst().message());
+        }
+        DebugPlacementPlan placementPlan = convert(plan);
+        Map<GridPoint, Integer> elevationByPoint = preparationElevations(preparationPlan);
+        return new DebugPlacementPlan(placementPlan.operations()
+                .stream()
+                .map(operation -> withPreparationElevation(operation, elevationByPoint))
+                .toList());
+    }
+
+    private static Map<GridPoint, Integer> preparationElevations(TerrainPreparationPlan preparationPlan) {
+        Map<GridPoint, Integer> elevations = new LinkedHashMap<>();
+        for (TerrainPreparationColumn column : preparationPlan.columns()) {
+            elevations.put(column.point(), column.targetElevation());
+        }
+        return Map.copyOf(elevations);
+    }
+
+    private static DebugBlockPlacementOperation withPreparationElevation(
+            DebugBlockPlacementOperation operation,
+            Map<GridPoint, Integer> elevationByPoint
+    ) {
+        Integer elevation = elevationByPoint.get(operation.point());
+        if (elevation == null) {
+            return operation;
+        }
+        return new DebugBlockPlacementOperation(
+                operation.point(),
+                operation.verticalOffset(),
+                operation.role(),
+                operation.sourceElementId(),
+                OptionalInt.of(elevation)
+        );
     }
 
     private static Map<PlanElementId, Integer> platformElevations(SettlementPlan plan) {

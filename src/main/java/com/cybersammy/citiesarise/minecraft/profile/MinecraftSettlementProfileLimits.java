@@ -13,7 +13,8 @@ public record MinecraftSettlementProfileLimits(
         int maxParcelDepth,
         int maxBuildingMargin,
         int maxCutDepth,
-        int maxFillDepth
+        int maxFillDepth,
+        long maxEarthworkVolume
 ) {
     private static final MinecraftSettlementProfileLimits DEFAULTS = new MinecraftSettlementProfileLimits(
             128,
@@ -25,7 +26,8 @@ public record MinecraftSettlementProfileLimits(
             64,
             8,
             16,
-            16
+            16,
+            1_000_000L
     );
 
     public MinecraftSettlementProfileLimits {
@@ -39,6 +41,7 @@ public record MinecraftSettlementProfileLimits(
         requireNonNegative(maxBuildingMargin, "maxBuildingMargin");
         requireNonNegative(maxCutDepth, "maxCutDepth");
         requireNonNegative(maxFillDepth, "maxFillDepth");
+        requireNonNegative(maxEarthworkVolume, "maxEarthworkVolume");
     }
 
     public static MinecraftSettlementProfileLimits defaults() {
@@ -66,6 +69,11 @@ public record MinecraftSettlementProfileLimits(
         requireAtMost(profile.suburbPlanningSettings().buildingMargin(), maxBuildingMargin, "planning.buildingMargin");
         requireAtMost(profile.suburbPlanningSettings().maxCutDepth(), maxCutDepth, "planning.maxCutDepth");
         requireAtMost(profile.suburbPlanningSettings().maxFillDepth(), maxFillDepth, "planning.maxFillDepth");
+        requireAtMost(
+                profile.suburbPlanningSettings().maxEarthworkVolume(),
+                maxEarthworkVolume,
+                "planning.maxEarthworkVolume"
+        );
     }
 
     private static void requireAtMost(int value, int maxValue, String name) {
@@ -84,6 +92,13 @@ public record MinecraftSettlementProfileLimits(
         throw new IllegalArgumentException(name + " must be at most " + maxValue);
     }
 
+    private static void requireAtMost(long value, long maxValue, String name) {
+        if (value <= maxValue) {
+            return;
+        }
+        throw new IllegalArgumentException(name + " must be at most " + maxValue);
+    }
+
     private static void requirePositive(int value, String name) {
         if (value <= 0) {
             throw new IllegalArgumentException(name + " must be positive");
@@ -92,6 +107,12 @@ public record MinecraftSettlementProfileLimits(
 
     private static void requireNonNegative(int value, String name) {
         if (value < 0) {
+            throw new IllegalArgumentException(name + " must not be negative");
+        }
+    }
+
+    private static void requireNonNegative(long value, String name) {
+        if (value < 0L) {
             throw new IllegalArgumentException(name + " must not be negative");
         }
     }

@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationArea;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -78,6 +81,26 @@ final class DebugPlacementPlanConverterTest {
 
         assertEquals(72, placementPlan.operations().getFirst().platformY().orElseThrow());
         assertTrue(placementPlan.operations().stream().allMatch(operation -> operation.platformY().orElseThrow() == 72));
+    }
+
+    @Test
+    void acceptsPlacementWhenPreparationElevationMatchesPlan() {
+        PlanElementId roadId = id("road");
+        SettlementPlan plan = planWithElevatedRoad(roadId, 72);
+        TerrainPreparationPlan preparationPlan = preparationPlan(roadId, 72);
+
+        DebugPlacementPlan placementPlan = converter.convert(plan, preparationPlan);
+
+        assertTrue(placementPlan.operations().stream().allMatch(operation -> operation.platformY().orElseThrow() == 72));
+    }
+
+    @Test
+    void rejectsPlacementWhenPreparationElevationDoesNotMatchPlan() {
+        PlanElementId roadId = id("road");
+        SettlementPlan plan = planWithElevatedRoad(roadId, 72);
+        TerrainPreparationPlan preparationPlan = preparationPlan(roadId, 71);
+
+        assertThrows(IllegalArgumentException.class, () -> converter.convert(plan, preparationPlan));
     }
 
     @Test
@@ -194,6 +217,45 @@ final class DebugPlacementPlanConverterTest {
 
     private static SettlementPlan planWithRoad(PlanElementId roadId, GridPoint start, GridPoint end, int width) {
         return planWithRoad(roadId, start, end, width, Set.of());
+    }
+
+    private static SettlementPlan planWithElevatedRoad(PlanElementId roadId, int platformY) {
+        PlanElementId startId = id("start");
+        PlanElementId endId = id("end");
+        RoadSegment segment = new RoadSegment(
+                roadId,
+                startId,
+                endId,
+                3,
+                Set.of(),
+                PlanProperties.of(PlanPropertyKeys.PLATFORM_Y, Integer.toString(platformY))
+        );
+        return plan(
+                new RoadGraph(
+                        List.of(roadNode(startId, point(0, 0)), roadNode(endId, point(4, 0))),
+                        List.of(segment)
+                ),
+                List.of(),
+                List.of()
+        );
+    }
+
+    private static TerrainPreparationPlan preparationPlan(PlanElementId roadId, int elevation) {
+        TerrainPreparationArea area = new TerrainPreparationArea(
+                roadId,
+                bounds(0, -1, 5, 3),
+                elevation,
+                1L,
+                0L
+        );
+        TerrainPreparationColumn column = new TerrainPreparationColumn(
+                point(0, -1),
+                roadId,
+                elevation,
+                1,
+                0
+        );
+        return TerrainPreparationPlan.of(List.of(area), List.of(column));
     }
 
     private static SettlementPlan planWithRoad(

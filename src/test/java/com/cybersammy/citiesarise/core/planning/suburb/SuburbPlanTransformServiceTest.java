@@ -19,6 +19,8 @@ import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.core.transform.PlanTransform;
 import com.cybersammy.citiesarise.core.transform.TransformPipeline;
+import com.cybersammy.citiesarise.core.validation.PlanValidationErrorCode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -61,6 +63,27 @@ final class SuburbPlanTransformServiceTest {
         assertEquals(planned.terrainPreparationPlan(), transformed.terrainPreparationPlan());
     }
 
+    @Test
+    void rejectsGeometryTransformThatLeavesPreparationPlanStale() {
+        SuburbPlanningResult planned = SuburbPlanner.defaults().plan(new SuburbPlanningRequest(
+                new PlanElementId("settlement/prepared"),
+                flatSurvey(),
+                42L,
+                SuburbPlanningSettings.defaults()
+        ));
+        SuburbPlanTransformService service = new SuburbPlanTransformService(
+                TransformPipeline.of(shrinkFirstBuildingTransform())
+        );
+
+        SuburbPlanningResult transformed = service.apply(planned, 42L);
+
+        assertEquals(SuburbPlanningFailureReason.INVALID_PLAN, transformed.failureReason().orElseThrow());
+        assertEquals(
+                PlanValidationErrorCode.TERRAIN_PREPARATION_MISMATCH,
+                transformed.validationErrors().getFirst().code()
+        );
+    }
+
     private static PlanTransform invalidTransform() {
         return (plan, context) -> new SettlementPlan(
                 plan.id(),
@@ -91,6 +114,33 @@ final class SuburbPlanTransformServiceTest {
 
     private static GridBounds bounds(int x, int z, int width, int depth) {
         return new GridBounds(new GridPoint(x, z), new GridSize(width, depth));
+    }
+
+    private static PlanTransform shrinkFirstBuildingTransform() {
+        return (plan, context) -> {
+            BuildingSlot original = plan.buildingSlots().getFirst();
+            GridBounds originalBounds = original.bounds();
+            BuildingSlot changed = new BuildingSlot(
+                    original.id(),
+                    original.parcelId(),
+                    new GridBounds(
+                            originalBounds.origin(),
+                            new GridSize(originalBounds.size().width() - 1, originalBounds.size().depth())
+                    ),
+                    original.tags(),
+                    original.properties()
+            );
+            List<BuildingSlot> buildings = new ArrayList<>(plan.buildingSlots());
+            buildings.set(0, changed);
+            return new SettlementPlan(
+                    plan.id(),
+                    plan.roadGraph(),
+                    plan.parcels(),
+                    buildings,
+                    plan.tags(),
+                    plan.properties()
+            );
+        };
     }
 
     private static TerrainSurvey flatSurvey() {

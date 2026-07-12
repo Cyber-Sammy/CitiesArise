@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationArea;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
@@ -86,9 +87,7 @@ final class DebugPlacementPlanConverterTest {
     void acceptsPlacementWhenPreparationElevationMatchesPlan() {
         PlanElementId roadId = id("road");
         SettlementPlan plan = planWithElevatedRoad(roadId, 72);
-        TerrainPreparationPlan preparationPlan = TerrainPreparationPlan.of(List.of(
-                new TerrainPreparationArea(roadId, bounds(0, -1, 5, 3), 72, 4L, 2L)
-        ));
+        TerrainPreparationPlan preparationPlan = preparationPlan(roadId, 72);
 
         DebugPlacementPlan placementPlan = converter.convert(plan, preparationPlan);
 
@@ -99,9 +98,7 @@ final class DebugPlacementPlanConverterTest {
     void rejectsPlacementWhenPreparationElevationDoesNotMatchPlan() {
         PlanElementId roadId = id("road");
         SettlementPlan plan = planWithElevatedRoad(roadId, 72);
-        TerrainPreparationPlan preparationPlan = TerrainPreparationPlan.of(List.of(
-                new TerrainPreparationArea(roadId, bounds(0, -1, 5, 3), 71, 4L, 2L)
-        ));
+        TerrainPreparationPlan preparationPlan = preparationPlan(roadId, 71);
 
         assertThrows(IllegalArgumentException.class, () -> converter.convert(plan, preparationPlan));
     }
@@ -241,6 +238,24 @@ final class DebugPlacementPlanConverterTest {
                 List.of(),
                 List.of()
         );
+    }
+
+    private static TerrainPreparationPlan preparationPlan(PlanElementId roadId, int elevation) {
+        TerrainPreparationArea area = new TerrainPreparationArea(
+                roadId,
+                bounds(0, -1, 5, 3),
+                elevation,
+                1L,
+                0L
+        );
+        TerrainPreparationColumn column = new TerrainPreparationColumn(
+                point(0, -1),
+                roadId,
+                elevation,
+                1,
+                0
+        );
+        return TerrainPreparationPlan.of(List.of(area), List.of(column));
     }
 
     private static SettlementPlan planWithRoad(

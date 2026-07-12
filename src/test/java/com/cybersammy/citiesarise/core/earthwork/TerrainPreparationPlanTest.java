@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 final class TerrainPreparationPlanTest {
     @Test
     void reportsAcceptedWhenNoEarthworkIsRequired() {
-        TerrainPreparationPlan plan = TerrainPreparationPlan.of(List.of(area(0L, 0L)));
+        TerrainPreparationPlan plan = TerrainPreparationPlan.of(List.of(area(0L, 0L)), List.of(column(0, 0)));
 
         assertEquals(TerrainPreparationStatus.ACCEPTED, plan.status());
         assertFalse(plan.requiresEarthworks());
@@ -24,7 +24,10 @@ final class TerrainPreparationPlanTest {
 
     @Test
     void reportsAcceptedWithEarthworksAndSumsVolumes() {
-        TerrainPreparationPlan plan = TerrainPreparationPlan.of(List.of(area(4L, 2L), area(3L, 5L)));
+        TerrainPreparationPlan plan = TerrainPreparationPlan.of(
+                List.of(area(4L, 2L), area(3L, 5L)),
+                List.of(column(7, 0), column(0, 7))
+        );
 
         assertEquals(TerrainPreparationStatus.ACCEPTED_WITH_EARTHWORKS, plan.status());
         assertTrue(plan.requiresEarthworks());
@@ -40,6 +43,7 @@ final class TerrainPreparationPlanTest {
                 () -> new TerrainPreparationPlan(
                         TerrainPreparationStatus.ACCEPTED_WITH_EARTHWORKS,
                         List.of(area(1L, 2L)),
+                        List.of(column(1, 2)),
                         2L,
                         2L
                 )
@@ -50,7 +54,13 @@ final class TerrainPreparationPlanTest {
     void rejectsRejectedStatusBecauseRejectedSitesHaveNoPreparationPlan() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new TerrainPreparationPlan(TerrainPreparationStatus.REJECTED, List.of(), 0L, 0L)
+                () -> new TerrainPreparationPlan(
+                        TerrainPreparationStatus.REJECTED,
+                        List.of(),
+                        List.of(),
+                        0L,
+                        0L
+                )
         );
     }
 
@@ -60,7 +70,23 @@ final class TerrainPreparationPlanTest {
 
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new TerrainPreparationPlan(TerrainPreparationStatus.ACCEPTED, List.of(area), 1L, 0L)
+                () -> new TerrainPreparationPlan(
+                        TerrainPreparationStatus.ACCEPTED,
+                        List.of(area),
+                        List.of(column(1, 0)),
+                        1L,
+                        0L
+                )
+        );
+    }
+
+    @Test
+    void rejectsDuplicatePreparationColumns() {
+        TerrainPreparationColumn column = column(0, 0);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> TerrainPreparationPlan.of(List.of(area(0L, 0L)), List.of(column, column))
         );
     }
 
@@ -71,6 +97,16 @@ final class TerrainPreparationPlanTest {
                 64,
                 cutVolume,
                 fillVolume
+        );
+    }
+
+    private static TerrainPreparationColumn column(int cutDepth, int fillDepth) {
+        return new TerrainPreparationColumn(
+                new GridPoint(cutDepth, fillDepth),
+                new PlanElementId("area/test"),
+                64,
+                cutDepth,
+                fillDepth
         );
     }
 }

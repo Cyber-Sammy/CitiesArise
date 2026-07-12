@@ -1,30 +1,40 @@
 package com.cybersammy.citiesarise.core.earthwork;
 
+import com.cybersammy.citiesarise.core.geometry.GridPoint;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public record TerrainPreparationPlan(
         TerrainPreparationStatus status,
         List<TerrainPreparationArea> areas,
+        List<TerrainPreparationColumn> columns,
         long cutVolume,
         long fillVolume
 ) {
     public TerrainPreparationPlan {
         Objects.requireNonNull(status, "status");
         areas = immutableAreas(areas);
+        columns = immutableColumns(columns);
         requireSuccessfulStatus(status);
         requireNonNegative(cutVolume, "cutVolume");
         requireNonNegative(fillVolume, "fillVolume");
-        requireMatchingVolume(areas, cutVolume, fillVolume);
+        requireUniqueColumns(columns);
+        requireMatchingVolume(areas, columns, cutVolume, fillVolume);
         requireMatchingStatus(status, cutVolume, fillVolume);
     }
 
-    public static TerrainPreparationPlan of(List<TerrainPreparationArea> areas) {
+    public static TerrainPreparationPlan of(
+            List<TerrainPreparationArea> areas,
+            List<TerrainPreparationColumn> columns
+    ) {
         List<TerrainPreparationArea> immutableAreas = immutableAreas(areas);
-        long cutVolume = sumCutVolume(immutableAreas);
-        long fillVolume = sumFillVolume(immutableAreas);
+        List<TerrainPreparationColumn> immutableColumns = immutableColumns(columns);
+        long cutVolume = sumColumnCutVolume(immutableColumns);
+        long fillVolume = sumColumnFillVolume(immutableColumns);
         TerrainPreparationStatus status = preparationStatus(cutVolume, fillVolume);
-        return new TerrainPreparationPlan(status, immutableAreas, cutVolume, fillVolume);
+        return new TerrainPreparationPlan(status, immutableAreas, immutableColumns, cutVolume, fillVolume);
     }
 
     public long totalVolume() {
@@ -50,6 +60,16 @@ public record TerrainPreparationPlan(
             }
         }
         return List.copyOf(areas);
+    }
+
+    private static List<TerrainPreparationColumn> immutableColumns(List<TerrainPreparationColumn> columns) {
+        Objects.requireNonNull(columns, "columns");
+        for (TerrainPreparationColumn column : columns) {
+            if (column == null) {
+                throw new IllegalArgumentException("columns must not contain null values");
+            }
+        }
+        return List.copyOf(columns);
     }
 
     private static long sumCutVolume(List<TerrainPreparationArea> areas) {
@@ -80,8 +100,34 @@ public record TerrainPreparationPlan(
         }
     }
 
+    private static long sumColumnCutVolume(List<TerrainPreparationColumn> columns) {
+        long total = 0L;
+        for (TerrainPreparationColumn column : columns) {
+            total = Math.addExact(total, column.cutDepth());
+        }
+        return total;
+    }
+
+    private static long sumColumnFillVolume(List<TerrainPreparationColumn> columns) {
+        long total = 0L;
+        for (TerrainPreparationColumn column : columns) {
+            total = Math.addExact(total, column.fillDepth());
+        }
+        return total;
+    }
+
+    private static void requireUniqueColumns(List<TerrainPreparationColumn> columns) {
+        Set<GridPoint> points = new HashSet<>();
+        for (TerrainPreparationColumn column : columns) {
+            if (!points.add(column.point())) {
+                throw new IllegalArgumentException("columns must contain unique points");
+            }
+        }
+    }
+
     private static void requireMatchingVolume(
             List<TerrainPreparationArea> areas,
+            List<TerrainPreparationColumn> columns,
             long cutVolume,
             long fillVolume
     ) {
@@ -90,6 +136,12 @@ public record TerrainPreparationPlan(
         }
         if (sumFillVolume(areas) != fillVolume) {
             throw new IllegalArgumentException("fillVolume must equal area fill volume");
+        }
+        if (sumColumnCutVolume(columns) != cutVolume) {
+            throw new IllegalArgumentException("cutVolume must equal column cut volume");
+        }
+        if (sumColumnFillVolume(columns) != fillVolume) {
+            throw new IllegalArgumentException("fillVolume must equal column fill volume");
         }
     }
 

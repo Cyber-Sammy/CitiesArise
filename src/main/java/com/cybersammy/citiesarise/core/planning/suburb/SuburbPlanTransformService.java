@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator;
 import com.cybersammy.citiesarise.core.transform.TransformContext;
 import com.cybersammy.citiesarise.core.transform.TransformPipeline;
 import com.cybersammy.citiesarise.core.validation.PlanValidationError;
@@ -11,6 +12,7 @@ import java.util.Objects;
 public final class SuburbPlanTransformService {
     private final TransformPipeline transformPipeline;
     private final PlanValidator planValidator;
+    private final TerrainPreparationPlanValidator preparationPlanValidator;
 
     public SuburbPlanTransformService(TransformPipeline transformPipeline) {
         this(transformPipeline, new PlanValidator());
@@ -19,6 +21,7 @@ public final class SuburbPlanTransformService {
     public SuburbPlanTransformService(TransformPipeline transformPipeline, PlanValidator planValidator) {
         this.transformPipeline = Objects.requireNonNull(transformPipeline, "transformPipeline");
         this.planValidator = Objects.requireNonNull(planValidator, "planValidator");
+        this.preparationPlanValidator = new TerrainPreparationPlanValidator();
     }
 
     public SuburbPlanningResult apply(SuburbPlanningResult result, long seed) {
@@ -35,6 +38,16 @@ public final class SuburbPlanTransformService {
 
         if (!validationErrors.isEmpty()) {
             return SuburbPlanningResult.invalid(validationErrors);
+        }
+
+        if (result.terrainPreparationPlan().isPresent()) {
+            validationErrors = preparationPlanValidator.validate(
+                    transformedPlan,
+                    result.terrainPreparationPlan().orElseThrow()
+            );
+            if (!validationErrors.isEmpty()) {
+                return SuburbPlanningResult.invalid(validationErrors);
+            }
         }
 
         return result.terrainPreparationPlan()

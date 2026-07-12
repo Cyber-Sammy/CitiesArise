@@ -156,6 +156,7 @@ final class InMemoryRegionPlanCacheTest {
                 dimensionId,
                 new SettlementRegion(2, -3),
                 1234L,
+                TerrainSurveySource.LOADED_WORLD,
                 new SettlementProfileId(profileId),
                 new GridSize(120, 72),
                 settings

@@ -1,12 +1,15 @@
 package com.cybersammy.citiesarise.minecraft.placement;
 
+import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
+import com.cybersammy.citiesarise.core.model.PlanProperties;
 import com.cybersammy.citiesarise.core.model.PlanTags;
+import com.cybersammy.citiesarise.core.model.PlanPropertyKeys;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
@@ -14,6 +17,7 @@ import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.OptionalInt;
 
 public final class DebugPlacementPlanConverter {
     private static final int SURFACE_OFFSET = 0;
@@ -32,7 +36,57 @@ public final class DebugPlacementPlanConverter {
         addParcelOperations(plan, operationsByPosition);
         addBuildingSlotOperations(plan, operationsByPosition);
 
-        return new DebugPlacementPlan(operationsByPosition.values().stream().toList());
+        Map<PlanElementId, Integer> platformElevations = platformElevations(plan);
+        return new DebugPlacementPlan(operationsByPosition.values()
+                .stream()
+                .map(operation -> withPlatformElevation(operation, platformElevations))
+                .toList());
+    }
+
+    private static Map<PlanElementId, Integer> platformElevations(SettlementPlan plan) {
+        Map<PlanElementId, Integer> elevations = new LinkedHashMap<>();
+        for (RoadSegment segment : plan.roadGraph().segments()) {
+            addPlatformElevation(segment.id(), segment.properties(), elevations);
+        }
+        for (BuildingSlot slot : plan.buildingSlots()) {
+            addPlatformElevation(slot.id(), slot.properties(), elevations);
+        }
+        return Map.copyOf(elevations);
+    }
+
+    private static void addPlatformElevation(
+            PlanElementId id,
+            PlanProperties properties,
+            Map<PlanElementId, Integer> elevations
+    ) {
+        properties.find(PlanPropertyKeys.PLATFORM_Y)
+                .map(DebugPlacementPlanConverter::parsePlatformElevation)
+                .ifPresent(value -> elevations.put(id, value));
+    }
+
+    private static int parsePlatformElevation(String value) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("platform_y must be an integer", exception);
+        }
+    }
+
+    private static DebugBlockPlacementOperation withPlatformElevation(
+            DebugBlockPlacementOperation operation,
+            Map<PlanElementId, Integer> elevations
+    ) {
+        Integer platformY = elevations.get(operation.sourceElementId());
+        if (platformY == null) {
+            return operation;
+        }
+        return new DebugBlockPlacementOperation(
+                operation.point(),
+                operation.verticalOffset(),
+                operation.role(),
+                operation.sourceElementId(),
+                OptionalInt.of(platformY)
+        );
     }
 
     private static void addRoadOperations(
@@ -63,7 +117,7 @@ public final class DebugPlacementPlanConverter {
     ) {
         RoadNode startNode = requiredNode(nodesById, segment.startNodeId());
         RoadNode endNode = requiredNode(nodesById, segment.endNodeId());
-        GridBounds roadBounds = roadBounds(startNode.point(), endNode.point(), segment.width());
+        GridBounds roadBounds = AxisAlignedGridCorridor.bounds(startNode.point(), endNode.point(), segment.width());
         DebugPlacementRole roadSurfaceRole = roadSurfaceRole(segment);
 
         addFilledBoundsOperations(
@@ -98,41 +152,6 @@ public final class DebugPlacementPlanConverter {
         }
 
         throw new IllegalArgumentException("road segment references missing node: " + nodeId.value());
-    }
-
-    private static GridBounds roadBounds(GridPoint start, GridPoint end, int width) {
-        if (start.z() == end.z()) {
-            return horizontalRoadBounds(start, end, width);
-        }
-
-        if (start.x() == end.x()) {
-            return verticalRoadBounds(start, end, width);
-        }
-
-        throw new IllegalArgumentException("debug placement only supports axis-aligned road segments");
-    }
-
-    private static GridBounds horizontalRoadBounds(GridPoint start, GridPoint end, int width) {
-        int minX = Math.min(start.x(), end.x());
-        int maxX = Math.max(start.x(), end.x());
-        int minZ = start.z() - (width / 2);
-
-        return boundsFromInclusive(minX, minZ, maxX, minZ + width - 1);
-    }
-
-    private static GridBounds verticalRoadBounds(GridPoint start, GridPoint end, int width) {
-        int minZ = Math.min(start.z(), end.z());
-        int maxZ = Math.max(start.z(), end.z());
-        int minX = start.x() - (width / 2);
-
-        return boundsFromInclusive(minX, minZ, minX + width - 1, maxZ);
-    }
-
-    private static GridBounds boundsFromInclusive(int minX, int minZ, int maxX, int maxZ) {
-        return new GridBounds(
-                new GridPoint(minX, minZ),
-                new GridSize((maxX - minX) + 1, (maxZ - minZ) + 1)
-        );
     }
 
     private static void addParcelOperations(

@@ -1,69 +1,35 @@
 package com.cybersammy.citiesarise.minecraft.planning;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
+import com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache;
 import java.util.function.Supplier;
 
 public final class InMemoryRegionPlanCache implements RegionPlanCache {
     public static final int DEFAULT_MAX_ENTRIES = 256;
 
-    private final Map<RegionPlanCacheKey, SuburbDebugPlanResult> plans;
-    private final int maxEntries;
+    private final BoundedLruCache<RegionPlanCacheKey, SuburbDebugPlanResult> plans;
 
     public InMemoryRegionPlanCache() {
         this(DEFAULT_MAX_ENTRIES);
     }
 
     public InMemoryRegionPlanCache(int maxEntries) {
-        if (maxEntries < 1) {
-            throw new IllegalArgumentException("maxEntries must be positive");
-        }
-
-        this.maxEntries = maxEntries;
-        this.plans = new LinkedHashMap<>(maxEntries, 0.75f, true);
+        this.plans = new BoundedLruCache<>(maxEntries);
     }
 
     @Override
-    public synchronized SuburbDebugPlanResult getOrCreate(
+    public SuburbDebugPlanResult getOrCreate(
             RegionPlanCacheKey key,
             Supplier<SuburbDebugPlanResult> planFactory
     ) {
-        Objects.requireNonNull(key, "key");
-        Objects.requireNonNull(planFactory, "planFactory");
-
-        SuburbDebugPlanResult cachedPlan = plans.get(key);
-        if (cachedPlan != null) {
-            return cachedPlan;
-        }
-
-        SuburbDebugPlanResult createdPlan = createPlan(planFactory);
-        plans.put(key, createdPlan);
-        evictEldestPlan();
-        return createdPlan;
+        return plans.getOrCreate(key, planFactory);
     }
 
-    public synchronized int size() {
+    public int size() {
         return plans.size();
     }
 
     @Override
-    public synchronized void clear() {
+    public void clear() {
         plans.clear();
-    }
-
-    private void evictEldestPlan() {
-        if (plans.size() <= maxEntries) {
-            return;
-        }
-
-        RegionPlanCacheKey eldestKey = plans.keySet().iterator().next();
-        plans.remove(eldestKey);
-    }
-
-    private static SuburbDebugPlanResult createPlan(Supplier<SuburbDebugPlanResult> planFactory) {
-        SuburbDebugPlanResult result = planFactory.get();
-
-        return Objects.requireNonNull(result, "planFactory result");
     }
 }

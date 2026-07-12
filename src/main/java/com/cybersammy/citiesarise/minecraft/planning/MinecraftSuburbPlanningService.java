@@ -2,6 +2,7 @@ package com.cybersammy.citiesarise.minecraft.planning;
 
 import com.cybersammy.citiesarise.CitiesAriseMod;
 import com.cybersammy.citiesarise.config.CitiesAriseConfig;
+import com.cybersammy.citiesarise.config.CitiesAriseWorldgenConfig;
 import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -19,18 +20,27 @@ import com.cybersammy.citiesarise.core.transform.LightDecayTransform;
 import com.cybersammy.citiesarise.core.transform.TransformPipeline;
 import com.cybersammy.citiesarise.minecraft.profile.MinecraftSettlementProfileRepository;
 import com.cybersammy.citiesarise.minecraft.profile.SettlementProfileSource;
+import com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftTerrainSampler;
+import com.cybersammy.citiesarise.minecraft.terrain.MinecraftWorldgenTerrainSampler;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 
 public final class MinecraftSuburbPlanningService {
+    private static final int MAX_CACHED_PROFILES = 32;
+
     private final SuburbPlanner planner;
     private final SuburbPlanTransformService transformService;
     private final SettlementProfileSource profileSource;
     private final RegionPlanCache planCache;
+    private final BoundedLruCache<SettlementProfileId, DebugSettlementProfileSelection.SelectionResult> profileCache;
     private final Logger logger;
 
     public MinecraftSuburbPlanningService(SuburbPlanner planner, Logger logger) {
@@ -75,6 +85,7 @@ public final class MinecraftSuburbPlanningService {
         this.transformService = Objects.requireNonNull(transformService, "transformService");
         this.profileSource = Objects.requireNonNull(profileSource, "profileSource");
         this.planCache = Objects.requireNonNull(planCache, "planCache");
+        this.profileCache = new BoundedLruCache<>(MAX_CACHED_PROFILES);
         this.logger = Objects.requireNonNull(logger, "logger");
     }
 
@@ -90,12 +101,88 @@ public final class MinecraftSuburbPlanningService {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(position, "position");
 
-        SettlementRegion region = SettlementRegion.fromBlockPosition(blockCoordinate(position.x()), blockCoordinate(position.z()));
-        DebugSuburbPlanningConfig config = CitiesAriseConfig.debugSuburbPlanningConfig();
         SettlementProfileId profileId = new SettlementProfileId(CitiesAriseConfig.debugSettlementProfileId());
+        return planAt(
+                level,
+                blockCoordinate(position.x()),
+                blockCoordinate(position.z()),
+                profileId,
+                TerrainSurveySource.LOADED_WORLD,
+                bounds -> new MinecraftTerrainSampler(level).sample(bounds)
+        );
+    }
+
+    public Optional<SuburbDebugPlanResult> planForWorldgen(
+            WorldGenLevel level,
+            ChunkGenerator chunkGenerator,
+            BlockPos position
+    ) {
+        Objects.requireNonNull(level, "level");
+        Objects.requireNonNull(chunkGenerator, "chunkGenerator");
+        Objects.requireNonNull(position, "position");
+
+        ServerLevel serverLevel = level.getLevel();
+        MinecraftWorldgenTerrainSampler terrainSampler = new MinecraftWorldgenTerrainSampler(
+                chunkGenerator,
+                serverLevel.getChunkSource().randomState(),
+                level
+        );
+        SettlementProfileId profileId = new SettlementProfileId(CitiesAriseWorldgenConfig.settlementProfileId());
+        Optional<WorldgenSettlementProfileSelection> selection = WorldgenSettlementProfileSelection.from(
+                activeProfile(serverLevel, profileId)
+        );
+        if (selection.isEmpty()) {
+            return Optional.empty();
+        }
+
+        WorldgenSettlementProfileSelection worldgenProfile = selection.get();
+        return Optional.of(planAt(
+                serverLevel,
+                position.getX(),
+                position.getZ(),
+                profileId,
+                worldgenProfile.surveySize(),
+                worldgenProfile.planningSettings(),
+                TerrainSurveySource.WORLDGEN_BASE,
+                terrainSampler::sample
+        ));
+    }
+
+    private SuburbDebugPlanResult planAt(
+            ServerLevel level,
+            int blockX,
+            int blockZ,
+            SettlementProfileId profileId,
+            TerrainSurveySource terrainSurveySource,
+            Function<GridBounds, TerrainSurvey> surveyFactory
+    ) {
+        DebugSuburbPlanningConfig config = CitiesAriseConfig.debugSuburbPlanningConfig();
         Optional<SettlementProfile> profile = activeProfile(level, profileId);
         GridSize surveySize = DebugSettlementProfileSelection.surveySize(config, profile);
         SuburbPlanningSettings planningSettings = DebugSettlementProfileSelection.suburbPlanningSettings(config, profile);
+        return planAt(
+                level,
+                blockX,
+                blockZ,
+                profileId,
+                surveySize,
+                planningSettings,
+                terrainSurveySource,
+                surveyFactory
+        );
+    }
+
+    private SuburbDebugPlanResult planAt(
+            ServerLevel level,
+            int blockX,
+            int blockZ,
+            SettlementProfileId profileId,
+            GridSize surveySize,
+            SuburbPlanningSettings planningSettings,
+            TerrainSurveySource terrainSurveySource,
+            Function<GridBounds, TerrainSurvey> surveyFactory
+    ) {
+        SettlementRegion region = SettlementRegion.fromBlockPosition(blockX, blockZ);
         GridBounds bounds = region.surveyBounds(surveySize);
         PlanElementId settlementId = settlementId(region);
         long seed = SettlementSeed.forRegion(level.getSeed(), region, settlementId);
@@ -103,6 +190,7 @@ public final class MinecraftSuburbPlanningService {
                 dimensionId(level),
                 region,
                 level.getSeed(),
+                terrainSurveySource,
                 profileId,
                 surveySize,
                 planningSettings
@@ -110,25 +198,26 @@ public final class MinecraftSuburbPlanningService {
 
         return planCache.getOrCreate(
                 cacheKey,
-                () -> createDebugPlan(level, region, bounds, settlementId, seed, planningSettings)
+                () -> createPlan(region, bounds, settlementId, seed, planningSettings, surveyFactory)
         );
     }
 
     public void clearCache() {
         planCache.clear();
+        profileCache.clear();
     }
 
-    private SuburbDebugPlanResult createDebugPlan(
-            ServerLevel level,
+    private SuburbDebugPlanResult createPlan(
             SettlementRegion region,
             GridBounds bounds,
             PlanElementId settlementId,
             long seed,
-            SuburbPlanningSettings planningSettings
+            SuburbPlanningSettings planningSettings,
+            Function<GridBounds, TerrainSurvey> surveyFactory
     ) {
         logTerrainStart(region, bounds, seed, settlementId);
 
-        TerrainSurvey survey = new MinecraftTerrainSampler(level).sample(bounds);
+        TerrainSurvey survey = surveyFactory.apply(bounds);
         SuburbPlanningRequest request = new SuburbPlanningRequest(
                 settlementId,
                 survey,
@@ -144,11 +233,22 @@ public final class MinecraftSuburbPlanningService {
     }
 
     Optional<SettlementProfile> activeProfile(ServerLevel level, SettlementProfileId profileId) {
+        DebugSettlementProfileSelection.SelectionResult result = profileCache.getOrCreate(
+                profileId,
+                () -> loadProfile(level, profileId)
+        );
+        return result.profile();
+    }
+
+    private DebugSettlementProfileSelection.SelectionResult loadProfile(
+            ServerLevel level,
+            SettlementProfileId profileId
+    ) {
         DebugSettlementProfileSelection.SelectionResult result = DebugSettlementProfileSelection.load(
                 () -> profileSource.find(level, profileId)
         );
         logProfileResult(profileId, result);
-        return result.profile();
+        return result;
     }
 
     private static PlanElementId settlementId(SettlementRegion region) {
@@ -196,14 +296,14 @@ public final class MinecraftSuburbPlanningService {
 
         if (result.failed()) {
             logger.warn(
-                    "Failed to load settlement profile {}. Falling back to debug config.",
+                    "Failed to load settlement profile {}.",
                     profileId.value(),
                     result.error()
             );
             return;
         }
 
-        logger.warn("Settlement profile {} was not found. Falling back to debug config.", profileId.value());
+        logger.warn("Settlement profile {} was not found.", profileId.value());
     }
 
     private void logPlanningResult(SuburbDebugPlanResult result) {

@@ -6,7 +6,10 @@ public record SuburbPlanningSettings(
         int targetParcelCount,
         int parcelWidth,
         int parcelDepth,
-        int buildingMargin
+        int buildingMargin,
+        int maxElevationRange,
+        int maxCutDepth,
+        int maxFillDepth
 ) {
     public static final int DEFAULT_ROAD_WIDTH = 3;
     public static final double DEFAULT_MAX_BUILDABLE_SLOPE = 0.25;
@@ -14,6 +17,9 @@ public record SuburbPlanningSettings(
     public static final int DEFAULT_PARCEL_WIDTH = 6;
     public static final int DEFAULT_PARCEL_DEPTH = 7;
     public static final int DEFAULT_BUILDING_MARGIN = 1;
+    public static final int DEFAULT_MAX_ELEVATION_RANGE = 12;
+    public static final int DEFAULT_MAX_CUT_DEPTH = 3;
+    public static final int DEFAULT_MAX_FILL_DEPTH = 3;
 
     public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, int targetParcelCount) {
         this(
@@ -22,7 +28,53 @@ public record SuburbPlanningSettings(
                 targetParcelCount,
                 DEFAULT_PARCEL_WIDTH,
                 DEFAULT_PARCEL_DEPTH,
-                DEFAULT_BUILDING_MARGIN
+                DEFAULT_BUILDING_MARGIN,
+                DEFAULT_MAX_ELEVATION_RANGE,
+                DEFAULT_MAX_CUT_DEPTH,
+                DEFAULT_MAX_FILL_DEPTH
+        );
+    }
+
+    public SuburbPlanningSettings(
+            int roadWidth,
+            double maxBuildableSlope,
+            int targetParcelCount,
+            int parcelWidth,
+            int parcelDepth,
+            int buildingMargin
+    ) {
+        this(
+                roadWidth,
+                maxBuildableSlope,
+                targetParcelCount,
+                parcelWidth,
+                parcelDepth,
+                buildingMargin,
+                DEFAULT_MAX_ELEVATION_RANGE,
+                DEFAULT_MAX_CUT_DEPTH,
+                DEFAULT_MAX_FILL_DEPTH
+        );
+    }
+
+    public SuburbPlanningSettings(
+            int roadWidth,
+            double maxBuildableSlope,
+            int targetParcelCount,
+            int parcelWidth,
+            int parcelDepth,
+            int buildingMargin,
+            int maxElevationRange
+    ) {
+        this(
+                roadWidth,
+                maxBuildableSlope,
+                targetParcelCount,
+                parcelWidth,
+                parcelDepth,
+                buildingMargin,
+                maxElevationRange,
+                DEFAULT_MAX_CUT_DEPTH,
+                DEFAULT_MAX_FILL_DEPTH
         );
     }
 
@@ -33,6 +85,9 @@ public record SuburbPlanningSettings(
         requirePositive(parcelWidth, "parcelWidth");
         requirePositive(parcelDepth, "parcelDepth");
         requireNonNegative(buildingMargin, "buildingMargin");
+        requireNonNegative(maxElevationRange, "maxElevationRange");
+        requireNonNegative(maxCutDepth, "maxCutDepth");
+        requireNonNegative(maxFillDepth, "maxFillDepth");
         requireBuildingFitsParcel(parcelWidth, parcelDepth, buildingMargin);
     }
 
@@ -43,7 +98,10 @@ public record SuburbPlanningSettings(
                 DEFAULT_TARGET_PARCEL_COUNT,
                 DEFAULT_PARCEL_WIDTH,
                 DEFAULT_PARCEL_DEPTH,
-                DEFAULT_BUILDING_MARGIN
+                DEFAULT_BUILDING_MARGIN,
+                DEFAULT_MAX_ELEVATION_RANGE,
+                DEFAULT_MAX_CUT_DEPTH,
+                DEFAULT_MAX_FILL_DEPTH
         );
     }
 

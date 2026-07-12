@@ -11,7 +11,9 @@ public record MinecraftSettlementProfileLimits(
         int maxTargetParcelCount,
         int maxParcelWidth,
         int maxParcelDepth,
-        int maxBuildingMargin
+        int maxBuildingMargin,
+        int maxCutDepth,
+        int maxFillDepth
 ) {
     private static final MinecraftSettlementProfileLimits DEFAULTS = new MinecraftSettlementProfileLimits(
             128,
@@ -21,7 +23,9 @@ public record MinecraftSettlementProfileLimits(
             128,
             64,
             64,
-            8
+            8,
+            16,
+            16
     );
 
     public MinecraftSettlementProfileLimits {
@@ -33,6 +37,8 @@ public record MinecraftSettlementProfileLimits(
         requirePositive(maxParcelWidth, "maxParcelWidth");
         requirePositive(maxParcelDepth, "maxParcelDepth");
         requireNonNegative(maxBuildingMargin, "maxBuildingMargin");
+        requireNonNegative(maxCutDepth, "maxCutDepth");
+        requireNonNegative(maxFillDepth, "maxFillDepth");
     }
 
     public static MinecraftSettlementProfileLimits defaults() {
@@ -58,6 +64,8 @@ public record MinecraftSettlementProfileLimits(
         requireAtMost(profile.suburbPlanningSettings().parcelWidth(), maxParcelWidth, "planning.parcelWidth");
         requireAtMost(profile.suburbPlanningSettings().parcelDepth(), maxParcelDepth, "planning.parcelDepth");
         requireAtMost(profile.suburbPlanningSettings().buildingMargin(), maxBuildingMargin, "planning.buildingMargin");
+        requireAtMost(profile.suburbPlanningSettings().maxCutDepth(), maxCutDepth, "planning.maxCutDepth");
+        requireAtMost(profile.suburbPlanningSettings().maxFillDepth(), maxFillDepth, "planning.maxFillDepth");
     }
 
     private static void requireAtMost(int value, int maxValue, String name) {

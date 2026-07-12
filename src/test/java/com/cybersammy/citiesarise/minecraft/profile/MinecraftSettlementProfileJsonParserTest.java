@@ -53,6 +53,36 @@ final class MinecraftSettlementProfileJsonParserTest {
     }
 
     @Test
+    void parsesOptionalMaximumElevationRange() {
+        JsonObject json = validJson();
+        json.getAsJsonObject("planning").addProperty("maxElevationRange", 20);
+
+        SettlementProfile profile = parser.parse(id(), json);
+
+        assertEquals(20, profile.suburbPlanningSettings().maxElevationRange());
+    }
+
+    @Test
+    void parsesOptionalEarthworkLimits() {
+        JsonObject json = validJson();
+        json.getAsJsonObject("planning").addProperty("maxCutDepth", 5);
+        json.getAsJsonObject("planning").addProperty("maxFillDepth", 6);
+
+        SettlementProfile profile = parser.parse(id(), json);
+
+        assertEquals(5, profile.suburbPlanningSettings().maxCutDepth());
+        assertEquals(6, profile.suburbPlanningSettings().maxFillDepth());
+    }
+
+    @Test
+    void rejectsNegativeMaximumElevationRange() {
+        JsonObject json = validJson();
+        json.getAsJsonObject("planning").addProperty("maxElevationRange", -1);
+
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), json));
+    }
+
+    @Test
     void rejectsStringNumbers() {
         JsonObject json = validJson();
         json.getAsJsonObject("survey").addProperty("width", "96");
@@ -92,6 +122,8 @@ final class MinecraftSettlementProfileJsonParserTest {
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("parcelWidth", 65)));
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("parcelDepth", 65)));
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("buildingMargin", 9)));
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("maxCutDepth", 17)));
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("maxFillDepth", 17)));
     }
 
     private static JsonObject validJson() {

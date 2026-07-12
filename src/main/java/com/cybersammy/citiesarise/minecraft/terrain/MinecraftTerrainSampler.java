@@ -8,7 +8,6 @@ import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceSample;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -89,89 +88,15 @@ public final class MinecraftTerrainSampler {
     }
 
     private BiomeCategory biomeCategory(int x, int height, int z) {
-        String biomePath = biomePath(x, height, z);
-
-        if (biomePath.contains("ocean")) {
-            return BiomeCategory.OCEAN;
-        }
-
-        if (biomePath.contains("river")) {
-            return BiomeCategory.OCEAN;
-        }
-
-        if (biomePath.contains("swamp")) {
-            return BiomeCategory.SWAMP;
-        }
-
-        if (isSnowyBiome(biomePath)) {
-            return BiomeCategory.SNOWY;
-        }
-
-        if (isMountainBiome(biomePath)) {
-            return BiomeCategory.MOUNTAIN;
-        }
-
-        if (isDesertBiome(biomePath)) {
-            return BiomeCategory.DESERT;
-        }
-
-        if (isForestBiome(biomePath)) {
-            return BiomeCategory.FOREST;
-        }
-
-        if (biomePath.contains("plains")) {
-            return BiomeCategory.PLAINS;
-        }
-
-        return BiomeCategory.UNKNOWN;
+        return MinecraftBiomeClassifier.classify(biomePath(x, height, z));
     }
 
     private String biomePath(int x, int height, int z) {
         return level.getBiome(new BlockPos(x, height, z))
                 .unwrapKey()
                 .map(ResourceKey::location)
-                .map(location -> location.getPath().toLowerCase(Locale.ROOT))
+                .map(location -> location.getPath())
                 .orElse("");
-    }
-
-    private boolean isSnowyBiome(String biomePath) {
-        if (biomePath.contains("snow")) {
-            return true;
-        }
-
-        return biomePath.contains("frozen");
-    }
-
-    private boolean isMountainBiome(String biomePath) {
-        if (biomePath.contains("mountain")) {
-            return true;
-        }
-
-        if (biomePath.contains("peak")) {
-            return true;
-        }
-
-        return biomePath.contains("slope");
-    }
-
-    private boolean isDesertBiome(String biomePath) {
-        if (biomePath.contains("desert")) {
-            return true;
-        }
-
-        return biomePath.contains("badlands");
-    }
-
-    private boolean isForestBiome(String biomePath) {
-        if (biomePath.contains("forest")) {
-            return true;
-        }
-
-        if (biomePath.contains("jungle")) {
-            return true;
-        }
-
-        return biomePath.contains("taiga");
     }
 
     private TerrainCategory terrainCategory(int x, int height, int z, boolean water, SurfaceSample surfaceSample) {

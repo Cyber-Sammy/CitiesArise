@@ -8,8 +8,8 @@ The long-term goal is to create suburbs, villages, towns, city fragments, indust
 
 - Minecraft version: 1.21.1
 - NeoForge version: 21.1.227
-- Current implementation: core planner with a Minecraft terrain debug adapter, region plan cache, and chunk-aware debug placement projection
-- Generation gameplay: not implemented yet
+- Current implementation: core planner with debug tools and config-gated experimental NeoForge worldgen placement
+- Generation gameplay: disabled by default and limited to vanilla placeholder suburb content
 
 ## How It Will Work
 
@@ -33,7 +33,38 @@ The mod also includes a debug command that samples real Minecraft terrain around
 The command reports whether a semantic suburb plan was accepted or rejected, along with the region, survey bounds, deterministic seed, and plan element counts.
 Repeated debug commands for the same dimension, region, world seed, selected profile id, survey size, and planning settings reuse the same in-memory region plan result. This cache is per process, is not saved to disk, and keeps at most 256 recently used plans. It is cleared after a global datapack reload and when the server stops. Manual world block edits do not invalidate an existing cached plan. The cache keeps debug plan, dump, and placement commands consistent while preparing the project for deterministic chunk-based generation later.
 
-Placement operations can be indexed once and projected onto individual 16x16 chunks without changing the complete plan. Chunk projection handles negative coordinates and exact chunk borders, preserves source plan element ids, and provides constant-time chunk slice lookup without reading, loading, or modifying the world. Automatic world generation placement is not connected yet.
+Placement operations can be indexed once and projected onto individual 16x16 chunks without changing the complete plan. Chunk projection handles negative coordinates and exact chunk borders, preserves source plan element ids, and provides indexed chunk slice lookup without reading, loading, or modifying neighboring chunks.
+
+## Experimental World Generation
+
+Automatic suburb placement is available as an experimental NeoForge worldgen feature. It is disabled by default. Enable it in `config/cities_arise-server.toml` before generating new chunks:
+
+```toml
+[worldgen]
+enabled = true
+settlementProfileId = "cities_arise:suburb"
+candidateRegionModulo = 16
+```
+
+NeoForge 21.1 stores this config in the physical client or dedicated server `config` directory, so the setting applies to every world started by that installation. It requires a world restart, only affects newly generated chunks, and has no undo command. Back up important worlds before enabling it and disable it again when testing is complete.
+
+The selected settlement profile is required for automatic generation. If it is missing or invalid, worldgen skips settlement placement and logs the profile error. Debug planning may still use its debug-config fallback, but worldgen never does.
+
+The current MVP evaluates approximately one deterministic suburb candidate per `candidateRegionModulo` settlement regions. The default value is `16`; `1` evaluates every 128x128-block region. Candidate selection happens before terrain sampling. For an accepted candidate it builds one semantic plan, indexes its placement operations, and writes only the slice belonging to the chunk currently being generated. It never intentionally writes to or force-loads neighboring chunks. Chunk generation order does not change the regional plan.
+
+Operators can locate the nearest candidate that is accepted by the current worldgen planner:
+
+```mcfunction
+/citiesarise locate
+```
+
+The command uses the same world seed, candidate density, settlement profile, terrain survey, and plan cache as automatic generation. It does not load chunks. The reported coordinates are the center of an accepted settlement region, not proof that settlement blocks already exist there: chunks generated before Cities Arise worldgen was enabled cannot be retroactively populated. Standard `/locate structure` support requires a future migration from the current biome feature to Minecraft's Structure API.
+
+Worldgen terrain planning uses a deterministic four-block interpolated base-height grid and noise biomes instead of reading neighboring chunks. Ocean and river surfaces at or below sea level are treated as water. This is intentionally lighter and less detailed than the loaded-world debug survey. Final placement resolves each operation against the actual surface of its own chunk and clears vanilla logs or leaves above affected columns before placing roads and placeholder buildings.
+
+Road segments and building slots carry a deterministic semantic platform elevation selected from the median terrain height of their complete footprint. Worldgen cuts terrain above that elevation and fills lower columns with the vanilla foundation material before placement. Each building pad and each road segment is therefore flat even when it crosses chunk boundaries. Separate connected road segments may use different elevations; smooth transitions, stairs, retaining walls, tunnels, and switchbacks remain future terrain-aware road work.
+
+The generated content is still a development preview: vanilla marker roads, yards, and placeholder houses are used instead of final building assets. Settlement density, richer water classification, final providers, and persistent plans remain future work.
 
 The accepted semantic plan can be exported as JSON for inspection:
 
@@ -74,11 +105,11 @@ The debug planner can load a settlement profile from data resources. The default
 cities_arise:suburb
 ```
 
-The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. For this MVP, profiles can change survey size, road width, max buildable slope, target parcel count, parcel size, and building margin. If the configured profile is missing or invalid, the planner falls back to the numeric debug config values.
+The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. For this MVP, profiles can change survey size, road width, max buildable slope, maximum elevation range, cut/fill limits, target parcel count, parcel size, and building margin. If the configured profile is missing or invalid, the planner falls back to the numeric debug config values.
 
 ## Datapack Settlement Profiles
 
-Settlement profiles are datapack JSON files. For the current MVP they only change debug suburb planning numbers. They do not define house assets, structures, block palettes, loot, entities, or final placement providers yet.
+Settlement profiles are datapack JSON files. For the current MVP they change debug and experimental worldgen suburb planning numbers. They do not define house assets, structures, block palettes, loot, entities, or final placement providers yet.
 
 Create a datapack with this shape:
 
@@ -113,6 +144,9 @@ Example `data/my_pack/settlement_profiles/large_suburb.json`:
   "planning": {
     "roadWidth": 5,
     "maxBuildableSlope": 0.75,
+    "maxElevationRange": 10,
+    "maxCutDepth": 3,
+    "maxFillDepth": 3,
     "targetParcelCount": 8,
     "parcelWidth": 18,
     "parcelDepth": 20,
@@ -127,6 +161,8 @@ Set `debugSettlementProfileId` to the profile id:
 my_pack:large_suburb
 ```
 
+For automatic world generation, set `worldgen.settlementProfileId` in `cities_arise-server.toml` instead.
+
 Then run:
 
 ```text
@@ -136,7 +172,9 @@ Then run:
 
 Use `/citiesarise debug dump` to inspect the generated plan and confirm that the profile changed the survey, parcel, and building slot scale.
 
-Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, target parcel count `128`, parcel width/depth `64`, and building margin `8`.
+`maxCutDepth` and `maxFillDepth` limit how many terrain blocks a flat road or building platform may remove or support. A plan is rejected before placement when any occupied column exceeds either limit, so the basic suburb profile does not bridge ravines with solid foundations or bury buildings into cliffs. Connected road segments are constrained to at most one block of elevation difference.
+
+Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, target parcel count `128`, parcel width/depth `64`, building margin `8`, and cut/fill depth `16`.
 
 House assets are future work. The intended direction is a separate provider layer where profiles can reference building pools, weights, footprints, tags, palettes, and structure/NBT assets. The core planner will still work with abstract building slots and provider ids; Minecraft-specific assets will stay in the Minecraft/content layer.
 

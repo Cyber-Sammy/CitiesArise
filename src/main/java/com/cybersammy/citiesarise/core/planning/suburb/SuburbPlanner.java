@@ -16,11 +16,13 @@ import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityContext;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityScorer;
+import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
 import com.cybersammy.citiesarise.core.validation.PlanValidationError;
 import com.cybersammy.citiesarise.core.validation.PlanValidator;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
@@ -58,6 +60,12 @@ public final class SuburbPlanner {
         }
 
         SettlementPlan plan = createPlan(request, layout);
+        Optional<SuburbTerrainDiagnostic> earthworkDiagnostic = EarthworkValidator.findDiagnostic(request, plan);
+
+        if (earthworkDiagnostic.isPresent()) {
+            return SuburbPlanningResult.rejectedTerrain(earthworkDiagnostic.orElseThrow());
+        }
+
         List<PlanValidationError> validationErrors = planValidator.validate(plan);
 
         if (!validationErrors.isEmpty()) {
@@ -106,6 +114,11 @@ public final class SuburbPlanner {
     }
 
     private Optional<SuburbTerrainDiagnostic> findTerrainDiagnostic(SuburbPlanningRequest request, SuburbLayout layout) {
+        Optional<SuburbTerrainDiagnostic> elevationDiagnostic = findElevationDiagnostic(request, layout);
+        if (elevationDiagnostic.isPresent()) {
+            return elevationDiagnostic;
+        }
+
         TerrainSuitabilityContext context = new TerrainSuitabilityContext(request.settings().maxBuildableSlope());
 
         for (GridBounds footprint : layout.plannedFootprints()) {
@@ -117,6 +130,66 @@ public final class SuburbPlanner {
         }
 
         return Optional.empty();
+    }
+
+    private Optional<SuburbTerrainDiagnostic> findElevationDiagnostic(
+            SuburbPlanningRequest request,
+            SuburbLayout layout
+    ) {
+        TerrainCell lowestCell = null;
+        TerrainCell highestCell = null;
+
+        for (GridBounds footprint : layout.plannedFootprints()) {
+            for (int z = footprint.minZ(); z < footprint.maxZExclusive(); z++) {
+                for (int x = footprint.minX(); x < footprint.maxXExclusive(); x++) {
+                    TerrainCell cell = requiredTerrainCell(request, new GridPoint(x, z));
+                    lowestCell = lowerCell(lowestCell, cell);
+                    highestCell = higherCell(highestCell, cell);
+                }
+            }
+        }
+
+        if (lowestCell == null) {
+            return Optional.empty();
+        }
+
+        int elevationRange = Math.subtractExact(highestCell.height(), lowestCell.height());
+        if (elevationRange <= request.settings().maxElevationRange()) {
+            return Optional.empty();
+        }
+
+        TerrainSuitability suitability = new TerrainSuitability(
+                0.0,
+                Set.of(TerrainRejectionReason.ELEVATION_RANGE),
+                List.of()
+        );
+        return Optional.of(new SuburbTerrainDiagnostic(highestCell, suitability));
+    }
+
+    private static TerrainCell lowerCell(TerrainCell current, TerrainCell candidate) {
+        if (current == null) {
+            return candidate;
+        }
+        if (candidate.height() < current.height()) {
+            return candidate;
+        }
+        return current;
+    }
+
+    private static TerrainCell higherCell(TerrainCell current, TerrainCell candidate) {
+        if (current == null) {
+            return candidate;
+        }
+        if (candidate.height() > current.height()) {
+            return candidate;
+        }
+        return current;
+    }
+
+    private static TerrainCell requiredTerrainCell(SuburbPlanningRequest request, GridPoint point) {
+        return request.survey()
+                .findCell(point)
+                .orElseThrow(() -> new IllegalStateException("planned footprint is outside terrain survey: " + point));
     }
 
     private Optional<SuburbTerrainDiagnostic> findFootprintTerrainDiagnostic(
@@ -161,9 +234,7 @@ public final class SuburbPlanner {
             TerrainSuitabilityContext context,
             GridPoint point
     ) {
-        TerrainCell cell = request.survey()
-                .findCell(point)
-                .orElseThrow(() -> new IllegalStateException("planned footprint is outside terrain survey: " + point));
+        TerrainCell cell = requiredTerrainCell(request, point);
 
         TerrainSuitability suitability = terrainScorer.score(cell, context);
 
@@ -197,6 +268,7 @@ public final class SuburbPlanner {
     private SettlementPlan createPlan(SuburbPlanningRequest request, SuburbLayout layout) {
         GridBounds bounds = request.survey().bounds();
         RoadGraph roadGraph = createRoadGraph(request, bounds, layout.mainRoadZ(), layout.sideRoadXs());
+        roadGraph = RoadElevationPlanner.apply(request, roadGraph);
         List<Parcel> parcels = createParcels(request, layout.parcelBounds());
         List<BuildingSlot> buildingSlots = createBuildingSlots(request, parcels);
 
@@ -506,7 +578,7 @@ public final class SuburbPlanner {
                 parcel.id(),
                 buildingBounds,
                 Set.of(new PlanTag("residential")),
-                PlanProperties.empty()
+                TerrainPlatform.withElevation(PlanProperties.empty(), request, buildingBounds)
         );
     }
 

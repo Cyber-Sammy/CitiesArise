@@ -1,14 +1,16 @@
 package com.cybersammy.citiesarise.minecraft.planning;
 
+import java.util.List;
 import java.util.Objects;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 
-public final class RegionPlanCacheLifecycle {
-    private final MinecraftSuburbPlanningService planningService;
+public final class MinecraftCacheLifecycle {
+    private final List<Runnable> cacheClearers;
 
-    public RegionPlanCacheLifecycle(MinecraftSuburbPlanningService planningService) {
-        this.planningService = Objects.requireNonNull(planningService, "planningService");
+    public MinecraftCacheLifecycle(Runnable... cacheClearers) {
+        Objects.requireNonNull(cacheClearers, "cacheClearers");
+        this.cacheClearers = List.of(cacheClearers);
     }
 
     public void onDatapackSync(OnDatapackSyncEvent event) {
@@ -18,11 +20,17 @@ public final class RegionPlanCacheLifecycle {
             return;
         }
 
-        planningService.clearCache();
+        clearCaches();
     }
 
     public void onServerStopped(ServerStoppedEvent event) {
         Objects.requireNonNull(event, "event");
-        planningService.clearCache();
+        clearCaches();
+    }
+
+    private void clearCaches() {
+        for (Runnable cacheClearer : cacheClearers) {
+            cacheClearer.run();
+        }
     }
 }

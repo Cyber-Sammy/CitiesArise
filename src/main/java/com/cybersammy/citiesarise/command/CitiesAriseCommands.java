@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.command;
 
 import com.cybersammy.citiesarise.config.CitiesAriseConfig;
+import com.cybersammy.citiesarise.config.CitiesAriseWorldgenConfig;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementApplier;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlan;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlanConverter;
@@ -9,11 +10,13 @@ import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementUndoStatus;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanDumpWriter;
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanResult;
+import com.cybersammy.citiesarise.minecraft.worldgen.WorldgenSettlementLocator;
 import com.mojang.brigadier.CommandDispatcher;
 import java.io.IOException;
 import java.nio.file.Path;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.slf4j.Logger;
@@ -25,6 +28,7 @@ public final class CitiesAriseCommands {
     private final DebugPlacementPlanConverter placementPlanConverter;
     private final DebugPlacementApplier placementApplier;
     private final SuburbDebugPlanDumpWriter planDumpWriter;
+    private final WorldgenSettlementLocator settlementLocator;
     private final Logger logger;
 
     public CitiesAriseCommands(MinecraftSuburbPlanningService planningService, Logger logger) {
@@ -32,6 +36,7 @@ public final class CitiesAriseCommands {
         this.placementPlanConverter = new DebugPlacementPlanConverter();
         this.placementApplier = new DebugPlacementApplier();
         this.planDumpWriter = new SuburbDebugPlanDumpWriter();
+        this.settlementLocator = new WorldgenSettlementLocator(planningService);
         this.logger = logger;
     }
 
@@ -42,6 +47,8 @@ public final class CitiesAriseCommands {
     private void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("citiesarise")
                 .requires(source -> source.hasPermission(DEBUG_PERMISSION_LEVEL))
+                .then(Commands.literal("locate")
+                        .executes(context -> runLocate(context.getSource())))
                 .then(Commands.literal("debug")
                         .then(Commands.literal("plan")
                                 .executes(context -> runDebugPlan(context.getSource())))
@@ -51,6 +58,40 @@ public final class CitiesAriseCommands {
                                 .executes(context -> runDebugPlace(context.getSource())))
                         .then(Commands.literal("undo")
                                 .executes(context -> runDebugUndo(context.getSource())))));
+    }
+
+    private int runLocate(CommandSourceStack source) {
+        if (!CitiesAriseWorldgenConfig.enabled()) {
+            String summary = "Cities Arise worldgen is disabled.";
+            source.sendFailure(Component.literal(summary));
+            logCommandResult(summary);
+            return 0;
+        }
+
+        BlockPos origin = BlockPos.containing(source.getPosition());
+        var locatedSettlement = settlementLocator.findNearest(source.getLevel(), origin);
+        if (locatedSettlement.isEmpty()) {
+            String summary = "No accepted Cities Arise settlement candidate was found within the search limit.";
+            source.sendFailure(Component.literal(summary));
+            logCommandResult(summary);
+            return 0;
+        }
+
+        var located = locatedSettlement.orElseThrow();
+        String summary = "Nearest Cities Arise settlement: ["
+                + located.blockX()
+                + ", ~, "
+                + located.blockZ()
+                + "], region=("
+                + located.region().x()
+                + ", "
+                + located.region().z()
+                + "), checkedCandidates="
+                + located.attemptedCandidates()
+                + ".";
+        source.sendSuccess(() -> Component.literal(summary), false);
+        logCommandResult(summary);
+        return 1;
     }
 
     private int runDebugPlan(CommandSourceStack source) {

@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Predicate;
@@ -48,6 +49,7 @@ final class WorldgenRegionSearch {
         List<SettlementRegion> regions = orderedRegions(originX, originZ, searchRadius);
         int attempts = 0;
         for (SettlementRegion region : regions) {
+            rejectInterruptedSearch();
             if (!candidatePredicate.test(region)) {
                 continue;
             }
@@ -97,6 +99,12 @@ final class WorldgenRegionSearch {
     }
 
     record Result(SettlementRegion region, int attemptedCandidates) {
+    }
+
+    private static void rejectInterruptedSearch() {
+        if (Thread.currentThread().isInterrupted()) {
+            throw new CancellationException("settlement search was interrupted");
+        }
     }
 
     record Outcome(Optional<Result> result, int attemptedCandidates) {

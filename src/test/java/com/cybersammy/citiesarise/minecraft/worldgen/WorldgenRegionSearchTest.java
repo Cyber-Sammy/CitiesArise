@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.minecraft.planning.SettlementRegion;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
@@ -83,6 +84,19 @@ final class WorldgenRegionSearchTest {
         scheduledTask.get().run();
 
         assertTrue(future.join().result().isPresent());
+    }
+
+    @Test
+    void stopsWhenWorkerIsInterrupted() {
+        Thread.currentThread().interrupt();
+        try {
+            assertThrows(
+                    CancellationException.class,
+                    () -> search.findNearest(0, 0, 1, 1, region -> true, region -> true)
+            );
+        } finally {
+            Thread.interrupted();
+        }
     }
 
     @Test

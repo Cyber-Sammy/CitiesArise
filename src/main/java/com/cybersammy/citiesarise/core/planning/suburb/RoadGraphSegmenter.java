@@ -16,16 +16,16 @@ final class RoadGraphSegmenter {
     private RoadGraphSegmenter() {
     }
 
-    static RoadGraph splitLongSegments(RoadGraph graph, int maxSegmentLength) {
-        if (maxSegmentLength <= 0) {
-            throw new IllegalArgumentException("maxSegmentLength must be positive");
+    static RoadGraph splitLongSegments(RoadGraph graph, int maxNodeDistance) {
+        if (maxNodeDistance <= 0) {
+            throw new IllegalArgumentException("maxNodeDistance must be positive");
         }
 
         Map<PlanElementId, RoadNode> nodesById = nodesById(graph);
         List<RoadNode> nodes = new ArrayList<>(graph.nodes());
         List<RoadSegment> segments = new ArrayList<>();
         for (RoadSegment segment : graph.segments()) {
-            splitSegment(segment, nodesById, maxSegmentLength, nodes, segments);
+            splitSegment(segment, nodesById, maxNodeDistance, nodes, segments);
         }
         return new RoadGraph(nodes, segments);
     }
@@ -33,7 +33,7 @@ final class RoadGraphSegmenter {
     private static void splitSegment(
             RoadSegment segment,
             Map<PlanElementId, RoadNode> nodesById,
-            int maxSegmentLength,
+            int maxNodeDistance,
             List<RoadNode> nodes,
             List<RoadSegment> segments
     ) {
@@ -41,14 +41,14 @@ final class RoadGraphSegmenter {
         RoadNode end = requiredNode(nodesById, segment.endNodeId());
         Direction direction = Direction.between(start.point(), end.point());
         int length = direction.length(start.point(), end.point());
-        if (length <= maxSegmentLength) {
+        if (length <= maxNodeDistance) {
             segments.add(segment);
             return;
         }
 
         PlanElementId previousNodeId = start.id();
         int partIndex = 0;
-        for (int distance = maxSegmentLength; distance < length; distance += maxSegmentLength) {
+        for (int distance = maxNodeDistance; distance < length; distance += maxNodeDistance) {
             PlanElementId nodeId = segment.id().child("grade-node-" + partIndex);
             nodes.add(new RoadNode(
                     nodeId,

@@ -4,6 +4,7 @@ import com.cybersammy.citiesarise.config.CitiesAriseWorldgenConfig;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
 import com.cybersammy.citiesarise.minecraft.planning.SettlementRegion;
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanResult;
+import com.cybersammy.citiesarise.minecraft.planning.WorldgenPlanningContext;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -11,36 +12,38 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.chunk.ChunkGenerator;
 
 public final class WorldgenSettlementLocator {
     private final MinecraftSuburbPlanningService planningService;
     private final WorldgenRegionCandidateSelector candidateSelector;
     private final WorldgenRegionSearch regionSearch;
-    private final Executor executor;
+    private final LocateSearchExecutor executor;
 
     public WorldgenSettlementLocator(MinecraftSuburbPlanningService planningService) {
-        this(planningService, Util.backgroundExecutor());
-    }
-
-    WorldgenSettlementLocator(MinecraftSuburbPlanningService planningService, Executor executor) {
         this.planningService = Objects.requireNonNull(planningService, "planningService");
         this.candidateSelector = new WorldgenRegionCandidateSelector();
         this.regionSearch = new WorldgenRegionSearch();
-        this.executor = Objects.requireNonNull(executor, "executor");
+        this.executor = new LocateSearchExecutor();
     }
 
     public CompletableFuture<SearchResult> findNearestAsync(ServerLevel level, BlockPos origin) {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(origin, "origin");
 
-        long worldSeed = level.getSeed();
+        Optional<WorldgenPlanningContext> optionalContext = planningService.prepareLocateContext(
+                level,
+                level.getChunkSource().getGenerator()
+        );
+        if (optionalContext.isEmpty()) {
+            return CompletableFuture.completedFuture(profileUnavailableResult());
+        }
+
+        WorldgenPlanningContext context = optionalContext.orElseThrow();
+        long worldSeed = context.worldSeed();
         int regionModulo = CitiesAriseWorldgenConfig.candidateRegionModulo();
-        ChunkGenerator chunkGenerator = level.getChunkSource().getGenerator();
+        int seaLevel = level.getSeaLevel();
         Map<String, Integer> rejectionCounts = new LinkedHashMap<>();
         return regionSearch.findNearestAsync(
                 origin.getX(),
@@ -48,25 +51,19 @@ public final class WorldgenSettlementLocator {
                 CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
                 CitiesAriseWorldgenConfig.locateMaxCandidateAttempts(),
                 region -> candidateSelector.isCandidate(worldSeed, region, regionModulo),
-                region -> isAccepted(level, chunkGenerator, region, rejectionCounts),
+                region -> isAccepted(context, seaLevel, region, rejectionCounts),
                 executor
         ).thenApply(outcome -> searchResult(outcome, rejectionCounts));
     }
 
     private boolean isAccepted(
-            ServerLevel level,
-            ChunkGenerator chunkGenerator,
+            WorldgenPlanningContext context,
+            int seaLevel,
             SettlementRegion region,
             Map<String, Integer> rejectionCounts
     ) {
-        BlockPos center = centerPosition(level, region);
-        Optional<SuburbDebugPlanResult> planningResult = planningService.planForWorldgen(level, chunkGenerator, center);
-        if (planningResult.isEmpty()) {
-            increment(rejectionCounts, "PROFILE_UNAVAILABLE");
-            return false;
-        }
-
-        SuburbDebugPlanResult result = planningResult.orElseThrow();
+        BlockPos center = centerPosition(seaLevel, region);
+        SuburbDebugPlanResult result = planningService.planForWorldgen(context, center);
         if (result.successful()) {
             return true;
         }
@@ -81,6 +78,10 @@ public final class WorldgenSettlementLocator {
     ) {
         Optional<LocatedSettlement> settlement = outcome.result().map(this::locatedSettlement);
         return new SearchResult(settlement, outcome.attemptedCandidates(), rejectionCounts);
+    }
+
+    private static SearchResult profileUnavailableResult() {
+        return new SearchResult(Optional.empty(), 0, Map.of("PROFILE_UNAVAILABLE", 1));
     }
 
     private static String rejectionReason(SuburbDebugPlanResult result) {
@@ -104,12 +105,16 @@ public final class WorldgenSettlementLocator {
         );
     }
 
-    private static BlockPos centerPosition(ServerLevel level, SettlementRegion region) {
+    private static BlockPos centerPosition(int seaLevel, SettlementRegion region) {
         return new BlockPos(
                 WorldgenRegionSearch.centerCoordinate(region.x()),
-                level.getSeaLevel(),
+                seaLevel,
                 WorldgenRegionSearch.centerCoordinate(region.z())
         );
+    }
+
+    public void stop() {
+        executor.stop();
     }
 
     public record LocatedSettlement(

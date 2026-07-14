@@ -60,7 +60,9 @@ Operators can locate the nearest candidate that is accepted by the current world
 /citiesarise locate
 ```
 
-The command runs candidate planning in the background, returns the result to chat when complete, and rejects a second locate request while one is already active. It uses the same world seed, candidate density, settlement profile, terrain survey, and plan cache as automatic generation. It does not load chunks. `locateSearchRadiusRegions` controls the geographic radius and `locateMaxCandidateAttempts` limits expensive full planning; the defaults search up to 64 settlement regions away and evaluate at most 256 deterministic candidates. A failed search reports rejection counts by reason.
+The command prepares an immutable planning context on the server thread, then runs candidate planning on one dedicated locate worker. The worker receives no live Minecraft level and reads only parallel-safe chunk-generator data through the worldgen terrain provider. Results return to chat on the server thread, and a second locate request is rejected while one is active. The worker is stopped with the server.
+
+Locate uses the same world seed, candidate density, settlement profile, terrain survey, and plan cache as automatic generation. It does not load chunks. `locateSearchRadiusRegions` controls the geographic radius and `locateMaxCandidateAttempts` limits expensive full planning; the defaults search up to 64 settlement regions away and evaluate at most 256 deterministic candidates. A failed search reports rejection counts by reason.
 
 The reported coordinates are the center of an accepted settlement region, not proof that settlement blocks already exist there: chunks generated before Cities Arise worldgen was enabled cannot be retroactively populated. Standard `/locate structure` support requires a future migration from the current biome feature to Minecraft's Structure API.
 
@@ -179,7 +181,7 @@ Use `/citiesarise debug dump` to inspect the generated plan and confirm that the
 
 `maxCutDepth` and `maxFillDepth` limit how many terrain blocks a flat road or building platform may remove or support. `maxEarthworkVolume` limits the summed cut and fill volume across semantic road and building preparation areas. A plan is rejected before placement when a column or the total budget exceeds its profile limit, so the basic suburb profile does not bridge ravines with solid foundations or bury buildings into cliffs. Moderate correctable terrain is accepted with earthworks. Connected road segments are constrained to at most one block of elevation difference.
 
-`maxElevationRange` remains accepted in profile JSON for compatibility, but the suburb planner no longer rejects the total settlement height span globally. Long roads are divided into deterministic flat grading segments, while concrete cut, fill, road-transition, and total earthwork limits decide whether terrain is usable.
+`maxElevationRange` is deprecated and remains accepted in the current profile schema only for compatibility. It will be removed in a future profile schema version. The suburb planner no longer rejects the total settlement height span globally. Long roads are divided into deterministic flat grading segments by maximum distance between their nodes, while concrete cut, fill, road-transition, and total earthwork limits decide whether terrain is usable.
 
 Successful debug summaries report `terrain=ACCEPTED` when no cut or fill is required and `terrain=ACCEPTED_WITH_EARTHWORKS` with the calculated cut and fill volumes when preparation is required. `/citiesarise locate` treats both successful outcomes as valid settlement candidates.
 

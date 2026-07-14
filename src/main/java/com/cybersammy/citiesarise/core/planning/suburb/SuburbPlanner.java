@@ -29,7 +29,7 @@ import java.util.Random;
 import java.util.Set;
 
 public final class SuburbPlanner {
-    private static final int MAX_ROAD_ELEVATION_SEGMENT_LENGTH = 3;
+    private static final int MAX_ROAD_ELEVATION_NODE_DISTANCE = 3;
     private final TerrainSuitabilityScorer terrainScorer;
     private final PlanValidator planValidator;
 
@@ -221,7 +221,7 @@ public final class SuburbPlanner {
     private SettlementPlan createPlan(SuburbPlanningRequest request, SuburbLayout layout) {
         GridBounds bounds = request.survey().bounds();
         RoadGraph roadGraph = createRoadGraph(request, bounds, layout.mainRoadZ(), layout.sideRoadXs());
-        roadGraph = RoadGraphSegmenter.splitLongSegments(roadGraph, MAX_ROAD_ELEVATION_SEGMENT_LENGTH);
+        roadGraph = RoadGraphSegmenter.splitLongSegments(roadGraph, MAX_ROAD_ELEVATION_NODE_DISTANCE);
         roadGraph = RoadElevationPlanner.apply(request, roadGraph);
         List<Parcel> parcels = createParcels(request, layout.parcelBounds());
         List<BuildingSlot> buildingSlots = createBuildingSlots(request, parcels);

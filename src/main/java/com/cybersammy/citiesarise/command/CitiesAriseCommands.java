@@ -14,12 +14,15 @@ import com.cybersammy.citiesarise.minecraft.worldgen.WorldgenSettlementLocator;
 import com.mojang.brigadier.CommandDispatcher;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.slf4j.Logger;
 
 public final class CitiesAriseCommands {
@@ -44,6 +47,12 @@ public final class CitiesAriseCommands {
 
     public void register(RegisterCommandsEvent event) {
         register(event.getDispatcher());
+    }
+
+    public void onServerStopped(ServerStoppedEvent event) {
+        Objects.requireNonNull(event, "event");
+        locateInProgress.set(false);
+        settlementLocator.stop();
     }
 
     private void register(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -81,8 +90,9 @@ public final class CitiesAriseCommands {
         String startedSummary = "Cities Arise settlement search started in the background.";
         source.sendSuccess(() -> Component.literal(startedSummary), false);
         logCommandResult(startedSummary);
+        MinecraftServer server = source.getServer();
         settlementLocator.findNearestAsync(source.getLevel(), origin)
-                .whenComplete((result, exception) -> source.getServer().execute(
+                .whenComplete((result, exception) -> server.execute(
                         () -> completeLocate(source, result, exception)
                 ));
         return 1;

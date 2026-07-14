@@ -4,11 +4,37 @@ import com.cybersammy.citiesarise.minecraft.planning.SettlementRegion;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.Predicate;
 
 final class WorldgenRegionSearch {
-    Optional<Result> findNearest(
+    CompletableFuture<Outcome> findNearestAsync(
+            int originX,
+            int originZ,
+            int searchRadius,
+            int maxCandidateAttempts,
+            Predicate<SettlementRegion> candidatePredicate,
+            Predicate<SettlementRegion> acceptedPredicate,
+            Executor executor
+    ) {
+        Objects.requireNonNull(executor, "executor");
+        return CompletableFuture.supplyAsync(
+                () -> findNearest(
+                        originX,
+                        originZ,
+                        searchRadius,
+                        maxCandidateAttempts,
+                        candidatePredicate,
+                        acceptedPredicate
+                ),
+                executor
+        );
+    }
+
+    Outcome findNearest(
             int originX,
             int originZ,
             int searchRadius,
@@ -27,13 +53,13 @@ final class WorldgenRegionSearch {
             }
             attempts++;
             if (acceptedPredicate.test(region)) {
-                return Optional.of(new Result(region, attempts));
+                return Outcome.found(region, attempts);
             }
             if (attempts >= maxCandidateAttempts) {
-                return Optional.empty();
+                return Outcome.notFound(attempts);
             }
         }
-        return Optional.empty();
+        return Outcome.notFound(attempts);
     }
 
     private static List<SettlementRegion> orderedRegions(int originX, int originZ, int radius) {
@@ -71,5 +97,22 @@ final class WorldgenRegionSearch {
     }
 
     record Result(SettlementRegion region, int attemptedCandidates) {
+    }
+
+    record Outcome(Optional<Result> result, int attemptedCandidates) {
+        Outcome {
+            Objects.requireNonNull(result, "result");
+            if (attemptedCandidates < 0) {
+                throw new IllegalArgumentException("attemptedCandidates must not be negative");
+            }
+        }
+
+        private static Outcome found(SettlementRegion region, int attemptedCandidates) {
+            return new Outcome(Optional.of(new Result(region, attemptedCandidates)), attemptedCandidates);
+        }
+
+        private static Outcome notFound(int attemptedCandidates) {
+            return new Outcome(Optional.empty(), attemptedCandidates);
+        }
     }
 }

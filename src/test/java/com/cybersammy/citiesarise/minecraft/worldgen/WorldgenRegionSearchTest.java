@@ -1,11 +1,13 @@
 package com.cybersammy.citiesarise.minecraft.worldgen;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.minecraft.planning.SettlementRegion;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 final class WorldgenRegionSearchTest {
@@ -23,7 +25,7 @@ final class WorldgenRegionSearchTest {
                         10,
                         region -> List.of(nearest, farther).contains(region),
                         region -> true
-                )
+                ).result()
                 .orElseThrow();
 
         assertEquals(nearest, result.region());
@@ -42,7 +44,7 @@ final class WorldgenRegionSearchTest {
                         10,
                         region -> region.equals(rejected) || region.equals(accepted),
                         region -> region.equals(accepted)
-                )
+                ).result()
                 .orElseThrow();
 
         assertEquals(accepted, result.region());
@@ -51,7 +53,36 @@ final class WorldgenRegionSearchTest {
 
     @Test
     void stopsAtCandidateAttemptLimit() {
-        assertTrue(search.findNearest(0, 0, 4, 1, region -> true, region -> false).isEmpty());
+        WorldgenRegionSearch.Outcome outcome = search.findNearest(
+                0,
+                0,
+                4,
+                1,
+                region -> true,
+                region -> false
+        );
+
+        assertTrue(outcome.result().isEmpty());
+        assertEquals(1, outcome.attemptedCandidates());
+    }
+
+    @Test
+    void schedulesSearchWithoutRunningItOnTheCallingThread() {
+        AtomicReference<Runnable> scheduledTask = new AtomicReference<>();
+        var future = search.findNearestAsync(
+                0,
+                0,
+                1,
+                1,
+                region -> true,
+                region -> true,
+                scheduledTask::set
+        );
+
+        assertFalse(future.isDone());
+        scheduledTask.get().run();
+
+        assertTrue(future.join().result().isPresent());
     }
 
     @Test

@@ -8,7 +8,7 @@ The long-term goal is to create suburbs, villages, towns, city fragments, indust
 
 - Minecraft version: 1.21.1
 - NeoForge version: 21.1.227
-- Current implementation: core planner with debug tools and config-gated experimental NeoForge worldgen placement
+- Current implementation: core planner with debug tools and config-gated Structure API worldgen placement
 - Generation gameplay: disabled by default and limited to vanilla placeholder suburb content
 
 ## How It Will Work
@@ -37,7 +37,7 @@ Placement operations can be indexed once and projected onto individual 16x16 chu
 
 ## Experimental World Generation
 
-Automatic suburb placement is available as an experimental NeoForge worldgen feature. It is disabled by default. Enable it in `config/cities_arise-server.toml` before generating new chunks:
+Automatic suburb placement is registered through Minecraft's Structure API. It is disabled by default. Enable it in `config/cities_arise-server.toml` before generating new chunks:
 
 ```toml
 [worldgen]
@@ -52,9 +52,19 @@ NeoForge 21.1 stores this config in the physical client or dedicated server `con
 
 The selected settlement profile is required for automatic generation. If it is missing or invalid, worldgen skips settlement placement and logs the profile error. Debug planning may still use its debug-config fallback, but worldgen never does.
 
-The current MVP evaluates approximately one deterministic suburb candidate per `candidateRegionModulo` settlement regions. The default value is `16`; `1` evaluates every 128x128-block region. Candidate selection happens before terrain sampling. For an accepted candidate it builds one semantic plan, indexes its placement operations, and writes only the slice belonging to the chunk currently being generated. It never intentionally writes to or force-loads neighboring chunks. Chunk generation order does not change the regional plan.
+The structure set aligns candidate starts to the same 128x128-block grid used by settlement regions. The current MVP then evaluates approximately one deterministic suburb candidate per `candidateRegionModulo` regions. The default value is `16`; `1` evaluates every region. Candidate selection happens before terrain sampling. Rejected terrain produces no structure start and no partial placement.
 
-Operators can locate the nearest candidate that is accepted by the current worldgen planner:
+An accepted start stores a compact placement snapshot in its structure piece. Minecraft saves and reloads that snapshot with normal structure data, so already-created starts do not depend on live profile objects. During generation the piece writes only the placement slice belonging to the current chunk and never intentionally writes to or force-loads neighboring chunks. Chunk generation order does not change the regional plan.
+
+The nearest accepted Cities Arise structure can be found with the standard command:
+
+```mcfunction
+/locate structure cities_arise:suburb
+```
+
+This uses Minecraft's normal Structure API search. Worldgen must be enabled, the selected profile must be valid, and the target chunks must not have been generated before the structure worldgen path was enabled.
+
+Operators can also run the Cities Arise planner diagnostic:
 
 ```mcfunction
 /citiesarise locate
@@ -62,9 +72,9 @@ Operators can locate the nearest candidate that is accepted by the current world
 
 The command prepares an immutable planning context on the server thread, then runs candidate planning on one dedicated locate worker. The worker receives no live Minecraft level and reads only parallel-safe chunk-generator data through the worldgen terrain provider. Results return to chat on the server thread, and a second locate request is rejected while one is active. The worker is stopped with the server.
 
-Locate uses the same world seed, candidate density, settlement profile, terrain survey, and plan cache as automatic generation. It does not load chunks. `locateSearchRadiusRegions` controls the geographic radius and `locateMaxCandidateAttempts` limits expensive full planning; the defaults search up to 64 settlement regions away and evaluate at most 256 deterministic candidates. A failed search reports rejection counts by reason.
+The diagnostic uses the same world seed, candidate density, settlement profile, terrain survey, and plan cache as automatic generation. It does not load chunks. `locateSearchRadiusRegions` controls the geographic radius and `locateMaxCandidateAttempts` limits expensive full planning; the defaults search up to 64 settlement regions away and evaluate at most 256 deterministic candidates. A failed search reports rejection counts by reason.
 
-The reported coordinates are the center of an accepted settlement region, not proof that settlement blocks already exist there: chunks generated before Cities Arise worldgen was enabled cannot be retroactively populated. Standard `/locate structure` support requires a future migration from the current biome feature to Minecraft's Structure API.
+The diagnostic coordinates are the center of a planner-accepted settlement region, not proof that Minecraft has created a structure start there. Use `/locate structure cities_arise:suburb` for the registered structure. Chunks generated before Cities Arise worldgen was enabled cannot be retroactively populated.
 
 Worldgen terrain planning uses a deterministic four-block interpolated base-height grid and noise biomes instead of reading neighboring chunks. Ocean and river surfaces at or below sea level are treated as water. This is intentionally lighter and less detailed than the loaded-world debug survey. Final placement resolves each operation against the actual surface of its own chunk and clears vanilla logs or leaves above affected columns before placing roads and placeholder buildings.
 

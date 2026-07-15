@@ -192,6 +192,29 @@ public final class MinecraftSuburbPlanningService {
         );
     }
 
+    public SuburbDebugPlanResult planForStructureStart(
+            WorldgenPlanningContext context,
+            BlockPos position
+    ) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(position, "position");
+
+        SettlementRegion region = SettlementRegion.fromBlockPosition(position.getX(), position.getZ());
+        GridBounds bounds = region.surveyBounds(context.surveySize());
+        PlanElementId settlementId = settlementId(region);
+        long seed = SettlementSeed.forRegion(context.worldSeed(), region, settlementId);
+        return createPlan(
+                region,
+                bounds,
+                settlementId,
+                seed,
+                context.planningSettings(),
+                context.terrainProvider()::sample,
+                context.terrainLoggingEnabled(),
+                context.planningLoggingEnabled()
+        );
+    }
+
     private SuburbDebugPlanResult planAt(
             ServerLevel level,
             int blockX,

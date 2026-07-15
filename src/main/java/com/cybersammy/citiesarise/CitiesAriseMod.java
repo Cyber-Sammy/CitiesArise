@@ -5,8 +5,8 @@ import com.cybersammy.citiesarise.config.CitiesAriseConfig;
 import com.cybersammy.citiesarise.config.CitiesAriseWorldgenConfig;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftCacheLifecycle;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
+import com.cybersammy.citiesarise.minecraft.profile.ReloadableSettlementProfileStore;
 import com.cybersammy.citiesarise.minecraft.worldgen.CitiesAriseWorldgen;
-import com.cybersammy.citiesarise.minecraft.worldgen.MinecraftSuburbWorldgenService;
 import com.mojang.logging.LogUtils;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -28,27 +28,25 @@ public final class CitiesAriseMod {
         modContainer.registerConfig(ModConfig.Type.SERVER, CitiesAriseWorldgenConfig.SPEC);
 
         MinecraftSuburbPlanningService planningService = MinecraftSuburbPlanningService.defaults(LOGGER);
-        MinecraftSuburbWorldgenService worldgenService = new MinecraftSuburbWorldgenService(planningService, LOGGER);
+        ReloadableSettlementProfileStore profileStore = new ReloadableSettlementProfileStore(LOGGER);
 
-        CitiesAriseWorldgen.register(modEventBus, worldgenService);
-        registerServerFeatures(planningService, worldgenService);
+        CitiesAriseWorldgen.register(modEventBus, planningService, profileStore, LOGGER);
+        registerServerFeatures(planningService, profileStore);
         registerClientOnlyFeatures();
         LOGGER.info("Cities Arise initialized.");
     }
 
     private static void registerServerFeatures(
             MinecraftSuburbPlanningService planningService,
-            MinecraftSuburbWorldgenService worldgenService
+            ReloadableSettlementProfileStore profileStore
     ) {
-        MinecraftCacheLifecycle cacheLifecycle = new MinecraftCacheLifecycle(
-                planningService::clearCache,
-                worldgenService::clearCache
-        );
+        MinecraftCacheLifecycle cacheLifecycle = new MinecraftCacheLifecycle(planningService::clearCache);
         CitiesAriseCommands commands = new CitiesAriseCommands(planningService, LOGGER);
         NeoForge.EVENT_BUS.addListener(commands::register);
         NeoForge.EVENT_BUS.addListener(commands::onServerStopped);
         NeoForge.EVENT_BUS.addListener(cacheLifecycle::onDatapackSync);
         NeoForge.EVENT_BUS.addListener(cacheLifecycle::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(profileStore::register);
     }
 
     private static void registerClientOnlyFeatures() {

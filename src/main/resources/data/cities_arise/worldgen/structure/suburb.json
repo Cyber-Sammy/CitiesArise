@@ -1,0 +1,6 @@
+{
+  "type": "cities_arise:suburb",
+  "biomes": "#c:is_overworld",
+  "step": "top_layer_modification",
+  "spawn_overrides": {}
+}

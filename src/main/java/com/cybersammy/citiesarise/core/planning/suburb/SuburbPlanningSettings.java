@@ -137,6 +137,14 @@ public record SuburbPlanningSettings(
         );
     }
 
+    /**
+     * Retained for settlement profile schema compatibility. Terrain preparation limits now decide acceptance.
+     */
+    @Deprecated(forRemoval = true)
+    public int maxElevationRange() {
+        return maxElevationRange;
+    }
+
     private static void requirePositive(int value, String name) {
         if (value <= 0) {
             throw new IllegalArgumentException(name + " must be positive");

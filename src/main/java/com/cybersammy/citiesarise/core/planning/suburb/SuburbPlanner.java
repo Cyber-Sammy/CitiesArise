@@ -29,6 +29,7 @@ import java.util.Random;
 import java.util.Set;
 
 public final class SuburbPlanner {
+    private static final int MAX_ROAD_ELEVATION_NODE_DISTANCE = 3;
     private final TerrainSuitabilityScorer terrainScorer;
     private final PlanValidator planValidator;
 
@@ -113,11 +114,6 @@ public final class SuburbPlanner {
     }
 
     private Optional<SuburbTerrainDiagnostic> findTerrainDiagnostic(SuburbPlanningRequest request, SuburbLayout layout) {
-        Optional<SuburbTerrainDiagnostic> elevationDiagnostic = findElevationDiagnostic(request, layout);
-        if (elevationDiagnostic.isPresent()) {
-            return elevationDiagnostic;
-        }
-
         TerrainSuitabilityContext context = new TerrainSuitabilityContext(request.settings().maxBuildableSlope());
 
         for (GridBounds footprint : layout.plannedFootprints()) {
@@ -129,60 +125,6 @@ public final class SuburbPlanner {
         }
 
         return Optional.empty();
-    }
-
-    private Optional<SuburbTerrainDiagnostic> findElevationDiagnostic(
-            SuburbPlanningRequest request,
-            SuburbLayout layout
-    ) {
-        TerrainCell lowestCell = null;
-        TerrainCell highestCell = null;
-
-        for (GridBounds footprint : layout.plannedFootprints()) {
-            for (int z = footprint.minZ(); z < footprint.maxZExclusive(); z++) {
-                for (int x = footprint.minX(); x < footprint.maxXExclusive(); x++) {
-                    TerrainCell cell = requiredTerrainCell(request, new GridPoint(x, z));
-                    lowestCell = lowerCell(lowestCell, cell);
-                    highestCell = higherCell(highestCell, cell);
-                }
-            }
-        }
-
-        if (lowestCell == null) {
-            return Optional.empty();
-        }
-
-        int elevationRange = Math.subtractExact(highestCell.height(), lowestCell.height());
-        if (elevationRange <= request.settings().maxElevationRange()) {
-            return Optional.empty();
-        }
-
-        TerrainSuitability suitability = new TerrainSuitability(
-                0.0,
-                Set.of(TerrainRejectionReason.ELEVATION_RANGE),
-                List.of()
-        );
-        return Optional.of(new SuburbTerrainDiagnostic(highestCell, suitability));
-    }
-
-    private static TerrainCell lowerCell(TerrainCell current, TerrainCell candidate) {
-        if (current == null) {
-            return candidate;
-        }
-        if (candidate.height() < current.height()) {
-            return candidate;
-        }
-        return current;
-    }
-
-    private static TerrainCell higherCell(TerrainCell current, TerrainCell candidate) {
-        if (current == null) {
-            return candidate;
-        }
-        if (candidate.height() > current.height()) {
-            return candidate;
-        }
-        return current;
     }
 
     private static TerrainCell requiredTerrainCell(SuburbPlanningRequest request, GridPoint point) {
@@ -279,6 +221,7 @@ public final class SuburbPlanner {
     private SettlementPlan createPlan(SuburbPlanningRequest request, SuburbLayout layout) {
         GridBounds bounds = request.survey().bounds();
         RoadGraph roadGraph = createRoadGraph(request, bounds, layout.mainRoadZ(), layout.sideRoadXs());
+        roadGraph = RoadGraphSegmenter.splitLongSegments(roadGraph, MAX_ROAD_ELEVATION_NODE_DISTANCE);
         roadGraph = RoadElevationPlanner.apply(request, roadGraph);
         List<Parcel> parcels = createParcels(request, layout.parcelBounds());
         List<BuildingSlot> buildingSlots = createBuildingSlots(request, parcels);

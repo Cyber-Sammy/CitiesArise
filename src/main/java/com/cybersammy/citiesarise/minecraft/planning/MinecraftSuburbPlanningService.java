@@ -22,7 +22,7 @@ import com.cybersammy.citiesarise.minecraft.profile.MinecraftSettlementProfileRe
 import com.cybersammy.citiesarise.minecraft.profile.SettlementProfileSource;
 import com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftTerrainSampler;
-import com.cybersammy.citiesarise.minecraft.terrain.MinecraftWorldgenTerrainSampler;
+import com.cybersammy.citiesarise.minecraft.terrain.MinecraftWorldgenTerrainProvider;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -121,31 +121,75 @@ public final class MinecraftSuburbPlanningService {
         Objects.requireNonNull(chunkGenerator, "chunkGenerator");
         Objects.requireNonNull(position, "position");
 
-        ServerLevel serverLevel = level.getLevel();
-        MinecraftWorldgenTerrainSampler terrainSampler = new MinecraftWorldgenTerrainSampler(
-                chunkGenerator,
-                serverLevel.getChunkSource().randomState(),
-                level
-        );
+        return prepareWorldgenContext(level.getLevel(), chunkGenerator)
+                .map(context -> planForWorldgen(context, position));
+    }
+
+    public Optional<WorldgenPlanningContext> prepareWorldgenContext(
+            ServerLevel level,
+            ChunkGenerator chunkGenerator
+    ) {
+        Objects.requireNonNull(level, "level");
+        Objects.requireNonNull(chunkGenerator, "chunkGenerator");
+
         SettlementProfileId profileId = new SettlementProfileId(CitiesAriseWorldgenConfig.settlementProfileId());
         Optional<WorldgenSettlementProfileSelection> selection = WorldgenSettlementProfileSelection.from(
-                activeProfile(serverLevel, profileId)
+                activeProfile(level, profileId)
         );
         if (selection.isEmpty()) {
             return Optional.empty();
         }
 
         WorldgenSettlementProfileSelection worldgenProfile = selection.get();
-        return Optional.of(planAt(
-                serverLevel,
-                position.getX(),
-                position.getZ(),
+        MinecraftWorldgenTerrainProvider terrainProvider = new MinecraftWorldgenTerrainProvider(
+                chunkGenerator,
+                level.getChunkSource().randomState(),
+                level.getMinBuildHeight(),
+                level.getHeight()
+        );
+        return Optional.of(new WorldgenPlanningContext(
+                dimensionId(level),
+                level.getSeed(),
                 profileId,
                 worldgenProfile.surveySize(),
                 worldgenProfile.planningSettings(),
-                TerrainSurveySource.WORLDGEN_BASE,
-                terrainSampler::sample
+                terrainProvider::sample,
+                CitiesAriseConfig.terrainLoggingEnabled(),
+                CitiesAriseConfig.planningLoggingEnabled()
         ));
+    }
+
+    public Optional<WorldgenPlanningContext> prepareLocateContext(
+            ServerLevel level,
+            ChunkGenerator chunkGenerator
+    ) {
+        Objects.requireNonNull(level, "level");
+        if (!level.getServer().isSameThread()) {
+            throw new IllegalStateException("locate context must be prepared on the server thread");
+        }
+        return prepareWorldgenContext(level, chunkGenerator);
+    }
+
+    public SuburbDebugPlanResult planForWorldgen(
+            WorldgenPlanningContext context,
+            BlockPos position
+    ) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(position, "position");
+
+        return planAt(
+                context.dimensionId(),
+                context.worldSeed(),
+                position.getX(),
+                position.getZ(),
+                context.profileId(),
+                context.surveySize(),
+                context.planningSettings(),
+                TerrainSurveySource.WORLDGEN_BASE,
+                context.terrainProvider()::sample,
+                context.terrainLoggingEnabled(),
+                context.planningLoggingEnabled()
+        );
     }
 
     private SuburbDebugPlanResult planAt(
@@ -161,35 +205,41 @@ public final class MinecraftSuburbPlanningService {
         GridSize surveySize = DebugSettlementProfileSelection.surveySize(config, profile);
         SuburbPlanningSettings planningSettings = DebugSettlementProfileSelection.suburbPlanningSettings(config, profile);
         return planAt(
-                level,
+                dimensionId(level),
+                level.getSeed(),
                 blockX,
                 blockZ,
                 profileId,
                 surveySize,
                 planningSettings,
                 terrainSurveySource,
-                surveyFactory
+                surveyFactory,
+                CitiesAriseConfig.terrainLoggingEnabled(),
+                CitiesAriseConfig.planningLoggingEnabled()
         );
     }
 
     private SuburbDebugPlanResult planAt(
-            ServerLevel level,
+            String dimensionId,
+            long worldSeed,
             int blockX,
             int blockZ,
             SettlementProfileId profileId,
             GridSize surveySize,
             SuburbPlanningSettings planningSettings,
             TerrainSurveySource terrainSurveySource,
-            Function<GridBounds, TerrainSurvey> surveyFactory
+            Function<GridBounds, TerrainSurvey> surveyFactory,
+            boolean terrainLoggingEnabled,
+            boolean planningLoggingEnabled
     ) {
         SettlementRegion region = SettlementRegion.fromBlockPosition(blockX, blockZ);
         GridBounds bounds = region.surveyBounds(surveySize);
         PlanElementId settlementId = settlementId(region);
-        long seed = SettlementSeed.forRegion(level.getSeed(), region, settlementId);
+        long seed = SettlementSeed.forRegion(worldSeed, region, settlementId);
         RegionPlanCacheKey cacheKey = new RegionPlanCacheKey(
-                dimensionId(level),
+                dimensionId,
                 region,
-                level.getSeed(),
+                worldSeed,
                 terrainSurveySource,
                 profileId,
                 surveySize,
@@ -198,7 +248,16 @@ public final class MinecraftSuburbPlanningService {
 
         return planCache.getOrCreate(
                 cacheKey,
-                () -> createPlan(region, bounds, settlementId, seed, planningSettings, surveyFactory)
+                () -> createPlan(
+                        region,
+                        bounds,
+                        settlementId,
+                        seed,
+                        planningSettings,
+                        surveyFactory,
+                        terrainLoggingEnabled,
+                        planningLoggingEnabled
+                )
         );
     }
 
@@ -213,9 +272,11 @@ public final class MinecraftSuburbPlanningService {
             PlanElementId settlementId,
             long seed,
             SuburbPlanningSettings planningSettings,
-            Function<GridBounds, TerrainSurvey> surveyFactory
+            Function<GridBounds, TerrainSurvey> surveyFactory,
+            boolean terrainLoggingEnabled,
+            boolean planningLoggingEnabled
     ) {
-        logTerrainStart(region, bounds, seed, settlementId);
+        logTerrainStart(region, bounds, seed, settlementId, terrainLoggingEnabled);
 
         TerrainSurvey survey = surveyFactory.apply(bounds);
         SuburbPlanningRequest request = new SuburbPlanningRequest(
@@ -228,7 +289,7 @@ public final class MinecraftSuburbPlanningService {
         SuburbPlanningResult transformedResult = transformService.apply(result, seed);
         SuburbDebugPlanResult debugResult = SuburbDebugPlanResult.from(region, bounds, seed, transformedResult);
 
-        logPlanningResult(debugResult);
+        logPlanningResult(debugResult, planningLoggingEnabled);
         return debugResult;
     }
 
@@ -263,8 +324,14 @@ public final class MinecraftSuburbPlanningService {
         return level.dimension().location().toString();
     }
 
-    private void logTerrainStart(SettlementRegion region, GridBounds bounds, long seed, PlanElementId settlementId) {
-        if (!CitiesAriseConfig.terrainLoggingEnabled()) {
+    private void logTerrainStart(
+            SettlementRegion region,
+            GridBounds bounds,
+            long seed,
+            PlanElementId settlementId,
+            boolean loggingEnabled
+    ) {
+        if (!loggingEnabled) {
             return;
         }
 
@@ -306,8 +373,8 @@ public final class MinecraftSuburbPlanningService {
         logger.warn("Settlement profile {} was not found.", profileId.value());
     }
 
-    private void logPlanningResult(SuburbDebugPlanResult result) {
-        if (!CitiesAriseConfig.planningLoggingEnabled()) {
+    private void logPlanningResult(SuburbDebugPlanResult result, boolean loggingEnabled) {
+        if (!loggingEnabled) {
             return;
         }
 

@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 public final class MinecraftSettlementProfileJsonParser {
+    private static final String LEGACY_MAX_ELEVATION_RANGE = "maxElevationRange";
     private final MinecraftSettlementProfileLimits limits;
 
     public MinecraftSettlementProfileJsonParser() {
@@ -52,7 +53,11 @@ public final class MinecraftSettlementProfileJsonParser {
                 requiredInt(planning, "parcelWidth"),
                 requiredInt(planning, "parcelDepth"),
                 requiredInt(planning, "buildingMargin"),
-                optionalInt(planning, "maxElevationRange", SuburbPlanningSettings.DEFAULT_MAX_ELEVATION_RANGE),
+                optionalInt(
+                        planning,
+                        LEGACY_MAX_ELEVATION_RANGE,
+                        SuburbPlanningSettings.DEFAULT_MAX_ELEVATION_RANGE
+                ),
                 optionalInt(planning, "maxCutDepth", SuburbPlanningSettings.DEFAULT_MAX_CUT_DEPTH),
                 optionalInt(planning, "maxFillDepth", SuburbPlanningSettings.DEFAULT_MAX_FILL_DEPTH),
                 optionalLong(

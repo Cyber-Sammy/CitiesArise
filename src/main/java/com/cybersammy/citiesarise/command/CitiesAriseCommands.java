@@ -14,11 +14,15 @@ import com.cybersammy.citiesarise.minecraft.worldgen.WorldgenSettlementLocator;
 import com.mojang.brigadier.CommandDispatcher;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.slf4j.Logger;
 
 public final class CitiesAriseCommands {
@@ -30,6 +34,7 @@ public final class CitiesAriseCommands {
     private final SuburbDebugPlanDumpWriter planDumpWriter;
     private final WorldgenSettlementLocator settlementLocator;
     private final Logger logger;
+    private final AtomicBoolean locateInProgress = new AtomicBoolean();
 
     public CitiesAriseCommands(MinecraftSuburbPlanningService planningService, Logger logger) {
         this.planningService = planningService;
@@ -42,6 +47,12 @@ public final class CitiesAriseCommands {
 
     public void register(RegisterCommandsEvent event) {
         register(event.getDispatcher());
+    }
+
+    public void onServerStopped(ServerStoppedEvent event) {
+        Objects.requireNonNull(event, "event");
+        locateInProgress.set(false);
+        settlementLocator.stop();
     }
 
     private void register(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -68,16 +79,51 @@ public final class CitiesAriseCommands {
             return 0;
         }
 
-        BlockPos origin = BlockPos.containing(source.getPosition());
-        var locatedSettlement = settlementLocator.findNearest(source.getLevel(), origin);
-        if (locatedSettlement.isEmpty()) {
-            String summary = "No accepted Cities Arise settlement candidate was found within the search limit.";
+        if (!locateInProgress.compareAndSet(false, true)) {
+            String summary = "A Cities Arise settlement search is already running.";
             source.sendFailure(Component.literal(summary));
             logCommandResult(summary);
             return 0;
         }
 
-        var located = locatedSettlement.orElseThrow();
+        BlockPos origin = BlockPos.containing(source.getPosition());
+        String startedSummary = "Cities Arise settlement search started in the background.";
+        source.sendSuccess(() -> Component.literal(startedSummary), false);
+        logCommandResult(startedSummary);
+        MinecraftServer server = source.getServer();
+        settlementLocator.findNearestAsync(source.getLevel(), origin)
+                .whenComplete((result, exception) -> server.execute(
+                        () -> completeLocate(source, result, exception)
+                ));
+        return 1;
+    }
+
+    private void completeLocate(
+            CommandSourceStack source,
+            WorldgenSettlementLocator.SearchResult result,
+            Throwable exception
+    ) {
+        locateInProgress.set(false);
+        if (exception != null) {
+            String summary = "Cities Arise settlement search failed: " + rootMessage(exception);
+            source.sendFailure(Component.literal(summary));
+            logger.error("Cities Arise settlement search failed.", exception);
+            logCommandResult(summary);
+            return;
+        }
+
+        if (result.settlement().isEmpty()) {
+            String summary = "No accepted Cities Arise settlement candidate was found after checking "
+                    + result.attemptedCandidates()
+                    + " candidates. Rejections: "
+                    + result.rejectionSummary()
+                    + ".";
+            source.sendFailure(Component.literal(summary));
+            logCommandResult(summary);
+            return;
+        }
+
+        var located = result.settlement().orElseThrow();
         String summary = "Nearest Cities Arise settlement: ["
                 + located.blockX()
                 + ", ~, "
@@ -91,7 +137,22 @@ public final class CitiesAriseCommands {
                 + ".";
         source.sendSuccess(() -> Component.literal(summary), false);
         logCommandResult(summary);
-        return 1;
+    }
+
+    private static String rootMessage(Throwable exception) {
+        Throwable cause = exception;
+        while (cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+
+        String message = cause.getMessage();
+        if (message == null) {
+            return cause.getClass().getSimpleName();
+        }
+        if (message.isBlank()) {
+            return cause.getClass().getSimpleName();
+        }
+        return message;
     }
 
     private int runDebugPlan(CommandSourceStack source) {

@@ -116,18 +116,20 @@ final class SuburbPlannerTest {
     }
 
     @Test
-    void rejectsMountainScaleElevationRange() {
+    void rejectsMountainTerrainThroughBoundedEarthwork() {
         TerrainSurvey survey = elevationSurvey(40, 30, 1);
 
         SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
 
         assertFalse(result.successful());
         assertEquals(Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN), result.failureReason());
-        assertTerrainDiagnostic(result, TerrainRejectionReason.ELEVATION_RANGE);
+        assertTrue(result.terrainDiagnostic().orElseThrow().primaryRejectionReason().isPresent());
+        TerrainRejectionReason reason = result.terrainDiagnostic().orElseThrow().primaryRejectionReason().orElseThrow();
+        assertTrue(reason == TerrainRejectionReason.EXCESSIVE_CUT || reason == TerrainRejectionReason.EXCESSIVE_FILL);
     }
 
     @Test
-    void acceptsRollingTerrainWithinElevationRange() {
+    void acceptsRollingTerrainWithinEarthworkLimits() {
         TerrainSurvey survey = elevationSurvey(40, 30, 5);
 
         SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
@@ -138,6 +140,19 @@ final class SuburbPlannerTest {
                 result.terrainPreparationPlan().orElseThrow().status()
         );
         assertTrue(result.terrainPreparationPlan().orElseThrow().totalVolume() > 0L);
+    }
+
+    @Test
+    void acceptsGradualTerrainBeyondLegacyGlobalElevationRange() {
+        TerrainSurvey survey = elevationSurvey(40, 30, 3);
+
+        SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
+
+        assertTrue(result.successful(), result.toString());
+        assertEquals(
+                TerrainPreparationStatus.ACCEPTED_WITH_EARTHWORKS,
+                result.terrainPreparationPlan().orElseThrow().status()
+        );
     }
 
     @Test
@@ -163,9 +178,19 @@ final class SuburbPlannerTest {
     }
 
     @Test
-    void allowsProfileToIncreaseElevationRange() {
+    void allowsProfileToIncreaseEarthworkDepth() {
         TerrainSurvey survey = elevationSurvey(40, 30, 1);
-        SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.25, 6, 6, 7, 1, 40, 40, 40);
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(
+                3,
+                0.25,
+                6,
+                6,
+                7,
+                1,
+                SuburbPlanningSettings.DEFAULT_MAX_ELEVATION_RANGE,
+                40,
+                40
+        );
 
         SuburbPlanningResult result = planner.plan(request(survey, 100L, settings));
 

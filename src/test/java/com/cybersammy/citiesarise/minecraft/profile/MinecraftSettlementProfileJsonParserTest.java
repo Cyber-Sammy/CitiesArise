@@ -53,6 +53,7 @@ final class MinecraftSettlementProfileJsonParserTest {
     }
 
     @Test
+    @SuppressWarnings("removal")
     void parsesOptionalMaximumElevationRange() {
         JsonObject json = validJson();
         json.getAsJsonObject("planning").addProperty("maxElevationRange", 20);

@@ -11,7 +11,7 @@ final class TerrainPlatform {
     private TerrainPlatform() {
     }
 
-    static int elevation(SuburbPlanningRequest request, GridBounds bounds) {
+    static int medianElevation(SuburbPlanningRequest request, GridBounds bounds) {
         int cellCount = Math.multiplyExact(bounds.size().width(), bounds.size().depth());
         int[] heights = new int[cellCount];
         int index = 0;
@@ -27,12 +27,23 @@ final class TerrainPlatform {
         return heights[heights.length / 2];
     }
 
-    static PlanProperties withElevation(
+    static int highestElevation(SuburbPlanningRequest request, GridBounds bounds) {
+        int highest = Integer.MIN_VALUE;
+        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
+            for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
+                TerrainCell cell = requiredTerrainCell(request, new GridPoint(x, z));
+                highest = Math.max(highest, cell.height() - 1);
+            }
+        }
+        return highest;
+    }
+
+    static PlanProperties withHighestElevation(
             PlanProperties properties,
             SuburbPlanningRequest request,
             GridBounds bounds
     ) {
-        return withElevation(properties, elevation(request, bounds));
+        return withElevation(properties, highestElevation(request, bounds));
     }
 
     static PlanProperties withElevation(PlanProperties properties, int elevation) {

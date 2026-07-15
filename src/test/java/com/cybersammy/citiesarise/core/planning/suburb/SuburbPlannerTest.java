@@ -208,6 +208,49 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void placesBuildingPlatformAtHighestTerrainPointInFootprint() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 3);
+        BuildingSlot flatSlot = planner.plan(request(flatSurvey(40, 30), 100L, settings))
+                .plan()
+                .orElseThrow()
+                .buildingSlots()
+                .getFirst();
+        GridPoint highPoint = flatSlot.bounds().origin();
+        TerrainSurvey slopedSurvey = surveyWithHeightAt(40, 30, highPoint, 66);
+
+        SuburbPlanningResult result = planner.plan(request(slopedSurvey, 100L, settings));
+
+        assertTrue(result.successful(), result.toString());
+        BuildingSlot elevatedSlot = result.plan().orElseThrow().buildingSlots().stream()
+                .filter(slot -> slot.id().equals(flatSlot.id()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(65, platformY(elevatedSlot));
+        var buildingColumns = result.terrainPreparationPlan().orElseThrow().columns().stream()
+                .filter(column -> column.sourceElementId().equals(elevatedSlot.id()))
+                .toList();
+        assertTrue(buildingColumns.stream().allMatch(column -> column.targetElevation() == 65));
+        assertTrue(buildingColumns.stream().allMatch(column -> column.cutDepth() == 0));
+        assertTrue(buildingColumns.stream().anyMatch(column -> column.fillDepth() == 2));
+    }
+
+    @Test
+    void rejectsBuildingFoundationDeeperThanFillLimit() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 1);
+        BuildingSlot flatSlot = planner.plan(request(flatSurvey(40, 30), 100L, settings))
+                .plan()
+                .orElseThrow()
+                .buildingSlots()
+                .getFirst();
+        TerrainSurvey slopedSurvey = surveyWithHeightAt(40, 30, flatSlot.bounds().origin(), 66);
+
+        SuburbPlanningResult result = planner.plan(request(slopedSurvey, 100L, settings));
+
+        assertFalse(result.successful());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.EXCESSIVE_FILL);
+    }
+
+    @Test
     void rejectsPlatformThatWouldBridgeADeepRavine() {
         TerrainSurvey survey = surveyWithHeightAt(40, 30, new GridPoint(10, 15), 40);
         SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 3);
@@ -617,6 +660,10 @@ final class SuburbPlannerTest {
 
     private static int platformY(RoadSegment segment) {
         return Integer.parseInt(segment.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());
+    }
+
+    private static int platformY(BuildingSlot slot) {
+        return Integer.parseInt(slot.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());
     }
 
     private static TerrainSuitabilityRule lowScoreRule() {

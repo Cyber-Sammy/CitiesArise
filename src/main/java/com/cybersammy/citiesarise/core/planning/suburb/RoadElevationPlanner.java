@@ -43,7 +43,7 @@ final class RoadElevationPlanner {
             RoadNode start = requiredNode(nodesById, segment.startNodeId());
             RoadNode end = requiredNode(nodesById, segment.endNodeId());
             GridBounds bounds = AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
-            elevations.put(segment.id(), TerrainPlatform.elevation(request, bounds));
+            elevations.put(segment.id(), TerrainPlatform.medianElevation(request, bounds));
         }
         return Map.copyOf(elevations);
     }

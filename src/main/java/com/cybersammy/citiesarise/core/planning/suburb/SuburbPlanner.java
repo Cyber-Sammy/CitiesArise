@@ -532,7 +532,7 @@ public final class SuburbPlanner {
                 parcel.id(),
                 buildingBounds,
                 Set.of(new PlanTag("residential")),
-                TerrainPlatform.withElevation(PlanProperties.empty(), request, buildingBounds)
+                TerrainPlatform.withHighestElevation(PlanProperties.empty(), request, buildingBounds)
         );
     }
 

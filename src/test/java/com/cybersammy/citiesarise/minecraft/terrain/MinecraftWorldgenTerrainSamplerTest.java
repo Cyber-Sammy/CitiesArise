@@ -56,6 +56,62 @@ final class MinecraftWorldgenTerrainSamplerTest {
         for (int calls : source.heightCalls.values()) {
             assertEquals(1, calls);
         }
+        assertTrue(source.supportHeightCalls.size() <= 25);
+        for (int calls : source.supportHeightCalls.values()) {
+            assertEquals(1, calls);
+        }
+    }
+
+    @Test
+    void detectsSwampWaterFromSurfaceAndSupportHeights() {
+        FakeTerrainSource source = new FakeTerrainSource();
+        for (GridPoint sample : new GridPoint[]{point(0, 0), point(4, 0), point(0, 4), point(4, 4)}) {
+            source.height(sample, 64);
+            source.supportHeight(sample, 62);
+        }
+        source.biome(point(0, 0), "swamp");
+        MinecraftWorldgenTerrainSampler sampler = new MinecraftWorldgenTerrainSampler(source);
+
+        TerrainCell cell = requiredCell(
+                sampler.sample(new GridBounds(point(0, 0), new GridSize(1, 1))),
+                point(0, 0)
+        );
+
+        assertTrue(cell.water());
+        assertEquals(BiomeCategory.SWAMP, cell.biomeCategory());
+        assertEquals(TerrainCategory.BLOCKED, cell.terrainCategory());
+    }
+
+    @Test
+    void keepsDrySwampGroundBuildable() {
+        FakeTerrainSource source = new FakeTerrainSource();
+        source.biome(point(0, 0), "swamp");
+        MinecraftWorldgenTerrainSampler sampler = new MinecraftWorldgenTerrainSampler(source);
+
+        TerrainCell cell = requiredCell(
+                sampler.sample(new GridBounds(point(0, 0), new GridSize(1, 1))),
+                point(0, 0)
+        );
+
+        assertFalse(cell.water());
+        assertEquals(BiomeCategory.SWAMP, cell.biomeCategory());
+        assertEquals(TerrainCategory.BUILDABLE, cell.terrainCategory());
+    }
+
+    @Test
+    void preservesShallowFluidDifferenceBeforeHeightRounding() {
+        FakeTerrainSource source = new FakeTerrainSource();
+        source.supportHeight(point(0, 0), 63);
+        MinecraftWorldgenTerrainSampler sampler = new MinecraftWorldgenTerrainSampler(source);
+
+        TerrainCell cell = requiredCell(
+                sampler.sample(new GridBounds(point(2, 2), new GridSize(1, 1))),
+                point(2, 2)
+        );
+
+        assertEquals(64, cell.height());
+        assertTrue(cell.water());
+        assertEquals(TerrainCategory.BLOCKED, cell.terrainCategory());
     }
 
     @Test
@@ -88,9 +144,11 @@ final class MinecraftWorldgenTerrainSamplerTest {
 
     private static final class FakeTerrainSource implements TerrainSource {
         private final Map<GridPoint, Integer> heights = new HashMap<>();
+        private final Map<GridPoint, Integer> supportHeights = new HashMap<>();
         private final Map<GridPoint, ColumnSample> columns = new HashMap<>();
         private final Map<GridPoint, String> biomes = new HashMap<>();
         private final Map<GridPoint, Integer> heightCalls = new HashMap<>();
+        private final Map<GridPoint, Integer> supportHeightCalls = new HashMap<>();
 
         void height(GridPoint point, int height) {
             heights.put(point, height);
@@ -98,6 +156,10 @@ final class MinecraftWorldgenTerrainSamplerTest {
 
         void column(GridPoint point, ColumnSample column) {
             columns.put(point, column);
+        }
+
+        void supportHeight(GridPoint point, int height) {
+            supportHeights.put(point, height);
         }
 
         void biome(GridPoint point, String biomePath) {
@@ -108,6 +170,12 @@ final class MinecraftWorldgenTerrainSamplerTest {
         public int height(GridPoint point) {
             heightCalls.merge(point, 1, Integer::sum);
             return heights.getOrDefault(point, 64);
+        }
+
+        @Override
+        public int supportHeight(GridPoint point) {
+            supportHeightCalls.merge(point, 1, Integer::sum);
+            return supportHeights.getOrDefault(point, heights.getOrDefault(point, 64));
         }
 
         @Override

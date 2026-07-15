@@ -4,5 +4,6 @@ enum WorldgenSurfaceMaterial {
     AIR,
     LEAVES,
     LOGS,
+    FLUID,
     OTHER
 }

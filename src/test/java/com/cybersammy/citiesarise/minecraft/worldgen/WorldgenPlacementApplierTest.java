@@ -75,6 +75,24 @@ class WorldgenPlacementApplierTest {
     }
 
     @Test
+    void fillsPlatformFromSolidSupportBelowFluid() {
+        PlanElementId roadId = new PlanElementId("cities_arise:shallow_water_road");
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(platformOperation(8, 8, roadId, 64)));
+        DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
+                .partition(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.surfaceHeight(8, 8, 65);
+        level.put(8, 63, 8, WorldgenSurfaceMaterial.FLUID);
+        level.put(8, 64, 8, WorldgenSurfaceMaterial.FLUID);
+
+        new WorldgenChunkPlacement().apply(level, chunkPlan);
+
+        assertTrue(level.hasPlacement(8, 63, 8, DebugPlacementRole.FOUNDATION));
+        assertTrue(level.hasPlacement(8, 64, 8, DebugPlacementRole.ROAD_SURFACE));
+    }
+
+    @Test
     void clearsVegetationAboveAStaleWorldgenSurfaceHeight() {
         DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(operation(8, 8, "forest_road")));
         DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()

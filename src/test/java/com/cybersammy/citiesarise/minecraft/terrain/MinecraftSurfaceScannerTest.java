@@ -48,6 +48,28 @@ final class MinecraftSurfaceScannerTest {
         assertTrue(sample.logs());
     }
 
+    @Test
+    void solidSupportScanSkipsFluidAboveGround() {
+        SurfaceSample sample = MinecraftSurfaceScanner.scanSolidSupport(
+                8,
+                0,
+                y -> y >= 5 ? fluid() : solid()
+        );
+
+        assertEquals(5, sample.height());
+    }
+
+    @Test
+    void regularSurfaceScanKeepsFluidAsSurface() {
+        SurfaceSample sample = MinecraftSurfaceScanner.scan(
+                8,
+                0,
+                y -> y == 7 ? fluid() : solid()
+        );
+
+        assertEquals(8, sample.height());
+    }
+
     private static SurfaceBlock blockAt(int y, int leavesY, int logsY, int solidY) {
         if (y == leavesY) {
             return leaves();
@@ -78,5 +100,9 @@ final class MinecraftSurfaceScannerTest {
 
     private static SurfaceBlock air() {
         return new SurfaceBlock(true, false, false);
+    }
+
+    private static SurfaceBlock fluid() {
+        return new SurfaceBlock(false, false, false, true);
     }
 }

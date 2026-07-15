@@ -99,7 +99,7 @@ final class WorldgenChunkPlacement {
 
     private static SurfaceColumn surfaceColumn(WorldgenBlockAccess level, GridPoint point) {
         int topHeight = level.surfaceHeight(point.x(), point.z());
-        MinecraftSurfaceScanner.SurfaceSample sample = MinecraftSurfaceScanner.scan(
+        MinecraftSurfaceScanner.SurfaceSample sample = MinecraftSurfaceScanner.scanSolidSupport(
                 topHeight,
                 level.minBuildHeight(),
                 y -> surfaceBlock(level, point.x(), y, point.z())
@@ -142,7 +142,8 @@ final class WorldgenChunkPlacement {
         return new SurfaceBlock(
                 material == WorldgenSurfaceMaterial.AIR,
                 material == WorldgenSurfaceMaterial.LEAVES,
-                material == WorldgenSurfaceMaterial.LOGS
+                material == WorldgenSurfaceMaterial.LOGS,
+                material == WorldgenSurfaceMaterial.FLUID
         );
     }
 

@@ -193,7 +193,7 @@ public final class MinecraftSuburbPlanningService {
     }
 
     public SuburbDebugPlanResult planForStructureStart(
-            WorldgenPlanningContext context,
+            StructurePlanningContext context,
             BlockPos position
     ) {
         Objects.requireNonNull(context, "context");

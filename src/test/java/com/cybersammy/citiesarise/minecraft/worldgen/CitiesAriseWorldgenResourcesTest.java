@@ -19,14 +19,14 @@ class CitiesAriseWorldgenResourcesTest {
             "data/cities_arise/neoforge/biome_modifier/suburb.json";
 
     @Test
-    void registersSuburbAsSurfaceStructure() throws IOException {
+    void placesSuburbStructureAfterVegetation() throws IOException {
         try (InputStream stream = requiredResource(STRUCTURE_PATH);
              InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
             JsonObject structure = JsonParser.parseReader(reader).getAsJsonObject();
 
             assertEquals("cities_arise:suburb", structure.get("type").getAsString());
             assertEquals("#c:is_overworld", structure.get("biomes").getAsString());
-            assertEquals("surface_structures", structure.get("step").getAsString());
+            assertEquals("top_layer_modification", structure.get("step").getAsString());
         }
     }
 

@@ -54,7 +54,7 @@ The selected settlement profile is required for automatic generation. If it is m
 
 The structure set aligns candidate starts to the same 128x128-block grid used by settlement regions. The current MVP then evaluates approximately one deterministic suburb candidate per `candidateRegionModulo` regions. The default value is `16`; `1` evaluates every region. Candidate selection happens before terrain sampling. Rejected terrain produces no structure start and no partial placement.
 
-An accepted start stores a compact placement snapshot in its structure piece. Minecraft saves and reloads that snapshot with normal structure data, so already-created starts do not depend on live profile objects. During generation the piece writes only the placement slice belonging to the current chunk and never intentionally writes to or force-loads neighboring chunks. Chunk generation order does not change the regional plan.
+An accepted start stores a versioned compact placement snapshot in its structure piece. Minecraft saves and reloads that snapshot with normal structure data, so already-created starts do not depend on live profile objects. During generation the piece runs at `top_layer_modification`, after normal vegetation, writes only the placement slice belonging to the current chunk, and clears vegetation around occupied columns. It never intentionally writes to or force-loads neighboring chunks. Chunk generation order does not change the regional plan.
 
 The nearest accepted Cities Arise structure can be found with the standard command:
 

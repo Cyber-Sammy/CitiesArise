@@ -10,7 +10,7 @@ import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlanConverte
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
 import com.cybersammy.citiesarise.minecraft.planning.SettlementRegion;
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanResult;
-import com.cybersammy.citiesarise.minecraft.planning.WorldgenPlanningContext;
+import com.cybersammy.citiesarise.minecraft.planning.StructurePlanningContext;
 import com.cybersammy.citiesarise.minecraft.profile.ReloadableSettlementProfileStore;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftWorldgenTerrainProvider;
 import java.util.Objects;
@@ -21,8 +21,6 @@ import net.minecraft.world.level.levelgen.structure.Structure;
 import org.slf4j.Logger;
 
 final class SuburbStructureGeneration {
-    private static final String OVERWORLD_DIMENSION_ID = "minecraft:overworld";
-
     private final MinecraftSuburbPlanningService planningService;
     private final ReloadableSettlementProfileStore profileStore;
     private final DebugPlacementPlanConverter planConverter;
@@ -71,8 +69,7 @@ final class SuburbStructureGeneration {
                 context.heightAccessor().getMinBuildHeight(),
                 context.heightAccessor().getHeight()
         );
-        WorldgenPlanningContext planningContext = new WorldgenPlanningContext(
-                OVERWORLD_DIMENSION_ID,
+        StructurePlanningContext planningContext = new StructurePlanningContext(
                 context.seed(),
                 profile.id(),
                 profile.surveySize(),
@@ -90,7 +87,12 @@ final class SuburbStructureGeneration {
                 .map(preparationPlan -> planConverter.convert(result.plan(), preparationPlan))
                 .orElseGet(() -> planConverter.convert(result.plan()));
         SuburbStructurePlacementSnapshot snapshot = SuburbStructurePlacementSnapshot.from(placementPlan);
-        BoundingBox boundingBox = boundingBox(result.surveyBounds(), context);
+        BoundingBox boundingBox = boundingBox(
+                result.surveyBounds(),
+                snapshot,
+                profile,
+                context
+        );
         return Optional.of(new Generation(center, new CitiesAriseSuburbPiece(boundingBox, snapshot)));
     }
 
@@ -109,15 +111,44 @@ final class SuburbStructureGeneration {
         return Math.addExact(regionStart, SettlementRegion.REGION_BLOCKS / 2);
     }
 
-    private static BoundingBox boundingBox(GridBounds bounds, Structure.GenerationContext context) {
+    private static BoundingBox boundingBox(
+            GridBounds bounds,
+            SuburbStructurePlacementSnapshot snapshot,
+            SettlementProfile profile,
+            Structure.GenerationContext context
+    ) {
+        int minY = minimumStructureY(snapshot, profile, context);
+        int maxY = maximumStructureY(snapshot, profile, context);
         return new BoundingBox(
                 bounds.minX(),
-                context.heightAccessor().getMinBuildHeight(),
+                minY,
                 bounds.minZ(),
                 bounds.maxXExclusive() - 1,
-                context.heightAccessor().getMaxBuildHeight() - 1,
+                maxY,
                 bounds.maxZExclusive() - 1
         );
+    }
+
+    private static int minimumStructureY(
+            SuburbStructurePlacementSnapshot snapshot,
+            SettlementProfile profile,
+            Structure.GenerationContext context
+    ) {
+        int fillDepth = profile.suburbPlanningSettings().maxFillDepth();
+        int minimumY = snapshot.minimumPlatformY() - fillDepth - 1;
+        return Math.max(context.heightAccessor().getMinBuildHeight(), minimumY);
+    }
+
+    private static int maximumStructureY(
+            SuburbStructurePlacementSnapshot snapshot,
+            SettlementProfile profile,
+            Structure.GenerationContext context
+    ) {
+        int cutDepth = profile.suburbPlanningSettings().maxCutDepth();
+        int operationTop = Math.max(snapshot.maximumVerticalOffset(), 0);
+        int clearanceTop = cutDepth + WorldgenPlacementPolicy.VEGETATION_CLEARANCE;
+        int maximumY = snapshot.maximumPlatformY() + Math.max(operationTop, clearanceTop);
+        return Math.min(context.heightAccessor().getMaxBuildHeight() - 1, maximumY);
     }
 
     private void logMissingProfile(SettlementProfileId profileId) {

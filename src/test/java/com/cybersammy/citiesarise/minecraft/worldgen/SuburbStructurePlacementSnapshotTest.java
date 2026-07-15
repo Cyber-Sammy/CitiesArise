@@ -68,6 +68,36 @@ class SuburbStructurePlacementSnapshotTest {
         assertThrows(IllegalArgumentException.class, () -> DebugPlacementRole.fromSerializedId(100));
     }
 
+    @Test
+    void snapshotVersionRejectsMissingAndUnknownFormats() {
+        SuburbStructurePlacementSnapshot.requireSupportedVersion(
+                SuburbStructurePlacementSnapshot.currentVersion()
+        );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> SuburbStructurePlacementSnapshot.requireSupportedVersion(0)
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> SuburbStructurePlacementSnapshot.requireSupportedVersion(2)
+        );
+    }
+
+    @Test
+    void reportsPersistedVerticalRange() {
+        SuburbStructurePlacementSnapshot snapshot = SuburbStructurePlacementSnapshot.from(
+                new DebugPlacementPlan(List.of(
+                        operation(0, 0, -1, DebugPlacementRole.FOUNDATION, OptionalInt.of(63)),
+                        operation(0, 0, 5, DebugPlacementRole.BUILDING_ROOF, OptionalInt.of(70))
+                ))
+        );
+
+        assertEquals(63, snapshot.minimumPlatformY());
+        assertEquals(70, snapshot.maximumPlatformY());
+        assertEquals(5, snapshot.maximumVerticalOffset());
+    }
+
     private static DebugBlockPlacementOperation operation(
             int x,
             int z,

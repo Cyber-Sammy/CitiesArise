@@ -14,6 +14,8 @@ import net.minecraft.nbt.CompoundTag;
 
 public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
     private static final String OPERATIONS_TAG = "Operations";
+    private static final String VERSION_TAG = "SnapshotVersion";
+    private static final int CURRENT_VERSION = 1;
     private static final int VALUES_PER_OPERATION = 5;
     private static final int NO_PLATFORM = Integer.MIN_VALUE;
     private static final PlanElementId STRUCTURE_SOURCE_ID = new PlanElementId(
@@ -35,6 +37,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
 
     public static SuburbStructurePlacementSnapshot load(CompoundTag tag) {
         Objects.requireNonNull(tag, "tag");
+        requireSupportedVersion(tag.getInt(VERSION_TAG));
         return fromIntArray(tag.getIntArray(OPERATIONS_TAG));
     }
 
@@ -60,7 +63,19 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
 
     public void save(CompoundTag tag) {
         Objects.requireNonNull(tag, "tag");
+        tag.putInt(VERSION_TAG, CURRENT_VERSION);
         tag.putIntArray(OPERATIONS_TAG, toIntArray());
+    }
+
+    static int currentVersion() {
+        return CURRENT_VERSION;
+    }
+
+    static void requireSupportedVersion(int version) {
+        if (version == CURRENT_VERSION) {
+            return;
+        }
+        throw new IllegalArgumentException("unsupported structure placement snapshot version: " + version);
     }
 
     int[] toIntArray() {
@@ -78,6 +93,29 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
 
     public DebugPlacementPlan toPlacementPlan() {
         return new DebugPlacementPlan(operations.stream().map(Operation::toPlacementOperation).toList());
+    }
+
+    int minimumPlatformY() {
+        return operations.stream()
+                .filter(operation -> operation.platformY().isPresent())
+                .mapToInt(operation -> operation.platformY().getAsInt())
+                .min()
+                .orElseThrow(() -> new IllegalStateException("structure snapshot has no platform elevations"));
+    }
+
+    int maximumPlatformY() {
+        return operations.stream()
+                .filter(operation -> operation.platformY().isPresent())
+                .mapToInt(operation -> operation.platformY().getAsInt())
+                .max()
+                .orElseThrow(() -> new IllegalStateException("structure snapshot has no platform elevations"));
+    }
+
+    int maximumVerticalOffset() {
+        return operations.stream()
+                .mapToInt(Operation::verticalOffset)
+                .max()
+                .orElseThrow();
     }
 
     private static OptionalInt optionalPlatform(int value) {

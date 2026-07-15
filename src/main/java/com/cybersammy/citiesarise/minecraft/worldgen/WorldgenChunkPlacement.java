@@ -11,9 +11,6 @@ import java.util.Map;
 import java.util.Objects;
 
 final class WorldgenChunkPlacement {
-    private static final int VEGETATION_CLEARANCE = 48;
-    private static final int VEGETATION_CLEARANCE_RADIUS = 5;
-
     int apply(WorldgenBlockAccess level, DebugChunkPlacementPlan placementPlan) {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(placementPlan, "placementPlan");
@@ -129,8 +126,9 @@ final class WorldgenChunkPlacement {
             Map<GridPoint, SurfaceColumn> columns,
             GridPoint center
     ) {
-        for (int zOffset = -VEGETATION_CLEARANCE_RADIUS; zOffset <= VEGETATION_CLEARANCE_RADIUS; zOffset++) {
-            for (int xOffset = -VEGETATION_CLEARANCE_RADIUS; xOffset <= VEGETATION_CLEARANCE_RADIUS; xOffset++) {
+        int radius = WorldgenPlacementPolicy.VEGETATION_CLEARANCE_RADIUS;
+        for (int zOffset = -radius; zOffset <= radius; zOffset++) {
+            for (int xOffset = -radius; xOffset <= radius; xOffset++) {
                 GridPoint point = new GridPoint(center.x() + xOffset, center.z() + zOffset);
                 if (plan.chunk().contains(point)) {
                     columns.computeIfAbsent(point, ignored -> surfaceColumn(level, point));
@@ -165,7 +163,7 @@ final class WorldgenChunkPlacement {
     }
 
     private static int vegetationClearanceTop(WorldgenBlockAccess level, SurfaceColumn column) {
-        int requiredTop = column.placementY() + VEGETATION_CLEARANCE + 1;
+        int requiredTop = column.placementY() + WorldgenPlacementPolicy.VEGETATION_CLEARANCE + 1;
         int detectedTop = Math.max(column.topHeight(), requiredTop);
         return Math.min(level.maxBuildHeight(), detectedTop);
     }

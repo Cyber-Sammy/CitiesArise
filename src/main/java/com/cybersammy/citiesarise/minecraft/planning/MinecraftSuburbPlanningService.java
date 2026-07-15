@@ -25,7 +25,6 @@ import com.cybersammy.citiesarise.minecraft.terrain.MinecraftTerrainSampler;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftWorldgenTerrainProvider;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.WorldGenLevel;
@@ -153,7 +152,7 @@ public final class MinecraftSuburbPlanningService {
                 profileId,
                 worldgenProfile.surveySize(),
                 worldgenProfile.planningSettings(),
-                terrainProvider::sample,
+                terrainProvider,
                 CitiesAriseConfig.terrainLoggingEnabled(),
                 CitiesAriseConfig.planningLoggingEnabled()
         ));
@@ -186,7 +185,7 @@ public final class MinecraftSuburbPlanningService {
                 context.surveySize(),
                 context.planningSettings(),
                 TerrainSurveySource.WORLDGEN_BASE,
-                context.terrainProvider()::sample,
+                context.terrainProvider(),
                 context.terrainLoggingEnabled(),
                 context.planningLoggingEnabled()
         );
@@ -209,7 +208,7 @@ public final class MinecraftSuburbPlanningService {
                 settlementId,
                 seed,
                 context.planningSettings(),
-                context.terrainProvider()::sample,
+                context.terrainProvider(),
                 context.terrainLoggingEnabled(),
                 context.planningLoggingEnabled()
         );
@@ -221,7 +220,7 @@ public final class MinecraftSuburbPlanningService {
             int blockZ,
             SettlementProfileId profileId,
             TerrainSurveySource terrainSurveySource,
-            Function<GridBounds, TerrainSurvey> surveyFactory
+            WorldgenTerrainSurveyProvider terrainProvider
     ) {
         DebugSuburbPlanningConfig config = CitiesAriseConfig.debugSuburbPlanningConfig();
         Optional<SettlementProfile> profile = activeProfile(level, profileId);
@@ -236,7 +235,7 @@ public final class MinecraftSuburbPlanningService {
                 surveySize,
                 planningSettings,
                 terrainSurveySource,
-                surveyFactory,
+                terrainProvider,
                 CitiesAriseConfig.terrainLoggingEnabled(),
                 CitiesAriseConfig.planningLoggingEnabled()
         );
@@ -251,7 +250,7 @@ public final class MinecraftSuburbPlanningService {
             GridSize surveySize,
             SuburbPlanningSettings planningSettings,
             TerrainSurveySource terrainSurveySource,
-            Function<GridBounds, TerrainSurvey> surveyFactory,
+            WorldgenTerrainSurveyProvider terrainProvider,
             boolean terrainLoggingEnabled,
             boolean planningLoggingEnabled
     ) {
@@ -277,7 +276,7 @@ public final class MinecraftSuburbPlanningService {
                         settlementId,
                         seed,
                         planningSettings,
-                        surveyFactory,
+                        terrainProvider,
                         terrainLoggingEnabled,
                         planningLoggingEnabled
                 )
@@ -295,13 +294,13 @@ public final class MinecraftSuburbPlanningService {
             PlanElementId settlementId,
             long seed,
             SuburbPlanningSettings planningSettings,
-            Function<GridBounds, TerrainSurvey> surveyFactory,
+            WorldgenTerrainSurveyProvider terrainProvider,
             boolean terrainLoggingEnabled,
             boolean planningLoggingEnabled
     ) {
         logTerrainStart(region, bounds, seed, settlementId, terrainLoggingEnabled);
 
-        TerrainSurvey survey = surveyFactory.apply(bounds);
+        TerrainSurvey survey = terrainProvider.sample(bounds);
         SuburbPlanningRequest request = new SuburbPlanningRequest(
                 settlementId,
                 survey,
@@ -309,7 +308,13 @@ public final class MinecraftSuburbPlanningService {
                 planningSettings
         );
         SuburbPlanningResult result = planner.plan(request);
-        SuburbPlanningResult transformedResult = transformService.apply(result, seed);
+        SuburbPlanningResult refinedResult = WorldgenWaterMaskRefiner.refine(
+                planner,
+                terrainProvider,
+                request,
+                result
+        );
+        SuburbPlanningResult transformedResult = transformService.apply(refinedResult, seed);
         SuburbDebugPlanResult debugResult = SuburbDebugPlanResult.from(region, bounds, seed, transformedResult);
 
         logPlanningResult(debugResult, planningLoggingEnabled);

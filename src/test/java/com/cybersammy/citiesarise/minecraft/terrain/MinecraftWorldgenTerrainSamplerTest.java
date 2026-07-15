@@ -16,6 +16,7 @@ import com.cybersammy.citiesarise.minecraft.terrain.MinecraftWorldgenTerrainSamp
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftWorldgenTerrainSampler.TerrainSource;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class MinecraftWorldgenTerrainSamplerTest {
@@ -56,10 +57,7 @@ final class MinecraftWorldgenTerrainSamplerTest {
         for (int calls : source.heightCalls.values()) {
             assertEquals(1, calls);
         }
-        assertTrue(source.supportHeightCalls.size() <= 25);
-        for (int calls : source.supportHeightCalls.values()) {
-            assertEquals(1, calls);
-        }
+        assertTrue(source.supportHeightCalls.isEmpty());
     }
 
     @Test
@@ -73,7 +71,10 @@ final class MinecraftWorldgenTerrainSamplerTest {
         MinecraftWorldgenTerrainSampler sampler = new MinecraftWorldgenTerrainSampler(source);
 
         TerrainCell cell = requiredCell(
-                sampler.sample(new GridBounds(point(0, 0), new GridSize(1, 1))),
+                sampler.sample(
+                        new GridBounds(point(0, 0), new GridSize(1, 1)),
+                        Set.of(point(0, 0))
+                ),
                 point(0, 0)
         );
 
@@ -99,19 +100,57 @@ final class MinecraftWorldgenTerrainSamplerTest {
     }
 
     @Test
-    void preservesShallowFluidDifferenceBeforeHeightRounding() {
+    void detectsOneBlockFluidDepthAtExactColumn() {
         FakeTerrainSource source = new FakeTerrainSource();
-        source.supportHeight(point(0, 0), 63);
+        source.supportHeight(point(2, 2), 63);
         MinecraftWorldgenTerrainSampler sampler = new MinecraftWorldgenTerrainSampler(source);
 
         TerrainCell cell = requiredCell(
-                sampler.sample(new GridBounds(point(2, 2), new GridSize(1, 1))),
+                sampler.sample(
+                        new GridBounds(point(2, 2), new GridSize(1, 1)),
+                        Set.of(point(2, 2))
+                ),
                 point(2, 2)
         );
 
         assertEquals(64, cell.height());
         assertTrue(cell.water());
         assertEquals(TerrainCategory.BLOCKED, cell.terrainCategory());
+    }
+
+    @Test
+    void detectsSmallPondBetweenSparseHeightSamples() {
+        GridPoint pond = point(2, 2);
+        FakeTerrainSource source = new FakeTerrainSource();
+        source.height(pond, 64);
+        source.supportHeight(pond, 62);
+        MinecraftWorldgenTerrainSampler sampler = new MinecraftWorldgenTerrainSampler(source);
+
+        TerrainSurvey survey = sampler.sample(
+                new GridBounds(point(0, 0), new GridSize(5, 5)),
+                Set.of(pond)
+        );
+
+        assertTrue(requiredCell(survey, pond).water());
+        assertEquals(TerrainCategory.BLOCKED, requiredCell(survey, pond).terrainCategory());
+        assertEquals(1, source.supportHeightCalls.get(pond));
+    }
+
+    @Test
+    void doesNotExpandCornerWaterOntoDryCheckedColumn() {
+        GridPoint dryPoint = point(1, 1);
+        FakeTerrainSource source = new FakeTerrainSource();
+        source.height(point(0, 0), 64);
+        source.supportHeight(point(0, 0), 62);
+        MinecraftWorldgenTerrainSampler sampler = new MinecraftWorldgenTerrainSampler(source);
+
+        TerrainSurvey survey = sampler.sample(
+                new GridBounds(point(0, 0), new GridSize(2, 2)),
+                Set.of(dryPoint)
+        );
+
+        assertFalse(requiredCell(survey, dryPoint).water());
+        assertEquals(TerrainCategory.BUILDABLE, requiredCell(survey, dryPoint).terrainCategory());
     }
 
     @Test

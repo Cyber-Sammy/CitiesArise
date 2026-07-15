@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.ToIntFunction;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.chunk.ChunkGenerator;
@@ -38,19 +39,24 @@ public final class MinecraftWorldgenTerrainSampler {
     }
 
     public TerrainSurvey sample(GridBounds bounds) {
+        return sample(bounds, Set.of());
+    }
+
+    TerrainSurvey sample(GridBounds bounds, Set<GridPoint> exactWaterCheckPoints) {
         Objects.requireNonNull(bounds, "bounds");
+        Objects.requireNonNull(exactWaterCheckPoints, "exactWaterCheckPoints");
         heights.clear();
         sampledHeights.clear();
         sampledSupportHeights.clear();
         biomePaths.clear();
-        return TerrainSurvey.sample(bounds, this::sampleCell);
+        return TerrainSurvey.sample(bounds, point -> sampleCell(point, exactWaterCheckPoints));
     }
 
-    private Optional<TerrainCell> sampleCell(GridPoint point) {
+    private Optional<TerrainCell> sampleCell(GridPoint point, Set<GridPoint> exactWaterCheckPoints) {
         int height = height(point);
         String biomePath = biomePath(point, height);
         ColumnSample column = terrainSource.column(point, height, biomePath);
-        boolean water = column.water() || hasFluidSurface(point);
+        boolean water = column.water() || hasExactFluidSurface(point, exactWaterCheckPoints);
         double slope = slope(point, height);
         BiomeCategory biomeCategory = MinecraftBiomeClassifier.classify(biomePath);
         TerrainCategory terrainCategory = MinecraftTerrainClassifier.classify(
@@ -79,10 +85,22 @@ public final class MinecraftWorldgenTerrainSampler {
         return roundedInterpolatedHeight(point, sampledHeights, terrainSource::height);
     }
 
-    private boolean hasFluidSurface(GridPoint point) {
-        double surface = interpolatedHeight(point, sampledHeights, terrainSource::height);
-        double support = interpolatedHeight(point, sampledSupportHeights, terrainSource::supportHeight);
+    private boolean hasExactFluidSurface(GridPoint point, Set<GridPoint> exactWaterCheckPoints) {
+        if (!exactWaterCheckPoints.contains(point)) {
+            return false;
+        }
+
+        int surface = exactHeight(point, sampledHeights, terrainSource::height);
+        int support = exactHeight(point, sampledSupportHeights, terrainSource::supportHeight);
         return surface > support;
+    }
+
+    private static int exactHeight(
+            GridPoint point,
+            Map<GridPoint, Integer> samples,
+            ToIntFunction<GridPoint> sampler
+    ) {
+        return samples.computeIfAbsent(point, sampler::applyAsInt);
     }
 
     private static int roundedInterpolatedHeight(

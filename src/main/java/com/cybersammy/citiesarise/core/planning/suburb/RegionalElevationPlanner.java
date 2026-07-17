@@ -1,5 +1,6 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
+import com.cybersammy.citiesarise.core.earthwork.BuildingAccessResolver;
 import com.cybersammy.citiesarise.core.earthwork.ElevationTransition;
 import com.cybersammy.citiesarise.core.earthwork.ElevationTransitionType;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
@@ -38,10 +39,8 @@ final class RegionalElevationPlanner {
                 settlementPlan.tags(),
                 settlementPlan.properties()
         );
-        RegionalElevationPlan elevationPlan = new RegionalElevationPlan(
-                elevationZones(elevatedPlan),
-                elevationTransitions(elevatedPlan)
-        );
+        List<ElevationZone> zones = elevationZones(elevatedPlan);
+        RegionalElevationPlan elevationPlan = new RegionalElevationPlan(zones, elevationTransitions(elevatedPlan, zones));
         return new RegionalElevationPlanningResult(elevatedPlan, elevationPlan);
     }
 
@@ -86,11 +85,14 @@ final class RegionalElevationPlanner {
         return List.copyOf(zones);
     }
 
-    private static List<ElevationTransition> elevationTransitions(SettlementPlan plan) {
+    private static List<ElevationTransition> elevationTransitions(
+            SettlementPlan plan,
+            List<ElevationZone> zones
+    ) {
         Map<PlanElementId, RoadNode> nodesById = nodesById(plan.roadGraph());
         List<ElevationTransition> transitions = new ArrayList<>();
         addRoadTransitions(plan.roadGraph(), nodesById, transitions);
-        addBuildingAccessTransitions(plan, nodesById, transitions);
+        addBuildingAccessTransitions(zones, transitions);
         return List.copyOf(transitions);
     }
 
@@ -121,24 +123,22 @@ final class RegionalElevationPlanner {
     }
 
     private static void addBuildingAccessTransitions(
-            SettlementPlan plan,
-            Map<PlanElementId, RoadNode> nodesById,
+            List<ElevationZone> zones,
             List<ElevationTransition> transitions
     ) {
-        List<RoadSegment> roadSegments = sortedSegments(plan.roadGraph().segments());
-        if (roadSegments.isEmpty()) {
-            return;
-        }
-        for (BuildingSlot slot : sortedBuildingSlots(plan.buildingSlots())) {
-            GridPoint accessPoint = buildingAccessPoint(slot.bounds());
-            RoadSegment road = nearestRoad(accessPoint, roadSegments, nodesById);
+        List<ElevationZone> buildingZones = zones.stream()
+                .filter(zone -> zone.type() == ElevationZoneType.BUILDING_PAD)
+                .sorted(Comparator.comparing(zone -> zone.sourceElementId().value()))
+                .toList();
+        for (ElevationZone buildingZone : buildingZones) {
+            BuildingAccessResolver.BuildingAccess access = BuildingAccessResolver.resolve(zones, buildingZone);
             transitions.add(new ElevationTransition(
                     ElevationTransitionType.BUILDING_ACCESS,
-                    road.id(),
-                    slot.id(),
-                    accessPoint,
-                    TerrainPlatform.requiredElevation(road.properties()),
-                    TerrainPlatform.requiredElevation(slot.properties())
+                    access.roadZone().sourceElementId(),
+                    buildingZone.sourceElementId(),
+                    access.anchor(),
+                    access.roadZone().targetElevation(),
+                    buildingZone.targetElevation()
             ));
         }
     }
@@ -157,49 +157,6 @@ final class RegionalElevationPlanner {
                 TerrainPlatform.requiredElevation(source.properties()),
                 TerrainPlatform.requiredElevation(target.properties())
         );
-    }
-
-    private static RoadSegment nearestRoad(
-            GridPoint point,
-            List<RoadSegment> segments,
-            Map<PlanElementId, RoadNode> nodesById
-    ) {
-        RoadSegment nearest = null;
-        int nearestDistance = Integer.MAX_VALUE;
-        for (RoadSegment segment : segments) {
-            RoadNode start = RoadElevationPlanner.requiredNode(nodesById, segment.startNodeId());
-            RoadNode end = RoadElevationPlanner.requiredNode(nodesById, segment.endNodeId());
-            GridBounds bounds = AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
-            int distance = distanceToBounds(point, bounds);
-            if (distance < nearestDistance) {
-                nearest = segment;
-                nearestDistance = distance;
-            }
-        }
-        if (nearest == null) {
-            throw new IllegalStateException("building access requires at least one road segment");
-        }
-        return nearest;
-    }
-
-    private static int distanceToBounds(GridPoint point, GridBounds bounds) {
-        int xDistance = axisDistance(point.x(), bounds.minX(), bounds.maxXExclusive());
-        int zDistance = axisDistance(point.z(), bounds.minZ(), bounds.maxZExclusive());
-        return Math.addExact(xDistance, zDistance);
-    }
-
-    private static int axisDistance(int coordinate, int minimum, int maximumExclusive) {
-        if (coordinate < minimum) {
-            return minimum - coordinate;
-        }
-        if (coordinate >= maximumExclusive) {
-            return coordinate - (maximumExclusive - 1);
-        }
-        return 0;
-    }
-
-    private static GridPoint buildingAccessPoint(GridBounds bounds) {
-        return new GridPoint(bounds.minX() + (bounds.size().width() / 2), bounds.minZ());
     }
 
     private static Map<PlanElementId, RoadNode> nodesById(RoadGraph graph) {

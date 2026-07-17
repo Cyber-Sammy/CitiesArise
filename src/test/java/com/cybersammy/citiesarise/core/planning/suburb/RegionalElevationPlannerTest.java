@@ -3,6 +3,7 @@ package com.cybersammy.citiesarise.core.planning.suburb;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.cybersammy.citiesarise.core.earthwork.BuildingAccessResolver;
 import com.cybersammy.citiesarise.core.earthwork.ElevationTransition;
 import com.cybersammy.citiesarise.core.earthwork.ElevationTransitionType;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
@@ -56,6 +57,7 @@ final class RegionalElevationPlannerTest {
 
         assertEquals(id("building"), access.targetZoneId());
         assertTrue(building.bounds().contains(access.anchor()));
+        assertTrue(BuildingAccessResolver.isPerimeterPoint(building.bounds(), access.anchor()));
         assertEquals(building.targetElevation(), access.targetElevation());
     }
 

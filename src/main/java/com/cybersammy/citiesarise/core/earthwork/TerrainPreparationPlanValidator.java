@@ -67,7 +67,10 @@ public final class TerrainPreparationPlanValidator {
         for (RoadSegment segment : plan.roadGraph().segments()) {
             RoadNode start = nodesById.get(segment.startNodeId());
             RoadNode end = nodesById.get(segment.endNodeId());
-            if (start == null || end == null) {
+            if (start == null) {
+                continue;
+            }
+            if (end == null) {
                 continue;
             }
             GridBounds bounds = AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
@@ -139,7 +142,11 @@ public final class TerrainPreparationPlanValidator {
             errors.add(error(elementId, "terrain preparation bounds do not match element footprint"));
         }
         Integer platformY = platformElevation(properties);
-        if (platformY == null || platformY != zone.targetElevation()) {
+        if (platformY == null) {
+            errors.add(error(elementId, "terrain preparation elevation does not match platform_y"));
+            return;
+        }
+        if (platformY != zone.targetElevation()) {
             errors.add(error(elementId, "terrain preparation elevation does not match platform_y"));
         }
     }
@@ -232,7 +239,7 @@ public final class TerrainPreparationPlanValidator {
                 validateRoadTransition(transition, source, target, errors);
                 continue;
             }
-            validateBuildingAccessTransition(transition, source, target, errors);
+            validateBuildingAccessTransition(transition, source, target, elevationPlan.zones(), errors);
         }
     }
 
@@ -242,25 +249,62 @@ public final class TerrainPreparationPlanValidator {
             ElevationZone target,
             List<PlanValidationError> errors
     ) {
-        if (source.type() != ElevationZoneType.ROAD_SEGMENT || target.type() != ElevationZoneType.ROAD_SEGMENT) {
+        if (source.type() != ElevationZoneType.ROAD_SEGMENT) {
             errors.add(error(transition.sourceZoneId(), "road transition must connect road zones"));
+            return;
+        }
+        if (target.type() != ElevationZoneType.ROAD_SEGMENT) {
+            errors.add(error(transition.sourceZoneId(), "road transition must connect road zones"));
+            return;
         }
         if (transition.elevationDelta() > 1L) {
             errors.add(error(transition.sourceZoneId(), "connected road elevation delta exceeds one block"));
         }
+        if (!roadAnchorBelongsToBothZones(transition, source, target)) {
+            errors.add(error(transition.sourceZoneId(), "road transition anchor must belong to both road zones"));
+        }
+    }
+
+    private static boolean roadAnchorBelongsToBothZones(
+            ElevationTransition transition,
+            ElevationZone source,
+            ElevationZone target
+    ) {
+        if (!source.bounds().contains(transition.anchor())) {
+            return false;
+        }
+        return target.bounds().contains(transition.anchor());
     }
 
     private static void validateBuildingAccessTransition(
             ElevationTransition transition,
             ElevationZone source,
             ElevationZone target,
+            List<ElevationZone> zones,
             List<PlanValidationError> errors
     ) {
-        if (source.type() != ElevationZoneType.ROAD_SEGMENT || target.type() != ElevationZoneType.BUILDING_PAD) {
+        if (source.type() != ElevationZoneType.ROAD_SEGMENT) {
             errors.add(error(transition.targetZoneId(), "building access transition must connect road and building zones"));
+            return;
+        }
+        if (target.type() != ElevationZoneType.BUILDING_PAD) {
+            errors.add(error(transition.targetZoneId(), "building access transition must connect road and building zones"));
+            return;
         }
         if (!target.bounds().contains(transition.anchor())) {
             errors.add(error(transition.targetZoneId(), "building access anchor must be inside building bounds"));
+            return;
+        }
+        if (!BuildingAccessResolver.isPerimeterPoint(target.bounds(), transition.anchor())) {
+            errors.add(error(transition.targetZoneId(), "building access anchor must be on the building perimeter"));
+        }
+
+        BuildingAccessResolver.BuildingAccess expected = BuildingAccessResolver.resolve(zones, target);
+        if (!transition.sourceZoneId().equals(expected.roadZone().sourceElementId())) {
+            errors.add(error(transition.targetZoneId(), "building access must use the nearest road zone"));
+        }
+        if (!transition.anchor().equals(expected.anchor())) {
+            errors.add(error(transition.targetZoneId(), "building access anchor must be the nearest perimeter point"));
         }
     }
 

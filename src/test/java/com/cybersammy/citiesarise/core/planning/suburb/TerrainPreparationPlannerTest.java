@@ -2,6 +2,9 @@ package com.cybersammy.citiesarise.core.planning.suburb;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
+import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
+import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -31,7 +34,7 @@ final class TerrainPreparationPlannerTest {
                 new SuburbPlanningSettings(1, 1.0, 1, 3, 3, 0, 20, 3, 3, 13L)
         );
 
-        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(request, crossingRoadPlan());
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(request, crossingRoadElevationPlan());
 
         assertEquals(13L, assessment.plan().orElseThrow().fillVolume());
         assertEquals(13, assessment.plan().orElseThrow().columns().size());
@@ -47,7 +50,7 @@ final class TerrainPreparationPlannerTest {
                 new SuburbPlanningSettings(1, 1.0, 1, 3, 3, 0, 20, 3, 3, 0L)
         );
 
-        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(request, crossingRoadPlan());
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(request, crossingRoadElevationPlan());
 
         assertEquals(lowestPoint, assessment.diagnostic().orElseThrow().cell().point());
     }
@@ -67,6 +70,27 @@ final class TerrainPreparationPlannerTest {
                 List.of(),
                 Set.of(),
                 PlanProperties.empty()
+        );
+    }
+
+    private static RegionalElevationPlan crossingRoadElevationPlan() {
+        SettlementPlan plan = crossingRoadPlan();
+        return new RegionalElevationPlan(
+                List.of(
+                        new ElevationZone(
+                                plan.roadGraph().segments().get(0).id(),
+                                ElevationZoneType.ROAD_SEGMENT,
+                                new GridBounds(new GridPoint(2, 5), new GridSize(7, 1)),
+                                64
+                        ),
+                        new ElevationZone(
+                                plan.roadGraph().segments().get(1).id(),
+                                ElevationZoneType.ROAD_SEGMENT,
+                                new GridBounds(new GridPoint(5, 2), new GridSize(1, 7)),
+                                64
+                        )
+                ),
+                List.of()
         );
     }
 

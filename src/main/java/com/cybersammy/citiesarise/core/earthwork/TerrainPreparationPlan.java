@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Set;
 
 public record TerrainPreparationPlan(
+        RegionalElevationPlan elevationPlan,
         TerrainPreparationStatus status,
         List<TerrainPreparationArea> areas,
         List<TerrainPreparationColumn> columns,
@@ -14,6 +15,7 @@ public record TerrainPreparationPlan(
         long fillVolume
 ) {
     public TerrainPreparationPlan {
+        Objects.requireNonNull(elevationPlan, "elevationPlan");
         Objects.requireNonNull(status, "status");
         areas = immutableAreas(areas);
         columns = immutableColumns(columns);
@@ -26,15 +28,24 @@ public record TerrainPreparationPlan(
     }
 
     public static TerrainPreparationPlan of(
+            RegionalElevationPlan elevationPlan,
             List<TerrainPreparationArea> areas,
             List<TerrainPreparationColumn> columns
     ) {
+        Objects.requireNonNull(elevationPlan, "elevationPlan");
         List<TerrainPreparationArea> immutableAreas = immutableAreas(areas);
         List<TerrainPreparationColumn> immutableColumns = immutableColumns(columns);
         long cutVolume = sumColumnCutVolume(immutableColumns);
         long fillVolume = sumColumnFillVolume(immutableColumns);
         TerrainPreparationStatus status = preparationStatus(cutVolume, fillVolume);
-        return new TerrainPreparationPlan(status, immutableAreas, immutableColumns, cutVolume, fillVolume);
+        return new TerrainPreparationPlan(
+                elevationPlan,
+                status,
+                immutableAreas,
+                immutableColumns,
+                cutVolume,
+                fillVolume
+        );
     }
 
     public long totalVolume() {

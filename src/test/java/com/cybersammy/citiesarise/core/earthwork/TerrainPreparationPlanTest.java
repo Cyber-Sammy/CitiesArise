@@ -15,7 +15,11 @@ import org.junit.jupiter.api.Test;
 final class TerrainPreparationPlanTest {
     @Test
     void reportsAcceptedWhenNoEarthworkIsRequired() {
-        TerrainPreparationPlan plan = TerrainPreparationPlan.of(List.of(area(0L, 0L)), List.of(column(0, 0)));
+        TerrainPreparationPlan plan = TerrainPreparationPlan.of(
+                elevationPlan(),
+                List.of(area(0L, 0L)),
+                List.of(column(0, 0))
+        );
 
         assertEquals(TerrainPreparationStatus.ACCEPTED, plan.status());
         assertFalse(plan.requiresEarthworks());
@@ -25,6 +29,7 @@ final class TerrainPreparationPlanTest {
     @Test
     void reportsAcceptedWithEarthworksAndSumsVolumes() {
         TerrainPreparationPlan plan = TerrainPreparationPlan.of(
+                elevationPlan(),
                 List.of(area(4L, 2L), area(3L, 5L)),
                 List.of(column(7, 0), column(0, 7))
         );
@@ -41,6 +46,7 @@ final class TerrainPreparationPlanTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new TerrainPreparationPlan(
+                        elevationPlan(),
                         TerrainPreparationStatus.ACCEPTED_WITH_EARTHWORKS,
                         List.of(area(1L, 2L)),
                         List.of(column(1, 2)),
@@ -55,6 +61,7 @@ final class TerrainPreparationPlanTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new TerrainPreparationPlan(
+                        elevationPlan(),
                         TerrainPreparationStatus.REJECTED,
                         List.of(),
                         List.of(),
@@ -71,6 +78,7 @@ final class TerrainPreparationPlanTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new TerrainPreparationPlan(
+                        elevationPlan(),
                         TerrainPreparationStatus.ACCEPTED,
                         List.of(area),
                         List.of(column(1, 0)),
@@ -86,7 +94,23 @@ final class TerrainPreparationPlanTest {
 
         assertThrows(
                 IllegalArgumentException.class,
-                () -> TerrainPreparationPlan.of(List.of(area(0L, 0L)), List.of(column, column))
+                () -> TerrainPreparationPlan.of(
+                        elevationPlan(),
+                        List.of(area(0L, 0L)),
+                        List.of(column, column)
+                )
+        );
+    }
+
+    private static RegionalElevationPlan elevationPlan() {
+        return new RegionalElevationPlan(
+                List.of(new ElevationZone(
+                        new PlanElementId("area/test"),
+                        ElevationZoneType.ROAD_SEGMENT,
+                        new GridBounds(new GridPoint(0, 0), new GridSize(2, 2)),
+                        64
+                )),
+                List.of()
         );
     }
 

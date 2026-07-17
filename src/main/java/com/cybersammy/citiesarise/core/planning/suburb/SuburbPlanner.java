@@ -61,7 +61,12 @@ public final class SuburbPlanner {
         }
 
         SettlementPlan plan = createPlan(request, layout);
-        TerrainPreparationAssessment preparation = TerrainPreparationPlanner.plan(request, plan);
+        RegionalElevationPlanningResult elevationPlanning = RegionalElevationPlanner.plan(request, plan);
+        plan = elevationPlanning.settlementPlan();
+        TerrainPreparationAssessment preparation = TerrainPreparationPlanner.plan(
+                request,
+                elevationPlanning.elevationPlan()
+        );
         if (preparation.diagnostic().isPresent()) {
             return SuburbPlanningResult.rejectedTerrain(preparation.diagnostic().orElseThrow());
         }
@@ -222,7 +227,6 @@ public final class SuburbPlanner {
         GridBounds bounds = request.survey().bounds();
         RoadGraph roadGraph = createRoadGraph(request, bounds, layout.mainRoadZ(), layout.sideRoadXs());
         roadGraph = RoadGraphSegmenter.splitLongSegments(roadGraph, MAX_ROAD_ELEVATION_NODE_DISTANCE);
-        roadGraph = RoadElevationPlanner.apply(request, roadGraph);
         List<Parcel> parcels = createParcels(request, layout.parcelBounds());
         List<BuildingSlot> buildingSlots = createBuildingSlots(request, parcels);
 
@@ -532,7 +536,7 @@ public final class SuburbPlanner {
                 parcel.id(),
                 buildingBounds,
                 Set.of(new PlanTag("residential")),
-                TerrainPlatform.withHighestElevation(PlanProperties.empty(), request, buildingBounds)
+                PlanProperties.empty()
         );
     }
 

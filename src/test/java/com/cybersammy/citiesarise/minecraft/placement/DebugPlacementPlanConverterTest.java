@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
+import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
+import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationArea;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
@@ -255,7 +258,16 @@ final class DebugPlacementPlanConverterTest {
                 1,
                 0
         );
-        return TerrainPreparationPlan.of(List.of(area), List.of(column));
+        RegionalElevationPlan elevationPlan = new RegionalElevationPlan(
+                List.of(new ElevationZone(
+                        roadId,
+                        ElevationZoneType.ROAD_SEGMENT,
+                        area.bounds(),
+                        elevation
+                )),
+                List.of()
+        );
+        return TerrainPreparationPlan.of(elevationPlan, List.of(area), List.of(column));
     }
 
     private static SettlementPlan planWithRoad(

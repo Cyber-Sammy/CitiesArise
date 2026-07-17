@@ -3,14 +3,10 @@ package com.cybersammy.citiesarise.core.planning.suburb;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationArea;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
-import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
-import com.cybersammy.citiesarise.core.geometry.GridBounds;
+import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
+import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
-import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
-import com.cybersammy.citiesarise.core.model.RoadNode;
-import com.cybersammy.citiesarise.core.model.RoadSegment;
-import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability;
@@ -26,85 +22,54 @@ final class TerrainPreparationPlanner {
     private TerrainPreparationPlanner() {
     }
 
-    static TerrainPreparationAssessment plan(SuburbPlanningRequest request, SettlementPlan settlementPlan) {
-        List<AreaDefinition> definitions = areaDefinitions(settlementPlan);
+    static TerrainPreparationAssessment plan(
+            SuburbPlanningRequest request,
+            RegionalElevationPlan elevationPlan
+    ) {
+        List<ElevationZone> zones = elevationPlan.zones();
         Map<GridPoint, TerrainPreparationColumn> columns = new LinkedHashMap<>();
 
-        for (AreaDefinition definition : definitions) {
-            Optional<SuburbTerrainDiagnostic> diagnostic = addColumns(request, definition, columns);
+        for (ElevationZone zone : zones) {
+            Optional<SuburbTerrainDiagnostic> diagnostic = addColumns(request, zone, columns);
             if (diagnostic.isPresent()) {
                 return TerrainPreparationAssessment.rejected(diagnostic.orElseThrow());
             }
         }
 
-        List<TerrainPreparationArea> areas = normalizedAreas(definitions, columns.values());
-        TerrainPreparationPlan preparationPlan = TerrainPreparationPlan.of(areas, List.copyOf(columns.values()));
+        List<TerrainPreparationArea> areas = normalizedAreas(zones, columns.values());
+        TerrainPreparationPlan preparationPlan = TerrainPreparationPlan.of(
+                elevationPlan,
+                areas,
+                List.copyOf(columns.values())
+        );
         if (preparationPlan.totalVolume() > request.settings().maxEarthworkVolume()) {
             return TerrainPreparationAssessment.rejected(totalVolumeDiagnostic(request, columns.values()));
         }
         return TerrainPreparationAssessment.accepted(preparationPlan);
     }
 
-    private static List<AreaDefinition> areaDefinitions(SettlementPlan plan) {
-        List<AreaDefinition> definitions = new ArrayList<>();
-        addRoadDefinitions(plan, definitions);
-        addBuildingDefinitions(plan, definitions);
-        return List.copyOf(definitions);
-    }
-
-    private static void addRoadDefinitions(SettlementPlan plan, List<AreaDefinition> definitions) {
-        Map<PlanElementId, RoadNode> nodesById = nodesById(plan);
-        for (RoadSegment segment : plan.roadGraph().segments()) {
-            RoadNode start = RoadElevationPlanner.requiredNode(nodesById, segment.startNodeId());
-            RoadNode end = RoadElevationPlanner.requiredNode(nodesById, segment.endNodeId());
-            definitions.add(new AreaDefinition(
-                    segment.id(),
-                    AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width()),
-                    TerrainPlatform.requiredElevation(segment.properties())
-            ));
-        }
-    }
-
-    private static void addBuildingDefinitions(SettlementPlan plan, List<AreaDefinition> definitions) {
-        for (BuildingSlot slot : plan.buildingSlots()) {
-            definitions.add(new AreaDefinition(
-                    slot.id(),
-                    slot.bounds(),
-                    TerrainPlatform.requiredElevation(slot.properties())
-            ));
-        }
-    }
-
-    private static Map<PlanElementId, RoadNode> nodesById(SettlementPlan plan) {
-        Map<PlanElementId, RoadNode> nodesById = new HashMap<>();
-        for (RoadNode node : plan.roadGraph().nodes()) {
-            nodesById.put(node.id(), node);
-        }
-        return Map.copyOf(nodesById);
-    }
-
     private static Optional<SuburbTerrainDiagnostic> addColumns(
             SuburbPlanningRequest request,
-            AreaDefinition definition,
+            ElevationZone zone,
             Map<GridPoint, TerrainPreparationColumn> columns
     ) {
-        for (int z = definition.bounds().minZ(); z < definition.bounds().maxZExclusive(); z++) {
-            for (int x = definition.bounds().minX(); x < definition.bounds().maxXExclusive(); x++) {
+        for (int z = zone.bounds().minZ(); z < zone.bounds().maxZExclusive(); z++) {
+            for (int x = zone.bounds().minX(); x < zone.bounds().maxXExclusive(); x++) {
                 GridPoint point = new GridPoint(x, z);
                 TerrainCell cell = TerrainPlatform.requiredTerrainCell(request, point);
-                int elevationDelta = Math.subtractExact(definition.targetElevation(), cell.height() - 1);
+                int elevationDelta = Math.subtractExact(zone.targetElevation(), cell.height() - 1);
                 Optional<TerrainRejectionReason> rejection = rejection(request.settings(), elevationDelta);
                 if (rejection.isPresent()) {
                     return Optional.of(diagnostic(cell, rejection.orElseThrow()));
                 }
-                columns.putIfAbsent(point, column(definition, point, elevationDelta));
+                columns.putIfAbsent(point, column(zone, point, elevationDelta));
             }
         }
         return Optional.empty();
     }
 
     private static TerrainPreparationColumn column(
-            AreaDefinition definition,
+            ElevationZone zone,
             GridPoint point,
             int elevationDelta
     ) {
@@ -112,15 +77,15 @@ final class TerrainPreparationPlanner {
         int fillDepth = Math.max(0, elevationDelta);
         return new TerrainPreparationColumn(
                 point,
-                definition.sourceElementId(),
-                definition.targetElevation(),
+                zone.sourceElementId(),
+                zone.targetElevation(),
                 cutDepth,
                 fillDepth
         );
     }
 
     private static List<TerrainPreparationArea> normalizedAreas(
-            List<AreaDefinition> definitions,
+            List<ElevationZone> zones,
             Iterable<TerrainPreparationColumn> columns
     ) {
         Map<PlanElementId, Volume> volumeByElement = new HashMap<>();
@@ -129,12 +94,12 @@ final class TerrainPreparationPlanner {
         }
 
         List<TerrainPreparationArea> areas = new ArrayList<>();
-        for (AreaDefinition definition : definitions) {
-            Volume volume = volumeByElement.getOrDefault(definition.sourceElementId(), new Volume());
+        for (ElevationZone zone : zones) {
+            Volume volume = volumeByElement.getOrDefault(zone.sourceElementId(), new Volume());
             areas.add(new TerrainPreparationArea(
-                    definition.sourceElementId(),
-                    definition.bounds(),
-                    definition.targetElevation(),
+                    zone.sourceElementId(),
+                    zone.bounds(),
+                    zone.targetElevation(),
                     volume.cutVolume,
                     volume.fillVolume
             ));
@@ -183,9 +148,6 @@ final class TerrainPreparationPlanner {
     ) {
         TerrainSuitability suitability = new TerrainSuitability(0.0, Set.of(rejectionReason), List.of());
         return new SuburbTerrainDiagnostic(cell, suitability);
-    }
-
-    private record AreaDefinition(PlanElementId sourceElementId, GridBounds bounds, int targetElevation) {
     }
 
     private static final class Volume {

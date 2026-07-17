@@ -10,6 +10,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.ToIntFunction;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -21,6 +23,7 @@ public final class MinecraftWorldgenTerrainSampler {
     private final TerrainSource terrainSource;
     private final Map<GridPoint, Integer> heights = new HashMap<>();
     private final Map<GridPoint, Integer> sampledHeights = new HashMap<>();
+    private final Map<GridPoint, Integer> sampledSupportHeights = new HashMap<>();
     private final Map<BiomeSampleKey, String> biomePaths = new HashMap<>();
 
     public MinecraftWorldgenTerrainSampler(
@@ -36,21 +39,28 @@ public final class MinecraftWorldgenTerrainSampler {
     }
 
     public TerrainSurvey sample(GridBounds bounds) {
-        Objects.requireNonNull(bounds, "bounds");
-        heights.clear();
-        sampledHeights.clear();
-        biomePaths.clear();
-        return TerrainSurvey.sample(bounds, this::sampleCell);
+        return sample(bounds, Set.of());
     }
 
-    private Optional<TerrainCell> sampleCell(GridPoint point) {
+    TerrainSurvey sample(GridBounds bounds, Set<GridPoint> exactWaterCheckPoints) {
+        Objects.requireNonNull(bounds, "bounds");
+        Objects.requireNonNull(exactWaterCheckPoints, "exactWaterCheckPoints");
+        heights.clear();
+        sampledHeights.clear();
+        sampledSupportHeights.clear();
+        biomePaths.clear();
+        return TerrainSurvey.sample(bounds, point -> sampleCell(point, exactWaterCheckPoints));
+    }
+
+    private Optional<TerrainCell> sampleCell(GridPoint point, Set<GridPoint> exactWaterCheckPoints) {
         int height = height(point);
         String biomePath = biomePath(point, height);
         ColumnSample column = terrainSource.column(point, height, biomePath);
+        boolean water = column.water() || hasExactFluidSurface(point, exactWaterCheckPoints);
         double slope = slope(point, height);
         BiomeCategory biomeCategory = MinecraftBiomeClassifier.classify(biomePath);
         TerrainCategory terrainCategory = MinecraftTerrainClassifier.classify(
-                column.water(),
+                water,
                 column.lava(),
                 column.surfaceAir(),
                 column.leaves(),
@@ -60,7 +70,7 @@ public final class MinecraftWorldgenTerrainSampler {
         return Optional.of(new TerrainCell(
                 point,
                 height,
-                column.water(),
+                water,
                 slope,
                 biomeCategory,
                 terrainCategory
@@ -72,25 +82,64 @@ public final class MinecraftWorldgenTerrainSampler {
     }
 
     private int sampleHeight(GridPoint point) {
+        return roundedInterpolatedHeight(point, sampledHeights, terrainSource::height);
+    }
+
+    private boolean hasExactFluidSurface(GridPoint point, Set<GridPoint> exactWaterCheckPoints) {
+        if (!exactWaterCheckPoints.contains(point)) {
+            return false;
+        }
+
+        int surface = exactHeight(point, sampledHeights, terrainSource::height);
+        int support = exactHeight(point, sampledSupportHeights, terrainSource::supportHeight);
+        return surface > support;
+    }
+
+    private static int exactHeight(
+            GridPoint point,
+            Map<GridPoint, Integer> samples,
+            ToIntFunction<GridPoint> sampler
+    ) {
+        return samples.computeIfAbsent(point, sampler::applyAsInt);
+    }
+
+    private static int roundedInterpolatedHeight(
+            GridPoint point,
+            Map<GridPoint, Integer> samples,
+            ToIntFunction<GridPoint> sampler
+    ) {
+        return (int) Math.round(interpolatedHeight(point, samples, sampler));
+    }
+
+    private static double interpolatedHeight(
+            GridPoint point,
+            Map<GridPoint, Integer> samples,
+            ToIntFunction<GridPoint> sampler
+    ) {
         int minX = sampleCoordinate(point.x());
         int minZ = sampleCoordinate(point.z());
         int maxX = Math.addExact(minX, HEIGHT_SAMPLE_STEP);
         int maxZ = Math.addExact(minZ, HEIGHT_SAMPLE_STEP);
-        int northWest = sampledHeight(minX, minZ);
-        int northEast = sampledHeight(maxX, minZ);
-        int southWest = sampledHeight(minX, maxZ);
-        int southEast = sampledHeight(maxX, maxZ);
+        int northWest = sampledHeight(samples, sampler, minX, minZ);
+        int northEast = sampledHeight(samples, sampler, maxX, minZ);
+        int southWest = sampledHeight(samples, sampler, minX, maxZ);
+        int southEast = sampledHeight(samples, sampler, maxX, maxZ);
         double xProgress = progress(point.x(), minX);
         double zProgress = progress(point.z(), minZ);
         double north = interpolate(northWest, northEast, xProgress);
         double south = interpolate(southWest, southEast, xProgress);
 
-        return (int) Math.round(interpolate(north, south, zProgress));
+        return interpolate(north, south, zProgress);
     }
 
-    private int sampledHeight(int x, int z) {
+    private static int sampledHeight(
+            Map<GridPoint, Integer> samples,
+            ToIntFunction<GridPoint> sampler,
+            int x,
+            int z
+    ) {
         GridPoint point = new GridPoint(x, z);
-        return sampledHeights.computeIfAbsent(point, terrainSource::height);
+        return samples.computeIfAbsent(point, ignored -> sampler.applyAsInt(point));
     }
 
     private String biomePath(GridPoint point, int height) {
@@ -135,6 +184,8 @@ public final class MinecraftWorldgenTerrainSampler {
     interface TerrainSource {
         int height(GridPoint point);
 
+        int supportHeight(GridPoint point);
+
         ColumnSample column(GridPoint point, int height, String biomePath);
 
         String biomePath(GridPoint point, int height);
@@ -173,23 +224,24 @@ public final class MinecraftWorldgenTerrainSampler {
         }
 
         @Override
+        public int supportHeight(GridPoint point) {
+            return chunkGenerator.getBaseHeight(
+                    point.x(),
+                    point.z(),
+                    Heightmap.Types.OCEAN_FLOOR_WG,
+                    levelHeight,
+                    randomState
+            );
+        }
+
+        @Override
         public ColumnSample column(GridPoint point, int height, String biomePath) {
-            BiomeCategory biomeCategory = MinecraftBiomeClassifier.classify(biomePath);
-            boolean water = isWaterSurface(height, chunkGenerator.getSeaLevel(), biomeCategory);
-            return new ColumnSample(water, false, false, false, false);
+            return new ColumnSample(false, false, false, false, false);
         }
 
         @Override
         public String biomePath(GridPoint point, int height) {
             return MinecraftWorldgenBiomeResolver.biomePath(chunkGenerator, randomState, point, height);
-        }
-
-        private static boolean isWaterSurface(int height, int seaLevel, BiomeCategory biomeCategory) {
-            if (height > seaLevel) {
-                return false;
-            }
-
-            return biomeCategory == BiomeCategory.OCEAN;
         }
     }
 }

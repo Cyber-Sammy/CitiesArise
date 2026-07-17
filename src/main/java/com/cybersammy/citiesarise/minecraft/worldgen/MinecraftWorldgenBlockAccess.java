@@ -36,7 +36,8 @@ final class MinecraftWorldgenBlockAccess implements WorldgenBlockAccess {
 
     @Override
     public WorldgenSurfaceMaterial material(WorldgenBlockPosition position) {
-        BlockState state = level.getBlockState(toBlockPos(position));
+        BlockPos blockPosition = toBlockPos(position);
+        BlockState state = level.getBlockState(blockPosition);
         if (state.isAir()) {
             return WorldgenSurfaceMaterial.AIR;
         }
@@ -45,6 +46,9 @@ final class MinecraftWorldgenBlockAccess implements WorldgenBlockAccess {
         }
         if (state.is(net.minecraft.tags.BlockTags.LOGS)) {
             return WorldgenSurfaceMaterial.LOGS;
+        }
+        if (!state.getFluidState().isEmpty() && state.getCollisionShape(level, blockPosition).isEmpty()) {
+            return WorldgenSurfaceMaterial.FLUID;
         }
         return WorldgenSurfaceMaterial.OTHER;
     }

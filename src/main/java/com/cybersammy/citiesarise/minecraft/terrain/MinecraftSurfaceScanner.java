@@ -12,6 +12,23 @@ public final class MinecraftSurfaceScanner {
             int minBuildHeight,
             IntFunction<SurfaceBlock> blockAt
     ) {
+        return scan(topHeight, minBuildHeight, blockAt, false);
+    }
+
+    public static SurfaceSample scanSolidSupport(
+            int topHeight,
+            int minBuildHeight,
+            IntFunction<SurfaceBlock> blockAt
+    ) {
+        return scan(topHeight, minBuildHeight, blockAt, true);
+    }
+
+    private static SurfaceSample scan(
+            int topHeight,
+            int minBuildHeight,
+            IntFunction<SurfaceBlock> blockAt,
+            boolean skipFluids
+    ) {
         Objects.requireNonNull(blockAt, "blockAt");
         boolean leaves = false;
         boolean logs = false;
@@ -33,13 +50,20 @@ public final class MinecraftSurfaceScanner {
                 continue;
             }
 
+            if (skipFluids && block.fluid()) {
+                continue;
+            }
+
             return new SurfaceSample(y + 1, leaves, logs);
         }
 
         return new SurfaceSample(topHeight, leaves, logs);
     }
 
-    public record SurfaceBlock(boolean air, boolean leaves, boolean logs) {
+    public record SurfaceBlock(boolean air, boolean leaves, boolean logs, boolean fluid) {
+        public SurfaceBlock(boolean air, boolean leaves, boolean logs) {
+            this(air, leaves, logs, false);
+        }
     }
 
     public record SurfaceSample(int height, boolean leaves, boolean logs) {

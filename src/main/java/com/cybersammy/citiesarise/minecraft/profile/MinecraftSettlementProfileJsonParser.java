@@ -58,6 +58,16 @@ public final class MinecraftSettlementProfileJsonParser {
                         LEGACY_MAX_ELEVATION_RANGE,
                         SuburbPlanningSettings.DEFAULT_MAX_ELEVATION_RANGE
                 ),
+                optionalInt(
+                        planning,
+                        "preferredMaxCutDepth",
+                        SuburbPlanningSettings.DEFAULT_PREFERRED_MAX_CUT_DEPTH
+                ),
+                optionalInt(
+                        planning,
+                        "preferredMaxFillDepth",
+                        SuburbPlanningSettings.DEFAULT_PREFERRED_MAX_FILL_DEPTH
+                ),
                 optionalInt(planning, "maxCutDepth", SuburbPlanningSettings.DEFAULT_MAX_CUT_DEPTH),
                 optionalInt(planning, "maxFillDepth", SuburbPlanningSettings.DEFAULT_MAX_FILL_DEPTH),
                 optionalLong(

@@ -66,12 +66,16 @@ final class MinecraftSettlementProfileJsonParserTest {
     @Test
     void parsesOptionalEarthworkLimits() {
         JsonObject json = validJson();
+        json.getAsJsonObject("planning").addProperty("preferredMaxCutDepth", 2);
+        json.getAsJsonObject("planning").addProperty("preferredMaxFillDepth", 4);
         json.getAsJsonObject("planning").addProperty("maxCutDepth", 5);
         json.getAsJsonObject("planning").addProperty("maxFillDepth", 6);
         json.getAsJsonObject("planning").addProperty("maxEarthworkVolume", 45_000L);
 
         SettlementProfile profile = parser.parse(id(), json);
 
+        assertEquals(2, profile.suburbPlanningSettings().preferredMaxCutDepth());
+        assertEquals(4, profile.suburbPlanningSettings().preferredMaxFillDepth());
         assertEquals(5, profile.suburbPlanningSettings().maxCutDepth());
         assertEquals(6, profile.suburbPlanningSettings().maxFillDepth());
         assertEquals(45_000L, profile.suburbPlanningSettings().maxEarthworkVolume());
@@ -81,6 +85,15 @@ final class MinecraftSettlementProfileJsonParserTest {
     void rejectsNegativeMaximumElevationRange() {
         JsonObject json = validJson();
         json.getAsJsonObject("planning").addProperty("maxElevationRange", -1);
+
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), json));
+    }
+
+    @Test
+    void rejectsPreferredEarthworkLimitAboveAbsoluteLimit() {
+        JsonObject json = validJson();
+        json.getAsJsonObject("planning").addProperty("preferredMaxFillDepth", 9);
+        json.getAsJsonObject("planning").addProperty("maxFillDepth", 8);
 
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), json));
     }

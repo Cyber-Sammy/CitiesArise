@@ -9,6 +9,7 @@ import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningFailureReason;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbTerrainDiagnostic;
+import com.cybersammy.citiesarise.core.planning.suburb.TerrainPreparationLimitDiagnostic;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import java.util.Locale;
 import java.util.Objects;
@@ -186,7 +187,22 @@ public record SuburbDebugPlanResult(
                 + ", water=" + cell.water()
                 + ", terrainCategory=" + cell.terrainCategory()
                 + ", biomeCategory=" + cell.biomeCategory()
+                + preparationLimitSummary(diagnostic)
                 + ")";
+    }
+
+    private static String preparationLimitSummary(SuburbTerrainDiagnostic diagnostic) {
+        return diagnostic.optionalPreparationLimit()
+                .map(SuburbDebugPlanResult::formatPreparationLimit)
+                .orElse("");
+    }
+
+    private static String formatPreparationLimit(TerrainPreparationLimitDiagnostic diagnostic) {
+        return ", element=" + diagnostic.sourceElementId().value()
+                + ", actual=" + diagnostic.actualValue()
+                + ", preferredLimit=" + diagnostic.preferredLimit()
+                + ", maximumLimit=" + diagnostic.maximumLimit()
+                + ", excess=" + diagnostic.excessOverMaximum();
     }
 
     private static void rejectMissingOutcome(

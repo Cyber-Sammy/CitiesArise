@@ -143,6 +143,36 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void acceptsDeterministicMarginalDryTerrainWithinAbsoluteLimits() {
+        TerrainSurvey survey = surveyWithHeightAt(40, 30, new GridPoint(10, 15), 59);
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(
+                3,
+                0.75,
+                6,
+                6,
+                7,
+                1,
+                12,
+                3,
+                3,
+                6,
+                8,
+                20_000L
+        );
+        SuburbPlanningRequest request = request(survey, 100L, settings);
+
+        SuburbPlanningResult first = planner.plan(request);
+        SuburbPlanningResult second = planner.plan(request);
+
+        assertTrue(first.successful(), first.toString());
+        assertEquals(first, second);
+        assertEquals(
+                TerrainPreparationStatus.ACCEPTED_WITH_EARTHWORKS,
+                first.terrainPreparationPlan().orElseThrow().status()
+        );
+    }
+
+    @Test
     void acceptsGradualTerrainBeyondLegacyGlobalElevationRange() {
         TerrainSurvey survey = elevationSurvey(40, 30, 3);
 

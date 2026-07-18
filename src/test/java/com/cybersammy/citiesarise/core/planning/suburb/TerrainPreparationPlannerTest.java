@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
@@ -53,6 +54,49 @@ final class TerrainPreparationPlannerTest {
         TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(request, crossingRoadElevationPlan());
 
         assertEquals(lowestPoint, assessment.diagnostic().orElseThrow().cell().point());
+    }
+
+    @Test
+    void acceptsDepthAbovePreferredLimitWithinAbsoluteLimit() {
+        GridPoint lowPoint = new GridPoint(2, 5);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithHeightAt(lowPoint, 62),
+                42L,
+                settings(1, 3)
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(request, crossingRoadElevationPlan());
+
+        assertTrue(assessment.plan().isPresent());
+        assertEquals(3, assessment.plan().orElseThrow().columns().stream()
+                .filter(column -> column.point().equals(lowPoint))
+                .findFirst()
+                .orElseThrow()
+                .fillDepth());
+    }
+
+    @Test
+    void reportsElementAndLimitDeltaAboveAbsoluteLimit() {
+        GridPoint lowPoint = new GridPoint(2, 5);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithHeightAt(lowPoint, 61),
+                42L,
+                settings(1, 3)
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(request, crossingRoadElevationPlan());
+        TerrainPreparationLimitDiagnostic diagnostic = assessment.diagnostic()
+                .orElseThrow()
+                .optionalPreparationLimit()
+                .orElseThrow();
+
+        assertEquals(id("horizontal"), diagnostic.sourceElementId());
+        assertEquals(4L, diagnostic.actualValue());
+        assertEquals(1L, diagnostic.preferredLimit());
+        assertEquals(3L, diagnostic.maximumLimit());
+        assertEquals(1L, diagnostic.excessOverMaximum());
     }
 
     private static SettlementPlan crossingRoadPlan() {
@@ -114,17 +158,38 @@ final class TerrainPreparationPlannerTest {
     }
 
     private static TerrainSurvey surveyWithLowPoint(GridPoint lowPoint) {
+        return surveyWithHeightAt(lowPoint, 63);
+    }
+
+    private static TerrainSurvey surveyWithHeightAt(GridPoint pointAtHeight, int height) {
         GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(12, 12));
         return TerrainSurvey.sample(
                 bounds,
                 point -> Optional.of(new TerrainCell(
                         point,
-                        point.equals(lowPoint) ? 63 : 64,
+                        point.equals(pointAtHeight) ? height : 64,
                         false,
                         0.0,
                         BiomeCategory.PLAINS,
                         TerrainCategory.BUILDABLE
                 ))
+        );
+    }
+
+    private static SuburbPlanningSettings settings(int preferredMaxFillDepth, int maxFillDepth) {
+        return new SuburbPlanningSettings(
+                1,
+                1.0,
+                1,
+                3,
+                3,
+                0,
+                20,
+                1,
+                preferredMaxFillDepth,
+                3,
+                maxFillDepth,
+                1_000L
         );
     }
 

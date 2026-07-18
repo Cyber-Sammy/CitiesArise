@@ -43,7 +43,11 @@ final class TerrainPreparationPlanner {
                 List.copyOf(columns.values())
         );
         if (preparationPlan.totalVolume() > request.settings().maxEarthworkVolume()) {
-            return TerrainPreparationAssessment.rejected(totalVolumeDiagnostic(request, columns.values()));
+            return TerrainPreparationAssessment.rejected(totalVolumeDiagnostic(
+                    request,
+                    columns.values(),
+                    preparationPlan.totalVolume()
+            ));
         }
         return TerrainPreparationAssessment.accepted(preparationPlan);
     }
@@ -60,7 +64,13 @@ final class TerrainPreparationPlanner {
                 int elevationDelta = Math.subtractExact(zone.targetElevation(), cell.height() - 1);
                 Optional<TerrainRejectionReason> rejection = rejection(request.settings(), elevationDelta);
                 if (rejection.isPresent()) {
-                    return Optional.of(diagnostic(cell, rejection.orElseThrow()));
+                    return Optional.of(depthDiagnostic(
+                            request.settings(),
+                            zone,
+                            cell,
+                            elevationDelta,
+                            rejection.orElseThrow()
+                    ));
                 }
                 columns.putIfAbsent(point, column(zone, point, elevationDelta));
             }
@@ -122,17 +132,24 @@ final class TerrainPreparationPlanner {
 
     private static SuburbTerrainDiagnostic totalVolumeDiagnostic(
             SuburbPlanningRequest request,
-            Iterable<TerrainPreparationColumn> columns
+            Iterable<TerrainPreparationColumn> columns,
+            long totalVolume
     ) {
         TerrainPreparationColumn largest = largestColumn(columns);
         TerrainCell cell = TerrainPlatform.requiredTerrainCell(request, largest.point());
-        return diagnostic(cell, TerrainRejectionReason.EXCESSIVE_EARTHWORK);
+        TerrainPreparationLimitDiagnostic limit = new TerrainPreparationLimitDiagnostic(
+                largest.sourceElementId(),
+                totalVolume,
+                request.settings().maxEarthworkVolume(),
+                request.settings().maxEarthworkVolume()
+        );
+        return diagnostic(cell, TerrainRejectionReason.EXCESSIVE_EARTHWORK, limit);
     }
 
     private static TerrainPreparationColumn largestColumn(Iterable<TerrainPreparationColumn> columns) {
         TerrainPreparationColumn largest = null;
         for (TerrainPreparationColumn column : columns) {
-            if (largest == null || column.totalVolume() > largest.totalVolume()) {
+            if (isLarger(column, largest)) {
                 largest = column;
             }
         }
@@ -142,12 +159,65 @@ final class TerrainPreparationPlanner {
         return largest;
     }
 
-    private static SuburbTerrainDiagnostic diagnostic(
+    private static boolean isLarger(
+            TerrainPreparationColumn candidate,
+            TerrainPreparationColumn current
+    ) {
+        if (current == null) {
+            return true;
+        }
+
+        return candidate.totalVolume() > current.totalVolume();
+    }
+
+    private static SuburbTerrainDiagnostic depthDiagnostic(
+            SuburbPlanningSettings settings,
+            ElevationZone zone,
             TerrainCell cell,
+            int elevationDelta,
             TerrainRejectionReason rejectionReason
     ) {
+        int actualDepth = Math.abs(elevationDelta);
+        int preferredLimit = preferredLimit(settings, rejectionReason);
+        int maximumLimit = maximumLimit(settings, rejectionReason);
+        TerrainPreparationLimitDiagnostic limit = new TerrainPreparationLimitDiagnostic(
+                zone.sourceElementId(),
+                actualDepth,
+                preferredLimit,
+                maximumLimit
+        );
+        return diagnostic(cell, rejectionReason, limit);
+    }
+
+    private static int preferredLimit(
+            SuburbPlanningSettings settings,
+            TerrainRejectionReason rejectionReason
+    ) {
+        if (rejectionReason == TerrainRejectionReason.EXCESSIVE_CUT) {
+            return settings.preferredMaxCutDepth();
+        }
+
+        return settings.preferredMaxFillDepth();
+    }
+
+    private static int maximumLimit(
+            SuburbPlanningSettings settings,
+            TerrainRejectionReason rejectionReason
+    ) {
+        if (rejectionReason == TerrainRejectionReason.EXCESSIVE_CUT) {
+            return settings.maxCutDepth();
+        }
+
+        return settings.maxFillDepth();
+    }
+
+    private static SuburbTerrainDiagnostic diagnostic(
+            TerrainCell cell,
+            TerrainRejectionReason rejectionReason,
+            TerrainPreparationLimitDiagnostic limit
+    ) {
         TerrainSuitability suitability = new TerrainSuitability(0.0, Set.of(rejectionReason), List.of());
-        return new SuburbTerrainDiagnostic(cell, suitability);
+        return new SuburbTerrainDiagnostic(cell, suitability, limit);
     }
 
     private static final class Volume {

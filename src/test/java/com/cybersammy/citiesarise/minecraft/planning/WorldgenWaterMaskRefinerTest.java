@@ -5,10 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
+import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
+import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanner;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningFailureReason;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningRequest;
@@ -28,9 +31,16 @@ final class WorldgenWaterMaskRefinerTest {
     @Test
     void rejectsExactWaterInsidePreliminaryPlanFootprint() {
         SuburbPlanner planner = SuburbPlanner.defaults();
-        SuburbPlanningRequest request = request(flatSurvey());
+        SuburbPlanningResult template = planner.plan(request(flatSurvey()));
+        TerrainSurvey terrain = buildingShoulderSurvey(template.plan().orElseThrow());
+        SuburbPlanningRequest request = request(terrain);
         SuburbPlanningResult initialResult = planner.plan(request);
-        ExactWaterProvider terrainProvider = new ExactWaterProvider();
+        GridPoint shoulderPoint = initialResult.terrainPreparationPlan().orElseThrow().columns().stream()
+                .filter(column -> column.type() == TerrainPreparationColumnType.BUILDING_SHOULDER)
+                .findFirst()
+                .orElseThrow()
+                .point();
+        ExactWaterProvider terrainProvider = new ExactWaterProvider(terrain, shoulderPoint);
 
         SuburbPlanningResult result = WorldgenWaterMaskRefiner.refine(
                 planner,
@@ -43,6 +53,7 @@ final class WorldgenWaterMaskRefinerTest {
         assertEquals(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN, result.failureReason().orElseThrow());
         assertEquals(1, terrainProvider.refinedSamples);
         assertTrue(terrainProvider.checkedPoints.contains(result.terrainDiagnostic().orElseThrow().cell().point()));
+        assertTrue(terrainProvider.checkedPoints.contains(shoulderPoint));
         assertTrue(terrainProvider.checkedPoints.size() < BOUNDS.size().width() * BOUNDS.size().depth());
     }
 
@@ -102,6 +113,26 @@ final class WorldgenWaterMaskRefinerTest {
         return TerrainSurvey.sample(BOUNDS, point -> Optional.of(cell(point, waterPoint)));
     }
 
+    private static TerrainSurvey buildingShoulderSurvey(SettlementPlan plan) {
+        return TerrainSurvey.sample(BOUNDS, point -> Optional.of(new TerrainCell(
+                point,
+                belongsToBuilding(plan, point) ? 65 : 62,
+                false,
+                0.0,
+                BiomeCategory.PLAINS,
+                TerrainCategory.BUILDABLE
+        )));
+    }
+
+    private static boolean belongsToBuilding(SettlementPlan plan, GridPoint point) {
+        for (BuildingSlot slot : plan.buildingSlots()) {
+            if (slot.bounds().contains(point)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static TerrainCell cell(GridPoint point, Optional<GridPoint> waterPoint) {
         boolean water = waterPoint.filter(point::equals).isPresent();
         TerrainCategory category = water ? TerrainCategory.BLOCKED : TerrainCategory.BUILDABLE;
@@ -109,12 +140,23 @@ final class WorldgenWaterMaskRefinerTest {
     }
 
     private static final class ExactWaterProvider implements WorldgenTerrainSurveyProvider {
+        private final TerrainSurvey terrain;
+        private final GridPoint waterPoint;
         private int refinedSamples;
         private Set<GridPoint> checkedPoints = Set.of();
 
+        private ExactWaterProvider() {
+            this(flatSurvey(), null);
+        }
+
+        private ExactWaterProvider(TerrainSurvey terrain, GridPoint waterPoint) {
+            this.terrain = terrain;
+            this.waterPoint = waterPoint;
+        }
+
         @Override
         public TerrainSurvey sample(GridBounds bounds) {
-            return flatSurvey();
+            return terrain;
         }
 
         @Override
@@ -124,7 +166,22 @@ final class WorldgenWaterMaskRefinerTest {
         ) {
             refinedSamples++;
             checkedPoints = Set.copyOf(waterCheckPoints);
-            return Optional.of(survey(Optional.of(checkedPoints.iterator().next())));
+            GridPoint exactWaterPoint = waterPoint == null ? checkedPoints.iterator().next() : waterPoint;
+            return Optional.of(TerrainSurvey.sample(bounds, point -> Optional.of(exactCell(point, exactWaterPoint))));
+        }
+
+        private TerrainCell exactCell(GridPoint point, GridPoint exactWaterPoint) {
+            TerrainCell source = terrain.findCell(point).orElseThrow();
+            boolean water = point.equals(exactWaterPoint);
+            TerrainCategory category = water ? TerrainCategory.BLOCKED : source.terrainCategory();
+            return new TerrainCell(
+                    point,
+                    source.height(),
+                    water,
+                    source.slope(),
+                    source.biomeCategory(),
+                    category
+            );
         }
     }
 }

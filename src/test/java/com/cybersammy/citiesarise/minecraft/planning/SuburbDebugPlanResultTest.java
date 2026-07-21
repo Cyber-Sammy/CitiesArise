@@ -3,6 +3,7 @@ package com.cybersammy.citiesarise.minecraft.planning;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
@@ -19,6 +20,7 @@ import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningFailureReason;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbTerrainDiagnostic;
+import com.cybersammy.citiesarise.core.planning.suburb.TerrainPreparationLimitDiagnostic;
 import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
@@ -78,6 +80,31 @@ final class SuburbDebugPlanResultTest {
                         + ", water=true, terrainCategory=BUILDABLE, biomeCategory=PLAINS)",
                 result.summary()
         );
+    }
+
+    @Test
+    void includesPreparationLimitsInRejectedSummary() {
+        SuburbTerrainDiagnostic diagnostic = waterDiagnostic();
+        TerrainPreparationLimitDiagnostic limit = new TerrainPreparationLimitDiagnostic(
+                new PlanElementId("road/main"),
+                7L,
+                3L,
+                6L
+        );
+        SuburbDebugPlanResult result = SuburbDebugPlanResult.from(
+                new SettlementRegion(1, -2),
+                new GridBounds(new GridPoint(10, 20), new GridSize(40, 30)),
+                123L,
+                SuburbPlanningResult.rejectedTerrain(new SuburbTerrainDiagnostic(
+                        diagnostic.cell(),
+                        diagnostic.suitability(),
+                        limit
+                ))
+        );
+
+        assertTrue(result.summary().contains(
+                "element=road/main, actual=7, preferredLimit=3, maximumLimit=6, excess=1"
+        ));
     }
 
     @Test

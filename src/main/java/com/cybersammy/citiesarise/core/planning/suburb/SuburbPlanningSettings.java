@@ -8,8 +8,11 @@ public record SuburbPlanningSettings(
         int parcelDepth,
         int buildingMargin,
         int maxElevationRange,
+        int preferredMaxCutDepth,
+        int preferredMaxFillDepth,
         int maxCutDepth,
         int maxFillDepth,
+        int maxBuildingFoundationDepth,
         long maxEarthworkVolume
 ) {
     public static final int DEFAULT_ROAD_WIDTH = 3;
@@ -19,8 +22,11 @@ public record SuburbPlanningSettings(
     public static final int DEFAULT_PARCEL_DEPTH = 7;
     public static final int DEFAULT_BUILDING_MARGIN = 1;
     public static final int DEFAULT_MAX_ELEVATION_RANGE = 12;
-    public static final int DEFAULT_MAX_CUT_DEPTH = 3;
-    public static final int DEFAULT_MAX_FILL_DEPTH = 3;
+    public static final int DEFAULT_PREFERRED_MAX_CUT_DEPTH = 3;
+    public static final int DEFAULT_PREFERRED_MAX_FILL_DEPTH = 3;
+    public static final int DEFAULT_MAX_CUT_DEPTH = 6;
+    public static final int DEFAULT_MAX_FILL_DEPTH = 8;
+    public static final int DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH = 4;
     public static final long DEFAULT_MAX_EARTHWORK_VOLUME = 20_000L;
 
     public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, int targetParcelCount) {
@@ -32,8 +38,11 @@ public record SuburbPlanningSettings(
                 DEFAULT_PARCEL_DEPTH,
                 DEFAULT_BUILDING_MARGIN,
                 DEFAULT_MAX_ELEVATION_RANGE,
+                DEFAULT_PREFERRED_MAX_CUT_DEPTH,
+                DEFAULT_PREFERRED_MAX_FILL_DEPTH,
                 DEFAULT_MAX_CUT_DEPTH,
                 DEFAULT_MAX_FILL_DEPTH,
+                DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH,
                 DEFAULT_MAX_EARTHWORK_VOLUME
         );
     }
@@ -54,8 +63,11 @@ public record SuburbPlanningSettings(
                 parcelDepth,
                 buildingMargin,
                 DEFAULT_MAX_ELEVATION_RANGE,
+                DEFAULT_PREFERRED_MAX_CUT_DEPTH,
+                DEFAULT_PREFERRED_MAX_FILL_DEPTH,
                 DEFAULT_MAX_CUT_DEPTH,
                 DEFAULT_MAX_FILL_DEPTH,
+                DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH,
                 DEFAULT_MAX_EARTHWORK_VOLUME
         );
     }
@@ -77,8 +89,11 @@ public record SuburbPlanningSettings(
                 parcelDepth,
                 buildingMargin,
                 maxElevationRange,
+                DEFAULT_PREFERRED_MAX_CUT_DEPTH,
+                DEFAULT_PREFERRED_MAX_FILL_DEPTH,
                 DEFAULT_MAX_CUT_DEPTH,
                 DEFAULT_MAX_FILL_DEPTH,
+                DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH,
                 DEFAULT_MAX_EARTHWORK_VOLUME
         );
     }
@@ -102,9 +117,72 @@ public record SuburbPlanningSettings(
                 parcelDepth,
                 buildingMargin,
                 maxElevationRange,
+                Math.min(DEFAULT_PREFERRED_MAX_CUT_DEPTH, maxCutDepth),
+                Math.min(DEFAULT_PREFERRED_MAX_FILL_DEPTH, maxFillDepth),
                 maxCutDepth,
                 maxFillDepth,
+                Math.min(DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH, maxFillDepth),
                 DEFAULT_MAX_EARTHWORK_VOLUME
+        );
+    }
+
+    public SuburbPlanningSettings(
+            int roadWidth,
+            double maxBuildableSlope,
+            int targetParcelCount,
+            int parcelWidth,
+            int parcelDepth,
+            int buildingMargin,
+            int maxElevationRange,
+            int maxCutDepth,
+            int maxFillDepth,
+            long maxEarthworkVolume
+    ) {
+        this(
+                roadWidth,
+                maxBuildableSlope,
+                targetParcelCount,
+                parcelWidth,
+                parcelDepth,
+                buildingMargin,
+                maxElevationRange,
+                Math.min(DEFAULT_PREFERRED_MAX_CUT_DEPTH, maxCutDepth),
+                Math.min(DEFAULT_PREFERRED_MAX_FILL_DEPTH, maxFillDepth),
+                maxCutDepth,
+                maxFillDepth,
+                Math.min(DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH, maxFillDepth),
+                maxEarthworkVolume
+        );
+    }
+
+    public SuburbPlanningSettings(
+            int roadWidth,
+            double maxBuildableSlope,
+            int targetParcelCount,
+            int parcelWidth,
+            int parcelDepth,
+            int buildingMargin,
+            int maxElevationRange,
+            int preferredMaxCutDepth,
+            int preferredMaxFillDepth,
+            int maxCutDepth,
+            int maxFillDepth,
+            long maxEarthworkVolume
+    ) {
+        this(
+                roadWidth,
+                maxBuildableSlope,
+                targetParcelCount,
+                parcelWidth,
+                parcelDepth,
+                buildingMargin,
+                maxElevationRange,
+                preferredMaxCutDepth,
+                preferredMaxFillDepth,
+                maxCutDepth,
+                maxFillDepth,
+                Math.min(DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH, maxFillDepth),
+                maxEarthworkVolume
         );
     }
 
@@ -116,9 +194,19 @@ public record SuburbPlanningSettings(
         requirePositive(parcelDepth, "parcelDepth");
         requireNonNegative(buildingMargin, "buildingMargin");
         requireNonNegative(maxElevationRange, "maxElevationRange");
+        requireNonNegative(preferredMaxCutDepth, "preferredMaxCutDepth");
+        requireNonNegative(preferredMaxFillDepth, "preferredMaxFillDepth");
         requireNonNegative(maxCutDepth, "maxCutDepth");
         requireNonNegative(maxFillDepth, "maxFillDepth");
+        requireNonNegative(maxBuildingFoundationDepth, "maxBuildingFoundationDepth");
         requireNonNegative(maxEarthworkVolume, "maxEarthworkVolume");
+        requirePreferredLimitWithinMaximum(preferredMaxCutDepth, maxCutDepth, "preferredMaxCutDepth");
+        requirePreferredLimitWithinMaximum(preferredMaxFillDepth, maxFillDepth, "preferredMaxFillDepth");
+        requirePreferredLimitWithinMaximum(
+                maxBuildingFoundationDepth,
+                maxFillDepth,
+                "maxBuildingFoundationDepth"
+        );
         requireBuildingFitsParcel(parcelWidth, parcelDepth, buildingMargin);
     }
 
@@ -131,8 +219,11 @@ public record SuburbPlanningSettings(
                 DEFAULT_PARCEL_DEPTH,
                 DEFAULT_BUILDING_MARGIN,
                 DEFAULT_MAX_ELEVATION_RANGE,
+                DEFAULT_PREFERRED_MAX_CUT_DEPTH,
+                DEFAULT_PREFERRED_MAX_FILL_DEPTH,
                 DEFAULT_MAX_CUT_DEPTH,
                 DEFAULT_MAX_FILL_DEPTH,
+                DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH,
                 DEFAULT_MAX_EARTHWORK_VOLUME
         );
     }
@@ -161,6 +252,14 @@ public record SuburbPlanningSettings(
         if (value < 0L) {
             throw new IllegalArgumentException(name + " must not be negative");
         }
+    }
+
+    private static void requirePreferredLimitWithinMaximum(int preferred, int maximum, String name) {
+        if (preferred <= maximum) {
+            return;
+        }
+
+        throw new IllegalArgumentException(name + " must not exceed its absolute maximum");
     }
 
     private static void requireFiniteNonNegative(double value, String name) {

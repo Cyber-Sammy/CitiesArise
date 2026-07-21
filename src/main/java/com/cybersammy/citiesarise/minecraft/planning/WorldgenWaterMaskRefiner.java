@@ -7,6 +7,7 @@ import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 final class WorldgenWaterMaskRefiner {
@@ -27,7 +28,7 @@ final class WorldgenWaterMaskRefiner {
             return initialResult;
         }
 
-        Set<GridPoint> footprint = SettlementPlanFootprint.points(initialResult.plan().orElseThrow());
+        Set<GridPoint> footprint = refinementFootprint(initialResult);
         Optional<TerrainSurvey> refinedSurvey = terrainProvider.sampleWithExactWaterMask(
                 initialRequest.survey().bounds(),
                 footprint
@@ -43,5 +44,11 @@ final class WorldgenWaterMaskRefiner {
                 initialRequest.settings()
         );
         return planner.plan(refinedRequest);
+    }
+
+    private static Set<GridPoint> refinementFootprint(SuburbPlanningResult result) {
+        Set<GridPoint> points = new LinkedHashSet<>(SettlementPlanFootprint.points(result.plan().orElseThrow()));
+        result.terrainPreparationPlan().orElseThrow().columns().forEach(column -> points.add(column.point()));
+        return Set.copyOf(points);
     }
 }

@@ -118,6 +118,22 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
                 .orElseThrow();
     }
 
+    int minimumX() {
+        return operations.stream().mapToInt(operation -> operation.point().x()).min().orElseThrow();
+    }
+
+    int maximumX() {
+        return operations.stream().mapToInt(operation -> operation.point().x()).max().orElseThrow();
+    }
+
+    int minimumZ() {
+        return operations.stream().mapToInt(operation -> operation.point().z()).min().orElseThrow();
+    }
+
+    int maximumZ() {
+        return operations.stream().mapToInt(operation -> operation.point().z()).max().orElseThrow();
+    }
+
     private static OptionalInt optionalPlatform(int value) {
         return value == NO_PLATFORM ? OptionalInt.empty() : OptionalInt.of(value);
     }

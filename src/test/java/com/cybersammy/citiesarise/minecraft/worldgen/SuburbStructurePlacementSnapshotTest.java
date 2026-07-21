@@ -88,14 +88,18 @@ class SuburbStructurePlacementSnapshotTest {
     void reportsPersistedVerticalRange() {
         SuburbStructurePlacementSnapshot snapshot = SuburbStructurePlacementSnapshot.from(
                 new DebugPlacementPlan(List.of(
-                        operation(0, 0, -1, DebugPlacementRole.FOUNDATION, OptionalInt.of(63)),
-                        operation(0, 0, 5, DebugPlacementRole.BUILDING_ROOF, OptionalInt.of(70))
+                        operation(-3, 8, -1, DebugPlacementRole.FOUNDATION, OptionalInt.of(63)),
+                        operation(17, -4, 5, DebugPlacementRole.BUILDING_ROOF, OptionalInt.of(70))
                 ))
         );
 
         assertEquals(63, snapshot.minimumPlatformY());
         assertEquals(70, snapshot.maximumPlatformY());
         assertEquals(5, snapshot.maximumVerticalOffset());
+        assertEquals(-3, snapshot.minimumX());
+        assertEquals(17, snapshot.maximumX());
+        assertEquals(-4, snapshot.minimumZ());
+        assertEquals(8, snapshot.maximumZ());
     }
 
     private static DebugBlockPlacementOperation operation(

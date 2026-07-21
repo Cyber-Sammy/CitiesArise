@@ -9,8 +9,13 @@ import java.util.Optional;
 
 public record SuburbTerrainDiagnostic(
         TerrainCell cell,
-        TerrainSuitability suitability
+        TerrainSuitability suitability,
+        TerrainPreparationLimitDiagnostic preparationLimit
 ) {
+    public SuburbTerrainDiagnostic(TerrainCell cell, TerrainSuitability suitability) {
+        this(cell, suitability, null);
+    }
+
     public SuburbTerrainDiagnostic {
         Objects.requireNonNull(cell, "cell");
         Objects.requireNonNull(suitability, "suitability");
@@ -20,5 +25,9 @@ public record SuburbTerrainDiagnostic(
         return suitability.rejectionReasons()
                 .stream()
                 .min(Comparator.comparing(Enum::name));
+    }
+
+    public Optional<TerrainPreparationLimitDiagnostic> optionalPreparationLimit() {
+        return Optional.ofNullable(preparationLimit);
     }
 }

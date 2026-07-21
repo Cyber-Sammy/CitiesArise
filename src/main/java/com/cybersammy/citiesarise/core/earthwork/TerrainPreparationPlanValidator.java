@@ -30,7 +30,7 @@ public final class TerrainPreparationPlanValidator {
         validateBuildings(plan, zonesById, areasById, errors);
         validateNoRemovedElements(plan, zonesById, areasById, errors);
         validateAreas(zonesById, areasById, errors);
-        validateColumns(areasById, preparationPlan.columns(), errors);
+        validateColumns(zonesById, areasById, preparationPlan.columns(), errors);
         validateTransitions(preparationPlan.elevationPlan(), zonesById, errors);
         return List.copyOf(errors);
     }
@@ -208,6 +208,7 @@ public final class TerrainPreparationPlanValidator {
     }
 
     private static void validateColumns(
+            Map<PlanElementId, ElevationZone> zonesById,
             Map<PlanElementId, TerrainPreparationArea> areasById,
             List<TerrainPreparationColumn> columns,
             List<PlanValidationError> errors
@@ -218,12 +219,52 @@ public final class TerrainPreparationPlanValidator {
                 errors.add(error(column.sourceElementId(), "terrain preparation column references missing area"));
                 continue;
             }
+            if (column.type() == TerrainPreparationColumnType.BUILDING_SHOULDER) {
+                validateBuildingShoulderColumn(zonesById, column, errors);
+                continue;
+            }
             if (!area.bounds().contains(column.point())) {
                 errors.add(error(column.sourceElementId(), "terrain preparation column is outside its area"));
             }
             if (column.targetElevation() != area.targetElevation()) {
                 errors.add(error(column.sourceElementId(), "terrain preparation column elevation does not match area"));
             }
+        }
+    }
+
+    private static void validateBuildingShoulderColumn(
+            Map<PlanElementId, ElevationZone> zonesById,
+            TerrainPreparationColumn column,
+            List<PlanValidationError> errors
+    ) {
+        ElevationZone zone = zonesById.get(column.sourceElementId());
+        if (zone == null) {
+            errors.add(error(column.sourceElementId(), "building shoulder references missing elevation zone"));
+            return;
+        }
+        if (zone.type() != ElevationZoneType.BUILDING_PAD) {
+            errors.add(error(column.sourceElementId(), "building shoulder must belong to a building zone"));
+            return;
+        }
+        if (!BuildingTerrainShoulderPolicy.contains(zone.bounds(), column.point())) {
+            errors.add(error(column.sourceElementId(), "building shoulder is outside the supported transition area"));
+        }
+        int expectedElevation = BuildingTerrainShoulderPolicy.targetElevation(
+                zone.bounds(),
+                column.point(),
+                zone.targetElevation()
+        );
+        if (column.targetElevation() != expectedElevation) {
+            errors.add(error(column.sourceElementId(), "building shoulder elevation does not match transition policy"));
+        }
+        if (column.cutDepth() != 0) {
+            errors.add(error(column.sourceElementId(), "building shoulder must not cut terrain"));
+        }
+        if (column.fillDepth() <= 0) {
+            errors.add(error(column.sourceElementId(), "building shoulder must fill terrain"));
+        }
+        if (column.fillDepth() > BuildingTerrainShoulderPolicy.MAX_FILL_DEPTH) {
+            errors.add(error(column.sourceElementId(), "building shoulder fill exceeds transition policy"));
         }
     }
 

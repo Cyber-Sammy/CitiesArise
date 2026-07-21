@@ -4,6 +4,7 @@ import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -57,10 +58,42 @@ public final class DebugPlacementPlanConverter {
         }
         DebugPlacementPlan placementPlan = convert(plan);
         Map<GridPoint, Integer> elevationByPoint = preparationElevations(preparationPlan);
-        return new DebugPlacementPlan(placementPlan.operations()
+        DebugPlacementPlan preparedPlan = new DebugPlacementPlan(placementPlan.operations()
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
+        return withBuildingTerrainShoulders(preparationPlan, preparedPlan);
+    }
+
+    private static DebugPlacementPlan withBuildingTerrainShoulders(
+            TerrainPreparationPlan preparationPlan,
+            DebugPlacementPlan placementPlan
+    ) {
+        Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations = new LinkedHashMap<>();
+        for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
+            operations.put(operation.position(), operation);
+        }
+        for (TerrainPreparationColumn column : preparationPlan.columns()) {
+            addBuildingTerrainShoulder(column, operations);
+        }
+        return new DebugPlacementPlan(List.copyOf(operations.values()));
+    }
+
+    private static void addBuildingTerrainShoulder(
+            TerrainPreparationColumn column,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations
+    ) {
+        if (column.type() != TerrainPreparationColumnType.BUILDING_SHOULDER) {
+            return;
+        }
+        DebugBlockPlacementOperation operation = new DebugBlockPlacementOperation(
+                column.point(),
+                SURFACE_OFFSET,
+                DebugPlacementRole.TERRAIN_SURFACE,
+                column.sourceElementId(),
+                OptionalInt.of(column.targetElevation())
+        );
+        addOperation(operation, operations);
     }
 
     private static Map<GridPoint, Integer> preparationElevations(TerrainPreparationPlan preparationPlan) {
@@ -438,6 +471,13 @@ public final class DebugPlacementPlanConverter {
                 role,
                 sourceElementId
         );
+        addOperation(operation, operationsByPosition);
+    }
+
+    private static void addOperation(
+            DebugBlockPlacementOperation operation,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
+    ) {
         DebugBlockPlacementOperation existingOperation = operationsByPosition.get(operation.position());
 
         if (shouldKeepExistingOperation(existingOperation, operation)) {

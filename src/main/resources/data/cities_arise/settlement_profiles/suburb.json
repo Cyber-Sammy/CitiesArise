@@ -11,8 +11,11 @@
     "parcelDepth": 20,
     "buildingMargin": 4,
     "maxElevationRange": 10,
-    "maxCutDepth": 3,
-    "maxFillDepth": 3,
+    "preferredMaxCutDepth": 3,
+    "preferredMaxFillDepth": 3,
+    "maxCutDepth": 6,
+    "maxFillDepth": 8,
+    "maxBuildingFoundationDepth": 4,
     "maxEarthworkVolume": 20000
   }
 }

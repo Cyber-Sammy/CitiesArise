@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationStatus;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -143,6 +144,36 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void acceptsDeterministicMarginalDryTerrainWithinAbsoluteLimits() {
+        TerrainSurvey survey = surveyWithHeightAt(40, 30, new GridPoint(10, 15), 59);
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(
+                3,
+                0.75,
+                6,
+                6,
+                7,
+                1,
+                12,
+                3,
+                3,
+                6,
+                8,
+                20_000L
+        );
+        SuburbPlanningRequest request = request(survey, 100L, settings);
+
+        SuburbPlanningResult first = planner.plan(request);
+        SuburbPlanningResult second = planner.plan(request);
+
+        assertTrue(first.successful(), first.toString());
+        assertEquals(first, second);
+        assertEquals(
+                TerrainPreparationStatus.ACCEPTED_WITH_EARTHWORKS,
+                first.terrainPreparationPlan().orElseThrow().status()
+        );
+    }
+
+    @Test
     void acceptsGradualTerrainBeyondLegacyGlobalElevationRange() {
         TerrainSurvey survey = elevationSurvey(40, 30, 3);
 
@@ -228,6 +259,7 @@ final class SuburbPlannerTest {
         assertEquals(65, platformY(elevatedSlot));
         var buildingColumns = result.terrainPreparationPlan().orElseThrow().columns().stream()
                 .filter(column -> column.sourceElementId().equals(elevatedSlot.id()))
+                .filter(column -> column.type() == TerrainPreparationColumnType.PLATFORM)
                 .toList();
         assertTrue(buildingColumns.stream().allMatch(column -> column.targetElevation() == 65));
         assertTrue(buildingColumns.stream().allMatch(column -> column.cutDepth() == 0));
@@ -248,6 +280,41 @@ final class SuburbPlannerTest {
 
         assertFalse(result.successful());
         assertTerrainDiagnostic(result, TerrainRejectionReason.EXCESSIVE_FILL);
+    }
+
+    @Test
+    void rejectsBuildingFoundationAboveDedicatedLimit() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(
+                3,
+                0.75,
+                6,
+                6,
+                7,
+                1,
+                100,
+                3,
+                3,
+                6,
+                8,
+                4,
+                20_000L
+        );
+        BuildingSlot flatSlot = planner.plan(request(flatSurvey(40, 30), 100L, settings))
+                .plan()
+                .orElseThrow()
+                .buildingSlots()
+                .getFirst();
+        TerrainSurvey slopedSurvey = surveyWithHeightAt(40, 30, flatSlot.bounds().origin(), 70);
+
+        SuburbPlanningResult result = planner.plan(request(slopedSurvey, 100L, settings));
+        TerrainPreparationLimitDiagnostic diagnostic = result.terrainDiagnostic()
+                .orElseThrow()
+                .optionalPreparationLimit()
+                .orElseThrow();
+
+        assertFalse(result.successful());
+        assertEquals(4L, diagnostic.maximumLimit());
+        assertEquals(flatSlot.id(), diagnostic.sourceElementId());
     }
 
     @Test

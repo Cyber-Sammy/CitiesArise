@@ -46,6 +46,31 @@ public final class MinecraftSettlementProfileJsonParser {
     }
 
     private static SuburbPlanningSettings parseSuburbPlanningSettings(JsonObject planning) {
+        int maxCutDepth = optionalInt(
+                planning,
+                "maxCutDepth",
+                SuburbPlanningSettings.DEFAULT_MAX_CUT_DEPTH
+        );
+        int maxFillDepth = optionalInt(
+                planning,
+                "maxFillDepth",
+                SuburbPlanningSettings.DEFAULT_MAX_FILL_DEPTH
+        );
+        int maxBuildingFoundationDepth = optionalInt(
+                planning,
+                "maxBuildingFoundationDepth",
+                Math.min(SuburbPlanningSettings.DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH, maxFillDepth)
+        );
+        int preferredMaxCutDepth = optionalInt(
+                planning,
+                "preferredMaxCutDepth",
+                Math.min(SuburbPlanningSettings.DEFAULT_PREFERRED_MAX_CUT_DEPTH, maxCutDepth)
+        );
+        int preferredMaxFillDepth = optionalInt(
+                planning,
+                "preferredMaxFillDepth",
+                Math.min(SuburbPlanningSettings.DEFAULT_PREFERRED_MAX_FILL_DEPTH, maxFillDepth)
+        );
         return new SuburbPlanningSettings(
                 requiredInt(planning, "roadWidth"),
                 requiredDouble(planning, "maxBuildableSlope"),
@@ -58,8 +83,11 @@ public final class MinecraftSettlementProfileJsonParser {
                         LEGACY_MAX_ELEVATION_RANGE,
                         SuburbPlanningSettings.DEFAULT_MAX_ELEVATION_RANGE
                 ),
-                optionalInt(planning, "maxCutDepth", SuburbPlanningSettings.DEFAULT_MAX_CUT_DEPTH),
-                optionalInt(planning, "maxFillDepth", SuburbPlanningSettings.DEFAULT_MAX_FILL_DEPTH),
+                preferredMaxCutDepth,
+                preferredMaxFillDepth,
+                maxCutDepth,
+                maxFillDepth,
+                maxBuildingFoundationDepth,
                 optionalLong(
                         planning,
                         "maxEarthworkVolume",

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.minecraft.planning.SettlementRegion;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -15,22 +16,43 @@ final class WorldgenRegionSearchTest {
     private final WorldgenRegionSearch search = new WorldgenRegionSearch();
 
     @Test
-    void returnsNearestAcceptedCandidate() {
+    void returnsBestAcceptedCandidateWithinAttemptLimit() {
         SettlementRegion nearest = new SettlementRegion(0, 0);
         SettlementRegion farther = new SettlementRegion(2, 0);
 
-        WorldgenRegionSearch.Result result = search.findNearest(
+        WorldgenRegionSearch.Result<Integer> result = search.findBest(
                         0,
                         0,
                         4,
                         10,
                         region -> List.of(nearest, farther).contains(region),
-                        region -> true
+                        region -> Optional.of(region.equals(nearest) ? 10 : 1),
+                        Integer::compare
+                ).result()
+                .orElseThrow();
+
+        assertEquals(farther, result.region());
+        assertEquals(2, result.attemptedCandidates());
+    }
+
+    @Test
+    void keepsNearestCandidateWhenEvaluationsAreEqual() {
+        SettlementRegion nearest = new SettlementRegion(0, 0);
+        SettlementRegion farther = new SettlementRegion(2, 0);
+
+        WorldgenRegionSearch.Result<Integer> result = search.findBest(
+                        0,
+                        0,
+                        4,
+                        10,
+                        region -> List.of(nearest, farther).contains(region),
+                        region -> Optional.of(1),
+                        Integer::compare
                 ).result()
                 .orElseThrow();
 
         assertEquals(nearest, result.region());
-        assertEquals(1, result.attemptedCandidates());
+        assertEquals(2, result.attemptedCandidates());
     }
 
     @Test
@@ -38,13 +60,14 @@ final class WorldgenRegionSearchTest {
         SettlementRegion rejected = new SettlementRegion(0, 0);
         SettlementRegion accepted = new SettlementRegion(1, 0);
 
-        WorldgenRegionSearch.Result result = search.findNearest(
+        WorldgenRegionSearch.Result<Integer> result = search.findBest(
                         0,
                         0,
                         4,
                         10,
                         region -> region.equals(rejected) || region.equals(accepted),
-                        region -> region.equals(accepted)
+                        region -> region.equals(accepted) ? Optional.of(1) : Optional.empty(),
+                        Integer::compare
                 ).result()
                 .orElseThrow();
 
@@ -54,13 +77,14 @@ final class WorldgenRegionSearchTest {
 
     @Test
     void stopsAtCandidateAttemptLimit() {
-        WorldgenRegionSearch.Outcome outcome = search.findNearest(
+        WorldgenRegionSearch.Outcome<Integer> outcome = search.findBest(
                 0,
                 0,
                 4,
                 1,
                 region -> true,
-                region -> false
+                region -> Optional.empty(),
+                Integer::compare
         );
 
         assertTrue(outcome.result().isEmpty());
@@ -70,13 +94,14 @@ final class WorldgenRegionSearchTest {
     @Test
     void schedulesSearchWithoutRunningItOnTheCallingThread() {
         AtomicReference<Runnable> scheduledTask = new AtomicReference<>();
-        var future = search.findNearestAsync(
+        var future = search.findBestAsync(
                 0,
                 0,
                 1,
                 1,
                 region -> true,
-                region -> true,
+                region -> Optional.of(1),
+                Integer::compare,
                 scheduledTask::set
         );
 
@@ -92,7 +117,15 @@ final class WorldgenRegionSearchTest {
         try {
             assertThrows(
                     CancellationException.class,
-                    () -> search.findNearest(0, 0, 1, 1, region -> true, region -> true)
+                    () -> search.findBest(
+                            0,
+                            0,
+                            1,
+                            1,
+                            region -> true,
+                            region -> Optional.of(1),
+                            Integer::compare
+                    )
             );
         } finally {
             Thread.interrupted();
@@ -103,11 +136,15 @@ final class WorldgenRegionSearchTest {
     void rejectsInvalidLimits() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> search.findNearest(0, 0, 0, 1, region -> true, region -> true)
+                () -> search.findBest(
+                        0, 0, 0, 1, region -> true, region -> Optional.of(1), Integer::compare
+                )
         );
         assertThrows(
                 IllegalArgumentException.class,
-                () -> search.findNearest(0, 0, 1, 0, region -> true, region -> true)
+                () -> search.findBest(
+                        0, 0, 1, 0, region -> true, region -> Optional.of(1), Integer::compare
+                )
         );
     }
 }

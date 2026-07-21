@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.minecraft.worldgen;
 
 import com.cybersammy.citiesarise.config.CitiesAriseWorldgenConfig;
+import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteAssessment;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
 import com.cybersammy.citiesarise.minecraft.planning.SettlementRegion;
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanResult;
@@ -28,7 +29,7 @@ public final class WorldgenSettlementLocator {
         this.executor = new LocateSearchExecutor();
     }
 
-    public CompletableFuture<SearchResult> findNearestAsync(ServerLevel level, BlockPos origin) {
+    public CompletableFuture<SearchResult> findBestAsync(ServerLevel level, BlockPos origin) {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(origin, "origin");
 
@@ -45,18 +46,19 @@ public final class WorldgenSettlementLocator {
         int regionModulo = CitiesAriseWorldgenConfig.candidateRegionModulo();
         int seaLevel = level.getSeaLevel();
         Map<String, Integer> rejectionCounts = new LinkedHashMap<>();
-        return regionSearch.findNearestAsync(
+        return regionSearch.findBestAsync(
                 origin.getX(),
                 origin.getZ(),
                 CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
                 CitiesAriseWorldgenConfig.locateMaxCandidateAttempts(),
                 region -> candidateSelector.isCandidate(worldSeed, region, regionModulo),
-                region -> isAccepted(context, seaLevel, region, rejectionCounts),
+                region -> evaluate(context, seaLevel, region, rejectionCounts),
+                EarthworkSiteAssessment::compareTo,
                 executor
         ).thenApply(outcome -> searchResult(outcome, rejectionCounts));
     }
 
-    private boolean isAccepted(
+    private Optional<EarthworkSiteAssessment> evaluate(
             WorldgenPlanningContext context,
             int seaLevel,
             SettlementRegion region,
@@ -65,15 +67,17 @@ public final class WorldgenSettlementLocator {
         BlockPos center = centerPosition(seaLevel, region);
         SuburbDebugPlanResult result = planningService.planForWorldgen(context, center);
         if (result.successful()) {
-            return true;
+            return Optional.of(result.optionalSiteAssessment().orElseThrow(
+                    () -> new IllegalStateException("successful worldgen plan is missing site assessment")
+            ));
         }
 
         increment(rejectionCounts, rejectionReason(result));
-        return false;
+        return Optional.empty();
     }
 
     private SearchResult searchResult(
-            WorldgenRegionSearch.Outcome outcome,
+            WorldgenRegionSearch.Outcome<EarthworkSiteAssessment> outcome,
             Map<String, Integer> rejectionCounts
     ) {
         Optional<LocatedSettlement> settlement = outcome.result().map(this::locatedSettlement);
@@ -95,13 +99,14 @@ public final class WorldgenSettlementLocator {
         counts.merge(reason, 1, Integer::sum);
     }
 
-    private LocatedSettlement locatedSettlement(WorldgenRegionSearch.Result result) {
+    private LocatedSettlement locatedSettlement(WorldgenRegionSearch.Result<EarthworkSiteAssessment> result) {
         SettlementRegion region = result.region();
         return new LocatedSettlement(
                 region,
                 WorldgenRegionSearch.centerCoordinate(region.x()),
                 WorldgenRegionSearch.centerCoordinate(region.z()),
-                result.attemptedCandidates()
+                result.attemptedCandidates(),
+                result.evaluation()
         );
     }
 
@@ -121,8 +126,13 @@ public final class WorldgenSettlementLocator {
             SettlementRegion region,
             int blockX,
             int blockZ,
-            int attemptedCandidates
+            int attemptedCandidates,
+            EarthworkSiteAssessment siteAssessment
     ) {
+        public LocatedSettlement {
+            Objects.requireNonNull(region, "region");
+            Objects.requireNonNull(siteAssessment, "siteAssessment");
+        }
     }
 
     public record SearchResult(

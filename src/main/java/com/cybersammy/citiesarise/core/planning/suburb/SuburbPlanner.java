@@ -1,5 +1,7 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
+import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteAssessment;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -77,7 +79,13 @@ public final class SuburbPlanner {
             return SuburbPlanningResult.invalid(validationErrors);
         }
 
-        return SuburbPlanningResult.success(plan, preparation.plan().orElseThrow());
+        TerrainPreparationPlan preparationPlan = preparation.plan().orElseThrow();
+        EarthworkSiteAssessment siteAssessment = EarthworkSiteAssessment.evaluate(
+                preparationPlan,
+                request.settings().preferredMaxCutDepth(),
+                request.settings().preferredMaxFillDepth()
+        );
+        return SuburbPlanningResult.success(plan, preparationPlan, siteAssessment);
     }
 
     private static boolean hasEnoughParcels(SuburbLayout layout, SuburbPlanningRequest request) {

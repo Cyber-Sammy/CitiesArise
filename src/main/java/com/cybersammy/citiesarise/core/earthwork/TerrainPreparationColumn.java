@@ -9,11 +9,23 @@ public record TerrainPreparationColumn(
         PlanElementId sourceElementId,
         int targetElevation,
         int cutDepth,
-        int fillDepth
+        int fillDepth,
+        TerrainPreparationColumnType type
 ) {
+    public TerrainPreparationColumn(
+            GridPoint point,
+            PlanElementId sourceElementId,
+            int targetElevation,
+            int cutDepth,
+            int fillDepth
+    ) {
+        this(point, sourceElementId, targetElevation, cutDepth, fillDepth, TerrainPreparationColumnType.PLATFORM);
+    }
+
     public TerrainPreparationColumn {
         Objects.requireNonNull(point, "point");
         Objects.requireNonNull(sourceElementId, "sourceElementId");
+        Objects.requireNonNull(type, "type");
         requireNonNegative(cutDepth, "cutDepth");
         requireNonNegative(fillDepth, "fillDepth");
         if (cutDepth > 0 && fillDepth > 0) {

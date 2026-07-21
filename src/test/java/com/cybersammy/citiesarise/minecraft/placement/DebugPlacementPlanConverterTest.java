@@ -9,6 +9,7 @@ import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
 import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationArea;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
@@ -377,12 +378,14 @@ final class DebugPlacementPlanConverterTest {
     }
 
     private static TerrainPreparationPlan buildingPreparationPlan(BuildingSlot slot, int elevation) {
-        TerrainPreparationArea area = new TerrainPreparationArea(slot.id(), slot.bounds(), elevation, 0L, 0L);
+        TerrainPreparationArea area = new TerrainPreparationArea(slot.id(), slot.bounds(), elevation, 0L, 4L);
         List<TerrainPreparationColumn> columns = List.of(
                 preparationColumn(slot.id(), slot.bounds().minX(), slot.bounds().minZ(), elevation),
                 preparationColumn(slot.id(), slot.bounds().minX() + 1, slot.bounds().minZ(), elevation),
                 preparationColumn(slot.id(), slot.bounds().minX(), slot.bounds().minZ() + 1, elevation),
-                preparationColumn(slot.id(), slot.bounds().minX() + 1, slot.bounds().minZ() + 1, elevation)
+                preparationColumn(slot.id(), slot.bounds().minX() + 1, slot.bounds().minZ() + 1, elevation),
+                shoulderColumn(slot.id(), 10, 11, 63, 1),
+                shoulderColumn(slot.id(), 8, 11, 61, 3)
         );
         RegionalElevationPlan elevationPlan = new RegionalElevationPlan(
                 List.of(new ElevationZone(slot.id(), ElevationZoneType.BUILDING_PAD, slot.bounds(), elevation)),
@@ -398,6 +401,23 @@ final class DebugPlacementPlanConverterTest {
             int elevation
     ) {
         return new TerrainPreparationColumn(point(x, z), id, elevation, 0, 0);
+    }
+
+    private static TerrainPreparationColumn shoulderColumn(
+            PlanElementId id,
+            int x,
+            int z,
+            int elevation,
+            int fillDepth
+    ) {
+        return new TerrainPreparationColumn(
+                point(x, z),
+                id,
+                elevation,
+                0,
+                fillDepth,
+                TerrainPreparationColumnType.BUILDING_SHOULDER
+        );
     }
 
     private static BuildingSlot decayedBuildingSlot(PlanElementId id, PlanElementId parcelId, GridBounds bounds) {

@@ -4,6 +4,7 @@ import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -61,87 +62,38 @@ public final class DebugPlacementPlanConverter {
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
-        return withBuildingTerrainShoulders(plan, preparedPlan);
+        return withBuildingTerrainShoulders(preparationPlan, preparedPlan);
     }
 
     private static DebugPlacementPlan withBuildingTerrainShoulders(
-            SettlementPlan plan,
+            TerrainPreparationPlan preparationPlan,
             DebugPlacementPlan placementPlan
     ) {
         Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations = new LinkedHashMap<>();
         for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
             operations.put(operation.position(), operation);
         }
-        for (BuildingSlot slot : plan.buildingSlots()) {
-            addBuildingTerrainShoulders(slot, operations);
+        for (TerrainPreparationColumn column : preparationPlan.columns()) {
+            addBuildingTerrainShoulder(column, operations);
         }
         return new DebugPlacementPlan(List.copyOf(operations.values()));
     }
 
-    private static void addBuildingTerrainShoulders(
-            BuildingSlot slot,
-            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations
-    ) {
-        int platformY = requiredPlatformElevation(slot.properties());
-        GridBounds bounds = slot.bounds();
-        int minX = Math.subtractExact(bounds.minX(), TerrainTransitionPolicy.BUILDING_TERRACE_RADIUS);
-        int minZ = Math.subtractExact(bounds.minZ(), TerrainTransitionPolicy.BUILDING_TERRACE_RADIUS);
-        int maxXExclusive = Math.addExact(
-                bounds.maxXExclusive(),
-                TerrainTransitionPolicy.BUILDING_TERRACE_RADIUS
-        );
-        int maxZExclusive = Math.addExact(
-                bounds.maxZExclusive(),
-                TerrainTransitionPolicy.BUILDING_TERRACE_RADIUS
-        );
-
-        for (int z = minZ; z < maxZExclusive; z++) {
-            for (int x = minX; x < maxXExclusive; x++) {
-                addBuildingTerrainShoulder(slot, platformY, new GridPoint(x, z), operations);
-            }
-        }
-    }
-
     private static void addBuildingTerrainShoulder(
-            BuildingSlot slot,
-            int platformY,
-            GridPoint point,
+            TerrainPreparationColumn column,
             Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations
     ) {
-        int distance = distanceFromBounds(slot.bounds(), point);
-        if (distance == 0) {
+        if (column.type() != TerrainPreparationColumnType.BUILDING_SHOULDER) {
             return;
         }
         DebugBlockPlacementOperation operation = new DebugBlockPlacementOperation(
-                point,
+                column.point(),
                 SURFACE_OFFSET,
                 DebugPlacementRole.TERRAIN_SURFACE,
-                slot.id(),
-                OptionalInt.of(platformY - distance)
+                column.sourceElementId(),
+                OptionalInt.of(column.targetElevation())
         );
         addOperation(operation, operations);
-    }
-
-    private static int distanceFromBounds(GridBounds bounds, GridPoint point) {
-        int xDistance = axisDistance(point.x(), bounds.minX(), bounds.maxXExclusive());
-        int zDistance = axisDistance(point.z(), bounds.minZ(), bounds.maxZExclusive());
-        return Math.max(xDistance, zDistance);
-    }
-
-    private static int axisDistance(int coordinate, int minimum, int maximumExclusive) {
-        if (coordinate < minimum) {
-            return minimum - coordinate;
-        }
-        if (coordinate >= maximumExclusive) {
-            return coordinate - (maximumExclusive - 1);
-        }
-        return 0;
-    }
-
-    private static int requiredPlatformElevation(PlanProperties properties) {
-        return properties.find(PlanPropertyKeys.PLATFORM_Y)
-                .map(DebugPlacementPlanConverter::parsePlatformElevation)
-                .orElseThrow(() -> new IllegalArgumentException("building platform_y is required"));
     }
 
     private static Map<GridPoint, Integer> preparationElevations(TerrainPreparationPlan preparationPlan) {

@@ -1,10 +1,10 @@
 package com.cybersammy.citiesarise.minecraft.worldgen;
 
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
+import com.cybersammy.citiesarise.core.earthwork.BuildingTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.minecraft.placement.DebugBlockPlacementOperation;
 import com.cybersammy.citiesarise.minecraft.placement.DebugChunkPlacementPlan;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole;
-import com.cybersammy.citiesarise.minecraft.placement.TerrainTransitionPolicy;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
 import java.util.LinkedHashMap;
@@ -135,7 +135,7 @@ final class WorldgenChunkPlacement {
         if (fillDepth <= 0) {
             return false;
         }
-        return fillDepth <= TerrainTransitionPolicy.BUILDING_TERRACE_MAX_FILL_DEPTH;
+        return fillDepth <= BuildingTerrainShoulderPolicy.MAX_FILL_DEPTH;
     }
 
     private static Map<GridPoint, SurfaceColumn> surfaceColumns(WorldgenBlockAccess level, DebugChunkPlacementPlan plan) {

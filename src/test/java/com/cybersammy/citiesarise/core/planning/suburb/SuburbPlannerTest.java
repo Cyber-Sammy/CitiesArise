@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationStatus;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -258,6 +259,7 @@ final class SuburbPlannerTest {
         assertEquals(65, platformY(elevatedSlot));
         var buildingColumns = result.terrainPreparationPlan().orElseThrow().columns().stream()
                 .filter(column -> column.sourceElementId().equals(elevatedSlot.id()))
+                .filter(column -> column.type() == TerrainPreparationColumnType.PLATFORM)
                 .toList();
         assertTrue(buildingColumns.stream().allMatch(column -> column.targetElevation() == 65));
         assertTrue(buildingColumns.stream().allMatch(column -> column.cutDepth() == 0));

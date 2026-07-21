@@ -1,11 +1,13 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
 import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -20,6 +22,7 @@ import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -99,6 +102,70 @@ final class TerrainPreparationPlannerTest {
         assertEquals(1L, diagnostic.excessOverMaximum());
     }
 
+    @Test
+    void includesBuildingShouldersInEarthworkBudget() {
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                buildingShoulderSurvey(null),
+                42L,
+                new SuburbPlanningSettings(1, 1.0, 1, 3, 3, 0, 20, 3, 3, 43L)
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                buildingElevationPlan()
+        );
+
+        assertFalse(assessment.plan().isPresent());
+        assertEquals(44L, assessment.diagnostic()
+                .orElseThrow()
+                .optionalPreparationLimit()
+                .orElseThrow()
+                .actualValue());
+    }
+
+    @Test
+    void rejectsWaterInsideBuildingShoulder() {
+        GridPoint waterPoint = new GridPoint(3, 4);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                buildingShoulderSurvey(waterPoint),
+                42L,
+                settings(3, 3)
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                buildingElevationPlan()
+        );
+
+        assertEquals(waterPoint, assessment.diagnostic().orElseThrow().cell().point());
+        assertEquals(
+                TerrainRejectionReason.WATER,
+                assessment.diagnostic().orElseThrow().primaryRejectionReason().orElseThrow()
+        );
+    }
+
+    @Test
+    void emitsTypedBuildingShoulderColumns() {
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                buildingShoulderSurvey(null),
+                42L,
+                settings(3, 3)
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                buildingElevationPlan()
+        );
+
+        assertEquals(32L, assessment.plan().orElseThrow().columns().stream()
+                .filter(column -> column.type() == TerrainPreparationColumnType.BUILDING_SHOULDER)
+                .count());
+        assertEquals(44L, assessment.plan().orElseThrow().fillVolume());
+    }
+
     private static SettlementPlan crossingRoadPlan() {
         RoadNode west = node("west", 2, 5);
         RoadNode east = node("east", 8, 5);
@@ -161,6 +228,18 @@ final class TerrainPreparationPlannerTest {
         return surveyWithHeightAt(lowPoint, 63);
     }
 
+    private static RegionalElevationPlan buildingElevationPlan() {
+        return new RegionalElevationPlan(
+                List.of(new ElevationZone(
+                        id("building"),
+                        ElevationZoneType.BUILDING_PAD,
+                        new GridBounds(new GridPoint(4, 4), new GridSize(2, 2)),
+                        64
+                )),
+                List.of()
+        );
+    }
+
     private static TerrainSurvey surveyWithHeightAt(GridPoint pointAtHeight, int height) {
         GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(12, 12));
         return TerrainSurvey.sample(
@@ -169,6 +248,22 @@ final class TerrainPreparationPlannerTest {
                         point,
                         point.equals(pointAtHeight) ? height : 64,
                         false,
+                        0.0,
+                        BiomeCategory.PLAINS,
+                        TerrainCategory.BUILDABLE
+                ))
+        );
+    }
+
+    private static TerrainSurvey buildingShoulderSurvey(GridPoint waterPoint) {
+        GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(12, 12));
+        GridBounds buildingBounds = new GridBounds(new GridPoint(4, 4), new GridSize(2, 2));
+        return TerrainSurvey.sample(
+                bounds,
+                point -> Optional.of(new TerrainCell(
+                        point,
+                        buildingBounds.contains(point) ? 65 : 62,
+                        point.equals(waterPoint),
                         0.0,
                         BiomeCategory.PLAINS,
                         TerrainCategory.BUILDABLE

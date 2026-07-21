@@ -2,7 +2,6 @@ package com.cybersammy.citiesarise.minecraft.worldgen;
 
 import com.cybersammy.citiesarise.config.CitiesAriseConfig;
 import com.cybersammy.citiesarise.config.CitiesAriseWorldgenConfig;
-import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlan;
@@ -88,7 +87,6 @@ final class SuburbStructureGeneration {
                 .orElseGet(() -> planConverter.convert(result.plan()));
         SuburbStructurePlacementSnapshot snapshot = SuburbStructurePlacementSnapshot.from(placementPlan);
         BoundingBox boundingBox = boundingBox(
-                result.surveyBounds(),
                 snapshot,
                 profile,
                 context
@@ -112,7 +110,6 @@ final class SuburbStructureGeneration {
     }
 
     private static BoundingBox boundingBox(
-            GridBounds bounds,
             SuburbStructurePlacementSnapshot snapshot,
             SettlementProfile profile,
             Structure.GenerationContext context
@@ -120,12 +117,12 @@ final class SuburbStructureGeneration {
         int minY = minimumStructureY(snapshot, profile, context);
         int maxY = maximumStructureY(snapshot, profile, context);
         return new BoundingBox(
-                bounds.minX(),
+                snapshot.minimumX(),
                 minY,
-                bounds.minZ(),
-                bounds.maxXExclusive() - 1,
+                snapshot.minimumZ(),
+                snapshot.maximumX(),
                 maxY,
-                bounds.maxZExclusive() - 1
+                snapshot.maximumZ()
         );
     }
 

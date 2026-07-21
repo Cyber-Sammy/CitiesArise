@@ -4,6 +4,7 @@ import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationArea;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
+import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
 import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
@@ -62,7 +63,11 @@ final class TerrainPreparationPlanner {
                 GridPoint point = new GridPoint(x, z);
                 TerrainCell cell = TerrainPlatform.requiredTerrainCell(request, point);
                 int elevationDelta = Math.subtractExact(zone.targetElevation(), cell.height() - 1);
-                Optional<TerrainRejectionReason> rejection = rejection(request.settings(), elevationDelta);
+                Optional<TerrainRejectionReason> rejection = rejection(
+                        request.settings(),
+                        zone.type(),
+                        elevationDelta
+                );
                 if (rejection.isPresent()) {
                     return Optional.of(depthDiagnostic(
                             request.settings(),
@@ -119,15 +124,28 @@ final class TerrainPreparationPlanner {
 
     private static Optional<TerrainRejectionReason> rejection(
             SuburbPlanningSettings settings,
+            ElevationZoneType zoneType,
             int elevationDelta
     ) {
         if (elevationDelta < -settings.maxCutDepth()) {
             return Optional.of(TerrainRejectionReason.EXCESSIVE_CUT);
         }
-        if (elevationDelta > settings.maxFillDepth()) {
+        if (exceedsFillLimit(settings, zoneType, elevationDelta)) {
             return Optional.of(TerrainRejectionReason.EXCESSIVE_FILL);
         }
         return Optional.empty();
+    }
+
+    private static boolean exceedsFillLimit(
+            SuburbPlanningSettings settings,
+            ElevationZoneType zoneType,
+            int elevationDelta
+    ) {
+        if (zoneType == ElevationZoneType.BUILDING_PAD) {
+            return elevationDelta > settings.maxBuildingFoundationDepth();
+        }
+
+        return elevationDelta > settings.maxFillDepth();
     }
 
     private static SuburbTerrainDiagnostic totalVolumeDiagnostic(
@@ -179,7 +197,7 @@ final class TerrainPreparationPlanner {
     ) {
         int actualDepth = Math.abs(elevationDelta);
         int preferredLimit = preferredLimit(settings, rejectionReason);
-        int maximumLimit = maximumLimit(settings, rejectionReason);
+        int maximumLimit = maximumLimit(settings, zone.type(), rejectionReason);
         TerrainPreparationLimitDiagnostic limit = new TerrainPreparationLimitDiagnostic(
                 zone.sourceElementId(),
                 actualDepth,
@@ -202,10 +220,15 @@ final class TerrainPreparationPlanner {
 
     private static int maximumLimit(
             SuburbPlanningSettings settings,
+            ElevationZoneType zoneType,
             TerrainRejectionReason rejectionReason
     ) {
         if (rejectionReason == TerrainRejectionReason.EXCESSIVE_CUT) {
             return settings.maxCutDepth();
+        }
+
+        if (zoneType == ElevationZoneType.BUILDING_PAD) {
+            return settings.maxBuildingFoundationDepth();
         }
 
         return settings.maxFillDepth();

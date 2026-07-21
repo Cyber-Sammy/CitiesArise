@@ -2,6 +2,7 @@ package com.cybersammy.citiesarise.minecraft.placement;
 
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
+import com.cybersammy.citiesarise.minecraft.terrain.MinecraftVegetationClassifier;
 import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -140,11 +141,7 @@ public final class DebugPlacementApplier {
     }
 
     private static boolean isVegetation(BlockState state) {
-        if (state.is(BlockTags.LEAVES)) {
-            return true;
-        }
-
-        return state.is(BlockTags.LOGS);
+        return MinecraftVegetationClassifier.isClearable(state);
     }
 
     private SurfaceBlock surfaceBlock(ServerLevel level, int x, int y, int z) {
@@ -152,8 +149,15 @@ public final class DebugPlacementApplier {
 
         return new SurfaceBlock(
                 state.isAir(),
-                state.is(BlockTags.LEAVES),
+                isLeavesOrReplaceableVegetation(state),
                 state.is(BlockTags.LOGS)
         );
+    }
+
+    private static boolean isLeavesOrReplaceableVegetation(BlockState state) {
+        if (state.is(BlockTags.LOGS)) {
+            return false;
+        }
+        return MinecraftVegetationClassifier.isClearable(state);
     }
 }

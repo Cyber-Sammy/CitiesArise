@@ -164,6 +164,25 @@ final class DebugPlacementPlanConverterTest {
     }
 
     @Test
+    void addsChunkProjectableTerrainShouldersAroundPreparedBuilding() {
+        Parcel parcel = parcel(id("parcel"), bounds(10, 10, 4, 4));
+        BuildingSlot buildingSlot = elevatedBuildingSlot(id("slot"), parcel.id(), bounds(11, 11, 2, 2), 64);
+        SettlementPlan plan = plan(RoadGraph.empty(), List.of(parcel), List.of(buildingSlot));
+        TerrainPreparationPlan preparationPlan = buildingPreparationPlan(buildingSlot, 64);
+
+        DebugPlacementPlan placementPlan = converter.convert(plan, preparationPlan);
+        DebugBlockPlacementOperation firstRing = operationsByPosition(placementPlan)
+                .get(new DebugPlacementPosition(point(10, 11), 0));
+        DebugBlockPlacementOperation thirdRing = operationsByPosition(placementPlan)
+                .get(new DebugPlacementPosition(point(8, 11), 0));
+
+        assertEquals(DebugPlacementRole.TERRAIN_SURFACE, firstRing.role());
+        assertEquals(63, firstRing.platformY().orElseThrow());
+        assertEquals(DebugPlacementRole.TERRAIN_SURFACE, thirdRing.role());
+        assertEquals(61, thirdRing.platformY().orElseThrow());
+    }
+
+    @Test
     void rendersRoofRidgeAlongLongerBuildingAxis() {
         Parcel parcel = parcel(id("parcel"), bounds(10, 10, 14, 16));
         BuildingSlot buildingSlot = buildingSlot(id("slot"), parcel.id(), bounds(12, 12, 10, 12));
@@ -340,6 +359,45 @@ final class DebugPlacementPlanConverterTest {
 
     private static BuildingSlot buildingSlot(PlanElementId id, PlanElementId parcelId, GridBounds bounds) {
         return new BuildingSlot(id, parcelId, bounds, Set.of(), PlanProperties.empty());
+    }
+
+    private static BuildingSlot elevatedBuildingSlot(
+            PlanElementId id,
+            PlanElementId parcelId,
+            GridBounds bounds,
+            int elevation
+    ) {
+        return new BuildingSlot(
+                id,
+                parcelId,
+                bounds,
+                Set.of(),
+                PlanProperties.of(PlanPropertyKeys.PLATFORM_Y, Integer.toString(elevation))
+        );
+    }
+
+    private static TerrainPreparationPlan buildingPreparationPlan(BuildingSlot slot, int elevation) {
+        TerrainPreparationArea area = new TerrainPreparationArea(slot.id(), slot.bounds(), elevation, 0L, 0L);
+        List<TerrainPreparationColumn> columns = List.of(
+                preparationColumn(slot.id(), slot.bounds().minX(), slot.bounds().minZ(), elevation),
+                preparationColumn(slot.id(), slot.bounds().minX() + 1, slot.bounds().minZ(), elevation),
+                preparationColumn(slot.id(), slot.bounds().minX(), slot.bounds().minZ() + 1, elevation),
+                preparationColumn(slot.id(), slot.bounds().minX() + 1, slot.bounds().minZ() + 1, elevation)
+        );
+        RegionalElevationPlan elevationPlan = new RegionalElevationPlan(
+                List.of(new ElevationZone(slot.id(), ElevationZoneType.BUILDING_PAD, slot.bounds(), elevation)),
+                List.of()
+        );
+        return TerrainPreparationPlan.of(elevationPlan, List.of(area), columns);
+    }
+
+    private static TerrainPreparationColumn preparationColumn(
+            PlanElementId id,
+            int x,
+            int z,
+            int elevation
+    ) {
+        return new TerrainPreparationColumn(point(x, z), id, elevation, 0, 0);
     }
 
     private static BuildingSlot decayedBuildingSlot(PlanElementId id, PlanElementId parcelId, GridBounds bounds) {

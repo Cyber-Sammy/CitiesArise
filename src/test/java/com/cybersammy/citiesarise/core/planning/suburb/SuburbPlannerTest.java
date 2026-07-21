@@ -281,6 +281,41 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void rejectsBuildingFoundationAboveDedicatedLimit() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(
+                3,
+                0.75,
+                6,
+                6,
+                7,
+                1,
+                100,
+                3,
+                3,
+                6,
+                8,
+                4,
+                20_000L
+        );
+        BuildingSlot flatSlot = planner.plan(request(flatSurvey(40, 30), 100L, settings))
+                .plan()
+                .orElseThrow()
+                .buildingSlots()
+                .getFirst();
+        TerrainSurvey slopedSurvey = surveyWithHeightAt(40, 30, flatSlot.bounds().origin(), 70);
+
+        SuburbPlanningResult result = planner.plan(request(slopedSurvey, 100L, settings));
+        TerrainPreparationLimitDiagnostic diagnostic = result.terrainDiagnostic()
+                .orElseThrow()
+                .optionalPreparationLimit()
+                .orElseThrow();
+
+        assertFalse(result.successful());
+        assertEquals(4L, diagnostic.maximumLimit());
+        assertEquals(flatSlot.id(), diagnostic.sourceElementId());
+    }
+
+    @Test
     void rejectsPlatformThatWouldBridgeADeepRavine() {
         TerrainSurvey survey = surveyWithHeightAt(40, 30, new GridPoint(10, 15), 40);
         SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 3);

@@ -57,10 +57,91 @@ public final class DebugPlacementPlanConverter {
         }
         DebugPlacementPlan placementPlan = convert(plan);
         Map<GridPoint, Integer> elevationByPoint = preparationElevations(preparationPlan);
-        return new DebugPlacementPlan(placementPlan.operations()
+        DebugPlacementPlan preparedPlan = new DebugPlacementPlan(placementPlan.operations()
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
+        return withBuildingTerrainShoulders(plan, preparedPlan);
+    }
+
+    private static DebugPlacementPlan withBuildingTerrainShoulders(
+            SettlementPlan plan,
+            DebugPlacementPlan placementPlan
+    ) {
+        Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations = new LinkedHashMap<>();
+        for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
+            operations.put(operation.position(), operation);
+        }
+        for (BuildingSlot slot : plan.buildingSlots()) {
+            addBuildingTerrainShoulders(slot, operations);
+        }
+        return new DebugPlacementPlan(List.copyOf(operations.values()));
+    }
+
+    private static void addBuildingTerrainShoulders(
+            BuildingSlot slot,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations
+    ) {
+        int platformY = requiredPlatformElevation(slot.properties());
+        GridBounds bounds = slot.bounds();
+        int minX = Math.subtractExact(bounds.minX(), TerrainTransitionPolicy.BUILDING_TERRACE_RADIUS);
+        int minZ = Math.subtractExact(bounds.minZ(), TerrainTransitionPolicy.BUILDING_TERRACE_RADIUS);
+        int maxXExclusive = Math.addExact(
+                bounds.maxXExclusive(),
+                TerrainTransitionPolicy.BUILDING_TERRACE_RADIUS
+        );
+        int maxZExclusive = Math.addExact(
+                bounds.maxZExclusive(),
+                TerrainTransitionPolicy.BUILDING_TERRACE_RADIUS
+        );
+
+        for (int z = minZ; z < maxZExclusive; z++) {
+            for (int x = minX; x < maxXExclusive; x++) {
+                addBuildingTerrainShoulder(slot, platformY, new GridPoint(x, z), operations);
+            }
+        }
+    }
+
+    private static void addBuildingTerrainShoulder(
+            BuildingSlot slot,
+            int platformY,
+            GridPoint point,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations
+    ) {
+        int distance = distanceFromBounds(slot.bounds(), point);
+        if (distance == 0) {
+            return;
+        }
+        DebugBlockPlacementOperation operation = new DebugBlockPlacementOperation(
+                point,
+                SURFACE_OFFSET,
+                DebugPlacementRole.TERRAIN_SURFACE,
+                slot.id(),
+                OptionalInt.of(platformY - distance)
+        );
+        addOperation(operation, operations);
+    }
+
+    private static int distanceFromBounds(GridBounds bounds, GridPoint point) {
+        int xDistance = axisDistance(point.x(), bounds.minX(), bounds.maxXExclusive());
+        int zDistance = axisDistance(point.z(), bounds.minZ(), bounds.maxZExclusive());
+        return Math.max(xDistance, zDistance);
+    }
+
+    private static int axisDistance(int coordinate, int minimum, int maximumExclusive) {
+        if (coordinate < minimum) {
+            return minimum - coordinate;
+        }
+        if (coordinate >= maximumExclusive) {
+            return coordinate - (maximumExclusive - 1);
+        }
+        return 0;
+    }
+
+    private static int requiredPlatformElevation(PlanProperties properties) {
+        return properties.find(PlanPropertyKeys.PLATFORM_Y)
+                .map(DebugPlacementPlanConverter::parsePlatformElevation)
+                .orElseThrow(() -> new IllegalArgumentException("building platform_y is required"));
     }
 
     private static Map<GridPoint, Integer> preparationElevations(TerrainPreparationPlan preparationPlan) {
@@ -438,6 +519,13 @@ public final class DebugPlacementPlanConverter {
                 role,
                 sourceElementId
         );
+        addOperation(operation, operationsByPosition);
+    }
+
+    private static void addOperation(
+            DebugBlockPlacementOperation operation,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
+    ) {
         DebugBlockPlacementOperation existingOperation = operationsByPosition.get(operation.position());
 
         if (shouldKeepExistingOperation(existingOperation, operation)) {

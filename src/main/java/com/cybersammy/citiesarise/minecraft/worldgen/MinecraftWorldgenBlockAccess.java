@@ -3,6 +3,7 @@ package com.cybersammy.citiesarise.minecraft.worldgen;
 import java.util.Objects;
 import com.cybersammy.citiesarise.minecraft.placement.DebugBlockMaterialProvider;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole;
+import com.cybersammy.citiesarise.minecraft.terrain.MinecraftVegetationClassifier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
@@ -46,6 +47,9 @@ final class MinecraftWorldgenBlockAccess implements WorldgenBlockAccess {
         }
         if (state.is(net.minecraft.tags.BlockTags.LOGS)) {
             return WorldgenSurfaceMaterial.LOGS;
+        }
+        if (MinecraftVegetationClassifier.isClearable(state)) {
+            return WorldgenSurfaceMaterial.VEGETATION;
         }
         if (!state.getFluidState().isEmpty() && state.getCollisionShape(level, blockPosition).isEmpty()) {
             return WorldgenSurfaceMaterial.FLUID;

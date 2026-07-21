@@ -119,16 +119,56 @@ class WorldgenPlacementApplierTest {
                 .slice(TARGET_CHUNK);
         FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
         level.put(14, 72, 8, WorldgenSurfaceMaterial.LEAVES);
-        level.put(4, 72, 8, WorldgenSurfaceMaterial.LEAVES);
+        level.put(1, 72, 8, WorldgenSurfaceMaterial.LEAVES);
         level.put(16, 72, 8, WorldgenSurfaceMaterial.LEAVES);
 
         new WorldgenChunkPlacement().apply(level, chunkPlan);
 
         assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(14, 72, 8));
-        assertEquals(WorldgenSurfaceMaterial.LEAVES, level.materialAt(4, 72, 8));
+        assertEquals(WorldgenSurfaceMaterial.LEAVES, level.materialAt(1, 72, 8));
         assertEquals(WorldgenSurfaceMaterial.LEAVES, level.materialAt(16, 72, 8));
         assertTrue(level.reads().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
         assertTrue(level.writes().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
+    }
+
+    @Test
+    void clearsReplaceableJungleVegetation() {
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(operation(8, 8, "jungle_road")));
+        DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
+                .partition(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.put(8, 70, 8, WorldgenSurfaceMaterial.VEGETATION);
+        level.put(12, 75, 8, WorldgenSurfaceMaterial.VEGETATION);
+
+        new WorldgenChunkPlacement().apply(level, chunkPlan);
+
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(8, 70, 8));
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(12, 75, 8));
+    }
+
+    @Test
+    void buildsOnlyBoundedDownhillTerrainShoulders() {
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(
+                terrainSurfaceOperation(8, 8, 66),
+                terrainSurfaceOperation(9, 8, 70),
+                terrainSurfaceOperation(10, 8, 64)
+        ));
+        DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
+                .partition(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.surfaceHeight(8, 8, 64);
+        level.surfaceHeight(9, 8, 64);
+        level.surfaceHeight(10, 8, 66);
+
+        new WorldgenChunkPlacement().apply(level, chunkPlan);
+
+        assertTrue(level.hasPlacement(8, 64, 8, DebugPlacementRole.TERRAIN_FILL));
+        assertTrue(level.hasPlacement(8, 65, 8, DebugPlacementRole.TERRAIN_FILL));
+        assertTrue(level.hasPlacement(8, 66, 8, DebugPlacementRole.TERRAIN_SURFACE));
+        assertFalse(level.hasPlacement(9, 70, 8, DebugPlacementRole.TERRAIN_SURFACE));
+        assertFalse(level.hasPlacement(10, 64, 8, DebugPlacementRole.TERRAIN_SURFACE));
     }
 
     private static DebugBlockPlacementOperation operation(int x, int z, String id) {
@@ -151,6 +191,16 @@ class WorldgenPlacementApplierTest {
                 0,
                 DebugPlacementRole.ROAD_SURFACE,
                 id,
+                OptionalInt.of(platformY)
+        );
+    }
+
+    private static DebugBlockPlacementOperation terrainSurfaceOperation(int x, int z, int platformY) {
+        return new DebugBlockPlacementOperation(
+                new GridPoint(x, z),
+                0,
+                DebugPlacementRole.TERRAIN_SURFACE,
+                new PlanElementId("cities_arise:terrain_surface"),
                 OptionalInt.of(platformY)
         );
     }

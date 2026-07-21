@@ -15,6 +15,7 @@
     "preferredMaxFillDepth": 3,
     "maxCutDepth": 6,
     "maxFillDepth": 8,
+    "maxBuildingFoundationDepth": 4,
     "maxEarthworkVolume": 20000
   }
 }

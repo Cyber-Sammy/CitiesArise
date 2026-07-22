@@ -30,8 +30,19 @@ public final class TerrainPreparationPlanValidator {
         validateBuildings(plan, zonesById, areasById, errors);
         validateNoRemovedElements(plan, zonesById, areasById, errors);
         validateAreas(zonesById, areasById, errors);
-        validateColumns(zonesById, areasById, preparationPlan.columns(), errors);
-        validateTransitions(preparationPlan.elevationPlan(), zonesById, errors);
+        validateColumns(
+                preparationPlan.elevationPlan(),
+                zonesById,
+                areasById,
+                preparationPlan.columns(),
+                errors
+        );
+        validateTransitions(
+                preparationPlan.elevationPlan(),
+                zonesById,
+                preparationPlan.columns(),
+                errors
+        );
         return List.copyOf(errors);
     }
 
@@ -208,6 +219,7 @@ public final class TerrainPreparationPlanValidator {
     }
 
     private static void validateColumns(
+            RegionalElevationPlan elevationPlan,
             Map<PlanElementId, ElevationZone> zonesById,
             Map<PlanElementId, TerrainPreparationArea> areasById,
             List<TerrainPreparationColumn> columns,
@@ -223,6 +235,14 @@ public final class TerrainPreparationPlanValidator {
                 validateBuildingShoulderColumn(zonesById, column, errors);
                 continue;
             }
+            if (column.type() == TerrainPreparationColumnType.ROAD_SHOULDER) {
+                validateRoadShoulderColumn(zonesById, column, errors);
+                continue;
+            }
+            if (isTransitionColumn(column)) {
+                validateTransitionColumn(elevationPlan, zonesById, column, errors);
+                continue;
+            }
             if (!area.bounds().contains(column.point())) {
                 errors.add(error(column.sourceElementId(), "terrain preparation column is outside its area"));
             }
@@ -230,6 +250,124 @@ public final class TerrainPreparationPlanValidator {
                 errors.add(error(column.sourceElementId(), "terrain preparation column elevation does not match area"));
             }
         }
+    }
+
+    private static void validateRoadShoulderColumn(
+            Map<PlanElementId, ElevationZone> zonesById,
+            TerrainPreparationColumn column,
+            List<PlanValidationError> errors
+    ) {
+        ElevationZone zone = zonesById.get(column.sourceElementId());
+        if (zone == null) {
+            errors.add(error(column.sourceElementId(), "road shoulder references missing elevation zone"));
+            return;
+        }
+        if (zone.type() != ElevationZoneType.ROAD_SEGMENT) {
+            errors.add(error(column.sourceElementId(), "road shoulder must belong to a road zone"));
+            return;
+        }
+        if (!RoadTerrainShoulderPolicy.contains(zone.bounds(), column.point())) {
+            errors.add(error(column.sourceElementId(), "road shoulder is outside the supported transition area"));
+        }
+        int expectedElevation = RoadTerrainShoulderPolicy.targetElevation(
+                zone.bounds(),
+                column.point(),
+                zone.targetElevation()
+        );
+        if (column.targetElevation() != expectedElevation) {
+            errors.add(error(column.sourceElementId(), "road shoulder elevation does not match support policy"));
+        }
+        validateFillOnlySupport(column, RoadTerrainShoulderPolicy.MAX_FILL_DEPTH, "road shoulder", errors);
+    }
+
+    private static void validateFillOnlySupport(
+            TerrainPreparationColumn column,
+            int maximumFillDepth,
+            String name,
+            List<PlanValidationError> errors
+    ) {
+        if (column.cutDepth() != 0) {
+            errors.add(error(column.sourceElementId(), name + " must not cut terrain"));
+        }
+        if (column.fillDepth() <= 0) {
+            errors.add(error(column.sourceElementId(), name + " must fill terrain"));
+        }
+        if (column.fillDepth() > maximumFillDepth) {
+            errors.add(error(column.sourceElementId(), name + " fill exceeds support policy"));
+        }
+    }
+
+    private static boolean isTransitionColumn(TerrainPreparationColumn column) {
+        return switch (column.type()) {
+            case ROAD_TRANSITION_STEP, BUILDING_ACCESS, BUILDING_ACCESS_STEP -> true;
+            case PLATFORM, BUILDING_SHOULDER, ROAD_SHOULDER -> false;
+        };
+    }
+
+    private static void validateTransitionColumn(
+            RegionalElevationPlan elevationPlan,
+            Map<PlanElementId, ElevationZone> zonesById,
+            TerrainPreparationColumn column,
+        List<PlanValidationError> errors
+    ) {
+        for (ElevationTransition transition : elevationPlan.transitions()) {
+            if (!transitionOwnsColumn(transition, column)) {
+                continue;
+            }
+            ElevationZone source = zonesById.get(transition.sourceZoneId());
+            ElevationZone target = zonesById.get(transition.targetZoneId());
+            if (!ElevationTransitionPolicy.canMaterialize(transition, source, target)) {
+                continue;
+            }
+            for (ElevationTransitionPolicy.TransitionPoint point
+                    : ElevationTransitionPolicy.materialize(transition, source, target)) {
+                if (matchesTransitionPoint(transition, column, point)) {
+                    return;
+                }
+            }
+        }
+        errors.add(error(column.sourceElementId(), "terrain transition column does not match elevation plan"));
+    }
+
+    private static boolean transitionOwnsColumn(
+            ElevationTransition transition,
+            TerrainPreparationColumn column
+    ) {
+        if (transition.type() == ElevationTransitionType.BUILDING_ACCESS) {
+            return transition.targetZoneId().equals(column.sourceElementId());
+        }
+        if (transition.sourceZoneId().equals(column.sourceElementId())) {
+            return true;
+        }
+        return transition.targetZoneId().equals(column.sourceElementId());
+    }
+
+    private static boolean matchesTransitionPoint(
+            ElevationTransition transition,
+            TerrainPreparationColumn column,
+            ElevationTransitionPolicy.TransitionPoint point
+    ) {
+        if (!point.point().equals(column.point())) {
+            return false;
+        }
+        if (point.targetElevation() != column.targetElevation()) {
+            return false;
+        }
+        TerrainPreparationColumnType expectedType = expectedTransitionColumnType(transition.type(), point.step());
+        return expectedType == column.type();
+    }
+
+    private static TerrainPreparationColumnType expectedTransitionColumnType(
+            ElevationTransitionType transitionType,
+            boolean step
+    ) {
+        if (transitionType == ElevationTransitionType.ROAD_CONNECTION) {
+            return TerrainPreparationColumnType.ROAD_TRANSITION_STEP;
+        }
+        if (step) {
+            return TerrainPreparationColumnType.BUILDING_ACCESS_STEP;
+        }
+        return TerrainPreparationColumnType.BUILDING_ACCESS;
     }
 
     private static void validateBuildingShoulderColumn(
@@ -257,20 +395,18 @@ public final class TerrainPreparationPlanValidator {
         if (column.targetElevation() != expectedElevation) {
             errors.add(error(column.sourceElementId(), "building shoulder elevation does not match transition policy"));
         }
-        if (column.cutDepth() != 0) {
-            errors.add(error(column.sourceElementId(), "building shoulder must not cut terrain"));
-        }
-        if (column.fillDepth() <= 0) {
-            errors.add(error(column.sourceElementId(), "building shoulder must fill terrain"));
-        }
-        if (column.fillDepth() > BuildingTerrainShoulderPolicy.MAX_FILL_DEPTH) {
-            errors.add(error(column.sourceElementId(), "building shoulder fill exceeds transition policy"));
-        }
+        validateFillOnlySupport(
+                column,
+                BuildingTerrainShoulderPolicy.MAX_FILL_DEPTH,
+                "building shoulder",
+                errors
+        );
     }
 
     private static void validateTransitions(
             RegionalElevationPlan elevationPlan,
             Map<PlanElementId, ElevationZone> zonesById,
+            List<TerrainPreparationColumn> columns,
             List<PlanValidationError> errors
     ) {
         for (ElevationTransition transition : elevationPlan.transitions()) {
@@ -278,10 +414,59 @@ public final class TerrainPreparationPlanValidator {
             ElevationZone target = zonesById.get(transition.targetZoneId());
             if (transition.type() == ElevationTransitionType.ROAD_CONNECTION) {
                 validateRoadTransition(transition, source, target, errors);
+            } else {
+                validateBuildingAccessTransition(transition, source, target, elevationPlan.zones(), errors);
+            }
+            validateMaterializedTransition(transition, source, target, columns, errors);
+        }
+    }
+
+    private static void validateMaterializedTransition(
+            ElevationTransition transition,
+            ElevationZone source,
+            ElevationZone target,
+            List<TerrainPreparationColumn> columns,
+            List<PlanValidationError> errors
+    ) {
+        if (!ElevationTransitionPolicy.canMaterialize(transition, source, target)) {
+            errors.add(error(transition.targetZoneId(), "elevation transition exceeds available transition length"));
+            return;
+        }
+        for (ElevationTransitionPolicy.TransitionPoint point
+                : ElevationTransitionPolicy.materialize(transition, source, target)) {
+            if (!containsTransitionColumn(transition.type(), point, columns)) {
+                errors.add(error(transition.targetZoneId(), "elevation transition preparation is incomplete"));
+                return;
+            }
+        }
+    }
+
+    private static boolean containsTransitionColumn(
+            ElevationTransitionType transitionType,
+            ElevationTransitionPolicy.TransitionPoint point,
+            List<TerrainPreparationColumn> columns
+    ) {
+        TerrainPreparationColumnType expected = expectedTransitionColumnType(transitionType, point.step());
+        for (TerrainPreparationColumn column : columns) {
+            if (!column.point().equals(point.point())) {
                 continue;
             }
-            validateBuildingAccessTransition(transition, source, target, elevationPlan.zones(), errors);
+            if (column.targetElevation() != point.targetElevation()) {
+                continue;
+            }
+            if (column.type() == expected) {
+                return true;
+            }
+            if (point.step() && isStepColumn(column.type())) {
+                return true;
+            }
         }
+        return false;
+    }
+
+    private static boolean isStepColumn(TerrainPreparationColumnType type) {
+        return type == TerrainPreparationColumnType.ROAD_TRANSITION_STEP
+                || type == TerrainPreparationColumnType.BUILDING_ACCESS_STEP;
     }
 
     private static void validateRoadTransition(

@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
+import com.cybersammy.citiesarise.core.earthwork.ElevationTransition;
+import com.cybersammy.citiesarise.core.earthwork.ElevationTransitionType;
 import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationArea;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
@@ -96,6 +98,53 @@ final class DebugPlacementPlanConverterTest {
         DebugPlacementPlan placementPlan = converter.convert(plan, preparationPlan);
 
         assertTrue(placementPlan.operations().stream().allMatch(operation -> operation.platformY().orElseThrow() == 72));
+    }
+
+    @Test
+    void materializesPreparedRoadTransitionAsStepSurface() {
+        RoadNode west = roadNode(id("west"), point(0, 0));
+        RoadNode junction = roadNode(id("junction"), point(3, 0));
+        RoadNode north = roadNode(id("north"), point(3, 3));
+        RoadSegment lower = elevatedRoadSegment(id("lower"), west.id(), junction.id(), 64);
+        RoadSegment upper = elevatedRoadSegment(id("upper"), junction.id(), north.id(), 65);
+        SettlementPlan plan = plan(
+                new RoadGraph(List.of(west, junction, north), List.of(lower, upper)),
+                List.of(),
+                List.of()
+        );
+        ElevationZone lowerZone = new ElevationZone(lower.id(), ElevationZoneType.ROAD_SEGMENT, bounds(0, 0, 4, 1), 64);
+        ElevationZone upperZone = new ElevationZone(upper.id(), ElevationZoneType.ROAD_SEGMENT, bounds(3, 0, 1, 4), 65);
+        ElevationTransition transition = new ElevationTransition(
+                ElevationTransitionType.ROAD_CONNECTION,
+                lower.id(),
+                upper.id(),
+                junction.point(),
+                64,
+                65
+        );
+        TerrainPreparationColumn transitionColumn = new TerrainPreparationColumn(
+                junction.point(),
+                lower.id(),
+                65,
+                0,
+                0,
+                TerrainPreparationColumnType.ROAD_TRANSITION_STEP
+        );
+        TerrainPreparationPlan preparationPlan = TerrainPreparationPlan.of(
+                new RegionalElevationPlan(List.of(lowerZone, upperZone), List.of(transition)),
+                List.of(
+                        new TerrainPreparationArea(lower.id(), lowerZone.bounds(), 64, 0, 0),
+                        new TerrainPreparationArea(upper.id(), upperZone.bounds(), 65, 0, 0)
+                ),
+                List.of(transitionColumn)
+        );
+
+        DebugPlacementPlan placementPlan = converter.convert(plan, preparationPlan);
+        DebugBlockPlacementOperation operation = operationsByPosition(placementPlan)
+                .get(new DebugPlacementPosition(junction.point(), 0));
+
+        assertEquals(DebugPlacementRole.ROAD_TRANSITION_STEP, operation.role());
+        assertEquals(65, operation.platformY().orElseThrow());
     }
 
     @Test
@@ -342,6 +391,22 @@ final class DebugPlacementPlanConverterTest {
             int width
     ) {
         return roadSegment(id, startNodeId, endNodeId, width, Set.of());
+    }
+
+    private static RoadSegment elevatedRoadSegment(
+            PlanElementId id,
+            PlanElementId startNodeId,
+            PlanElementId endNodeId,
+            int elevation
+    ) {
+        return new RoadSegment(
+                id,
+                startNodeId,
+                endNodeId,
+                1,
+                Set.of(),
+                PlanProperties.of(PlanPropertyKeys.PLATFORM_Y, Integer.toString(elevation))
+        );
     }
 
     private static RoadSegment roadSegment(

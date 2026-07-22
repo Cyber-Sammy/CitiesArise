@@ -55,7 +55,7 @@ final class SuburbPlannerTest {
     void createsValidSuburbPlanOnFlatTerrain() {
         SuburbPlanningResult result = planner.plan(request(flatSurvey(40, 30), 100L, SuburbPlanningSettings.defaults()));
 
-        assertTrue(result.successful());
+        assertTrue(result.successful(), result.toString());
         SettlementPlan plan = result.plan().orElseThrow();
         assertTrue(validator.validate(plan).isEmpty());
         assertFalse(plan.roadGraph().nodes().isEmpty());
@@ -213,7 +213,7 @@ final class SuburbPlannerTest {
     }
 
     @Test
-    void allowsProfileToIncreaseEarthworkDepth() {
+    void increasedEarthworkDepthDoesNotBypassTransitionGrade() {
         TerrainSurvey survey = elevationSurvey(40, 30, 1);
         SuburbPlanningSettings settings = new SuburbPlanningSettings(
                 3,
@@ -229,7 +229,8 @@ final class SuburbPlannerTest {
 
         SuburbPlanningResult result = planner.plan(request(survey, 100L, settings));
 
-        assertTrue(result.successful());
+        assertFalse(result.successful());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.EXCESSIVE_EARTHWORK);
     }
 
     @Test
@@ -346,9 +347,10 @@ final class SuburbPlannerTest {
     @Test
     void keepsConnectedRoadSegmentsWithinOneBlock() {
         SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 40, 40, 40);
-        SettlementPlan plan = planner.plan(request(elevationSurvey(40, 30, 2), 100L, settings))
+        SuburbPlanningResult result = planner.plan(request(elevationSurvey(40, 30, 2), 100L, settings));
+        SettlementPlan plan = result
                 .plan()
-                .orElseThrow();
+                .orElseThrow(() -> new AssertionError(result));
 
         for (RoadSegment first : plan.roadGraph().segments()) {
             for (RoadSegment second : plan.roadGraph().segments()) {

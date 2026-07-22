@@ -1,5 +1,6 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
+import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteAssessment;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.validation.PlanValidationError;
@@ -12,7 +13,8 @@ public record SuburbPlanningResult(
         Optional<SuburbPlanningFailureReason> failureReason,
         List<PlanValidationError> validationErrors,
         Optional<SuburbTerrainDiagnostic> terrainDiagnostic,
-        Optional<TerrainPreparationPlan> terrainPreparationPlan
+        Optional<TerrainPreparationPlan> terrainPreparationPlan,
+        Optional<EarthworkSiteAssessment> siteAssessment
 ) {
     public SuburbPlanningResult(
             Optional<SettlementPlan> plan,
@@ -20,7 +22,17 @@ public record SuburbPlanningResult(
             List<PlanValidationError> validationErrors,
             Optional<SuburbTerrainDiagnostic> terrainDiagnostic
     ) {
-        this(plan, failureReason, validationErrors, terrainDiagnostic, Optional.empty());
+        this(plan, failureReason, validationErrors, terrainDiagnostic, Optional.empty(), Optional.empty());
+    }
+
+    public SuburbPlanningResult(
+            Optional<SettlementPlan> plan,
+            Optional<SuburbPlanningFailureReason> failureReason,
+            List<PlanValidationError> validationErrors,
+            Optional<SuburbTerrainDiagnostic> terrainDiagnostic,
+            Optional<TerrainPreparationPlan> terrainPreparationPlan
+    ) {
+        this(plan, failureReason, validationErrors, terrainDiagnostic, terrainPreparationPlan, Optional.empty());
     }
 
     public SuburbPlanningResult {
@@ -28,10 +40,12 @@ public record SuburbPlanningResult(
         Objects.requireNonNull(failureReason, "failureReason");
         Objects.requireNonNull(terrainDiagnostic, "terrainDiagnostic");
         Objects.requireNonNull(terrainPreparationPlan, "terrainPreparationPlan");
+        Objects.requireNonNull(siteAssessment, "siteAssessment");
         validationErrors = immutableValidationErrors(validationErrors);
         rejectAmbiguousResult(plan, failureReason);
         rejectUnexpectedTerrainDiagnostic(failureReason, terrainDiagnostic);
         rejectUnexpectedPreparationPlan(plan, terrainPreparationPlan);
+        rejectUnexpectedSiteAssessment(plan, terrainPreparationPlan, siteAssessment);
     }
 
     public static SuburbPlanningResult success(SettlementPlan plan) {
@@ -40,6 +54,7 @@ public record SuburbPlanningResult(
                 Optional.of(plan),
                 Optional.empty(),
                 List.of(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty()
         );
@@ -53,7 +68,26 @@ public record SuburbPlanningResult(
                 Optional.empty(),
                 List.of(),
                 Optional.empty(),
-                Optional.of(terrainPreparationPlan)
+                Optional.of(terrainPreparationPlan),
+                Optional.empty()
+        );
+    }
+
+    public static SuburbPlanningResult success(
+            SettlementPlan plan,
+            TerrainPreparationPlan terrainPreparationPlan,
+            EarthworkSiteAssessment siteAssessment
+    ) {
+        Objects.requireNonNull(plan, "plan");
+        Objects.requireNonNull(terrainPreparationPlan, "terrainPreparationPlan");
+        Objects.requireNonNull(siteAssessment, "siteAssessment");
+        return new SuburbPlanningResult(
+                Optional.of(plan),
+                Optional.empty(),
+                List.of(),
+                Optional.empty(),
+                Optional.of(terrainPreparationPlan),
+                Optional.of(siteAssessment)
         );
     }
 
@@ -63,6 +97,7 @@ public record SuburbPlanningResult(
                 Optional.empty(),
                 Optional.of(reason),
                 List.of(),
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty()
         );
@@ -75,6 +110,7 @@ public record SuburbPlanningResult(
                 Optional.of(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN),
                 List.of(),
                 Optional.of(diagnostic),
+                Optional.empty(),
                 Optional.empty()
         );
     }
@@ -84,6 +120,7 @@ public record SuburbPlanningResult(
                 Optional.empty(),
                 Optional.of(SuburbPlanningFailureReason.INVALID_PLAN),
                 validationErrors,
+                Optional.empty(),
                 Optional.empty(),
                 Optional.empty()
         );
@@ -151,6 +188,22 @@ public record SuburbPlanningResult(
         }
         if (plan.isEmpty()) {
             throw new IllegalArgumentException("terrainPreparationPlan is only allowed for successful result");
+        }
+    }
+
+    private static void rejectUnexpectedSiteAssessment(
+            Optional<SettlementPlan> plan,
+            Optional<TerrainPreparationPlan> terrainPreparationPlan,
+            Optional<EarthworkSiteAssessment> siteAssessment
+    ) {
+        if (siteAssessment.isEmpty()) {
+            return;
+        }
+        if (plan.isEmpty()) {
+            throw new IllegalArgumentException("siteAssessment is only allowed for successful result");
+        }
+        if (terrainPreparationPlan.isEmpty()) {
+            throw new IllegalArgumentException("siteAssessment requires terrainPreparationPlan");
         }
     }
 

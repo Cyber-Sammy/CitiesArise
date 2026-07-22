@@ -1,5 +1,6 @@
 package com.cybersammy.citiesarise.minecraft.planning;
 
+import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteAssessment;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.model.BuildingSlot;
@@ -23,7 +24,8 @@ public record SuburbDebugPlanResult(
         SettlementPlan plan,
         SuburbPlanningFailureReason failureReason,
         SuburbTerrainDiagnostic terrainDiagnostic,
-        TerrainPreparationPlan terrainPreparationPlan
+        TerrainPreparationPlan terrainPreparationPlan,
+        EarthworkSiteAssessment siteAssessment
 ) {
     public SuburbDebugPlanResult(
             SettlementRegion region,
@@ -34,7 +36,20 @@ public record SuburbDebugPlanResult(
             SuburbPlanningFailureReason failureReason,
             SuburbTerrainDiagnostic terrainDiagnostic
     ) {
-        this(region, surveyBounds, seed, successful, plan, failureReason, terrainDiagnostic, null);
+        this(region, surveyBounds, seed, successful, plan, failureReason, terrainDiagnostic, null, null);
+    }
+
+    public SuburbDebugPlanResult(
+            SettlementRegion region,
+            GridBounds surveyBounds,
+            long seed,
+            boolean successful,
+            SettlementPlan plan,
+            SuburbPlanningFailureReason failureReason,
+            SuburbTerrainDiagnostic terrainDiagnostic,
+            TerrainPreparationPlan terrainPreparationPlan
+    ) {
+        this(region, surveyBounds, seed, successful, plan, failureReason, terrainDiagnostic, terrainPreparationPlan, null);
     }
 
     public SuburbDebugPlanResult {
@@ -42,6 +57,7 @@ public record SuburbDebugPlanResult(
         Objects.requireNonNull(surveyBounds, "surveyBounds");
         rejectMissingOutcome(successful, plan, failureReason);
         rejectUnexpectedTerrainDiagnostic(successful, failureReason, terrainDiagnostic);
+        rejectUnexpectedSiteAssessment(successful, terrainPreparationPlan, siteAssessment);
     }
 
     public static SuburbDebugPlanResult from(
@@ -60,7 +76,8 @@ public record SuburbDebugPlanResult(
                 result.plan().orElse(null),
                 result.failureReason().orElse(null),
                 result.terrainDiagnostic().orElse(null),
-                result.terrainPreparationPlan().orElse(null)
+                result.terrainPreparationPlan().orElse(null),
+                result.siteAssessment().orElse(null)
         );
     }
 
@@ -78,6 +95,10 @@ public record SuburbDebugPlanResult(
 
     public Optional<TerrainPreparationPlan> optionalTerrainPreparationPlan() {
         return Optional.ofNullable(terrainPreparationPlan);
+    }
+
+    public Optional<EarthworkSiteAssessment> optionalSiteAssessment() {
+        return Optional.ofNullable(siteAssessment);
     }
 
     public long wornRoadCount() {
@@ -133,7 +154,18 @@ public record SuburbDebugPlanResult(
         return optionalTerrainPreparationPlan()
                 .map(plan -> ", terrain=" + plan.status()
                         + ", cutVolume=" + plan.cutVolume()
-                        + ", fillVolume=" + plan.fillVolume())
+                        + ", fillVolume=" + plan.fillVolume()
+                        + siteAssessmentSummary())
+                .orElse("");
+    }
+
+    private String siteAssessmentSummary() {
+        return optionalSiteAssessment()
+                .map(assessment -> ", earthworkQuality=" + assessment.quality()
+                        + ", earthworkCost=" + assessment.rankingCost()
+                        + ", preferredDepthExcess=" + assessment.preferredDepthExcess()
+                        + ", earthworkDensity="
+                        + String.format(Locale.ROOT, "%.3f", assessment.earthworkDensity()))
                 .orElse("");
     }
 
@@ -252,5 +284,21 @@ public record SuburbDebugPlanResult(
         }
 
         throw new IllegalArgumentException("terrainDiagnostic is only allowed for unsuitable terrain");
+    }
+
+    private static void rejectUnexpectedSiteAssessment(
+            boolean successful,
+            TerrainPreparationPlan terrainPreparationPlan,
+            EarthworkSiteAssessment siteAssessment
+    ) {
+        if (siteAssessment == null) {
+            return;
+        }
+        if (!successful) {
+            throw new IllegalArgumentException("siteAssessment is only allowed for successful result");
+        }
+        if (terrainPreparationPlan == null) {
+            throw new IllegalArgumentException("siteAssessment requires terrainPreparationPlan");
+        }
     }
 }

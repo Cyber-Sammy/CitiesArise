@@ -9,44 +9,52 @@ import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 final class WorldgenRegionSearch {
-    CompletableFuture<Outcome> findNearestAsync(
+    <T> CompletableFuture<Outcome<T>> findBestAsync(
             int originX,
             int originZ,
             int searchRadius,
             int maxCandidateAttempts,
             Predicate<SettlementRegion> candidatePredicate,
-            Predicate<SettlementRegion> acceptedPredicate,
+            Function<SettlementRegion, Optional<T>> evaluator,
+            Comparator<T> comparator,
             Executor executor
     ) {
         Objects.requireNonNull(executor, "executor");
         return CompletableFuture.supplyAsync(
-                () -> findNearest(
+                () -> findBest(
                         originX,
                         originZ,
                         searchRadius,
                         maxCandidateAttempts,
                         candidatePredicate,
-                        acceptedPredicate
+                        evaluator,
+                        comparator
                 ),
                 executor
         );
     }
 
-    Outcome findNearest(
+    <T> Outcome<T> findBest(
             int originX,
             int originZ,
             int searchRadius,
             int maxCandidateAttempts,
             Predicate<SettlementRegion> candidatePredicate,
-            Predicate<SettlementRegion> acceptedPredicate
+            Function<SettlementRegion, Optional<T>> evaluator,
+            Comparator<T> comparator
     ) {
         requirePositive(searchRadius, "searchRadius");
         requirePositive(maxCandidateAttempts, "maxCandidateAttempts");
+        Objects.requireNonNull(candidatePredicate, "candidatePredicate");
+        Objects.requireNonNull(evaluator, "evaluator");
+        Objects.requireNonNull(comparator, "comparator");
 
         List<SettlementRegion> regions = orderedRegions(originX, originZ, searchRadius);
+        Optional<Candidate<T>> bestCandidate = Optional.empty();
         int attempts = 0;
         for (SettlementRegion region : regions) {
             rejectInterruptedSearch();
@@ -54,14 +62,37 @@ final class WorldgenRegionSearch {
                 continue;
             }
             attempts++;
-            if (acceptedPredicate.test(region)) {
-                return Outcome.found(region, attempts);
+            Optional<T> evaluation = Objects.requireNonNull(evaluator.apply(region), "evaluation");
+            if (evaluation.isPresent()) {
+                Candidate<T> candidate = new Candidate<>(region, evaluation.orElseThrow());
+                bestCandidate = selectBetter(bestCandidate, candidate, comparator);
             }
             if (attempts >= maxCandidateAttempts) {
-                return Outcome.notFound(attempts);
+                break;
             }
         }
-        return Outcome.notFound(attempts);
+        return outcome(bestCandidate, attempts);
+    }
+
+    private static <T> Optional<Candidate<T>> selectBetter(
+            Optional<Candidate<T>> current,
+            Candidate<T> candidate,
+            Comparator<T> comparator
+    ) {
+        if (current.isEmpty()) {
+            return Optional.of(candidate);
+        }
+        Candidate<T> currentCandidate = current.orElseThrow();
+        if (comparator.compare(candidate.evaluation(), currentCandidate.evaluation()) < 0) {
+            return Optional.of(candidate);
+        }
+        return current;
+    }
+
+    private static <T> Outcome<T> outcome(Optional<Candidate<T>> candidate, int attempts) {
+        return candidate
+                .map(value -> Outcome.found(value.region(), value.evaluation(), attempts))
+                .orElseGet(() -> Outcome.notFound(attempts));
     }
 
     private static List<SettlementRegion> orderedRegions(int originX, int originZ, int radius) {
@@ -98,16 +129,27 @@ final class WorldgenRegionSearch {
         }
     }
 
-    record Result(SettlementRegion region, int attemptedCandidates) {
-    }
-
     private static void rejectInterruptedSearch() {
         if (Thread.currentThread().isInterrupted()) {
             throw new CancellationException("settlement search was interrupted");
         }
     }
 
-    record Outcome(Optional<Result> result, int attemptedCandidates) {
+    private record Candidate<T>(SettlementRegion region, T evaluation) {
+        private Candidate {
+            Objects.requireNonNull(region, "region");
+            Objects.requireNonNull(evaluation, "evaluation");
+        }
+    }
+
+    record Result<T>(SettlementRegion region, T evaluation, int attemptedCandidates) {
+        Result {
+            Objects.requireNonNull(region, "region");
+            Objects.requireNonNull(evaluation, "evaluation");
+        }
+    }
+
+    record Outcome<T>(Optional<Result<T>> result, int attemptedCandidates) {
         Outcome {
             Objects.requireNonNull(result, "result");
             if (attemptedCandidates < 0) {
@@ -115,12 +157,19 @@ final class WorldgenRegionSearch {
             }
         }
 
-        private static Outcome found(SettlementRegion region, int attemptedCandidates) {
-            return new Outcome(Optional.of(new Result(region, attemptedCandidates)), attemptedCandidates);
+        private static <T> Outcome<T> found(
+                SettlementRegion region,
+                T evaluation,
+                int attemptedCandidates
+        ) {
+            return new Outcome<>(
+                    Optional.of(new Result<>(region, evaluation, attemptedCandidates)),
+                    attemptedCandidates
+            );
         }
 
-        private static Outcome notFound(int attemptedCandidates) {
-            return new Outcome(Optional.empty(), attemptedCandidates);
+        private static <T> Outcome<T> notFound(int attemptedCandidates) {
+            return new Outcome<>(Optional.empty(), attemptedCandidates);
         }
     }
 }

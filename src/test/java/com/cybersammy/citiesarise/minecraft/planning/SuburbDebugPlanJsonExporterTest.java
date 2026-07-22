@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteAssessment;
+import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -29,6 +32,11 @@ final class SuburbDebugPlanJsonExporterTest {
         assertTrue(json.contains("\"surveyBounds\": { \"x\": 100, \"z\": 200, \"width\": 120, \"depth\": 72 }"));
         assertTrue(json.contains("\"seed\": 42"));
         assertTrue(json.contains("\"summary\""));
+        assertTrue(json.contains("\"quality\": \"DIRECT\""));
+        assertTrue(json.contains("\"rankingCost\": 0"));
+        assertTrue(json.contains("\"preferredDepthExcess\": 0"));
+        assertTrue(json.contains("\"footprintColumnCount\": 0"));
+        assertTrue(json.contains("\"earthworkColumnCount\": 0"));
         assertTrue(json.contains("\"plan\""));
         assertTrue(json.contains("\"id\": \"test/settlement\""));
         assertFalse(json.contains(",\n,"));
@@ -48,11 +56,17 @@ final class SuburbDebugPlanJsonExporterTest {
     }
 
     private static SuburbDebugPlanResult successfulResult() {
+        TerrainPreparationPlan preparationPlan = TerrainPreparationPlan.of(
+                new RegionalElevationPlan(List.of(), List.of()),
+                List.of(),
+                List.of()
+        );
+        EarthworkSiteAssessment assessment = EarthworkSiteAssessment.evaluate(preparationPlan, 3, 3);
         return SuburbDebugPlanResult.from(
                 new SettlementRegion(2, -3),
                 bounds(100, 200, 120, 72),
                 42L,
-                SuburbPlanningResult.success(plan())
+                SuburbPlanningResult.success(plan(), preparationPlan, assessment)
         );
     }
 

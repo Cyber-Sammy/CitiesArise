@@ -61,6 +61,7 @@ final class SuburbPlanTransformServiceTest {
         SuburbPlanningResult transformed = service.apply(planned, 42L);
 
         assertEquals(planned.terrainPreparationPlan(), transformed.terrainPreparationPlan());
+        assertEquals(planned.siteAssessment(), transformed.siteAssessment());
     }
 
     @Test

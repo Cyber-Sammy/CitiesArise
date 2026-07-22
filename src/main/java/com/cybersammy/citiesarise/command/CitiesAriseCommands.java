@@ -91,7 +91,7 @@ public final class CitiesAriseCommands {
         source.sendSuccess(() -> Component.literal(startedSummary), false);
         logCommandResult(startedSummary);
         MinecraftServer server = source.getServer();
-        settlementLocator.findNearestAsync(source.getLevel(), origin)
+        settlementLocator.findBestAsync(source.getLevel(), origin)
                 .whenComplete((result, exception) -> server.execute(
                         () -> completeLocate(source, result, exception)
                 ));
@@ -124,7 +124,7 @@ public final class CitiesAriseCommands {
         }
 
         var located = result.settlement().orElseThrow();
-        String summary = "Nearest Cities Arise settlement: ["
+        String summary = "Best Cities Arise settlement: ["
                 + located.blockX()
                 + ", ~, "
                 + located.blockZ()
@@ -134,6 +134,14 @@ public final class CitiesAriseCommands {
                 + located.region().z()
                 + "), checkedCandidates="
                 + located.attemptedCandidates()
+                + ", earthworkQuality="
+                + located.siteAssessment().quality()
+                + ", earthworkVolume="
+                + located.siteAssessment().totalVolume()
+                + ", earthworkCost="
+                + located.siteAssessment().rankingCost()
+                + ", preferredDepthExcess="
+                + located.siteAssessment().preferredDepthExcess()
                 + ".";
         source.sendSuccess(() -> Component.literal(summary), false);
         logCommandResult(summary);

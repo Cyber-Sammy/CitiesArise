@@ -61,7 +61,19 @@ public final class SuburbDebugPlanJsonExporter {
             appendInlineNumberField(output, "cutVolume", plan.cutVolume(), false);
             appendInlineNumberField(output, "fillVolume", plan.fillVolume(), false);
             appendInlineNumberField(output, "totalVolume", plan.totalVolume(), false);
+            appendSiteAssessment(output, result);
             output.append(" }");
+        });
+    }
+
+    private static void appendSiteAssessment(StringBuilder output, SuburbDebugPlanResult result) {
+        result.optionalSiteAssessment().ifPresent(assessment -> {
+            appendInlineStringField(output, "quality", assessment.quality().name(), false);
+            appendInlineNumberField(output, "rankingCost", assessment.rankingCost(), false);
+            appendInlineNumberField(output, "preferredDepthExcess", assessment.preferredDepthExcess(), false);
+            appendInlineNumberField(output, "columnsAbovePreferred", assessment.columnsAbovePreferred(), false);
+            appendInlineNumberField(output, "footprintColumnCount", assessment.footprintColumnCount(), false);
+            appendInlineNumberField(output, "earthworkColumnCount", assessment.earthworkColumnCount(), false);
         });
     }
 

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
+import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteQuality;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationStatus;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
@@ -106,6 +107,7 @@ final class SuburbPlannerTest {
 
         assertTrue(result.successful());
         assertEquals(TerrainPreparationStatus.ACCEPTED, result.terrainPreparationPlan().orElseThrow().status());
+        assertEquals(EarthworkSiteQuality.DIRECT, result.siteAssessment().orElseThrow().quality());
     }
 
     @Test
@@ -141,6 +143,7 @@ final class SuburbPlannerTest {
                 result.terrainPreparationPlan().orElseThrow().status()
         );
         assertTrue(result.terrainPreparationPlan().orElseThrow().totalVolume() > 0L);
+        assertTrue(result.siteAssessment().isPresent());
     }
 
     @Test
@@ -171,6 +174,7 @@ final class SuburbPlannerTest {
                 TerrainPreparationStatus.ACCEPTED_WITH_EARTHWORKS,
                 first.terrainPreparationPlan().orElseThrow().status()
         );
+        assertEquals(EarthworkSiteQuality.MAJOR, first.siteAssessment().orElseThrow().quality());
     }
 
     @Test

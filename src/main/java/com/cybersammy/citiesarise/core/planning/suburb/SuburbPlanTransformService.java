@@ -1,7 +1,8 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
-import com.cybersammy.citiesarise.core.model.SettlementPlan;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator;
+import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.transform.TransformContext;
 import com.cybersammy.citiesarise.core.transform.TransformPipeline;
 import com.cybersammy.citiesarise.core.validation.PlanValidationError;
@@ -50,8 +51,13 @@ public final class SuburbPlanTransformService {
             }
         }
 
-        return result.terrainPreparationPlan()
-                .map(preparationPlan -> SuburbPlanningResult.success(transformedPlan, preparationPlan))
-                .orElseGet(() -> SuburbPlanningResult.success(transformedPlan));
+        if (result.terrainPreparationPlan().isEmpty()) {
+            return SuburbPlanningResult.success(transformedPlan);
+        }
+
+        TerrainPreparationPlan preparationPlan = result.terrainPreparationPlan().orElseThrow();
+        return result.siteAssessment()
+                .map(assessment -> SuburbPlanningResult.success(transformedPlan, preparationPlan, assessment))
+                .orElseGet(() -> SuburbPlanningResult.success(transformedPlan, preparationPlan));
     }
 }

@@ -69,9 +69,11 @@ public final class SuburbDebugPlanJsonExporter {
     private static void appendSiteAssessment(StringBuilder output, SuburbDebugPlanResult result) {
         result.optionalSiteAssessment().ifPresent(assessment -> {
             appendInlineStringField(output, "quality", assessment.quality().name(), false);
+            appendInlineNumberField(output, "rankingCost", assessment.rankingCost(), false);
             appendInlineNumberField(output, "preferredDepthExcess", assessment.preferredDepthExcess(), false);
             appendInlineNumberField(output, "columnsAbovePreferred", assessment.columnsAbovePreferred(), false);
-            appendInlineNumberField(output, "preparedColumnCount", assessment.preparedColumnCount(), false);
+            appendInlineNumberField(output, "footprintColumnCount", assessment.footprintColumnCount(), false);
+            appendInlineNumberField(output, "earthworkColumnCount", assessment.earthworkColumnCount(), false);
         });
     }
 

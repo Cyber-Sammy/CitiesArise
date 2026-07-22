@@ -8,7 +8,8 @@ public record EarthworkSiteAssessment(
         long preferredDepthExcess,
         int columnsAbovePreferred,
         long totalVolume,
-        int preparedColumnCount,
+        int footprintColumnCount,
+        int earthworkColumnCount,
         int maximumCutDepth,
         int maximumFillDepth
 ) implements Comparable<EarthworkSiteAssessment> {
@@ -17,13 +18,15 @@ public record EarthworkSiteAssessment(
         requireNonNegative(preferredDepthExcess, "preferredDepthExcess");
         requireNonNegative(columnsAbovePreferred, "columnsAbovePreferred");
         requireNonNegative(totalVolume, "totalVolume");
-        requireNonNegative(preparedColumnCount, "preparedColumnCount");
+        requireNonNegative(footprintColumnCount, "footprintColumnCount");
+        requireNonNegative(earthworkColumnCount, "earthworkColumnCount");
         requireNonNegative(maximumCutDepth, "maximumCutDepth");
         requireNonNegative(maximumFillDepth, "maximumFillDepth");
         requireConsistentPreferredExcess(preferredDepthExcess, columnsAbovePreferred, totalVolume);
-        requireColumnCount(columnsAbovePreferred, preparedColumnCount);
+        requireEarthworkColumnCount(earthworkColumnCount, footprintColumnCount, totalVolume);
+        requireColumnCount(columnsAbovePreferred, earthworkColumnCount);
         requireMatchingQuality(quality, preferredDepthExcess, totalVolume);
-        requireColumnsForVolume(preparedColumnCount, totalVolume);
+        Math.addExact(totalVolume, preferredDepthExcess);
     }
 
     public static EarthworkSiteAssessment evaluate(
@@ -37,9 +40,13 @@ public record EarthworkSiteAssessment(
 
         long preferredDepthExcess = 0L;
         int columnsAbovePreferred = 0;
+        int earthworkColumnCount = 0;
         int maximumCutDepth = 0;
         int maximumFillDepth = 0;
         for (TerrainPreparationColumn column : plan.columns()) {
+            if (column.totalVolume() > 0) {
+                earthworkColumnCount = Math.incrementExact(earthworkColumnCount);
+            }
             long columnExcess = preferredExcess(column, preferredCutDepth, preferredFillDepth);
             preferredDepthExcess = Math.addExact(preferredDepthExcess, columnExcess);
             if (columnExcess > 0L) {
@@ -55,6 +62,7 @@ public record EarthworkSiteAssessment(
                 columnsAbovePreferred,
                 plan.totalVolume(),
                 plan.columns().size(),
+                earthworkColumnCount,
                 maximumCutDepth,
                 maximumFillDepth
         );
@@ -63,15 +71,11 @@ public record EarthworkSiteAssessment(
     @Override
     public int compareTo(EarthworkSiteAssessment other) {
         Objects.requireNonNull(other, "other");
-        int comparison = quality.compareTo(other.quality);
+        int comparison = Long.compare(rankingCost(), other.rankingCost());
         if (comparison != 0) {
             return comparison;
         }
-        comparison = Long.compare(preferredDepthExcess, other.preferredDepthExcess);
-        if (comparison != 0) {
-            return comparison;
-        }
-        comparison = Integer.compare(columnsAbovePreferred, other.columnsAbovePreferred);
+        comparison = Integer.compare(maximumDepth(), other.maximumDepth());
         if (comparison != 0) {
             return comparison;
         }
@@ -83,26 +87,50 @@ public record EarthworkSiteAssessment(
         if (comparison != 0) {
             return comparison;
         }
+        comparison = Long.compare(preferredDepthExcess, other.preferredDepthExcess);
+        if (comparison != 0) {
+            return comparison;
+        }
+        comparison = Integer.compare(columnsAbovePreferred, other.columnsAbovePreferred);
+        if (comparison != 0) {
+            return comparison;
+        }
+        comparison = Integer.compare(maximumFillDepth, other.maximumFillDepth);
+        if (comparison != 0) {
+            return comparison;
+        }
         comparison = Integer.compare(maximumCutDepth, other.maximumCutDepth);
         if (comparison != 0) {
             return comparison;
         }
-        return Integer.compare(maximumFillDepth, other.maximumFillDepth);
+        comparison = Integer.compare(earthworkColumnCount, other.earthworkColumnCount);
+        if (comparison != 0) {
+            return comparison;
+        }
+        return Integer.compare(footprintColumnCount, other.footprintColumnCount);
+    }
+
+    public long rankingCost() {
+        return Math.addExact(totalVolume, preferredDepthExcess);
     }
 
     public double earthworkDensity() {
-        if (preparedColumnCount == 0) {
+        if (earthworkColumnCount == 0) {
             return 0.0;
         }
-        return (double) totalVolume / preparedColumnCount;
+        return (double) totalVolume / earthworkColumnCount;
     }
 
     private int compareDensity(EarthworkSiteAssessment other) {
         BigInteger left = BigInteger.valueOf(totalVolume)
-                .multiply(BigInteger.valueOf(other.preparedColumnCount));
+                .multiply(BigInteger.valueOf(other.earthworkColumnCount));
         BigInteger right = BigInteger.valueOf(other.totalVolume)
-                .multiply(BigInteger.valueOf(preparedColumnCount));
+                .multiply(BigInteger.valueOf(earthworkColumnCount));
         return left.compareTo(right);
+    }
+
+    private int maximumDepth() {
+        return Math.max(maximumCutDepth, maximumFillDepth);
     }
 
     private static long preferredExcess(
@@ -148,14 +176,24 @@ public record EarthworkSiteAssessment(
         }
     }
 
-    private static void requireColumnsForVolume(int preparedColumnCount, long totalVolume) {
-        if (preparedColumnCount != 0) {
-            return;
+    private static void requireEarthworkColumnCount(
+            int earthworkColumnCount,
+            int footprintColumnCount,
+            long totalVolume
+    ) {
+        if (earthworkColumnCount > footprintColumnCount) {
+            throw new IllegalArgumentException("earthworkColumnCount must not exceed footprintColumnCount");
         }
         if (totalVolume == 0L) {
+            if (earthworkColumnCount != 0) {
+                throw new IllegalArgumentException("earthwork columns require positive volume");
+            }
             return;
         }
-        throw new IllegalArgumentException("positive volume requires prepared columns");
+        if (earthworkColumnCount > 0) {
+            return;
+        }
+        throw new IllegalArgumentException("positive volume requires earthwork columns");
     }
 
     private static void requireConsistentPreferredExcess(
@@ -177,9 +215,9 @@ public record EarthworkSiteAssessment(
         }
     }
 
-    private static void requireColumnCount(int columnsAbovePreferred, int preparedColumnCount) {
-        if (columnsAbovePreferred > preparedColumnCount) {
-            throw new IllegalArgumentException("columnsAbovePreferred must not exceed preparedColumnCount");
+    private static void requireColumnCount(int columnsAbovePreferred, int earthworkColumnCount) {
+        if (columnsAbovePreferred > earthworkColumnCount) {
+            throw new IllegalArgumentException("columnsAbovePreferred must not exceed earthworkColumnCount");
         }
     }
 }

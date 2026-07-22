@@ -33,8 +33,10 @@ final class SuburbDebugPlanJsonExporterTest {
         assertTrue(json.contains("\"seed\": 42"));
         assertTrue(json.contains("\"summary\""));
         assertTrue(json.contains("\"quality\": \"DIRECT\""));
+        assertTrue(json.contains("\"rankingCost\": 0"));
         assertTrue(json.contains("\"preferredDepthExcess\": 0"));
-        assertTrue(json.contains("\"preparedColumnCount\": 0"));
+        assertTrue(json.contains("\"footprintColumnCount\": 0"));
+        assertTrue(json.contains("\"earthworkColumnCount\": 0"));
         assertTrue(json.contains("\"plan\""));
         assertTrue(json.contains("\"id\": \"test/settlement\""));
         assertFalse(json.contains(",\n,"));

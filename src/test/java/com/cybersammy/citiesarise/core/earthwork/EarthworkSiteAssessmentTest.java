@@ -14,9 +14,9 @@ import org.junit.jupiter.api.Test;
 final class EarthworkSiteAssessmentTest {
     @Test
     void classifiesDirectModerateAndMajorSites() {
-        EarthworkSiteAssessment direct = assessment(0, 0, 0, 4, 0, 0);
-        EarthworkSiteAssessment moderate = assessment(6, 0, 0, 4, 2, 0);
-        EarthworkSiteAssessment major = assessment(6, 2, 1, 4, 4, 0);
+        EarthworkSiteAssessment direct = assessment(0, 0, 0, 4, 0, 0, 0);
+        EarthworkSiteAssessment moderate = assessment(6, 0, 0, 4, 3, 2, 0);
+        EarthworkSiteAssessment major = assessment(6, 2, 1, 4, 3, 4, 0);
 
         assertEquals(EarthworkSiteQuality.DIRECT, direct.quality());
         assertEquals(EarthworkSiteQuality.MODERATE, moderate.quality());
@@ -24,30 +24,41 @@ final class EarthworkSiteAssessmentTest {
     }
 
     @Test
-    void ranksQualityBeforeEarthworkVolume() {
-        EarthworkSiteAssessment moderate = assessment(100, 0, 0, 10, 3, 3);
-        EarthworkSiteAssessment major = assessment(1, 1, 1, 10, 4, 0);
+    void ranksQuantitativeCostWithoutHardQualityPriority() {
+        EarthworkSiteAssessment moderate = assessment(100, 0, 0, 10, 10, 3, 3);
+        EarthworkSiteAssessment major = assessment(4, 1, 1, 10, 1, 4, 0);
 
-        assertTrue(moderate.compareTo(major) < 0);
+        assertTrue(major.compareTo(moderate) < 0);
+        assertEquals(EarthworkSiteQuality.MAJOR, major.quality());
+        assertEquals(5, major.rankingCost());
     }
 
     @Test
-    void ranksLowerPreferredExcessAndDensityFirst() {
-        EarthworkSiteAssessment lowerExcess = assessment(20, 1, 1, 10, 4, 0);
-        EarthworkSiteAssessment higherExcess = assessment(10, 2, 1, 10, 4, 0);
-        EarthworkSiteAssessment lowerDensity = assessment(10, 1, 1, 10, 4, 0);
-        EarthworkSiteAssessment higherDensity = assessment(11, 1, 1, 10, 4, 0);
+    void ranksLowerCostThenLowerEarthworkDensity() {
+        EarthworkSiteAssessment lowerCost = assessment(10, 1, 1, 10, 5, 4, 0);
+        EarthworkSiteAssessment higherCost = assessment(10, 2, 1, 10, 5, 4, 0);
+        EarthworkSiteAssessment lowerDensity = assessment(10, 1, 1, 10, 10, 4, 0);
+        EarthworkSiteAssessment higherDensity = assessment(10, 1, 1, 10, 5, 4, 0);
 
-        assertTrue(lowerExcess.compareTo(higherExcess) < 0);
+        assertTrue(lowerCost.compareTo(higherCost) < 0);
         assertTrue(lowerDensity.compareTo(higherDensity) < 0);
         assertEquals(1.0, lowerDensity.earthworkDensity());
+    }
+
+    @Test
+    void ignoresUnchangedFootprintColumnsWhenCalculatingDensity() {
+        EarthworkSiteAssessment compact = assessment(10, 0, 0, 5, 2, 5, 0);
+        EarthworkSiteAssessment broad = assessment(10, 0, 0, 100, 2, 5, 0);
+
+        assertEquals(5.0, compact.earthworkDensity());
+        assertEquals(compact.earthworkDensity(), broad.earthworkDensity());
     }
 
     @Test
     void rejectsQualityThatDoesNotMatchValues() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new EarthworkSiteAssessment(EarthworkSiteQuality.DIRECT, 0, 0, 1, 1, 1, 0)
+                () -> new EarthworkSiteAssessment(EarthworkSiteQuality.DIRECT, 0, 0, 1, 1, 1, 1, 0)
         );
     }
 
@@ -65,6 +76,8 @@ final class EarthworkSiteAssessmentTest {
         assertEquals(3, assessment.preferredDepthExcess());
         assertEquals(2, assessment.columnsAbovePreferred());
         assertEquals(9, assessment.totalVolume());
+        assertEquals(2, assessment.footprintColumnCount());
+        assertEquals(2, assessment.earthworkColumnCount());
         assertEquals(4.5, assessment.earthworkDensity());
     }
 
@@ -72,7 +85,8 @@ final class EarthworkSiteAssessmentTest {
             long volume,
             long preferredExcess,
             int columnsAbovePreferred,
-            int columns,
+            int footprintColumns,
+            int earthworkColumns,
             int maximumCut,
             int maximumFill
     ) {
@@ -87,7 +101,8 @@ final class EarthworkSiteAssessmentTest {
                 preferredExcess,
                 columnsAbovePreferred,
                 volume,
-                columns,
+                footprintColumns,
+                earthworkColumns,
                 maximumCut,
                 maximumFill
         );

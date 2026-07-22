@@ -162,6 +162,7 @@ public record SuburbDebugPlanResult(
     private String siteAssessmentSummary() {
         return optionalSiteAssessment()
                 .map(assessment -> ", earthworkQuality=" + assessment.quality()
+                        + ", earthworkCost=" + assessment.rankingCost()
                         + ", preferredDepthExcess=" + assessment.preferredDepthExcess()
                         + ", earthworkDensity="
                         + String.format(Locale.ROOT, "%.3f", assessment.earthworkDensity()))

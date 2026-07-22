@@ -45,7 +45,7 @@ final class SuburbPlanningResultTest {
     }
 
     private static EarthworkSiteAssessment directAssessment() {
-        return new EarthworkSiteAssessment(EarthworkSiteQuality.DIRECT, 0, 0, 0, 0, 0, 0);
+        return new EarthworkSiteAssessment(EarthworkSiteQuality.DIRECT, 0, 0, 0, 0, 0, 0, 0);
     }
 
     private static SettlementPlan emptyPlan() {

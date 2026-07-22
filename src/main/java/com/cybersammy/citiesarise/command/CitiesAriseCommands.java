@@ -138,6 +138,8 @@ public final class CitiesAriseCommands {
                 + located.siteAssessment().quality()
                 + ", earthworkVolume="
                 + located.siteAssessment().totalVolume()
+                + ", earthworkCost="
+                + located.siteAssessment().rankingCost()
                 + ", preferredDepthExcess="
                 + located.siteAssessment().preferredDepthExcess()
                 + ".";

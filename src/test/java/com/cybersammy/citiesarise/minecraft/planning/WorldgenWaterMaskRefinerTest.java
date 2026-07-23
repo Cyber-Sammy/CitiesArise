@@ -5,6 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
+import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
+import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
@@ -55,6 +58,33 @@ final class WorldgenWaterMaskRefinerTest {
         assertTrue(terrainProvider.checkedPoints.contains(result.terrainDiagnostic().orElseThrow().cell().point()));
         assertTrue(terrainProvider.checkedPoints.contains(shoulderPoint));
         assertTrue(terrainProvider.checkedPoints.size() < BOUNDS.size().width() * BOUNDS.size().depth());
+    }
+
+    @Test
+    void rejectsExactWaterInsideRoadShoulder() {
+        SuburbPlanner planner = SuburbPlanner.defaults();
+        SuburbPlanningResult template = planner.plan(request(flatSurvey()));
+        RegionalElevationPlan elevationPlan = template.terrainPreparationPlan().orElseThrow().elevationPlan();
+        TerrainSurvey terrain = roadShoulderSurvey(elevationPlan);
+        SuburbPlanningRequest request = request(terrain);
+        SuburbPlanningResult initialResult = planner.plan(request);
+        GridPoint shoulderPoint = initialResult.terrainPreparationPlan().orElseThrow().columns().stream()
+                .filter(column -> column.type() == TerrainPreparationColumnType.ROAD_SHOULDER)
+                .findFirst()
+                .orElseThrow()
+                .point();
+        ExactWaterProvider terrainProvider = new ExactWaterProvider(terrain, shoulderPoint);
+
+        SuburbPlanningResult result = WorldgenWaterMaskRefiner.refine(
+                planner,
+                terrainProvider,
+                request,
+                initialResult
+        );
+
+        assertFalse(result.successful());
+        assertEquals(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN, result.failureReason().orElseThrow());
+        assertTrue(terrainProvider.checkedPoints.contains(shoulderPoint));
     }
 
     @Test
@@ -116,12 +146,32 @@ final class WorldgenWaterMaskRefinerTest {
     private static TerrainSurvey buildingShoulderSurvey(SettlementPlan plan) {
         return TerrainSurvey.sample(BOUNDS, point -> Optional.of(new TerrainCell(
                 point,
-                belongsToBuilding(plan, point) ? 65 : 62,
+                belongsToBuilding(plan, point) ? 64 : 62,
                 false,
                 0.0,
                 BiomeCategory.PLAINS,
                 TerrainCategory.BUILDABLE
         )));
+    }
+
+    private static TerrainSurvey roadShoulderSurvey(RegionalElevationPlan elevationPlan) {
+        return TerrainSurvey.sample(BOUNDS, point -> Optional.of(new TerrainCell(
+                point,
+                belongsToRoad(elevationPlan, point) ? 64 : 62,
+                false,
+                0.0,
+                BiomeCategory.PLAINS,
+                TerrainCategory.BUILDABLE
+        )));
+    }
+
+    private static boolean belongsToRoad(RegionalElevationPlan elevationPlan, GridPoint point) {
+        for (ElevationZone zone : elevationPlan.zones()) {
+            if (zone.type() == ElevationZoneType.ROAD_SEGMENT && zone.bounds().contains(point)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean belongsToBuilding(SettlementPlan plan, GridPoint point) {

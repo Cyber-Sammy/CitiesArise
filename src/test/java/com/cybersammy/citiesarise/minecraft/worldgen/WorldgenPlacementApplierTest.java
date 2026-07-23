@@ -75,6 +75,25 @@ class WorldgenPlacementApplierTest {
     }
 
     @Test
+    void placesTransitionStepsWithoutWritingNeighborChunk() {
+        PlanElementId transitionId = new PlanElementId("cities_arise:chunk_edge_transition");
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(
+                transitionOperation(15, 0, transitionId, 65),
+                transitionOperation(16, 0, transitionId, 65)
+        ));
+        DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
+                .partition(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+
+        new WorldgenChunkPlacement().apply(level, chunkPlan);
+
+        assertTrue(level.hasPlacement(15, 65, 0, DebugPlacementRole.ROAD_TRANSITION_STEP));
+        assertFalse(level.reads().stream().anyMatch(position -> position.x() == 16));
+        assertTrue(level.writes().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
+    }
+
+    @Test
     void fillsPlatformFromSolidSupportBelowFluid() {
         PlanElementId roadId = new PlanElementId("cities_arise:shallow_water_road");
         DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(platformOperation(8, 8, roadId, 64)));
@@ -201,6 +220,21 @@ class WorldgenPlacementApplierTest {
                 0,
                 DebugPlacementRole.TERRAIN_SURFACE,
                 new PlanElementId("cities_arise:terrain_surface"),
+                OptionalInt.of(platformY)
+        );
+    }
+
+    private static DebugBlockPlacementOperation transitionOperation(
+            int x,
+            int z,
+            PlanElementId id,
+            int platformY
+    ) {
+        return new DebugBlockPlacementOperation(
+                new GridPoint(x, z),
+                0,
+                DebugPlacementRole.ROAD_TRANSITION_STEP,
+                id,
                 OptionalInt.of(platformY)
         );
     }

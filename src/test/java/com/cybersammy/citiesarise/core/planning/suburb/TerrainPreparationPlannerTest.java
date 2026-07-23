@@ -166,6 +166,35 @@ final class TerrainPreparationPlannerTest {
         assertEquals(44L, assessment.plan().orElseThrow().fillVolume());
     }
 
+    @Test
+    void includesRoadEdgeSupportInEarthworkBudget() {
+        GridPoint lowShoulderPoint = new GridPoint(1, 5);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithHeightAt(lowShoulderPoint, 62),
+                42L,
+                settings(1, 3)
+        );
+        ElevationZone road = new ElevationZone(
+                id("road"),
+                ElevationZoneType.ROAD_SEGMENT,
+                new GridBounds(new GridPoint(2, 5), new GridSize(7, 1)),
+                64
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                new RegionalElevationPlan(List.of(road), List.of())
+        );
+
+        assertTrue(assessment.plan().isPresent());
+        assertTrue(assessment.plan().orElseThrow().columns().stream().anyMatch(column ->
+                column.point().equals(lowShoulderPoint)
+                        && column.type() == TerrainPreparationColumnType.ROAD_SHOULDER
+                        && column.fillDepth() == 2));
+        assertTrue(assessment.plan().orElseThrow().fillVolume() >= 2L);
+    }
+
     private static SettlementPlan crossingRoadPlan() {
         RoadNode west = node("west", 2, 5);
         RoadNode east = node("east", 8, 5);

@@ -5,6 +5,7 @@ import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
+import com.cybersammy.citiesarise.core.earthwork.ElevationTransitionType;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -36,11 +37,18 @@ public final class DebugPlacementPlanConverter {
 
     public DebugPlacementPlan convert(SettlementPlan plan) {
         Objects.requireNonNull(plan, "plan");
+        return convert(plan, Map.of());
+    }
+
+    private static DebugPlacementPlan convert(
+            SettlementPlan plan,
+            Map<PlanElementId, GridPoint> buildingAccessAnchors
+    ) {
         Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition = new LinkedHashMap<>();
 
         addRoadOperations(plan.roadGraph(), operationsByPosition);
         addParcelOperations(plan, operationsByPosition);
-        addBuildingSlotOperations(plan, operationsByPosition);
+        addBuildingSlotOperations(plan, buildingAccessAnchors, operationsByPosition);
 
         Map<PlanElementId, Integer> platformElevations = platformElevations(plan);
         return new DebugPlacementPlan(operationsByPosition.values()
@@ -56,16 +64,24 @@ public final class DebugPlacementPlanConverter {
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(errors.getFirst().message());
         }
-        DebugPlacementPlan placementPlan = convert(plan);
+        DebugPlacementPlan placementPlan = convert(plan, buildingAccessAnchors(preparationPlan));
         Map<GridPoint, Integer> elevationByPoint = preparationElevations(preparationPlan);
         DebugPlacementPlan preparedPlan = new DebugPlacementPlan(placementPlan.operations()
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
-        return withBuildingTerrainShoulders(preparationPlan, preparedPlan);
+        return withTerrainPreparationOperations(preparationPlan, preparedPlan);
     }
 
-    private static DebugPlacementPlan withBuildingTerrainShoulders(
+    private static Map<PlanElementId, GridPoint> buildingAccessAnchors(TerrainPreparationPlan preparationPlan) {
+        Map<PlanElementId, GridPoint> anchors = new LinkedHashMap<>();
+        preparationPlan.elevationPlan().transitions().stream()
+                .filter(transition -> transition.type() == ElevationTransitionType.BUILDING_ACCESS)
+                .forEach(transition -> anchors.put(transition.targetZoneId(), transition.anchor()));
+        return Map.copyOf(anchors);
+    }
+
+    private static DebugPlacementPlan withTerrainPreparationOperations(
             TerrainPreparationPlan preparationPlan,
             DebugPlacementPlan placementPlan
     ) {
@@ -74,26 +90,37 @@ public final class DebugPlacementPlanConverter {
             operations.put(operation.position(), operation);
         }
         for (TerrainPreparationColumn column : preparationPlan.columns()) {
-            addBuildingTerrainShoulder(column, operations);
+            addTerrainPreparationOperation(column, operations);
         }
         return new DebugPlacementPlan(List.copyOf(operations.values()));
     }
 
-    private static void addBuildingTerrainShoulder(
+    private static void addTerrainPreparationOperation(
             TerrainPreparationColumn column,
             Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations
     ) {
-        if (column.type() != TerrainPreparationColumnType.BUILDING_SHOULDER) {
+        DebugPlacementRole role = preparationRole(column.type());
+        if (role == null) {
             return;
         }
         DebugBlockPlacementOperation operation = new DebugBlockPlacementOperation(
                 column.point(),
                 SURFACE_OFFSET,
-                DebugPlacementRole.TERRAIN_SURFACE,
+                role,
                 column.sourceElementId(),
                 OptionalInt.of(column.targetElevation())
         );
         addOperation(operation, operations);
+    }
+
+    private static DebugPlacementRole preparationRole(TerrainPreparationColumnType type) {
+        return switch (type) {
+            case PLATFORM -> null;
+            case BUILDING_SHOULDER, ROAD_SHOULDER -> DebugPlacementRole.TERRAIN_SURFACE;
+            case ROAD_TRANSITION_STEP -> DebugPlacementRole.ROAD_TRANSITION_STEP;
+            case BUILDING_ACCESS -> DebugPlacementRole.BUILDING_ACCESS_SURFACE;
+            case BUILDING_ACCESS_STEP -> DebugPlacementRole.BUILDING_ACCESS_STEP;
+        };
     }
 
     private static Map<GridPoint, Integer> preparationElevations(TerrainPreparationPlan preparationPlan) {
@@ -256,6 +283,7 @@ public final class DebugPlacementPlanConverter {
 
     private static void addBuildingSlotOperations(
             SettlementPlan plan,
+            Map<PlanElementId, GridPoint> buildingAccessAnchors,
             Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (BuildingSlot buildingSlot : plan.buildingSlots()) {
@@ -277,7 +305,12 @@ public final class DebugPlacementPlanConverter {
                     operationsByPosition
             );
             addWallOperations(buildingSlot.bounds(), buildingSlot.id(), wallRole, operationsByPosition);
-            addDoorwayOperations(buildingSlot.bounds(), buildingSlot.id(), operationsByPosition);
+            addDoorwayOperations(
+                    buildingSlot.bounds(),
+                    buildingAccessAnchors.get(buildingSlot.id()),
+                    buildingSlot.id(),
+                    operationsByPosition
+            );
             addRoofOperations(buildingSlot.bounds(), buildingSlot.id(), roofRole, operationsByPosition);
         }
     }
@@ -317,10 +350,11 @@ public final class DebugPlacementPlanConverter {
 
     private static void addDoorwayOperations(
             GridBounds bounds,
+            GridPoint accessAnchor,
             PlanElementId sourceElementId,
             Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
-        GridPoint doorwayPoint = doorwayPoint(bounds);
+        GridPoint doorwayPoint = doorwayPoint(bounds, accessAnchor);
 
         for (int offset = FIRST_WALL_OFFSET; offset <= DOORWAY_TOP_OFFSET; offset++) {
             addOperation(
@@ -333,7 +367,10 @@ public final class DebugPlacementPlanConverter {
         }
     }
 
-    private static GridPoint doorwayPoint(GridBounds bounds) {
+    private static GridPoint doorwayPoint(GridBounds bounds, GridPoint accessAnchor) {
+        if (accessAnchor != null) {
+            return accessAnchor;
+        }
         return new GridPoint(centerX(bounds), bounds.minZ());
     }
 

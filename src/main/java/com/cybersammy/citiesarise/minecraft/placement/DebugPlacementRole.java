@@ -13,7 +13,10 @@ public enum DebugPlacementRole {
     DECAYED_BUILDING_WALL(9),
     DECAYED_BUILDING_ROOF(10),
     TERRAIN_FILL(11),
-    TERRAIN_SURFACE(12);
+    TERRAIN_SURFACE(12),
+    ROAD_TRANSITION_STEP(13),
+    BUILDING_ACCESS_SURFACE(14),
+    BUILDING_ACCESS_STEP(15);
 
     private final int serializedId;
 
@@ -49,6 +52,9 @@ public enum DebugPlacementRole {
             case DECAYED_BUILDING_ROOF -> 50;
             case ROAD_SURFACE -> 60;
             case WORN_ROAD_SURFACE -> 60;
+            case BUILDING_ACCESS_SURFACE -> 65;
+            case BUILDING_ACCESS_STEP -> 70;
+            case ROAD_TRANSITION_STEP -> 70;
         };
     }
 }

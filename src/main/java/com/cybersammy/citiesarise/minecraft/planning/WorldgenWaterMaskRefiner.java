@@ -11,6 +11,8 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 final class WorldgenWaterMaskRefiner {
+    private static final int MAX_INCREMENTAL_REFINEMENTS = 8;
+
     private WorldgenWaterMaskRefiner() {
     }
 
@@ -28,22 +30,69 @@ final class WorldgenWaterMaskRefiner {
             return initialResult;
         }
 
-        Set<GridPoint> footprint = refinementFootprint(initialResult);
-        Optional<TerrainSurvey> refinedSurvey = terrainProvider.sampleWithExactWaterMask(
-                initialRequest.survey().bounds(),
-                footprint
-        );
-        if (refinedSurvey.isEmpty()) {
-            return initialResult;
+        Set<GridPoint> checkedPoints = new LinkedHashSet<>();
+        SuburbPlanningResult currentResult = initialResult;
+        for (int iteration = 0; iteration < MAX_INCREMENTAL_REFINEMENTS; iteration++) {
+            if (!currentResult.successful()) {
+                return currentResult;
+            }
+            Set<GridPoint> footprint = refinementFootprint(currentResult);
+            if (checkedPoints.containsAll(footprint)) {
+                return currentResult;
+            }
+            checkedPoints.addAll(footprint);
+            Optional<TerrainSurvey> refinedSurvey = terrainProvider.sampleWithExactWaterMask(
+                    initialRequest.survey().bounds(),
+                    Set.copyOf(checkedPoints)
+            );
+            if (refinedSurvey.isEmpty()) {
+                return currentResult;
+            }
+            currentResult = replan(planner, initialRequest, refinedSurvey.orElseThrow());
         }
 
+        return refineCompleteSurvey(planner, terrainProvider, initialRequest, currentResult);
+    }
+
+    private static SuburbPlanningResult refineCompleteSurvey(
+            SuburbPlanner planner,
+            WorldgenTerrainSurveyProvider terrainProvider,
+            SuburbPlanningRequest initialRequest,
+            SuburbPlanningResult currentResult
+    ) {
+        Set<GridPoint> surveyPoints = points(initialRequest.survey());
+        Optional<TerrainSurvey> refinedSurvey = terrainProvider.sampleWithExactWaterMask(
+                initialRequest.survey().bounds(),
+                surveyPoints
+        );
+        if (refinedSurvey.isEmpty()) {
+            return currentResult;
+        }
+        return replan(planner, initialRequest, refinedSurvey.orElseThrow());
+    }
+
+    private static SuburbPlanningResult replan(
+            SuburbPlanner planner,
+            SuburbPlanningRequest initialRequest,
+            TerrainSurvey refinedSurvey
+    ) {
         SuburbPlanningRequest refinedRequest = new SuburbPlanningRequest(
                 initialRequest.settlementId(),
-                refinedSurvey.orElseThrow(),
+                refinedSurvey,
                 initialRequest.seed(),
                 initialRequest.settings()
         );
         return planner.plan(refinedRequest);
+    }
+
+    private static Set<GridPoint> points(TerrainSurvey survey) {
+        Set<GridPoint> points = new LinkedHashSet<>();
+        for (int z = survey.bounds().minZ(); z < survey.bounds().maxZExclusive(); z++) {
+            for (int x = survey.bounds().minX(); x < survey.bounds().maxXExclusive(); x++) {
+                points.add(new GridPoint(x, z));
+            }
+        }
+        return Set.copyOf(points);
     }
 
     private static Set<GridPoint> refinementFootprint(SuburbPlanningResult result) {

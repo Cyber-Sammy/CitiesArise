@@ -1,7 +1,5 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
-import com.cybersammy.citiesarise.core.earthwork.BuildingTerrainShoulderPolicy;
-import com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -11,11 +9,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class AdaptiveSuburbLayoutSelector {
-    private static final int TERRAIN_SUPPORT_BUFFER = Math.max(
-            BuildingTerrainShoulderPolicy.RADIUS,
-            RoadTerrainShoulderPolicy.RADIUS
-    );
-
     SuburbLayout select(
             GridBounds surveyBounds,
             int targetParcelCount,
@@ -125,8 +118,12 @@ final class AdaptiveSuburbLayoutSelector {
 
     private static boolean isDevelopable(SuburbLayout layout, TerrainTopology topology) {
         Integer regionId = null;
-        for (GridBounds footprint : layout.plannedFootprints()) {
-            GridBounds preparationBounds = expandWithin(footprint, topology.bounds(), TERRAIN_SUPPORT_BUFFER);
+        for (PotentialTerrainPreparationFootprint footprint : layout.terrainPreparationFootprints()) {
+            GridBounds preparationBounds = expandWithin(
+                    footprint.bounds(),
+                    topology.bounds(),
+                    footprint.supportRadius()
+            );
             if (!topology.isEntirelyDevelopable(preparationBounds)) {
                 return false;
             }

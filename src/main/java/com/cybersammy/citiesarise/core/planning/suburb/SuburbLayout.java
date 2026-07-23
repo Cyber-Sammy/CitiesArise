@@ -9,12 +9,14 @@ record SuburbLayout(
         int mainRoadZ,
         List<Integer> sideRoadXs,
         List<GridBounds> parcelBounds,
-        List<GridBounds> plannedFootprints
+        List<GridBounds> plannedFootprints,
+        List<PotentialTerrainPreparationFootprint> terrainPreparationFootprints
 ) {
     SuburbLayout {
         Objects.requireNonNull(bounds, "bounds");
         sideRoadXs = List.copyOf(sideRoadXs);
         parcelBounds = List.copyOf(parcelBounds);
         plannedFootprints = List.copyOf(plannedFootprints);
+        terrainPreparationFootprints = List.copyOf(terrainPreparationFootprints);
     }
 }

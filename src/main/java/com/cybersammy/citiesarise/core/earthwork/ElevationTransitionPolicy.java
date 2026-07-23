@@ -3,7 +3,6 @@ package com.cybersammy.citiesarise.core.earthwork;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -31,11 +30,8 @@ public final class ElevationTransitionPolicy {
         if (transition.type() == ElevationTransitionType.ROAD_CONNECTION) {
             return 1;
         }
-        int maximum = 0;
-        for (GridPoint point : points(source.bounds())) {
-            maximum = Math.max(maximum, manhattanDistance(point, transition.anchor()));
-        }
-        return maximum;
+        GridPoint start = nearestPoint(source.bounds(), transition.anchor());
+        return manhattanDistance(start, transition.anchor());
     }
 
     public static List<TransitionPoint> materialize(
@@ -123,24 +119,17 @@ public final class ElevationTransitionPolicy {
     }
 
     private static GridPoint transitionStart(ElevationTransition transition, GridBounds roadBounds) {
-        long requiredLength = transition.elevationDelta();
-        return points(roadBounds).stream()
-                .filter(point -> manhattanDistance(point, transition.anchor()) >= requiredLength)
-                .min(Comparator
-                        .comparingInt((GridPoint point) -> manhattanDistance(point, transition.anchor()))
-                        .thenComparingInt(GridPoint::x)
-                        .thenComparingInt(GridPoint::z))
-                .orElse(null);
+        return nearestPoint(roadBounds, transition.anchor());
     }
 
-    private static List<GridPoint> points(GridBounds bounds) {
-        List<GridPoint> points = new ArrayList<>();
-        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
-            for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
-                points.add(new GridPoint(x, z));
-            }
-        }
-        return List.copyOf(points);
+    private static GridPoint nearestPoint(GridBounds bounds, GridPoint point) {
+        int x = clamp(point.x(), bounds.minX(), bounds.maxXExclusive() - 1);
+        int z = clamp(point.z(), bounds.minZ(), bounds.maxZExclusive() - 1);
+        return new GridPoint(x, z);
+    }
+
+    private static int clamp(int value, int minimum, int maximum) {
+        return Math.max(minimum, Math.min(value, maximum));
     }
 
     private static GridBounds intersection(GridBounds first, GridBounds second) {

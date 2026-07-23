@@ -72,6 +72,21 @@ final class ElevationTransitionPolicyTest {
         assertFalse(ElevationTransitionPolicy.canMaterialize(transition, road, building));
     }
 
+    @Test
+    void doesNotBorrowBuildingAccessLengthFromLongRoad() {
+        ElevationZone road = road("road", bounds(0, 4, 21, 3), 64);
+        ElevationZone building = building("building", bounds(22, 4, 4, 4), 70);
+        ElevationTransition transition = transition(
+                ElevationTransitionType.BUILDING_ACCESS,
+                road,
+                building,
+                point(22, 5)
+        );
+
+        assertEquals(2, ElevationTransitionPolicy.maximumMaterializableDelta(transition, road));
+        assertFalse(ElevationTransitionPolicy.canMaterialize(transition, road, building));
+    }
+
     private static ElevationTransition transition(
             ElevationTransitionType type,
             ElevationZone source,

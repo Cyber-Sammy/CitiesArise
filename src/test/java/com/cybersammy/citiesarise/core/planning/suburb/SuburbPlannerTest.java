@@ -347,7 +347,7 @@ final class SuburbPlannerTest {
     @Test
     void keepsConnectedRoadSegmentsWithinOneBlock() {
         SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 40, 40, 40);
-        SuburbPlanningResult result = planner.plan(request(elevationSurvey(40, 30, 2), 100L, settings));
+        SuburbPlanningResult result = planner.plan(request(elevationSurvey(40, 30, 3), 100L, settings));
         SettlementPlan plan = result
                 .plan()
                 .orElseThrow(() -> new AssertionError(result));

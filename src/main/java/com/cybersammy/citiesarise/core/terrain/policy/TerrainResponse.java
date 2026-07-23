@@ -6,9 +6,5 @@ public enum TerrainResponse {
     TERRAFORM,
     BUILD_AROUND,
     CROSS_IF_SUPPORTED,
-    IGNORE;
-
-    public boolean permitsDirectPreparation() {
-        return this == TERRAFORM || this == IGNORE;
-    }
+    IGNORE
 }

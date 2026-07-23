@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class TerrainResponsePolicyTest {
@@ -57,12 +58,85 @@ final class TerrainResponsePolicyTest {
     }
 
     @Test
-    void onlyDirectResponsesPermitCurrentPreparation() {
-        assertTrue(TerrainResponse.TERRAFORM.permitsDirectPreparation());
-        assertTrue(TerrainResponse.IGNORE.permitsDirectPreparation());
-        assertFalse(TerrainResponse.AVOID.permitsDirectPreparation());
-        assertFalse(TerrainResponse.PRESERVE.permitsDirectPreparation());
-        assertFalse(TerrainResponse.BUILD_AROUND.permitsDirectPreparation());
-        assertFalse(TerrainResponse.CROSS_IF_SUPPORTED.permitsDirectPreparation());
+    void resolvesEveryResponseToADistinctPlanningAction() {
+        assertAction(TerrainResponse.AVOID, TerrainPlanningAction.RELOCATE);
+        assertAction(TerrainResponse.PRESERVE, TerrainPlanningAction.PRESERVE_IN_PLACE);
+        assertAction(TerrainResponse.TERRAFORM, TerrainPlanningAction.DIRECT_TERRAFORMING);
+        assertAction(TerrainResponse.BUILD_AROUND, TerrainPlanningAction.ROUTE_AROUND);
+        assertAction(TerrainResponse.CROSS_IF_SUPPORTED, TerrainPlanningAction.CROSS);
+        assertAction(TerrainResponse.IGNORE, TerrainPlanningAction.STANDARD_PLACEMENT);
+    }
+
+    @Test
+    void onlyImplementedActionsPermitCurrentPlacement() {
+        assertTrue(TerrainPlanningAction.DIRECT_TERRAFORMING.permitsCurrentPlacement());
+        assertTrue(TerrainPlanningAction.STANDARD_PLACEMENT.permitsCurrentPlacement());
+        assertFalse(TerrainPlanningAction.RELOCATE.permitsCurrentPlacement());
+        assertFalse(TerrainPlanningAction.PRESERVE_IN_PLACE.permitsCurrentPlacement());
+        assertFalse(TerrainPlanningAction.ROUTE_AROUND.permitsCurrentPlacement());
+        assertFalse(TerrainPlanningAction.CROSS.permitsCurrentPlacement());
+    }
+
+    @Test
+    void requiresMatchingCapabilityForCrossingResponse() {
+        EnumMap<TerrainFeatureType, TerrainResponse> responses =
+                new EnumMap<>(TerrainResponsePolicy.defaults().responses());
+        responses.put(TerrainFeatureType.WATER, TerrainResponse.CROSS_IF_SUPPORTED);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new TerrainResponsePolicy(responses, Set.of())
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new TerrainResponsePolicy(
+                        responses,
+                        Set.of(InfrastructureCapability.TUNNEL)
+                )
+        );
+
+        TerrainResponsePolicy policy = new TerrainResponsePolicy(
+                responses,
+                Set.of(InfrastructureCapability.BRIDGE)
+        );
+        assertEquals(TerrainPlanningAction.CROSS, policy.actionFor(TerrainFeatureType.WATER));
+        assertFalse(policy.permitsDirectPreparation(TerrainFeatureType.WATER));
+    }
+
+    @Test
+    void tunnelCapabilitySupportsBlockedAndSteepCrossings() {
+        EnumMap<TerrainFeatureType, TerrainResponse> responses =
+                new EnumMap<>(TerrainResponsePolicy.defaults().responses());
+        responses.put(TerrainFeatureType.BLOCKED_TERRAIN, TerrainResponse.CROSS_IF_SUPPORTED);
+        responses.put(TerrainFeatureType.STEEP_SLOPE, TerrainResponse.CROSS_IF_SUPPORTED);
+
+        TerrainResponsePolicy policy = new TerrainResponsePolicy(
+                responses,
+                Set.of(InfrastructureCapability.TUNNEL)
+        );
+
+        assertEquals(
+                TerrainPlanningAction.CROSS,
+                policy.actionFor(TerrainFeatureType.BLOCKED_TERRAIN)
+        );
+        assertEquals(
+                TerrainPlanningAction.CROSS,
+                policy.actionFor(TerrainFeatureType.STEEP_SLOPE)
+        );
+    }
+
+    private static void assertAction(
+            TerrainResponse response,
+            TerrainPlanningAction expectedAction
+    ) {
+        EnumMap<TerrainFeatureType, TerrainResponse> responses =
+                new EnumMap<>(TerrainResponsePolicy.defaults().responses());
+        responses.put(TerrainFeatureType.WATER, response);
+        Set<InfrastructureCapability> capabilities = response == TerrainResponse.CROSS_IF_SUPPORTED
+                ? Set.of(InfrastructureCapability.BRIDGE)
+                : Set.of();
+        TerrainResponsePolicy policy = new TerrainResponsePolicy(responses, capabilities);
+
+        assertEquals(expectedAction, policy.actionFor(TerrainFeatureType.WATER));
     }
 }

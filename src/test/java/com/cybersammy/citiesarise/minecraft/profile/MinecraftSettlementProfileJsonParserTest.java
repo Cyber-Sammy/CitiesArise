@@ -112,6 +112,28 @@ final class MinecraftSettlementProfileJsonParserTest {
     }
 
     @Test
+    void rejectsCrossingResponseWithoutMatchingCapability() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> parser.parse(id(), withTerrainPolicy("""
+                        {
+                          "responses": {"water": "cross_if_supported"},
+                          "capabilities": []
+                        }
+                        """))
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> parser.parse(id(), withTerrainPolicy("""
+                        {
+                          "responses": {"water": "cross_if_supported"},
+                          "capabilities": ["tunnel"]
+                        }
+                        """))
+        );
+    }
+
+    @Test
     void rejectsMissingRequiredSections() {
         JsonObject json = json("""
                 {

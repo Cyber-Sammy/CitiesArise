@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
 import org.junit.jupiter.api.Test;
 
 final class SettlementProfileTest {
@@ -33,6 +34,17 @@ final class SettlementProfileTest {
         assertThrows(NullPointerException.class, () -> new SettlementProfile(null, new GridSize(10, 10), settings()));
         assertThrows(NullPointerException.class, () -> new SettlementProfile(id(), null, settings()));
         assertThrows(NullPointerException.class, () -> new SettlementProfile(id(), new GridSize(10, 10), null));
+        assertThrows(
+                NullPointerException.class,
+                () -> new SettlementProfile(id(), new GridSize(10, 10), settings(), null)
+        );
+    }
+
+    @Test
+    void legacyConstructorUsesDefaultTerrainPolicy() {
+        SettlementProfile profile = new SettlementProfile(id(), new GridSize(10, 10), settings());
+
+        assertEquals(TerrainResponsePolicy.defaults(), profile.terrainResponsePolicy());
     }
 
     private static SettlementProfileId id() {

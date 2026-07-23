@@ -10,6 +10,7 @@ import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +28,10 @@ final class DebugSettlementProfileSelectionTest {
                 profile.suburbPlanningSettings(),
                 DebugSettlementProfileSelection.suburbPlanningSettings(fallbackConfig, selection.profile())
         );
+        assertEquals(
+                profile.terrainResponsePolicy(),
+                DebugSettlementProfileSelection.terrainResponsePolicy(selection.profile())
+        );
     }
 
     @Test
@@ -40,6 +45,10 @@ final class DebugSettlementProfileSelectionTest {
         assertEquals(
                 fallbackConfig.toSuburbPlanningSettings(),
                 DebugSettlementProfileSelection.suburbPlanningSettings(fallbackConfig, selection.profile())
+        );
+        assertEquals(
+                TerrainResponsePolicy.defaults(),
+                DebugSettlementProfileSelection.terrainResponsePolicy(selection.profile())
         );
     }
 

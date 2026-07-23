@@ -17,6 +17,7 @@ import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability;
 import java.util.ArrayList;
@@ -122,7 +123,7 @@ final class TerrainPreparationPlanner {
         for (ElevationTransitionPolicy.TransitionPoint point
                 : ElevationTransitionPolicy.materialize(transition, source, target)) {
             TerrainCell cell = TerrainPlatform.requiredTerrainCell(request, point.point());
-            Optional<SuburbTerrainDiagnostic> terrainDiagnostic = shoulderTerrainDiagnostic(cell);
+            Optional<SuburbTerrainDiagnostic> terrainDiagnostic = shoulderTerrainDiagnostic(request, cell);
             if (terrainDiagnostic.isPresent()) {
                 return terrainDiagnostic;
             }
@@ -259,7 +260,7 @@ final class TerrainPreparationPlanner {
             return Optional.empty();
         }
         TerrainCell cell = TerrainPlatform.requiredTerrainCell(request, point);
-        Optional<SuburbTerrainDiagnostic> terrainDiagnostic = shoulderTerrainDiagnostic(cell);
+        Optional<SuburbTerrainDiagnostic> terrainDiagnostic = shoulderTerrainDiagnostic(request, cell);
         if (terrainDiagnostic.isPresent()) {
             return terrainDiagnostic;
         }
@@ -333,14 +334,39 @@ final class TerrainPreparationPlanner {
         );
     }
 
-    private static Optional<SuburbTerrainDiagnostic> shoulderTerrainDiagnostic(TerrainCell cell) {
+    private static Optional<SuburbTerrainDiagnostic> shoulderTerrainDiagnostic(
+            SuburbPlanningRequest request,
+            TerrainCell cell
+    ) {
         if (cell.water()) {
-            return Optional.of(rejectionDiagnostic(cell, TerrainRejectionReason.WATER));
+            return terrainDiagnostic(
+                    request,
+                    cell,
+                    TerrainFeatureType.WATER,
+                    TerrainRejectionReason.WATER
+            );
         }
         if (cell.terrainCategory() == TerrainCategory.BLOCKED) {
-            return Optional.of(rejectionDiagnostic(cell, TerrainRejectionReason.BLOCKED_TERRAIN));
+            return terrainDiagnostic(
+                    request,
+                    cell,
+                    TerrainFeatureType.BLOCKED_TERRAIN,
+                    TerrainRejectionReason.BLOCKED_TERRAIN
+            );
         }
         return Optional.empty();
+    }
+
+    private static Optional<SuburbTerrainDiagnostic> terrainDiagnostic(
+            SuburbPlanningRequest request,
+            TerrainCell cell,
+            TerrainFeatureType featureType,
+            TerrainRejectionReason reason
+    ) {
+        if (request.terrainResponsePolicy().permitsCurrentPlacement(featureType)) {
+            return Optional.empty();
+        }
+        return Optional.of(rejectionDiagnostic(cell, reason));
     }
 
     private static SuburbTerrainDiagnostic supportDepthDiagnostic(

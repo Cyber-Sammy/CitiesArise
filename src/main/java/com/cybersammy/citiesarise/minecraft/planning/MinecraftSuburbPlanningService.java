@@ -16,6 +16,7 @@ import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
 import com.cybersammy.citiesarise.core.transform.LightDecayTransform;
 import com.cybersammy.citiesarise.core.transform.TransformPipeline;
 import com.cybersammy.citiesarise.minecraft.profile.MinecraftSettlementProfileRepository;
@@ -152,6 +153,7 @@ public final class MinecraftSuburbPlanningService {
                 profileId,
                 worldgenProfile.surveySize(),
                 worldgenProfile.planningSettings(),
+                worldgenProfile.terrainResponsePolicy(),
                 terrainProvider,
                 CitiesAriseConfig.terrainLoggingEnabled(),
                 CitiesAriseConfig.planningLoggingEnabled()
@@ -184,6 +186,7 @@ public final class MinecraftSuburbPlanningService {
                 context.profileId(),
                 context.surveySize(),
                 context.planningSettings(),
+                context.terrainResponsePolicy(),
                 TerrainSurveySource.WORLDGEN_BASE,
                 context.terrainProvider(),
                 context.terrainLoggingEnabled(),
@@ -208,6 +211,7 @@ public final class MinecraftSuburbPlanningService {
                 settlementId,
                 seed,
                 context.planningSettings(),
+                context.terrainResponsePolicy(),
                 context.terrainProvider(),
                 context.terrainLoggingEnabled(),
                 context.planningLoggingEnabled()
@@ -226,6 +230,8 @@ public final class MinecraftSuburbPlanningService {
         Optional<SettlementProfile> profile = activeProfile(level, profileId);
         GridSize surveySize = DebugSettlementProfileSelection.surveySize(config, profile);
         SuburbPlanningSettings planningSettings = DebugSettlementProfileSelection.suburbPlanningSettings(config, profile);
+        TerrainResponsePolicy terrainResponsePolicy =
+                DebugSettlementProfileSelection.terrainResponsePolicy(profile);
         return planAt(
                 dimensionId(level),
                 level.getSeed(),
@@ -234,6 +240,7 @@ public final class MinecraftSuburbPlanningService {
                 profileId,
                 surveySize,
                 planningSettings,
+                terrainResponsePolicy,
                 terrainSurveySource,
                 terrainProvider,
                 CitiesAriseConfig.terrainLoggingEnabled(),
@@ -249,6 +256,7 @@ public final class MinecraftSuburbPlanningService {
             SettlementProfileId profileId,
             GridSize surveySize,
             SuburbPlanningSettings planningSettings,
+            TerrainResponsePolicy terrainResponsePolicy,
             TerrainSurveySource terrainSurveySource,
             WorldgenTerrainSurveyProvider terrainProvider,
             boolean terrainLoggingEnabled,
@@ -265,7 +273,8 @@ public final class MinecraftSuburbPlanningService {
                 terrainSurveySource,
                 profileId,
                 surveySize,
-                planningSettings
+                planningSettings,
+                terrainResponsePolicy
         );
 
         return planCache.getOrCreate(
@@ -276,6 +285,7 @@ public final class MinecraftSuburbPlanningService {
                         settlementId,
                         seed,
                         planningSettings,
+                        terrainResponsePolicy,
                         terrainProvider,
                         terrainLoggingEnabled,
                         planningLoggingEnabled
@@ -294,6 +304,7 @@ public final class MinecraftSuburbPlanningService {
             PlanElementId settlementId,
             long seed,
             SuburbPlanningSettings planningSettings,
+            TerrainResponsePolicy terrainResponsePolicy,
             WorldgenTerrainSurveyProvider terrainProvider,
             boolean terrainLoggingEnabled,
             boolean planningLoggingEnabled
@@ -305,7 +316,8 @@ public final class MinecraftSuburbPlanningService {
                 settlementId,
                 survey,
                 seed,
-                planningSettings
+                planningSettings,
+                terrainResponsePolicy
         );
         SuburbPlanningResult result = planner.plan(request);
         SuburbPlanningResult refinedResult = WorldgenWaterMaskRefiner.refine(

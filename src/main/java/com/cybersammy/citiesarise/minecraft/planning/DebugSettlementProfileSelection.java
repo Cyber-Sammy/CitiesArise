@@ -4,6 +4,7 @@ import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -43,6 +44,13 @@ final class DebugSettlementProfileSelection {
         return profile
                 .map(SettlementProfile::suburbPlanningSettings)
                 .orElseGet(config::toSuburbPlanningSettings);
+    }
+
+    static TerrainResponsePolicy terrainResponsePolicy(Optional<SettlementProfile> profile) {
+        Objects.requireNonNull(profile, "profile");
+        return profile
+                .map(SettlementProfile::terrainResponsePolicy)
+                .orElseGet(TerrainResponsePolicy::defaults);
     }
 
     @FunctionalInterface

@@ -73,6 +73,7 @@ final class SuburbStructureGeneration {
                 profile.id(),
                 profile.surveySize(),
                 profile.suburbPlanningSettings(),
+                profile.terrainResponsePolicy(),
                 terrainProvider,
                 CitiesAriseConfig.terrainLoggingEnabled(),
                 CitiesAriseConfig.planningLoggingEnabled()

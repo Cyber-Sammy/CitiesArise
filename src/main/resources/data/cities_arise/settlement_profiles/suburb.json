@@ -17,5 +17,13 @@
     "maxFillDepth": 8,
     "maxBuildingFoundationDepth": 4,
     "maxEarthworkVolume": 20000
+  },
+  "terrainPolicy": {
+    "responses": {
+      "water": "avoid",
+      "blockedTerrain": "avoid",
+      "steepSlope": "terraform"
+    },
+    "capabilities": []
   }
 }

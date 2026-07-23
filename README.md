@@ -125,7 +125,7 @@ The debug planner can load a settlement profile from data resources. The default
 cities_arise:suburb
 ```
 
-The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. For this MVP, profiles can change survey size, road width, max buildable slope, maximum elevation range, cut/fill limits, target parcel count, parcel size, and building margin. If the configured profile is missing or invalid, the planner falls back to the numeric debug config values.
+The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. Profiles can change planning dimensions, earthwork limits, and terrain-response policy. If the configured debug profile is missing or invalid, the planner falls back to the numeric debug config values. Automatic world generation fails closed when its selected profile is missing or invalid.
 
 ## Datapack Settlement Profiles
 
@@ -175,6 +175,14 @@ Example `data/my_pack/settlement_profiles/large_suburb.json`:
     "parcelWidth": 18,
     "parcelDepth": 20,
     "buildingMargin": 4
+  },
+  "terrainPolicy": {
+    "responses": {
+      "water": "avoid",
+      "blockedTerrain": "avoid",
+      "steepSlope": "terraform"
+    },
+    "capabilities": []
   }
 }
 ```
@@ -195,6 +203,10 @@ Then run:
 ```
 
 Use `/citiesarise debug dump` to inspect the generated plan and confirm that the profile changed the survey, parcel, and building slot scale.
+
+`terrainPolicy.responses` controls how the profile treats observed terrain. Supported values are `avoid`, `preserve`, `terraform`, `build_around`, `cross_if_supported`, and `ignore`. They resolve to distinct semantic actions: relocate, preserve in place, direct terraforming, route around, create a crossing, or allow standard placement. The current rectangular suburb planner can materialize only direct terraforming and standard placement. Other actions keep the feature as a planning barrier until adaptive routing, preserved gaps, and crossing candidates are implemented. `ignore` does not preserve a feature; it removes that feature as a planning constraint, so ordinary terrain preparation may replace it. The default policy avoids water and blocked terrain while allowing bounded slope terraforming.
+
+`terrainPolicy.capabilities` accepts `bridge`, `tunnel`, `canal`, and `major_terraforming`. `cross_if_supported` requires a matching capability: water requires `bridge`, while blocked terrain and steep slopes require `tunnel`. Invalid combinations are rejected when the profile loads. A valid combination resolves to a semantic crossing action, but it does not place infrastructure in the current version.
 
 `preferredMaxCutDepth` and `preferredMaxFillDepth` describe the normal grading range for a settlement profile. `maxCutDepth` and `maxFillDepth` are separate absolute safety limits. `maxBuildingFoundationDepth` applies the stricter visible-support limit used by building pads, so relaxed road grading cannot produce houses on tall exposed foundation columns. Dry terrain between the preferred and absolute limits is accepted with bounded earthworks instead of being discarded, while columns beyond the applicable absolute limit are still rejected. `maxEarthworkVolume` limits the summed cut and fill volume across semantic road and building preparation areas. This keeps moderate correctable terrain usable without allowing the basic suburb profile to bridge ravines with unbounded foundations or bury buildings into cliffs. Connected road segments are constrained to at most one block of elevation difference.
 

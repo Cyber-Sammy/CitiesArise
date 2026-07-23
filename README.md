@@ -24,6 +24,8 @@ The core planner must stay independent from Minecraft and NeoForge. Loader-speci
 
 The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, terrain surveys, semantic terrain preparation, and plan transforms. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. Water and blocked terrain remain hard rejections for the current suburb profile. A steep terrain sample is treated as correctable when the resulting flat platforms stay within profile cut, fill, and total earthwork limits.
 
+The suburb planner now analyzes connected developable terrain before giving up on its preferred layout. When a local water or blocked-terrain barrier intersects that layout, it can move the complete suburb into another connected area within the same survey while preserving the requested parcel count and terrain-support clearance. This is the first adaptive-planning step; roads and parcels are still rectangular, and terrain-aware routing, irregular districts, bridges, and tunnels remain future work.
+
 The mod also includes a debug command that samples real Minecraft terrain around the player's region and runs the suburb planner without placing blocks:
 
 ```text

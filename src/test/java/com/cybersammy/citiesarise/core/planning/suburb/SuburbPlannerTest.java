@@ -102,6 +102,22 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void relocatesLayoutIntoConnectedDevelopableArea() {
+        int barrierX = 64;
+        TerrainSurvey survey = surveyWithVerticalWaterBarrier(128, 30, barrierX);
+
+        SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
+        SuburbPlanningResult repeated = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
+
+        assertTrue(result.successful(), result.toString());
+        assertEquals(result, repeated);
+        SettlementPlan plan = result.plan().orElseThrow();
+        boolean west = occupiesWestSide(plan, barrierX);
+        boolean east = occupiesEastSide(plan, barrierX);
+        assertTrue(west || east);
+    }
+
+    @Test
     void acceptsSteepTerrainWhenPlatformsStayWithinEarthworkLimits() {
         SuburbPlanningResult result = planner.plan(request(steepSurvey(40, 30), 100L, SuburbPlanningSettings.defaults()));
 
@@ -716,6 +732,49 @@ final class SuburbPlannerTest {
                         TerrainCategory.BUILDABLE
                 ))
         );
+    }
+
+    private static TerrainSurvey surveyWithVerticalWaterBarrier(int width, int depth, int barrierX) {
+        GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(width, depth));
+        return TerrainSurvey.sample(
+                bounds,
+                point -> Optional.of(new TerrainCell(
+                        point,
+                        64,
+                        point.x() == barrierX,
+                        0.0,
+                        BiomeCategory.PLAINS,
+                        TerrainCategory.BUILDABLE
+                ))
+        );
+    }
+
+    private static boolean occupiesWestSide(SettlementPlan plan, int barrierX) {
+        for (RoadNode node : plan.roadGraph().nodes()) {
+            if (node.point().x() >= barrierX) {
+                return false;
+            }
+        }
+        for (Parcel parcel : plan.parcels()) {
+            if (parcel.bounds().maxXExclusive() > barrierX) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean occupiesEastSide(SettlementPlan plan, int barrierX) {
+        for (RoadNode node : plan.roadGraph().nodes()) {
+            if (node.point().x() <= barrierX) {
+                return false;
+            }
+        }
+        for (Parcel parcel : plan.parcels()) {
+            if (parcel.bounds().minX() <= barrierX) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean segmentsConnect(RoadSegment first, RoadSegment second) {

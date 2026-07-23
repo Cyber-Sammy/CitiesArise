@@ -19,6 +19,8 @@ import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityContext;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityScorer;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
+import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopology;
+import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopologyAnalyzer;
 import com.cybersammy.citiesarise.core.validation.PlanValidationError;
 import com.cybersammy.citiesarise.core.validation.PlanValidator;
 import java.util.ArrayList;
@@ -32,6 +34,8 @@ import java.util.Set;
 
 public final class SuburbPlanner {
     private static final int MAX_ROAD_ELEVATION_NODE_DISTANCE = 3;
+    private static final TerrainTopologyAnalyzer TOPOLOGY_ANALYZER = new TerrainTopologyAnalyzer();
+    private static final AdaptiveSuburbLayoutSelector LAYOUT_SELECTOR = new AdaptiveSuburbLayoutSelector();
     private final TerrainSuitabilityScorer terrainScorer;
     private final PlanValidator planValidator;
 
@@ -51,7 +55,7 @@ public final class SuburbPlanner {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.SURVEY_TOO_SMALL);
         }
 
-        SuburbLayout layout = createLayout(request);
+        SuburbLayout layout = createAdaptiveLayout(request);
         Optional<SuburbTerrainDiagnostic> terrainDiagnostic = findTerrainDiagnostic(request, layout);
 
         if (terrainDiagnostic.isPresent()) {
@@ -219,8 +223,31 @@ public final class SuburbPlanner {
         return true;
     }
 
-    private SuburbLayout createLayout(SuburbPlanningRequest request) {
-        GridBounds bounds = request.survey().bounds();
+    private SuburbLayout createAdaptiveLayout(SuburbPlanningRequest request) {
+        TerrainTopology topology = analyzeTopology(request);
+        SuburbLayout preferredLayout = createLayout(request, request.survey().bounds());
+        return LAYOUT_SELECTOR.select(
+                request.survey().bounds(),
+                request.settings().targetParcelCount(),
+                new GridSize(
+                        minimumSurveyWidth(request.settings()),
+                        minimumSurveyDepth(request.settings())
+                ),
+                topology,
+                preferredLayout,
+                bounds -> createLayout(request, bounds)
+        );
+    }
+
+    private TerrainTopology analyzeTopology(SuburbPlanningRequest request) {
+        TerrainSuitabilityContext context = new TerrainSuitabilityContext(request.settings().maxBuildableSlope());
+        return TOPOLOGY_ANALYZER.analyze(
+                request.survey(),
+                cell -> isTerrainCellAccepted(terrainScorer.score(cell, context))
+        );
+    }
+
+    private SuburbLayout createLayout(SuburbPlanningRequest request, GridBounds bounds) {
         Random random = new Random(request.seed());
         int mainRoadZ = centerZ(bounds);
         List<Integer> sideRoadXs = sideRoadXs(bounds, random);
@@ -228,11 +255,11 @@ public final class SuburbPlanner {
         List<GridBounds> parcelBounds = createParcelBounds(request, bounds, mainRoadZ, sideRoadCorridors);
         List<GridBounds> plannedFootprints = plannedFootprints(request, bounds, mainRoadZ, sideRoadCorridors, parcelBounds);
 
-        return new SuburbLayout(mainRoadZ, sideRoadXs, parcelBounds, plannedFootprints);
+        return new SuburbLayout(bounds, mainRoadZ, sideRoadXs, parcelBounds, plannedFootprints);
     }
 
     private SettlementPlan createPlan(SuburbPlanningRequest request, SuburbLayout layout) {
-        GridBounds bounds = request.survey().bounds();
+        GridBounds bounds = layout.bounds();
         RoadGraph roadGraph = createRoadGraph(request, bounds, layout.mainRoadZ(), layout.sideRoadXs());
         roadGraph = RoadGraphSegmenter.splitLongSegments(roadGraph, MAX_ROAD_ELEVATION_NODE_DISTANCE);
         List<Parcel> parcels = createParcels(request, layout.parcelBounds());
@@ -280,7 +307,7 @@ public final class SuburbPlanner {
         nodes.add(roadNode(eastId, bounds.maxXExclusive() - 1, mainRoadZ, "main_road"));
 
         for (int index = 0; index < sideRoadXs.size(); index++) {
-            addSideRoadNodes(request, nodes, sideRoadXs.get(index), mainRoadZ, index);
+            addSideRoadNodes(request, bounds, nodes, sideRoadXs.get(index), mainRoadZ, index);
         }
 
         addMainRoadSegments(request, segments, westId, eastId, sideRoadXs.size());
@@ -331,6 +358,7 @@ public final class SuburbPlanner {
 
     private static void addSideRoadNodes(
             SuburbPlanningRequest request,
+            GridBounds bounds,
             List<RoadNode> nodes,
             int x,
             int mainRoadZ,
@@ -338,7 +366,7 @@ public final class SuburbPlanner {
     ) {
         PlanElementId roadsId = request.settlementId().child("roads");
         boolean northbound = isNorthbound(index);
-        int deadEndZ = deadEndZ(request.survey().bounds(), request.settings(), mainRoadZ, northbound);
+        int deadEndZ = deadEndZ(bounds, request.settings(), mainRoadZ, northbound);
 
         nodes.add(roadNode(roadsId.child("side-" + index + "-junction"), x, mainRoadZ, "side_road"));
         nodes.add(roadNode(roadsId.child("side-" + index + "-dead-end"), x, deadEndZ, "dead_end"));
@@ -572,16 +600,4 @@ public final class SuburbPlanner {
         return Set.copyOf(planTags);
     }
 
-    private record SuburbLayout(
-            int mainRoadZ,
-            List<Integer> sideRoadXs,
-            List<GridBounds> parcelBounds,
-            List<GridBounds> plannedFootprints
-    ) {
-        private SuburbLayout {
-            sideRoadXs = List.copyOf(sideRoadXs);
-            parcelBounds = List.copyOf(parcelBounds);
-            plannedFootprints = List.copyOf(plannedFootprints);
-        }
-    }
 }

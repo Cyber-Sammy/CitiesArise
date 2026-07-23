@@ -16,7 +16,6 @@ import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanner;
-import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningFailureReason;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningRequest;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
@@ -32,7 +31,7 @@ final class WorldgenWaterMaskRefinerTest {
     private static final GridBounds BOUNDS = new GridBounds(new GridPoint(0, 0), new GridSize(40, 30));
 
     @Test
-    void rejectsExactWaterInsidePreliminaryPlanFootprint() {
+    void relocatesAfterExactWaterAppearsInsideBuildingShoulder() {
         SuburbPlanner planner = SuburbPlanner.defaults();
         SuburbPlanningResult template = planner.plan(request(flatSurvey()));
         TerrainSurvey terrain = buildingShoulderSurvey(template.plan().orElseThrow());
@@ -52,16 +51,15 @@ final class WorldgenWaterMaskRefinerTest {
                 initialResult
         );
 
-        assertFalse(result.successful());
-        assertEquals(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN, result.failureReason().orElseThrow());
+        assertTrue(result.successful(), result.toString());
         assertEquals(1, terrainProvider.refinedSamples);
-        assertTrue(terrainProvider.checkedPoints.contains(result.terrainDiagnostic().orElseThrow().cell().point()));
         assertTrue(terrainProvider.checkedPoints.contains(shoulderPoint));
+        assertFalse(containsPreparationPoint(result, shoulderPoint));
         assertTrue(terrainProvider.checkedPoints.size() < BOUNDS.size().width() * BOUNDS.size().depth());
     }
 
     @Test
-    void rejectsExactWaterInsideRoadShoulder() {
+    void relocatesAfterExactWaterAppearsInsideRoadShoulder() {
         SuburbPlanner planner = SuburbPlanner.defaults();
         SuburbPlanningResult template = planner.plan(request(flatSurvey()));
         RegionalElevationPlan elevationPlan = template.terrainPreparationPlan().orElseThrow().elevationPlan();
@@ -82,15 +80,15 @@ final class WorldgenWaterMaskRefinerTest {
                 initialResult
         );
 
-        assertFalse(result.successful());
-        assertEquals(SuburbPlanningFailureReason.UNSUITABLE_TERRAIN, result.failureReason().orElseThrow());
+        assertTrue(result.successful(), result.toString());
         assertTrue(terrainProvider.checkedPoints.contains(shoulderPoint));
+        assertFalse(containsPreparationPoint(result, shoulderPoint));
     }
 
     @Test
     void skipsRefinementWhenInitialPlanningFailed() {
         SuburbPlanner planner = SuburbPlanner.defaults();
-        SuburbPlanningRequest request = request(waterSurvey());
+        SuburbPlanningRequest request = request(allWaterSurvey());
         SuburbPlanningResult initialResult = planner.plan(request);
         ExactWaterProvider terrainProvider = new ExactWaterProvider();
 
@@ -135,8 +133,15 @@ final class WorldgenWaterMaskRefinerTest {
         return survey(Optional.empty());
     }
 
-    private static TerrainSurvey waterSurvey() {
-        return survey(Optional.of(new GridPoint(0, 14)));
+    private static TerrainSurvey allWaterSurvey() {
+        return TerrainSurvey.sample(BOUNDS, point -> Optional.of(new TerrainCell(
+                point,
+                64,
+                true,
+                0.0,
+                BiomeCategory.PLAINS,
+                TerrainCategory.BLOCKED
+        )));
     }
 
     private static TerrainSurvey survey(Optional<GridPoint> waterPoint) {
@@ -181,6 +186,11 @@ final class WorldgenWaterMaskRefinerTest {
             }
         }
         return false;
+    }
+
+    private static boolean containsPreparationPoint(SuburbPlanningResult result, GridPoint point) {
+        return result.terrainPreparationPlan().orElseThrow().columns().stream()
+                .anyMatch(column -> column.point().equals(point));
     }
 
     private static TerrainCell cell(GridPoint point, Optional<GridPoint> waterPoint) {

@@ -28,6 +28,9 @@ import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityContribution;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityContext;
@@ -35,6 +38,7 @@ import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityRule;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityScorer;
 import com.cybersammy.citiesarise.core.validation.PlanValidator;
 import java.util.ArrayDeque;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -94,6 +98,39 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void terrainPolicyCanPermitDirectWaterPreparation() {
+        TerrainResponsePolicy policy = policyWith(TerrainFeatureType.WATER, TerrainResponse.TERRAFORM);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                SETTLEMENT_ID,
+                waterSurvey(40, 30),
+                100L,
+                SuburbPlanningSettings.defaults(),
+                policy
+        );
+
+        SuburbPlanningResult result = planner.plan(request);
+
+        assertTrue(result.successful(), result.toString());
+    }
+
+    @Test
+    void preserveResponseKeepsWaterAsAPlanningBarrier() {
+        TerrainResponsePolicy policy = policyWith(TerrainFeatureType.WATER, TerrainResponse.PRESERVE);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                SETTLEMENT_ID,
+                waterSurvey(40, 30),
+                100L,
+                SuburbPlanningSettings.defaults(),
+                policy
+        );
+
+        SuburbPlanningResult result = planner.plan(request);
+
+        assertFalse(result.successful());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.WATER);
+    }
+
+    @Test
     void ignoresBadTerrainOutsidePlannedFootprint() {
         TerrainSurvey survey = surveyWithSingleWaterCell(40, 30, new GridPoint(0, 0));
         SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
@@ -124,6 +161,23 @@ final class SuburbPlannerTest {
         assertTrue(result.successful());
         assertEquals(TerrainPreparationStatus.ACCEPTED, result.terrainPreparationPlan().orElseThrow().status());
         assertEquals(EarthworkSiteQuality.DIRECT, result.siteAssessment().orElseThrow().quality());
+    }
+
+    @Test
+    void terrainPolicyCanRejectSteepTerrainBeforeEarthworkPlanning() {
+        TerrainResponsePolicy policy = policyWith(TerrainFeatureType.STEEP_SLOPE, TerrainResponse.AVOID);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                SETTLEMENT_ID,
+                steepSurvey(40, 30),
+                100L,
+                SuburbPlanningSettings.defaults(),
+                policy
+        );
+
+        SuburbPlanningResult result = planner.plan(request);
+
+        assertFalse(result.successful());
+        assertTerrainDiagnostic(result, TerrainRejectionReason.STEEP_SLOPE);
     }
 
     @Test
@@ -681,6 +735,16 @@ final class SuburbPlannerTest {
             SuburbPlanningSettings settings
     ) {
         return new SuburbPlanningRequest(SETTLEMENT_ID, survey, seed, settings);
+    }
+
+    private static TerrainResponsePolicy policyWith(
+            TerrainFeatureType featureType,
+            TerrainResponse response
+    ) {
+        EnumMap<TerrainFeatureType, TerrainResponse> responses =
+                new EnumMap<>(TerrainResponsePolicy.defaults().responses());
+        responses.put(featureType, response);
+        return new TerrainResponsePolicy(responses, Set.of());
     }
 
     private static TerrainSurvey flatSurvey(int width, int depth) {

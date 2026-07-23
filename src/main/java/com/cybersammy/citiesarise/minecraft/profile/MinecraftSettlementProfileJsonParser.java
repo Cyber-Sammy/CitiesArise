@@ -4,11 +4,20 @@ import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
+import com.cybersammy.citiesarise.core.terrain.policy.InfrastructureCapability;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import java.math.BigDecimal;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public final class MinecraftSettlementProfileJsonParser {
     private static final String LEGACY_MAX_ELEVATION_RANGE = "maxElevationRange";
@@ -32,7 +41,8 @@ public final class MinecraftSettlementProfileJsonParser {
         SettlementProfile profile = new SettlementProfile(
                 id,
                 parseSurveySize(survey),
-                parseSuburbPlanningSettings(planning)
+                parseSuburbPlanningSettings(planning),
+                parseTerrainResponsePolicy(json)
         );
         limits.validate(profile);
         return profile;
@@ -94,6 +104,85 @@ public final class MinecraftSettlementProfileJsonParser {
                         SuburbPlanningSettings.DEFAULT_MAX_EARTHWORK_VOLUME
                 )
         );
+    }
+
+    private static TerrainResponsePolicy parseTerrainResponsePolicy(JsonObject profile) {
+        if (!profile.has("terrainPolicy")) {
+            return TerrainResponsePolicy.defaults();
+        }
+
+        JsonObject policy = requiredObject(profile, "terrainPolicy");
+        Map<TerrainFeatureType, TerrainResponse> responses = new EnumMap<>(
+                TerrainResponsePolicy.defaults().responses()
+        );
+        if (policy.has("responses")) {
+            parseTerrainResponses(requiredObject(policy, "responses"), responses);
+        }
+        Set<InfrastructureCapability> capabilities = policy.has("capabilities")
+                ? parseCapabilities(policy)
+                : Set.of();
+        return new TerrainResponsePolicy(responses, capabilities);
+    }
+
+    private static void parseTerrainResponses(
+            JsonObject json,
+            Map<TerrainFeatureType, TerrainResponse> responses
+    ) {
+        for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
+            TerrainFeatureType featureType = parseTerrainFeatureType(entry.getKey());
+            responses.put(featureType, parseTerrainResponse(entry.getValue(), entry.getKey()));
+        }
+    }
+
+    private static TerrainFeatureType parseTerrainFeatureType(String name) {
+        return switch (name) {
+            case "water" -> TerrainFeatureType.WATER;
+            case "blockedTerrain" -> TerrainFeatureType.BLOCKED_TERRAIN;
+            case "steepSlope" -> TerrainFeatureType.STEEP_SLOPE;
+            default -> throw new IllegalArgumentException("unknown terrain feature: " + name);
+        };
+    }
+
+    private static TerrainResponse parseTerrainResponse(JsonElement element, String featureName) {
+        String value = requiredString(element, "terrain response for " + featureName);
+        return switch (value) {
+            case "avoid" -> TerrainResponse.AVOID;
+            case "preserve" -> TerrainResponse.PRESERVE;
+            case "terraform" -> TerrainResponse.TERRAFORM;
+            case "build_around" -> TerrainResponse.BUILD_AROUND;
+            case "cross_if_supported" -> TerrainResponse.CROSS_IF_SUPPORTED;
+            case "ignore" -> TerrainResponse.IGNORE;
+            default -> throw new IllegalArgumentException("unknown terrain response: " + value);
+        };
+    }
+
+    private static Set<InfrastructureCapability> parseCapabilities(JsonObject policy) {
+        JsonElement element = requiredElement(policy, "capabilities");
+        if (!element.isJsonArray()) {
+            throw new IllegalArgumentException("capabilities must be an array");
+        }
+
+        EnumSet<InfrastructureCapability> capabilities = EnumSet.noneOf(InfrastructureCapability.class);
+        JsonArray values = element.getAsJsonArray();
+        for (JsonElement value : values) {
+            InfrastructureCapability capability = parseCapability(
+                    requiredString(value, "infrastructure capability")
+            );
+            if (!capabilities.add(capability)) {
+                throw new IllegalArgumentException("duplicate infrastructure capability: " + value.getAsString());
+            }
+        }
+        return capabilities;
+    }
+
+    private static InfrastructureCapability parseCapability(String value) {
+        return switch (value) {
+            case "bridge" -> InfrastructureCapability.BRIDGE;
+            case "tunnel" -> InfrastructureCapability.TUNNEL;
+            case "canal" -> InfrastructureCapability.CANAL;
+            case "major_terraforming" -> InfrastructureCapability.MAJOR_TERRAFORMING;
+            default -> throw new IllegalArgumentException("unknown infrastructure capability: " + value);
+        };
     }
 
     private static int optionalInt(JsonObject parent, String name, int defaultValue) {
@@ -178,6 +267,17 @@ public final class MinecraftSettlementProfileJsonParser {
         }
 
         throw new IllegalArgumentException(name + " is required");
+    }
+
+    private static String requiredString(JsonElement element, String name) {
+        if (!element.isJsonPrimitive()) {
+            throw new IllegalArgumentException(name + " must be a string");
+        }
+        JsonPrimitive primitive = element.getAsJsonPrimitive();
+        if (!primitive.isString()) {
+            throw new IllegalArgumentException(name + " must be a string");
+        }
+        return primitive.getAsString();
     }
 
     private static boolean isNumber(JsonElement element) {

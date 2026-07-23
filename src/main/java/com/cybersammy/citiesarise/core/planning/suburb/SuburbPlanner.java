@@ -17,6 +17,7 @@ import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityContext;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityScorer;
@@ -198,31 +199,69 @@ public final class SuburbPlanner {
 
         TerrainSuitability suitability = terrainScorer.score(cell, context);
 
-        if (isTerrainCellAccepted(suitability)) {
+        if (isTerrainCellAccepted(request, cell, suitability)) {
             return Optional.empty();
         }
 
         return Optional.of(new SuburbTerrainDiagnostic(cell, suitability));
     }
 
-    private boolean isTerrainCellAccepted(TerrainSuitability suitability) {
+    private boolean isTerrainCellAccepted(
+            SuburbPlanningRequest request,
+            TerrainCell cell,
+            TerrainSuitability suitability
+    ) {
         if (suitability.rejected()) {
-            return hasOnlyCorrectableRejections(suitability);
+            return hasOnlyPermittedRejections(request, cell, suitability);
         }
 
         return suitability.score() >= 0.25;
     }
 
-    private static boolean hasOnlyCorrectableRejections(TerrainSuitability suitability) {
+    private static boolean hasOnlyPermittedRejections(
+            SuburbPlanningRequest request,
+            TerrainCell cell,
+            TerrainSuitability suitability
+    ) {
         if (suitability.rejectionReasons().isEmpty()) {
             return false;
         }
         for (TerrainRejectionReason reason : suitability.rejectionReasons()) {
-            if (reason != TerrainRejectionReason.STEEP_SLOPE) {
+            if (!isRejectionPermitted(request, cell, reason)) {
                 return false;
             }
         }
         return true;
+    }
+
+    private static boolean isRejectionPermitted(
+            SuburbPlanningRequest request,
+            TerrainCell cell,
+            TerrainRejectionReason reason
+    ) {
+        Optional<TerrainFeatureType> featureType = featureType(cell, reason);
+        if (featureType.isEmpty()) {
+            return false;
+        }
+        return request.terrainResponsePolicy().permitsDirectPreparation(featureType.orElseThrow());
+    }
+
+    private static Optional<TerrainFeatureType> featureType(
+            TerrainCell cell,
+            TerrainRejectionReason reason
+    ) {
+        if (reason == TerrainRejectionReason.WATER) {
+            return Optional.of(TerrainFeatureType.WATER);
+        }
+        if (reason == TerrainRejectionReason.BLOCKED_TERRAIN) {
+            return Optional.of(cell.water()
+                    ? TerrainFeatureType.WATER
+                    : TerrainFeatureType.BLOCKED_TERRAIN);
+        }
+        if (reason == TerrainRejectionReason.STEEP_SLOPE) {
+            return Optional.of(TerrainFeatureType.STEEP_SLOPE);
+        }
+        return Optional.empty();
     }
 
     private SuburbLayout createAdaptiveLayout(SuburbPlanningRequest request) {
@@ -245,7 +284,7 @@ public final class SuburbPlanner {
         TerrainSuitabilityContext context = new TerrainSuitabilityContext(request.settings().maxBuildableSlope());
         return TOPOLOGY_ANALYZER.analyze(
                 request.survey(),
-                cell -> isTerrainCellAccepted(terrainScorer.score(cell, context))
+                cell -> isTerrainCellAccepted(request, cell, terrainScorer.score(cell, context))
         );
     }
 

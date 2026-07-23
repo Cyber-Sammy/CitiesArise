@@ -30,5 +30,6 @@ class WorldgenSettlementProfileSelectionTest {
 
         assertEquals(profile.surveySize(), selection.surveySize());
         assertEquals(profile.suburbPlanningSettings(), selection.planningSettings());
+        assertEquals(profile.terrainResponsePolicy(), selection.terrainResponsePolicy());
     }
 }

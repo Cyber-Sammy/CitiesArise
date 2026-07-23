@@ -2,11 +2,16 @@ package com.cybersammy.citiesarise.minecraft.profile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
+import com.cybersammy.citiesarise.core.terrain.policy.InfrastructureCapability;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.Test;
@@ -36,6 +41,74 @@ final class MinecraftSettlementProfileJsonParserTest {
         assertEquals(id(), profile.id());
         assertEquals(new GridSize(96, 64), profile.surveySize());
         assertEquals(new SuburbPlanningSettings(5, 0.75, 7, 18, 20, 4), profile.suburbPlanningSettings());
+        assertEquals(TerrainResponsePolicy.defaults(), profile.terrainResponsePolicy());
+    }
+
+    @Test
+    void parsesTerrainPolicy() {
+        JsonObject json = validJson();
+        json.add("terrainPolicy", JsonParser.parseString("""
+                {
+                  "responses": {
+                    "water": "preserve",
+                    "blockedTerrain": "build_around",
+                    "steepSlope": "cross_if_supported"
+                  },
+                  "capabilities": ["bridge", "tunnel", "canal", "major_terraforming"]
+                }
+                """));
+
+        SettlementProfile profile = parser.parse(id(), json);
+
+        assertEquals(TerrainResponse.PRESERVE, profile.terrainResponsePolicy().responseFor(TerrainFeatureType.WATER));
+        assertEquals(
+                TerrainResponse.BUILD_AROUND,
+                profile.terrainResponsePolicy().responseFor(TerrainFeatureType.BLOCKED_TERRAIN)
+        );
+        assertEquals(
+                TerrainResponse.CROSS_IF_SUPPORTED,
+                profile.terrainResponsePolicy().responseFor(TerrainFeatureType.STEEP_SLOPE)
+        );
+        assertEquals(4, profile.terrainResponsePolicy().capabilities().size());
+        assertTrue(profile.terrainResponsePolicy().supports(InfrastructureCapability.BRIDGE));
+    }
+
+    @Test
+    void rejectsUnknownTerrainPolicyValues() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> parser.parse(id(), withTerrainPolicy("""
+                        {"responses": {"water": "drain"}}
+                        """))
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> parser.parse(id(), withTerrainPolicy("""
+                        {"responses": {"ocean": "avoid"}}
+                        """))
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> parser.parse(id(), withTerrainPolicy("""
+                        {"capabilities": ["road"]}
+                        """))
+        );
+    }
+
+    @Test
+    void rejectsMalformedOrDuplicateCapabilities() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> parser.parse(id(), withTerrainPolicy("""
+                        {"capabilities": "bridge"}
+                        """))
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> parser.parse(id(), withTerrainPolicy("""
+                        {"capabilities": ["bridge", "bridge"]}
+                        """))
+        );
     }
 
     @Test
@@ -189,6 +262,12 @@ final class MinecraftSettlementProfileJsonParserTest {
     private static JsonObject jsonWithPlanningValue(String name, Number value) {
         JsonObject json = validJson();
         json.getAsJsonObject("planning").addProperty(name, value);
+        return json;
+    }
+
+    private static JsonObject withTerrainPolicy(String policyJson) {
+        JsonObject json = validJson();
+        json.add("terrainPolicy", JsonParser.parseString(policyJson));
         return json;
     }
 

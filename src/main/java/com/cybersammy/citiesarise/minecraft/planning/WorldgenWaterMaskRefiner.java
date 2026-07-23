@@ -83,7 +83,8 @@ final class WorldgenWaterMaskRefiner {
                 initialRequest.settlementId(),
                 refinedSurvey,
                 initialRequest.seed(),
-                initialRequest.settings()
+                initialRequest.settings(),
+                initialRequest.terrainResponsePolicy()
         );
         return planner.plan(refinedRequest);
     }

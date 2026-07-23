@@ -626,6 +626,35 @@ final class SuburbPlannerTest {
         assertEquals(Optional.of(SuburbPlanningFailureReason.NOT_ENOUGH_PARCEL_SPACE), result.failureReason());
     }
 
+    @Test
+    void reducesAdaptiveCapacityTowardMinimum() {
+        SuburbPlanningSettings settings = settingsWithCapacity(new DevelopmentCapacity(4, 100, 100));
+
+        SuburbPlanningResult result = planner.plan(request(flatSurvey(40, 30), 100L, settings));
+
+        assertTrue(result.successful(), result.toString());
+        SettlementPlan plan = result.plan().orElseThrow();
+        assertTrue(plan.parcels().size() >= 4);
+        assertTrue(plan.parcels().size() < 100);
+        assertEquals(
+                Integer.toString(plan.parcels().size()),
+                plan.properties().find(PlanPropertyKeys.ALLOCATED_CAPACITY).orElseThrow()
+        );
+        assertTrue(plan.properties().find(PlanPropertyKeys.DISTRICT_ANCHOR_X).isPresent());
+        assertTrue(plan.properties().find(PlanPropertyKeys.DISTRICT_ANCHOR_Z).isPresent());
+        assertTrue(plan.properties().find(PlanPropertyKeys.DEVELOPABLE_REGION_ID).isPresent());
+    }
+
+    @Test
+    void rejectsAdaptiveCapacityBelowMinimum() {
+        SuburbPlanningSettings settings = settingsWithCapacity(new DevelopmentCapacity(50, 100, 100));
+
+        SuburbPlanningResult result = planner.plan(request(flatSurvey(40, 30), 100L, settings));
+
+        assertFalse(result.successful());
+        assertEquals(Optional.of(SuburbPlanningFailureReason.NOT_ENOUGH_PARCEL_SPACE), result.failureReason());
+    }
+
     private static boolean isConnected(RoadGraph roadGraph) {
         Map<PlanElementId, Set<PlanElementId>> adjacency = adjacency(roadGraph);
         PlanElementId startId = roadGraph.nodes().getFirst().id();
@@ -749,6 +778,24 @@ final class SuburbPlannerTest {
 
     private static TerrainSurvey flatSurvey(int width, int depth) {
         return survey(width, depth, false, 0.0, TerrainCategory.BUILDABLE);
+    }
+
+    private static SuburbPlanningSettings settingsWithCapacity(DevelopmentCapacity capacity) {
+        return new SuburbPlanningSettings(
+                3,
+                0.25,
+                capacity,
+                6,
+                7,
+                1,
+                12,
+                3,
+                3,
+                6,
+                8,
+                4,
+                20_000L
+        );
     }
 
     private static TerrainSurvey waterSurvey(int width, int depth) {

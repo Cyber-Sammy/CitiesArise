@@ -60,9 +60,19 @@ public record MinecraftSettlementProfileLimits(
                 "planning.maxBuildableSlope"
         );
         requireAtMost(
+                profile.suburbPlanningSettings().minimumParcelCount(),
+                maxTargetParcelCount,
+                "planning.minimumParcelCount"
+        );
+        requireAtMost(
                 profile.suburbPlanningSettings().targetParcelCount(),
                 maxTargetParcelCount,
                 "planning.targetParcelCount"
+        );
+        requireAtMost(
+                profile.suburbPlanningSettings().maximumParcelCount(),
+                maxTargetParcelCount,
+                "planning.maximumParcelCount"
         );
         requireAtMost(profile.suburbPlanningSettings().parcelWidth(), maxParcelWidth, "planning.parcelWidth");
         requireAtMost(profile.suburbPlanningSettings().parcelDepth(), maxParcelDepth, "planning.parcelDepth");

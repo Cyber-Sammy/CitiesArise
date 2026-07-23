@@ -9,43 +9,66 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class AdaptiveSuburbLayoutSelector {
-    SuburbLayout select(
+    Optional<SuburbLayoutSelection> select(
             GridBounds surveyBounds,
-            int targetParcelCount,
+            DevelopmentCapacity capacity,
             GridSize minimumSize,
             TerrainTopology topology,
             SuburbLayout preferredLayout,
             LayoutFactory layoutFactory
     ) {
         Objects.requireNonNull(surveyBounds, "surveyBounds");
-        if (targetParcelCount <= 0) {
-            throw new IllegalArgumentException("targetParcelCount must be positive");
-        }
+        Objects.requireNonNull(capacity, "capacity");
         Objects.requireNonNull(minimumSize, "minimumSize");
         Objects.requireNonNull(topology, "topology");
         Objects.requireNonNull(preferredLayout, "preferredLayout");
         Objects.requireNonNull(layoutFactory, "layoutFactory");
 
-        if (isDevelopable(preferredLayout, topology)) {
-            return preferredLayout;
+        if (hasCapacity(preferredLayout, capacity.target())) {
+            if (isDevelopable(preferredLayout, topology)) {
+                return Optional.of(selection(preferredLayout, capacity.target(), topology));
+            }
         }
 
+        for (int allocatedCapacity = capacity.target(); allocatedCapacity >= capacity.minimum(); allocatedCapacity--) {
+            Optional<SuburbLayoutSelection> selection = selectCapacity(
+                    surveyBounds,
+                    allocatedCapacity,
+                    minimumSize,
+                    topology,
+                    layoutFactory
+            );
+            if (selection.isPresent()) {
+                return selection;
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private static Optional<SuburbLayoutSelection> selectCapacity(
+            GridBounds surveyBounds,
+            int allocatedCapacity,
+            GridSize minimumSize,
+            TerrainTopology topology,
+            LayoutFactory layoutFactory
+    ) {
         Optional<GridSize> layoutSize = minimumLayoutSize(
                 surveyBounds,
-                targetParcelCount,
+                allocatedCapacity,
                 minimumSize,
                 layoutFactory
         );
         if (layoutSize.isEmpty()) {
-            return preferredLayout;
+            return Optional.empty();
         }
         return bestCandidate(
                 surveyBounds,
-                targetParcelCount,
+                allocatedCapacity,
                 layoutSize.orElseThrow(),
                 topology,
                 layoutFactory
-        ).orElse(preferredLayout);
+        );
     }
 
     private static Optional<GridSize> minimumLayoutSize(
@@ -56,7 +79,10 @@ final class AdaptiveSuburbLayoutSelector {
     ) {
         for (int width = minimumSize.width(); width <= surveyBounds.size().width(); width++) {
             GridSize size = new GridSize(width, minimumSize.depth());
-            SuburbLayout layout = layoutFactory.create(new GridBounds(surveyBounds.origin(), size));
+            SuburbLayout layout = layoutFactory.create(
+                    new GridBounds(surveyBounds.origin(), size),
+                    targetParcelCount
+            );
             if (hasCapacity(layout, targetParcelCount)) {
                 return Optional.of(size);
             }
@@ -64,7 +90,7 @@ final class AdaptiveSuburbLayoutSelector {
         return Optional.empty();
     }
 
-    private static Optional<SuburbLayout> bestCandidate(
+    private static Optional<SuburbLayoutSelection> bestCandidate(
             GridBounds surveyBounds,
             int targetParcelCount,
             GridSize layoutSize,
@@ -77,7 +103,7 @@ final class AdaptiveSuburbLayoutSelector {
         for (int z = surveyBounds.minZ(); z <= maxZ; z++) {
             for (int x = surveyBounds.minX(); x <= maxX; x++) {
                 GridBounds bounds = new GridBounds(new GridPoint(x, z), layoutSize);
-                SuburbLayout layout = layoutFactory.create(bounds);
+                SuburbLayout layout = layoutFactory.create(bounds, targetParcelCount);
                 Optional<LayoutCandidate> candidate = candidate(
                         layout,
                         targetParcelCount,
@@ -89,7 +115,7 @@ final class AdaptiveSuburbLayoutSelector {
                 }
             }
         }
-        return Optional.ofNullable(best).map(LayoutCandidate::layout);
+        return Optional.ofNullable(best).map(LayoutCandidate::selection);
     }
 
     private static Optional<LayoutCandidate> candidate(
@@ -105,11 +131,69 @@ final class AdaptiveSuburbLayoutSelector {
             return Optional.empty();
         }
         DevelopableRegion region = topology.regionAt(layout.plannedFootprints().getFirst().origin()).orElseThrow();
+        SuburbLayoutSelection selection = selection(layout, targetParcelCount, topology);
         return Optional.of(new LayoutCandidate(
-                layout,
+                selection,
                 region.area(),
-                centerDistance(layout.bounds(), surveyBounds)
+                centerDistance(layout.bounds(), surveyBounds),
+                layout.bounds().minX(),
+                layout.bounds().minZ()
         ));
+    }
+
+    private static SuburbLayoutSelection selection(
+            SuburbLayout layout,
+            int allocatedCapacity,
+            TerrainTopology topology
+    ) {
+        DevelopableRegion region = topology.regionAt(layout.plannedFootprints().getFirst().origin()).orElseThrow();
+        return new SuburbLayoutSelection(
+                layout,
+                new DistrictAnchor(region.id(), anchorPoint(layout.bounds(), region)),
+                allocatedCapacity
+        );
+    }
+
+    private static GridPoint anchorPoint(GridBounds layoutBounds, DevelopableRegion region) {
+        GridPoint center = new GridPoint(
+                layoutBounds.minX() + (layoutBounds.size().width() / 2),
+                layoutBounds.minZ() + (layoutBounds.size().depth() / 2)
+        );
+        GridPoint best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (GridPoint point : region.points()) {
+            if (!layoutBounds.contains(point)) {
+                continue;
+            }
+            long distance = manhattanDistance(point, center);
+            if (isBetterAnchor(point, distance, best, bestDistance)) {
+                best = point;
+                bestDistance = distance;
+            }
+        }
+        return Objects.requireNonNull(best, "layout has no developable anchor point");
+    }
+
+    private static boolean isBetterAnchor(
+            GridPoint candidate,
+            long candidateDistance,
+            GridPoint current,
+            long currentDistance
+    ) {
+        if (current == null) {
+            return true;
+        }
+        if (candidateDistance != currentDistance) {
+            return candidateDistance < currentDistance;
+        }
+        if (candidate.x() != current.x()) {
+            return candidate.x() < current.x();
+        }
+        return candidate.z() < current.z();
+    }
+
+    private static long manhattanDistance(GridPoint first, GridPoint second) {
+        return Math.abs((long) first.x() - second.x()) + Math.abs((long) first.z() - second.z());
     }
 
     private static boolean hasCapacity(SuburbLayout layout, int targetParcelCount) {
@@ -170,12 +254,18 @@ final class AdaptiveSuburbLayoutSelector {
 
     @FunctionalInterface
     interface LayoutFactory {
-        SuburbLayout create(GridBounds bounds);
+        SuburbLayout create(GridBounds bounds, int parcelCapacity);
     }
 
-    private record LayoutCandidate(SuburbLayout layout, int regionArea, long centerDistance) {
+    private record LayoutCandidate(
+            SuburbLayoutSelection selection,
+            int regionArea,
+            long centerDistance,
+            int minX,
+            int minZ
+    ) {
         private LayoutCandidate {
-            Objects.requireNonNull(layout, "layout");
+            Objects.requireNonNull(selection, "selection");
             if (regionArea <= 0) {
                 throw new IllegalArgumentException("regionArea must be positive");
             }
@@ -191,7 +281,13 @@ final class AdaptiveSuburbLayoutSelector {
             if (regionArea != other.regionArea) {
                 return regionArea > other.regionArea;
             }
-            return centerDistance < other.centerDistance;
+            if (centerDistance != other.centerDistance) {
+                return centerDistance < other.centerDistance;
+            }
+            if (minX != other.minX) {
+                return minX < other.minX;
+            }
+            return minZ < other.minZ;
         }
     }
 }

@@ -1,6 +1,8 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
@@ -40,16 +42,80 @@ final class AdaptiveSuburbLayoutSelectorTest {
                 )
         );
 
-        SuburbLayout selected = new AdaptiveSuburbLayoutSelector().select(
+        SuburbLayoutSelection selected = new AdaptiveSuburbLayoutSelector().select(
                 surveyBounds,
-                1,
+                DevelopmentCapacity.fixed(1),
                 new GridSize(10, 10),
                 topology,
                 preferredLayout,
-                ignored -> preferredLayout
-        );
+                (ignored, capacity) -> preferredLayout
+        ).orElseThrow();
 
-        assertSame(preferredLayout, selected);
+        assertSame(preferredLayout, selected.layout());
+    }
+
+    @Test
+    void reducesCapacityToFitOneOfDisconnectedRegions() {
+        GridBounds surveyBounds = bounds(0, 0, 31, 10);
+        TerrainTopology topology = topologyWithBarrier(surveyBounds, 15);
+        SuburbLayout preferredLayout = layout(surveyBounds, 4);
+
+        SuburbLayoutSelection selected = new AdaptiveSuburbLayoutSelector().select(
+                surveyBounds,
+                new DevelopmentCapacity(2, 4, 6),
+                new GridSize(4, 10),
+                topology,
+                preferredLayout,
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout
+        ).orElseThrow();
+
+        assertEquals(3, selected.allocatedCapacity());
+        assertEquals(0, selected.anchor().developableRegionId());
+        assertTrue(selected.layout().bounds().maxXExclusive() <= 15);
+    }
+
+    @Test
+    void rejectsWhenNoConnectedRegionSupportsMinimumCapacity() {
+        GridBounds surveyBounds = bounds(0, 0, 15, 10);
+        TerrainTopology topology = topologyWithBarrier(surveyBounds, 7);
+
+        assertTrue(new AdaptiveSuburbLayoutSelector().select(
+                surveyBounds,
+                new DevelopmentCapacity(2, 4, 6),
+                new GridSize(4, 10),
+                topology,
+                layout(surveyBounds, 4),
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout
+        ).isEmpty());
+    }
+
+    private static TerrainTopology topologyWithBarrier(GridBounds bounds, int barrierX) {
+        TerrainSurvey survey = TerrainSurvey.sample(
+                bounds,
+                point -> Optional.of(cell(point, point.x() == barrierX))
+        );
+        return new TerrainTopologyAnalyzer().analyze(
+                survey,
+                cell -> cell.terrainCategory() != TerrainCategory.BLOCKED
+        );
+    }
+
+    private static SuburbLayout capacityLimitedLayout(GridBounds bounds, int requestedCapacity) {
+        return layout(bounds, Math.min(requestedCapacity, bounds.size().width() / 4));
+    }
+
+    private static SuburbLayout layout(GridBounds bounds, int parcelCount) {
+        List<GridBounds> parcels = java.util.stream.IntStream.range(0, parcelCount)
+                .mapToObj(index -> bounds(bounds.minX() + index, bounds.minZ(), 1, 1))
+                .toList();
+        return new SuburbLayout(
+                bounds,
+                bounds.minZ() + (bounds.size().depth() / 2),
+                List.of(),
+                parcels,
+                List.of(bounds),
+                List.of(new PotentialTerrainPreparationFootprint(bounds, 0))
+        );
     }
 
     private static TerrainCell cell(GridPoint point, boolean blocked) {

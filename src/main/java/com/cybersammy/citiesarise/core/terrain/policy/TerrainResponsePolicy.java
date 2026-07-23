@@ -47,7 +47,7 @@ public record TerrainResponsePolicy(
         return responses.get(featureType);
     }
 
-    public boolean permitsDirectPreparation(TerrainFeatureType featureType) {
+    public boolean permitsCurrentPlacement(TerrainFeatureType featureType) {
         return actionFor(featureType).permitsCurrentPlacement();
     }
 

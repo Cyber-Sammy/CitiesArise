@@ -100,7 +100,7 @@ final class TerrainResponsePolicyTest {
                 Set.of(InfrastructureCapability.BRIDGE)
         );
         assertEquals(TerrainPlanningAction.CROSS, policy.actionFor(TerrainFeatureType.WATER));
-        assertFalse(policy.permitsDirectPreparation(TerrainFeatureType.WATER));
+        assertFalse(policy.permitsCurrentPlacement(TerrainFeatureType.WATER));
     }
 
     @Test

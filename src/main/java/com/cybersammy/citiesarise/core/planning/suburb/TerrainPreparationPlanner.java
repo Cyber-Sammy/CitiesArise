@@ -363,7 +363,7 @@ final class TerrainPreparationPlanner {
             TerrainFeatureType featureType,
             TerrainRejectionReason reason
     ) {
-        if (request.terrainResponsePolicy().permitsDirectPreparation(featureType)) {
+        if (request.terrainResponsePolicy().permitsCurrentPlacement(featureType)) {
             return Optional.empty();
         }
         return Optional.of(rejectionDiagnostic(cell, reason));

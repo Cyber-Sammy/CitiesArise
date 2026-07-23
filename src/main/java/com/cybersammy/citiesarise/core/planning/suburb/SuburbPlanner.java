@@ -243,7 +243,7 @@ public final class SuburbPlanner {
         if (featureType.isEmpty()) {
             return false;
         }
-        return request.terrainResponsePolicy().permitsDirectPreparation(featureType.orElseThrow());
+        return request.terrainResponsePolicy().permitsCurrentPlacement(featureType.orElseThrow());
     }
 
     private static Optional<TerrainFeatureType> featureType(

@@ -51,6 +51,9 @@ final class WorldgenWaterMaskRefiner {
             currentResult = replan(planner, initialRequest, refinedSurvey.orElseThrow());
         }
 
+        if (!currentResult.successful()) {
+            return currentResult;
+        }
         return refineCompleteSurvey(planner, terrainProvider, initialRequest, currentResult);
     }
 

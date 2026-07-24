@@ -1,9 +1,11 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
+import java.util.Objects;
+
 public record SuburbPlanningSettings(
         int roadWidth,
         double maxBuildableSlope,
-        int targetParcelCount,
+        DevelopmentCapacity parcelCapacity,
         int parcelWidth,
         int parcelDepth,
         int buildingMargin,
@@ -33,7 +35,7 @@ public record SuburbPlanningSettings(
         this(
                 roadWidth,
                 maxBuildableSlope,
-                targetParcelCount,
+                DevelopmentCapacity.fixed(targetParcelCount),
                 DEFAULT_PARCEL_WIDTH,
                 DEFAULT_PARCEL_DEPTH,
                 DEFAULT_BUILDING_MARGIN,
@@ -58,7 +60,7 @@ public record SuburbPlanningSettings(
         this(
                 roadWidth,
                 maxBuildableSlope,
-                targetParcelCount,
+                DevelopmentCapacity.fixed(targetParcelCount),
                 parcelWidth,
                 parcelDepth,
                 buildingMargin,
@@ -84,7 +86,7 @@ public record SuburbPlanningSettings(
         this(
                 roadWidth,
                 maxBuildableSlope,
-                targetParcelCount,
+                DevelopmentCapacity.fixed(targetParcelCount),
                 parcelWidth,
                 parcelDepth,
                 buildingMargin,
@@ -112,7 +114,7 @@ public record SuburbPlanningSettings(
         this(
                 roadWidth,
                 maxBuildableSlope,
-                targetParcelCount,
+                DevelopmentCapacity.fixed(targetParcelCount),
                 parcelWidth,
                 parcelDepth,
                 buildingMargin,
@@ -141,7 +143,7 @@ public record SuburbPlanningSettings(
         this(
                 roadWidth,
                 maxBuildableSlope,
-                targetParcelCount,
+                DevelopmentCapacity.fixed(targetParcelCount),
                 parcelWidth,
                 parcelDepth,
                 buildingMargin,
@@ -172,7 +174,7 @@ public record SuburbPlanningSettings(
         this(
                 roadWidth,
                 maxBuildableSlope,
-                targetParcelCount,
+                DevelopmentCapacity.fixed(targetParcelCount),
                 parcelWidth,
                 parcelDepth,
                 buildingMargin,
@@ -186,10 +188,42 @@ public record SuburbPlanningSettings(
         );
     }
 
+    public SuburbPlanningSettings(
+            int roadWidth,
+            double maxBuildableSlope,
+            int targetParcelCount,
+            int parcelWidth,
+            int parcelDepth,
+            int buildingMargin,
+            int maxElevationRange,
+            int preferredMaxCutDepth,
+            int preferredMaxFillDepth,
+            int maxCutDepth,
+            int maxFillDepth,
+            int maxBuildingFoundationDepth,
+            long maxEarthworkVolume
+    ) {
+        this(
+                roadWidth,
+                maxBuildableSlope,
+                DevelopmentCapacity.fixed(targetParcelCount),
+                parcelWidth,
+                parcelDepth,
+                buildingMargin,
+                maxElevationRange,
+                preferredMaxCutDepth,
+                preferredMaxFillDepth,
+                maxCutDepth,
+                maxFillDepth,
+                maxBuildingFoundationDepth,
+                maxEarthworkVolume
+        );
+    }
+
     public SuburbPlanningSettings {
         requirePositive(roadWidth, "roadWidth");
         requireFiniteNonNegative(maxBuildableSlope, "maxBuildableSlope");
-        requirePositive(targetParcelCount, "targetParcelCount");
+        parcelCapacity = Objects.requireNonNull(parcelCapacity, "parcelCapacity");
         requirePositive(parcelWidth, "parcelWidth");
         requirePositive(parcelDepth, "parcelDepth");
         requireNonNegative(buildingMargin, "buildingMargin");
@@ -214,7 +248,7 @@ public record SuburbPlanningSettings(
         return new SuburbPlanningSettings(
                 DEFAULT_ROAD_WIDTH,
                 DEFAULT_MAX_BUILDABLE_SLOPE,
-                DEFAULT_TARGET_PARCEL_COUNT,
+                DevelopmentCapacity.fixed(DEFAULT_TARGET_PARCEL_COUNT),
                 DEFAULT_PARCEL_WIDTH,
                 DEFAULT_PARCEL_DEPTH,
                 DEFAULT_BUILDING_MARGIN,
@@ -226,6 +260,18 @@ public record SuburbPlanningSettings(
                 DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH,
                 DEFAULT_MAX_EARTHWORK_VOLUME
         );
+    }
+
+    public int minimumParcelCount() {
+        return parcelCapacity.minimum();
+    }
+
+    public int targetParcelCount() {
+        return parcelCapacity.target();
+    }
+
+    public int maximumParcelCount() {
+        return parcelCapacity.maximum();
     }
 
     /**

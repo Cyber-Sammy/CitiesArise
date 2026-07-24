@@ -24,7 +24,7 @@ The core planner must stay independent from Minecraft and NeoForge. Loader-speci
 
 The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, terrain surveys, semantic terrain preparation, and plan transforms. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. Water and blocked terrain remain hard rejections for the current suburb profile. A steep terrain sample is treated as correctable when the resulting flat platforms stay within profile cut, fill, and total earthwork limits.
 
-The suburb planner now analyzes connected developable terrain before giving up on its preferred layout. When a local water or blocked-terrain barrier intersects that layout, it can move the complete suburb into another connected area within the same survey while preserving the requested parcel count and terrain-support clearance. This is the first adaptive-planning step; roads and parcels are still rectangular, and terrain-aware routing, irregular districts, bridges, and tunnels remain future work.
+The suburb planner now analyzes connected developable terrain before giving up on its preferred layout. When a local water or blocked-terrain barrier intersects that layout, it can move the complete suburb into another connected area within the same survey while preserving terrain-support clearance. Datapack profiles may define minimum, target, and maximum parcel capacity. The planner prefers the target and deterministically reduces toward the minimum when a connected area cannot hold the target; falling below the minimum remains a controlled rejection. The selected developable-region id, district anchor, and allocated capacity are stored in plan properties for later routing stages. Roads and parcels are still rectangular, and terrain-aware routing, irregular districts, bridges, and tunnels remain future work.
 
 The mod also includes a debug command that samples real Minecraft terrain around the player's region and runs the suburb planner without placing blocks:
 
@@ -171,7 +171,9 @@ Example `data/my_pack/settlement_profiles/large_suburb.json`:
     "maxFillDepth": 8,
     "maxBuildingFoundationDepth": 4,
     "maxEarthworkVolume": 20000,
+    "minimumParcelCount": 6,
     "targetParcelCount": 8,
+    "maximumParcelCount": 10,
     "parcelWidth": 18,
     "parcelDepth": 20,
     "buildingMargin": 4
@@ -212,9 +214,11 @@ Use `/citiesarise debug dump` to inspect the generated plan and confirm that the
 
 `maxElevationRange` is deprecated and remains accepted in the current profile schema only for compatibility. It will be removed in a future profile schema version. The suburb planner no longer rejects the total settlement height span globally. Long roads are divided into deterministic flat grading segments by maximum distance between their nodes, while concrete cut, fill, road-transition, and total earthwork limits decide whether terrain is usable.
 
+`minimumParcelCount`, `targetParcelCount`, and `maximumParcelCount` define parcel capacity for a development district. The planner aims for the target and may reduce only as far as the minimum when terrain barriers constrain the selected connected area. The maximum is an explicit growth ceiling for later multi-district allocation. Legacy profiles that specify only `targetParcelCount` remain fixed-capacity profiles because minimum and maximum default to the target.
+
 Successful debug summaries report `terrain=ACCEPTED` when no cut or fill is required and `terrain=ACCEPTED_WITH_EARTHWORKS` with the calculated cut and fill volumes when preparation is required. Accepted plans also report `earthworkQuality`: `DIRECT` requires no cut or fill, `MODERATE` stays inside preferred depths, and `MAJOR` remains valid but exceeds at least one preferred depth. Ranking uses quantitative cost rather than category priority, so a small `MAJOR` correction may beat an extremely expensive `MODERATE` site. Earthwork density uses only columns that actually change; the complete footprint and changed-column counts remain available separately in JSON diagnostics. Rejected cut, fill, or total-volume diagnostics include the responsible plan element, actual value, preferred limit, absolute limit, and excess. `/citiesarise locate` treats all successful qualities as valid and ranks them without weakening hard safety limits.
 
-Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, target parcel count `128`, parcel width/depth `64`, building margin `8`, cut/fill depth `16`, and total earthwork volume `1000000`.
+Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, minimum/target/maximum parcel count `128`, parcel width/depth `64`, building margin `8`, cut/fill depth `16`, and total earthwork volume `1000000`.
 
 House assets are future work. The intended direction is a separate provider layer where profiles can reference building pools, weights, footprints, tags, palettes, and structure/NBT assets. The core planner will still work with abstract building slots and provider ids; Minecraft-specific assets will stay in the Minecraft/content layer.
 

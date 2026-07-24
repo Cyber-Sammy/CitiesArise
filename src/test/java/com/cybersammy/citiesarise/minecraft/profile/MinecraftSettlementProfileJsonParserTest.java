@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.geometry.GridSize;
+import com.cybersammy.citiesarise.core.planning.suburb.DevelopmentCapacity;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
@@ -42,6 +43,32 @@ final class MinecraftSettlementProfileJsonParserTest {
         assertEquals(new GridSize(96, 64), profile.surveySize());
         assertEquals(new SuburbPlanningSettings(5, 0.75, 7, 18, 20, 4), profile.suburbPlanningSettings());
         assertEquals(TerrainResponsePolicy.defaults(), profile.terrainResponsePolicy());
+    }
+
+    @Test
+    void parsesAdaptiveParcelCapacity() {
+        JsonObject json = validJson();
+        JsonObject planning = json.getAsJsonObject("planning");
+        planning.addProperty("minimumParcelCount", 4);
+        planning.addProperty("maximumParcelCount", 10);
+
+        SettlementProfile profile = parser.parse(id(), json);
+
+        assertEquals(
+                new DevelopmentCapacity(4, 7, 10),
+                profile.suburbPlanningSettings().parcelCapacity()
+        );
+    }
+
+    @Test
+    void rejectsInvalidAdaptiveParcelCapacity() {
+        JsonObject minimumAboveTarget = validJson();
+        minimumAboveTarget.getAsJsonObject("planning").addProperty("minimumParcelCount", 8);
+        JsonObject maximumBelowTarget = validJson();
+        maximumBelowTarget.getAsJsonObject("planning").addProperty("maximumParcelCount", 6);
+
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), minimumAboveTarget));
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), maximumBelowTarget));
     }
 
     @Test
@@ -251,6 +278,8 @@ final class MinecraftSettlementProfileJsonParserTest {
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("roadWidth", 17)));
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("maxBuildableSlope", 8.1)));
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("targetParcelCount", 129)));
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("minimumParcelCount", 129)));
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("maximumParcelCount", 129)));
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("parcelWidth", 65)));
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("parcelDepth", 65)));
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("buildingMargin", 9)));

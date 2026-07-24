@@ -11,6 +11,7 @@ import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanProperties;
+import com.cybersammy.citiesarise.core.model.PlanPropertyKeys;
 import com.cybersammy.citiesarise.core.model.PlanTag;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
@@ -58,7 +59,15 @@ public final class SuburbPlanner {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.SURVEY_TOO_SMALL);
         }
 
-        SuburbLayout layout = createAdaptiveLayout(request);
+        Optional<SuburbLayoutSelection> selection = createAdaptiveLayout(request);
+        if (selection.isEmpty()) {
+            Optional<SuburbTerrainDiagnostic> compatibilityDiagnostic = fixedCapacityTerrainDiagnostic(request);
+            if (compatibilityDiagnostic.isPresent()) {
+                return SuburbPlanningResult.rejectedTerrain(compatibilityDiagnostic.orElseThrow());
+            }
+            return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_PARCEL_SPACE);
+        }
+        SuburbLayout layout = selection.orElseThrow().layout();
         Optional<SuburbTerrainDiagnostic> terrainDiagnostic = findTerrainDiagnostic(request, layout);
 
         if (terrainDiagnostic.isPresent()) {
@@ -69,7 +78,7 @@ public final class SuburbPlanner {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_PARCEL_SPACE);
         }
 
-        SettlementPlan plan = createPlan(request, layout);
+        SettlementPlan plan = createPlan(request, selection.orElseThrow());
         RegionalElevationPlanningResult elevationPlanning = RegionalElevationPlanner.plan(request, plan);
         plan = elevationPlanning.settlementPlan();
         TerrainPreparationAssessment preparation = TerrainPreparationPlanner.plan(
@@ -96,7 +105,20 @@ public final class SuburbPlanner {
     }
 
     private static boolean hasEnoughParcels(SuburbLayout layout, SuburbPlanningRequest request) {
-        return layout.parcelBounds().size() >= request.settings().targetParcelCount();
+        return layout.parcelBounds().size() >= request.settings().minimumParcelCount();
+    }
+
+    private Optional<SuburbTerrainDiagnostic> fixedCapacityTerrainDiagnostic(SuburbPlanningRequest request) {
+        DevelopmentCapacity capacity = request.settings().parcelCapacity();
+        if (capacity.minimum() != capacity.target()) {
+            return Optional.empty();
+        }
+        SuburbLayout preferredLayout = createLayout(
+                request,
+                request.survey().bounds(),
+                capacity.target()
+        );
+        return findTerrainDiagnostic(request, preferredLayout);
     }
 
     private boolean hasEnoughSpace(SuburbPlanningRequest request) {
@@ -264,19 +286,23 @@ public final class SuburbPlanner {
         return Optional.empty();
     }
 
-    private SuburbLayout createAdaptiveLayout(SuburbPlanningRequest request) {
+    private Optional<SuburbLayoutSelection> createAdaptiveLayout(SuburbPlanningRequest request) {
         TerrainTopology topology = analyzeTopology(request);
-        SuburbLayout preferredLayout = createLayout(request, request.survey().bounds());
+        SuburbLayout preferredLayout = createLayout(
+                request,
+                request.survey().bounds(),
+                request.settings().targetParcelCount()
+        );
         return LAYOUT_SELECTOR.select(
                 request.survey().bounds(),
-                request.settings().targetParcelCount(),
+                request.settings().parcelCapacity(),
                 new GridSize(
                         minimumSurveyWidth(request.settings()),
                         minimumSurveyDepth(request.settings())
                 ),
                 topology,
                 preferredLayout,
-                bounds -> createLayout(request, bounds)
+                (bounds, capacity) -> createLayout(request, bounds, capacity)
         );
     }
 
@@ -288,12 +314,22 @@ public final class SuburbPlanner {
         );
     }
 
-    private SuburbLayout createLayout(SuburbPlanningRequest request, GridBounds bounds) {
+    private SuburbLayout createLayout(
+            SuburbPlanningRequest request,
+            GridBounds bounds,
+            int parcelCapacity
+    ) {
         Random random = new Random(request.seed());
         int mainRoadZ = centerZ(bounds);
         List<Integer> sideRoadXs = sideRoadXs(bounds, random);
         List<GridBounds> sideRoadCorridors = sideRoadCorridors(request, bounds, mainRoadZ, sideRoadXs);
-        List<GridBounds> parcelBounds = createParcelBounds(request, bounds, mainRoadZ, sideRoadCorridors);
+        List<GridBounds> parcelBounds = createParcelBounds(
+                request,
+                bounds,
+                mainRoadZ,
+                sideRoadCorridors,
+                parcelCapacity
+        );
         List<GridBounds> plannedFootprints = plannedFootprints(request, bounds, mainRoadZ, sideRoadCorridors, parcelBounds);
         List<PotentialTerrainPreparationFootprint> terrainPreparationFootprints =
                 terrainPreparationFootprints(request, bounds, mainRoadZ, sideRoadCorridors, parcelBounds);
@@ -308,7 +344,8 @@ public final class SuburbPlanner {
         );
     }
 
-    private SettlementPlan createPlan(SuburbPlanningRequest request, SuburbLayout layout) {
+    private SettlementPlan createPlan(SuburbPlanningRequest request, SuburbLayoutSelection selection) {
+        SuburbLayout layout = selection.layout();
         GridBounds bounds = layout.bounds();
         RoadGraph roadGraph = createRoadGraph(request, bounds, layout.mainRoadZ(), layout.sideRoadXs());
         roadGraph = RoadGraphSegmenter.splitLongSegments(roadGraph, MAX_ROAD_ELEVATION_NODE_DISTANCE);
@@ -321,7 +358,24 @@ public final class SuburbPlanner {
                 parcels,
                 buildingSlots,
                 Set.of(new PlanTag("suburban")),
-                PlanProperties.empty()
+                districtProperties(selection)
+        );
+    }
+
+    private static PlanProperties districtProperties(SuburbLayoutSelection selection) {
+        DistrictAnchor anchor = selection.anchor();
+        return PlanProperties.of(
+                PlanPropertyKeys.DISTRICT_ANCHOR_X,
+                Integer.toString(anchor.point().x())
+        ).with(
+                PlanPropertyKeys.DISTRICT_ANCHOR_Z,
+                Integer.toString(anchor.point().z())
+        ).with(
+                PlanPropertyKeys.DEVELOPABLE_REGION_ID,
+                Integer.toString(anchor.developableRegionId())
+        ).with(
+                PlanPropertyKeys.ALLOCATED_CAPACITY,
+                Integer.toString(selection.allocatedCapacity())
         );
     }
 
@@ -458,7 +512,8 @@ public final class SuburbPlanner {
             SuburbPlanningRequest request,
             GridBounds bounds,
             int mainRoadZ,
-            List<GridBounds> sideRoadCorridors
+            List<GridBounds> sideRoadCorridors,
+            int parcelCapacity
     ) {
         List<GridBounds> parcelBounds = new ArrayList<>();
         int northZ = mainRoadZ - request.settings().roadWidth() - request.settings().parcelDepth();
@@ -466,7 +521,7 @@ public final class SuburbPlanner {
         int startX = bounds.minX() + request.settings().roadWidth();
         int candidateIndex = 0;
 
-        while (parcelBounds.size() < request.settings().targetParcelCount()) {
+        while (parcelBounds.size() < parcelCapacity) {
             GridBounds candidateBounds = parcelBounds(request.settings(), startX, northZ, southZ, candidateIndex);
             candidateIndex++;
 

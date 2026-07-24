@@ -22,6 +22,30 @@ final class SuburbPlanningSettingsTest {
                 settings.maxBuildingFoundationDepth()
         );
         assertEquals(SuburbPlanningSettings.DEFAULT_MAX_EARTHWORK_VOLUME, settings.maxEarthworkVolume());
+        assertEquals(DevelopmentCapacity.fixed(6), settings.parcelCapacity());
+    }
+
+    @Test
+    void exposesAdaptiveParcelCapacity() {
+        SuburbPlanningSettings settings = new SuburbPlanningSettings(
+                3,
+                0.25,
+                new DevelopmentCapacity(4, 6, 8),
+                10,
+                12,
+                2,
+                12,
+                3,
+                3,
+                6,
+                8,
+                4,
+                100L
+        );
+
+        assertEquals(4, settings.minimumParcelCount());
+        assertEquals(6, settings.targetParcelCount());
+        assertEquals(8, settings.maximumParcelCount());
     }
 
     @Test

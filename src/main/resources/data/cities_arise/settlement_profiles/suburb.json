@@ -6,7 +6,9 @@
   "planning": {
     "roadWidth": 5,
     "maxBuildableSlope": 0.75,
+    "minimumParcelCount": 6,
     "targetParcelCount": 8,
+    "maximumParcelCount": 10,
     "parcelWidth": 18,
     "parcelDepth": 20,
     "buildingMargin": 4,

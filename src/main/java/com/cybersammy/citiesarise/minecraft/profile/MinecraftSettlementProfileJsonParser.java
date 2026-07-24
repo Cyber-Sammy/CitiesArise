@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.minecraft.profile;
 
 import com.cybersammy.citiesarise.core.geometry.GridSize;
+import com.cybersammy.citiesarise.core.planning.suburb.DevelopmentCapacity;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
@@ -56,6 +57,12 @@ public final class MinecraftSettlementProfileJsonParser {
     }
 
     private static SuburbPlanningSettings parseSuburbPlanningSettings(JsonObject planning) {
+        int targetParcelCount = requiredInt(planning, "targetParcelCount");
+        DevelopmentCapacity parcelCapacity = new DevelopmentCapacity(
+                optionalInt(planning, "minimumParcelCount", targetParcelCount),
+                targetParcelCount,
+                optionalInt(planning, "maximumParcelCount", targetParcelCount)
+        );
         int maxCutDepth = optionalInt(
                 planning,
                 "maxCutDepth",
@@ -84,7 +91,7 @@ public final class MinecraftSettlementProfileJsonParser {
         return new SuburbPlanningSettings(
                 requiredInt(planning, "roadWidth"),
                 requiredDouble(planning, "maxBuildableSlope"),
-                requiredInt(planning, "targetParcelCount"),
+                parcelCapacity,
                 requiredInt(planning, "parcelWidth"),
                 requiredInt(planning, "parcelDepth"),
                 requiredInt(planning, "buildingMargin"),

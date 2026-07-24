@@ -38,14 +38,6 @@ final class TerrainPlatform {
         return highest;
     }
 
-    static PlanProperties withHighestElevation(
-            PlanProperties properties,
-            SuburbPlanningRequest request,
-            GridBounds bounds
-    ) {
-        return withElevation(properties, highestElevation(request, bounds));
-    }
-
     static PlanProperties withElevation(PlanProperties properties, int elevation) {
         return properties.with(PlanPropertyKeys.PLATFORM_Y, Integer.toString(elevation));
     }

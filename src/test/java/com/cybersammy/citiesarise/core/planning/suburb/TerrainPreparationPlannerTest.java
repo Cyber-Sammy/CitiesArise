@@ -195,6 +195,36 @@ final class TerrainPreparationPlannerTest {
         assertTrue(assessment.plan().orElseThrow().fillVolume() >= 2L);
     }
 
+    @Test
+    void rejectsParcelPadOverDeepRavine() {
+        GridPoint ravinePoint = new GridPoint(4, 4);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithHeightAt(ravinePoint, 59),
+                42L,
+                settings(3, 8)
+        );
+        ElevationZone parcel = new ElevationZone(
+                id("parcel"),
+                ElevationZoneType.PARCEL_PAD,
+                new GridBounds(new GridPoint(4, 4), new GridSize(3, 3)),
+                64
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                new RegionalElevationPlan(List.of(parcel), List.of())
+        );
+
+        assertFalse(assessment.plan().isPresent());
+        assertEquals(ravinePoint, assessment.diagnostic().orElseThrow().cell().point());
+        assertEquals(4L, assessment.diagnostic()
+                .orElseThrow()
+                .optionalPreparationLimit()
+                .orElseThrow()
+                .maximumLimit());
+    }
+
     private static SettlementPlan crossingRoadPlan() {
         RoadNode west = node("west", 2, 5);
         RoadNode east = node("east", 8, 5);

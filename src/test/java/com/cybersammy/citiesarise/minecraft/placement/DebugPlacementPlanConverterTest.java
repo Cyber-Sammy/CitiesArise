@@ -27,6 +27,7 @@ import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -215,10 +216,10 @@ final class DebugPlacementPlanConverterTest {
 
     @Test
     void addsChunkProjectableTerrainShouldersAroundPreparedBuilding() {
-        Parcel parcel = parcel(id("parcel"), bounds(10, 10, 4, 4));
+        Parcel parcel = elevatedParcel(id("parcel"), bounds(10, 10, 4, 4), 64);
         BuildingSlot buildingSlot = elevatedBuildingSlot(id("slot"), parcel.id(), bounds(11, 11, 2, 2), 64);
         SettlementPlan plan = plan(RoadGraph.empty(), List.of(parcel), List.of(buildingSlot));
-        TerrainPreparationPlan preparationPlan = buildingPreparationPlan(buildingSlot, 64);
+        TerrainPreparationPlan preparationPlan = buildingPreparationPlan(parcel, buildingSlot, 64);
 
         DebugPlacementPlan placementPlan = converter.convert(plan, preparationPlan);
         DebugBlockPlacementOperation firstRing = operationsByPosition(placementPlan)
@@ -226,8 +227,8 @@ final class DebugPlacementPlanConverterTest {
         DebugBlockPlacementOperation thirdRing = operationsByPosition(placementPlan)
                 .get(new DebugPlacementPosition(point(8, 11), 0));
 
-        assertEquals(DebugPlacementRole.TERRAIN_SURFACE, firstRing.role());
-        assertEquals(63, firstRing.platformY().orElseThrow());
+        assertEquals(DebugPlacementRole.PARCEL_BOUNDARY, firstRing.role());
+        assertEquals(64, firstRing.platformY().orElseThrow());
         assertEquals(DebugPlacementRole.TERRAIN_SURFACE, thirdRing.role());
         assertEquals(61, thirdRing.platformY().orElseThrow());
     }
@@ -442,21 +443,63 @@ final class DebugPlacementPlanConverterTest {
         );
     }
 
-    private static TerrainPreparationPlan buildingPreparationPlan(BuildingSlot slot, int elevation) {
-        TerrainPreparationArea area = new TerrainPreparationArea(slot.id(), slot.bounds(), elevation, 0L, 4L);
-        List<TerrainPreparationColumn> columns = List.of(
-                preparationColumn(slot.id(), slot.bounds().minX(), slot.bounds().minZ(), elevation),
-                preparationColumn(slot.id(), slot.bounds().minX() + 1, slot.bounds().minZ(), elevation),
-                preparationColumn(slot.id(), slot.bounds().minX(), slot.bounds().minZ() + 1, elevation),
-                preparationColumn(slot.id(), slot.bounds().minX() + 1, slot.bounds().minZ() + 1, elevation),
-                shoulderColumn(slot.id(), 10, 11, 63, 1),
-                shoulderColumn(slot.id(), 8, 11, 61, 3)
+    private static Parcel elevatedParcel(PlanElementId id, GridBounds bounds, int elevation) {
+        return new Parcel(
+                id,
+                bounds,
+                Set.of(),
+                PlanProperties.of(PlanPropertyKeys.PLATFORM_Y, Integer.toString(elevation))
         );
+    }
+
+    private static TerrainPreparationPlan buildingPreparationPlan(
+            Parcel parcel,
+            BuildingSlot slot,
+            int elevation
+    ) {
+        TerrainPreparationArea parcelArea = new TerrainPreparationArea(
+                parcel.id(),
+                parcel.bounds(),
+                elevation,
+                0L,
+                0L
+        );
+        TerrainPreparationArea buildingArea = new TerrainPreparationArea(
+                slot.id(),
+                slot.bounds(),
+                elevation,
+                0L,
+                3L
+        );
+        List<TerrainPreparationColumn> columns = new ArrayList<>();
+        for (int z = parcel.bounds().minZ(); z < parcel.bounds().maxZExclusive(); z++) {
+            for (int x = parcel.bounds().minX(); x < parcel.bounds().maxXExclusive(); x++) {
+                columns.add(preparationColumn(parcel.id(), x, z, elevation));
+            }
+        }
+        columns.add(shoulderColumn(slot.id(), 8, 11, 61, 3));
         RegionalElevationPlan elevationPlan = new RegionalElevationPlan(
-                List.of(new ElevationZone(slot.id(), ElevationZoneType.BUILDING_PAD, slot.bounds(), elevation)),
+                List.of(
+                        new ElevationZone(
+                                parcel.id(),
+                                ElevationZoneType.PARCEL_PAD,
+                                parcel.bounds(),
+                                elevation
+                        ),
+                        new ElevationZone(
+                                slot.id(),
+                                ElevationZoneType.BUILDING_PAD,
+                                slot.bounds(),
+                                elevation
+                        )
+                ),
                 List.of()
         );
-        return TerrainPreparationPlan.of(elevationPlan, List.of(area), columns);
+        return TerrainPreparationPlan.of(
+                elevationPlan,
+                List.of(parcelArea, buildingArea),
+                List.copyOf(columns)
+        );
     }
 
     private static TerrainPreparationColumn preparationColumn(

@@ -361,14 +361,30 @@ final class SuburbPlannerTest {
                 .filter(slot -> slot.id().equals(flatSlot.id()))
                 .findFirst()
                 .orElseThrow();
+        PlanElementId parcelId = elevatedSlot.parcelId();
+        Parcel elevatedParcel = result.plan().orElseThrow().parcels().stream()
+                .filter(parcel -> parcel.id().equals(parcelId))
+                .findFirst()
+                .orElseThrow();
         assertEquals(65, platformY(elevatedSlot));
-        var buildingColumns = result.terrainPreparationPlan().orElseThrow().columns().stream()
-                .filter(column -> column.sourceElementId().equals(elevatedSlot.id()))
+        assertEquals(65, platformY(elevatedParcel));
+        var parcelColumns = result.terrainPreparationPlan().orElseThrow().columns().stream()
+                .filter(column -> column.sourceElementId().equals(parcelId))
                 .filter(column -> column.type() == TerrainPreparationColumnType.PLATFORM)
                 .toList();
-        assertTrue(buildingColumns.stream().allMatch(column -> column.targetElevation() == 65));
-        assertTrue(buildingColumns.stream().allMatch(column -> column.cutDepth() == 0));
-        assertTrue(buildingColumns.stream().anyMatch(column -> column.fillDepth() == 2));
+        long preparedParcelPoints = result.terrainPreparationPlan().orElseThrow().columns().stream()
+                .map(column -> column.point())
+                .filter(elevatedParcel.bounds()::contains)
+                .distinct()
+                .count();
+        assertFalse(parcelColumns.isEmpty());
+        assertEquals(
+                elevatedParcel.bounds().size().width() * elevatedParcel.bounds().size().depth(),
+                preparedParcelPoints
+        );
+        assertTrue(parcelColumns.stream().allMatch(column -> column.targetElevation() == 65));
+        assertTrue(parcelColumns.stream().allMatch(column -> column.cutDepth() == 0));
+        assertTrue(parcelColumns.stream().anyMatch(column -> column.fillDepth() == 2));
     }
 
     @Test
@@ -419,7 +435,7 @@ final class SuburbPlannerTest {
 
         assertFalse(result.successful());
         assertEquals(4L, diagnostic.maximumLimit());
-        assertEquals(flatSlot.id(), diagnostic.sourceElementId());
+        assertEquals(flatSlot.parcelId(), diagnostic.sourceElementId());
     }
 
     @Test
@@ -949,6 +965,10 @@ final class SuburbPlannerTest {
 
     private static int platformY(BuildingSlot slot) {
         return Integer.parseInt(slot.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());
+    }
+
+    private static int platformY(Parcel parcel) {
+        return Integer.parseInt(parcel.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());
     }
 
     private static TerrainSuitabilityRule lowScoreRule() {

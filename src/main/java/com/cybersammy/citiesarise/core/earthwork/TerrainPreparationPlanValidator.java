@@ -3,6 +3,7 @@ package com.cybersammy.citiesarise.core.earthwork;
 import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.model.BuildingSlot;
+import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanProperties;
 import com.cybersammy.citiesarise.core.model.PlanPropertyKeys;
@@ -27,6 +28,7 @@ public final class TerrainPreparationPlanValidator {
         Map<PlanElementId, ElevationZone> zonesById = zonesById(preparationPlan.elevationPlan());
         Map<PlanElementId, TerrainPreparationArea> areasById = areasById(preparationPlan, errors);
         validateRoads(plan, zonesById, areasById, errors);
+        validateParcels(plan, zonesById, areasById, errors);
         validateBuildings(plan, zonesById, areasById, errors);
         validateNoRemovedElements(plan, zonesById, areasById, errors);
         validateAreas(zonesById, areasById, errors);
@@ -124,6 +126,25 @@ public final class TerrainPreparationPlanValidator {
         }
     }
 
+    private static void validateParcels(
+            SettlementPlan plan,
+            Map<PlanElementId, ElevationZone> zonesById,
+            Map<PlanElementId, TerrainPreparationArea> areasById,
+            List<PlanValidationError> errors
+    ) {
+        for (Parcel parcel : plan.parcels()) {
+            validateElement(
+                    parcel.id(),
+                    ElevationZoneType.PARCEL_PAD,
+                    parcel.bounds(),
+                    parcel.properties(),
+                    zonesById,
+                    areasById,
+                    errors
+            );
+        }
+    }
+
     private static void validateElement(
             PlanElementId elementId,
             ElevationZoneType expectedType,
@@ -183,6 +204,9 @@ public final class TerrainPreparationPlanValidator {
         Map<PlanElementId, Boolean> expectedIds = new HashMap<>();
         for (RoadSegment segment : plan.roadGraph().segments()) {
             expectedIds.put(segment.id(), Boolean.TRUE);
+        }
+        for (Parcel parcel : plan.parcels()) {
+            expectedIds.put(parcel.id(), Boolean.TRUE);
         }
         for (BuildingSlot slot : plan.buildingSlots()) {
             expectedIds.put(slot.id(), Boolean.TRUE);

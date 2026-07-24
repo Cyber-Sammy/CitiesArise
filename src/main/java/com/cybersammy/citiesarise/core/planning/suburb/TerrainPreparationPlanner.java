@@ -438,7 +438,7 @@ final class TerrainPreparationPlanner {
             ElevationZoneType zoneType,
             int elevationDelta
     ) {
-        if (zoneType == ElevationZoneType.BUILDING_PAD) {
+        if (usesFoundationFillLimit(zoneType)) {
             return elevationDelta > settings.maxBuildingFoundationDepth();
         }
 
@@ -524,11 +524,16 @@ final class TerrainPreparationPlanner {
             return settings.maxCutDepth();
         }
 
-        if (zoneType == ElevationZoneType.BUILDING_PAD) {
+        if (usesFoundationFillLimit(zoneType)) {
             return settings.maxBuildingFoundationDepth();
         }
 
         return settings.maxFillDepth();
+    }
+
+    private static boolean usesFoundationFillLimit(ElevationZoneType zoneType) {
+        return zoneType == ElevationZoneType.PARCEL_PAD
+                || zoneType == ElevationZoneType.BUILDING_PAD;
     }
 
     private static SuburbTerrainDiagnostic diagnostic(

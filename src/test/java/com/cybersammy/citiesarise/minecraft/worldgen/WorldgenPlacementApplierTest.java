@@ -168,7 +168,7 @@ class WorldgenPlacementApplierTest {
         new WorldgenChunkPlacement().apply(level, chunkPlan);
 
         assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(14, 72, 8));
-        assertEquals(WorldgenSurfaceMaterial.LEAVES, level.materialAt(1, 72, 8));
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(1, 72, 8));
         assertEquals(WorldgenSurfaceMaterial.LEAVES, level.materialAt(16, 72, 8));
         assertTrue(level.reads().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
         assertTrue(level.writes().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));

@@ -263,6 +263,10 @@ public final class TerrainPreparationPlanValidator {
                 validateRoadShoulderColumn(zonesById, column, errors);
                 continue;
             }
+            if (column.type() == TerrainPreparationColumnType.PARCEL_SHOULDER) {
+                validateParcelShoulderColumn(zonesById, column, errors);
+                continue;
+            }
             if (isTransitionColumn(column)) {
                 validateTransitionColumn(elevationPlan, zonesById, column, errors);
                 continue;
@@ -321,10 +325,43 @@ public final class TerrainPreparationPlanValidator {
         }
     }
 
+    private static void validateParcelShoulderColumn(
+            Map<PlanElementId, ElevationZone> zonesById,
+            TerrainPreparationColumn column,
+            List<PlanValidationError> errors
+    ) {
+        ElevationZone zone = zonesById.get(column.sourceElementId());
+        if (zone == null) {
+            errors.add(error(column.sourceElementId(), "parcel shoulder references missing elevation zone"));
+            return;
+        }
+        if (zone.type() != ElevationZoneType.PARCEL_PAD) {
+            errors.add(error(column.sourceElementId(), "parcel shoulder must belong to a parcel zone"));
+            return;
+        }
+        if (!ParcelTerrainShoulderPolicy.contains(zone.bounds(), column.point())) {
+            errors.add(error(column.sourceElementId(), "parcel shoulder is outside the supported transition area"));
+        }
+        int expectedElevation = ParcelTerrainShoulderPolicy.targetElevation(
+                zone.bounds(),
+                column.point(),
+                zone.targetElevation()
+        );
+        if (column.targetElevation() != expectedElevation) {
+            errors.add(error(column.sourceElementId(), "parcel shoulder elevation does not match support policy"));
+        }
+        validateFillOnlySupport(
+                column,
+                ParcelTerrainShoulderPolicy.MAX_FILL_DEPTH,
+                "parcel shoulder",
+                errors
+        );
+    }
+
     private static boolean isTransitionColumn(TerrainPreparationColumn column) {
         return switch (column.type()) {
             case ROAD_TRANSITION_STEP, BUILDING_ACCESS, BUILDING_ACCESS_STEP -> true;
-            case PLATFORM, BUILDING_SHOULDER, ROAD_SHOULDER -> false;
+            case PLATFORM, BUILDING_SHOULDER, PARCEL_SHOULDER, ROAD_SHOULDER -> false;
         };
     }
 

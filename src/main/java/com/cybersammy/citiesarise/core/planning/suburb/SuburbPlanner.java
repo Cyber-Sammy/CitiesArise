@@ -38,7 +38,7 @@ import java.util.Random;
 import java.util.Set;
 
 public final class SuburbPlanner {
-    private static final int MAX_ROAD_ELEVATION_NODE_DISTANCE = 3;
+    private static final int MAX_ROAD_ELEVATION_NODE_DISTANCE = 6;
     private static final TerrainTopologyAnalyzer TOPOLOGY_ANALYZER = new TerrainTopologyAnalyzer();
     private static final AdaptiveSuburbLayoutSelector LAYOUT_SELECTOR = new AdaptiveSuburbLayoutSelector();
     private static final TerrainAwareRoadGraphRouter ROAD_GRAPH_ROUTER = new TerrainAwareRoadGraphRouter();

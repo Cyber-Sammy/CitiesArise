@@ -344,6 +344,23 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void spacesRoadElevationTransitionsAcrossLongerFlatRuns() {
+        SettlementPlan plan = planner.plan(request(flatSurvey(40, 30), 100L, SuburbPlanningSettings.defaults()))
+                .plan()
+                .orElseThrow();
+        Map<PlanElementId, RoadNode> nodes = nodesById(plan.roadGraph());
+        List<Integer> segmentLengths = plan.roadGraph().segments().stream()
+                .map(segment -> manhattanDistance(
+                        nodes.get(segment.startNodeId()).point(),
+                        nodes.get(segment.endNodeId()).point()
+                ))
+                .toList();
+
+        assertTrue(segmentLengths.stream().allMatch(length -> length <= 6));
+        assertTrue(segmentLengths.stream().anyMatch(length -> length > 3));
+    }
+
+    @Test
     void placesBuildingPlatformAtHighestTerrainPointInFootprint() {
         SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 3);
         BuildingSlot flatSlot = planner.plan(request(flatSurvey(40, 30), 100L, settings))
@@ -965,6 +982,10 @@ final class SuburbPlannerTest {
 
     private static int platformY(BuildingSlot slot) {
         return Integer.parseInt(slot.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());
+    }
+
+    private static int manhattanDistance(GridPoint first, GridPoint second) {
+        return Math.abs(first.x() - second.x()) + Math.abs(first.z() - second.z());
     }
 
     private static int platformY(Parcel parcel) {

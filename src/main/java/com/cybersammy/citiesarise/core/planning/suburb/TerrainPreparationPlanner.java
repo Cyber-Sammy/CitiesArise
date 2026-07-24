@@ -10,6 +10,7 @@ import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
+import com.cybersammy.citiesarise.core.earthwork.ParcelTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
 import com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
@@ -262,6 +263,9 @@ final class TerrainPreparationPlanner {
         TerrainCell cell = TerrainPlatform.requiredTerrainCell(request, point);
         Optional<SuburbTerrainDiagnostic> terrainDiagnostic = shoulderTerrainDiagnostic(request, cell);
         if (terrainDiagnostic.isPresent()) {
+            if (kind.optional()) {
+                return Optional.empty();
+            }
             return terrainDiagnostic;
         }
         int targetElevation = kind.targetElevation(zone, point);
@@ -270,11 +274,15 @@ final class TerrainPreparationPlanner {
             return Optional.empty();
         }
         if (fillDepth > kind.maximumFillDepth()) {
-            return Optional.of(supportDepthDiagnostic(
+            if (kind.optional()) {
+                return Optional.empty();
+            }
+            return Optional.of(shoulderDepthDiagnostic(
                     zone,
                     cell,
                     fillDepth,
-                    kind.maximumFillDepth()
+                    kind.maximumFillDepth(),
+                    TerrainRejectionReason.EXCESSIVE_FILL
             ));
         }
         columns.put(point, new TerrainPreparationColumn(
@@ -369,21 +377,22 @@ final class TerrainPreparationPlanner {
         return Optional.of(rejectionDiagnostic(cell, reason));
     }
 
-    private static SuburbTerrainDiagnostic supportDepthDiagnostic(
+    private static SuburbTerrainDiagnostic shoulderDepthDiagnostic(
             ElevationZone zone,
             TerrainCell cell,
-            int fillDepth,
-            int maximumFillDepth
+            int actualDepth,
+            int maximumDepth,
+            TerrainRejectionReason rejectionReason
     ) {
         TerrainPreparationLimitDiagnostic limit = new TerrainPreparationLimitDiagnostic(
                 zone.sourceElementId(),
-                fillDepth,
-                maximumFillDepth,
-                maximumFillDepth
+                actualDepth,
+                maximumDepth,
+                maximumDepth
         );
         TerrainSuitability suitability = new TerrainSuitability(
                 0.0,
-                Set.of(TerrainRejectionReason.EXCESSIVE_FILL),
+                Set.of(rejectionReason),
                 List.of()
         );
         return new SuburbTerrainDiagnostic(cell, suitability, limit);
@@ -550,30 +559,42 @@ final class TerrainPreparationPlanner {
                 ElevationZoneType.ROAD_SEGMENT,
                 TerrainPreparationColumnType.ROAD_SHOULDER,
                 RoadTerrainShoulderPolicy.RADIUS,
-                RoadTerrainShoulderPolicy.MAX_FILL_DEPTH
+                RoadTerrainShoulderPolicy.MAX_FILL_DEPTH,
+                false
+        ),
+        PARCEL(
+                ElevationZoneType.PARCEL_PAD,
+                TerrainPreparationColumnType.PARCEL_SHOULDER,
+                ParcelTerrainShoulderPolicy.RADIUS,
+                ParcelTerrainShoulderPolicy.MAX_FILL_DEPTH,
+                true
         ),
         BUILDING(
                 ElevationZoneType.BUILDING_PAD,
                 TerrainPreparationColumnType.BUILDING_SHOULDER,
                 BuildingTerrainShoulderPolicy.RADIUS,
-                BuildingTerrainShoulderPolicy.MAX_FILL_DEPTH
+                BuildingTerrainShoulderPolicy.MAX_FILL_DEPTH,
+                false
         );
 
         private final ElevationZoneType zoneType;
         private final TerrainPreparationColumnType columnType;
         private final int radius;
         private final int maximumFillDepth;
+        private final boolean optional;
 
         ShoulderKind(
                 ElevationZoneType zoneType,
                 TerrainPreparationColumnType columnType,
                 int radius,
-                int maximumFillDepth
+                int maximumFillDepth,
+                boolean optional
         ) {
             this.zoneType = zoneType;
             this.columnType = columnType;
             this.radius = radius;
             this.maximumFillDepth = maximumFillDepth;
+            this.optional = optional;
         }
 
         ElevationZoneType zoneType() {
@@ -592,9 +613,16 @@ final class TerrainPreparationPlanner {
             return maximumFillDepth;
         }
 
+        boolean optional() {
+            return optional;
+        }
+
         boolean contains(GridBounds bounds, GridPoint point) {
             if (this == ROAD) {
                 return RoadTerrainShoulderPolicy.contains(bounds, point);
+            }
+            if (this == PARCEL) {
+                return ParcelTerrainShoulderPolicy.contains(bounds, point);
             }
             return BuildingTerrainShoulderPolicy.contains(bounds, point);
         }
@@ -602,6 +630,13 @@ final class TerrainPreparationPlanner {
         int targetElevation(ElevationZone zone, GridPoint point) {
             if (this == ROAD) {
                 return RoadTerrainShoulderPolicy.targetElevation(
+                        zone.bounds(),
+                        point,
+                        zone.targetElevation()
+                );
+            }
+            if (this == PARCEL) {
+                return ParcelTerrainShoulderPolicy.targetElevation(
                         zone.bounds(),
                         point,
                         zone.targetElevation()

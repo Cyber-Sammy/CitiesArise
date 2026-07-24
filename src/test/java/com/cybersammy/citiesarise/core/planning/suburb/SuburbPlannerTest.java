@@ -8,6 +8,7 @@ import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
 import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteQuality;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationStatus;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
+import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -136,6 +137,35 @@ final class SuburbPlannerTest {
         SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
 
         assertTrue(result.successful());
+    }
+
+    @Test
+    void routesMainRoadAroundLocalWater() {
+        GridPoint waterPoint = new GridPoint(5, 15);
+        SuburbPlanningSettings settings = SuburbPlanningSettings.defaults();
+
+        SuburbPlanningResult result = planner.plan(request(
+                surveyWithSingleWaterCell(40, 30, waterPoint),
+                100L,
+                settings
+        ));
+
+        assertTrue(result.successful(), result.toString());
+        RoadGraph roadGraph = result.plan().orElseThrow().roadGraph();
+        Map<PlanElementId, RoadNode> nodes = nodesById(roadGraph);
+        List<RoadSegment> mainRoadSegments = roadGraph.segments().stream()
+                .filter(segment -> segment.tags().contains(new PlanTag("main_road")))
+                .toList();
+        assertTrue(mainRoadSegments.stream().noneMatch(segment -> roadCorridor(
+                segment,
+                nodes,
+                settings.roadWidth()
+        ).contains(waterPoint)));
+        assertTrue(mainRoadSegments.stream().anyMatch(segment -> {
+            RoadNode start = nodes.get(segment.startNodeId());
+            RoadNode end = nodes.get(segment.endNodeId());
+            return start.point().x() == end.point().x();
+        }));
     }
 
     @Test
@@ -746,6 +776,18 @@ final class SuburbPlannerTest {
         int maxZ = Math.max(startNode.point().z(), endNode.point().z()) + 1;
 
         return new GridBounds(new GridPoint(roadX, minZ), new GridSize(roadWidth, maxZ - minZ));
+    }
+
+    private static GridBounds roadCorridor(
+            RoadSegment segment,
+            Map<PlanElementId, RoadNode> nodesById,
+            int roadWidth
+    ) {
+        return AxisAlignedGridCorridor.bounds(
+                nodesById.get(segment.startNodeId()).point(),
+                nodesById.get(segment.endNodeId()).point(),
+                roadWidth
+        );
     }
 
     private static boolean intersectsAny(GridBounds bounds, List<GridBounds> otherBounds) {

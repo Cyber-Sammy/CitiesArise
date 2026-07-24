@@ -5,6 +5,9 @@ import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.terrain.topology.DevelopableRegion;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopology;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -15,7 +18,8 @@ final class AdaptiveSuburbLayoutSelector {
             GridSize minimumSize,
             TerrainTopology topology,
             SuburbLayout preferredLayout,
-            LayoutFactory layoutFactory
+            LayoutFactory layoutFactory,
+            LayoutFinalizer layoutFinalizer
     ) {
         Objects.requireNonNull(surveyBounds, "surveyBounds");
         Objects.requireNonNull(capacity, "capacity");
@@ -23,20 +27,45 @@ final class AdaptiveSuburbLayoutSelector {
         Objects.requireNonNull(topology, "topology");
         Objects.requireNonNull(preferredLayout, "preferredLayout");
         Objects.requireNonNull(layoutFactory, "layoutFactory");
+        Objects.requireNonNull(layoutFinalizer, "layoutFinalizer");
 
-        if (hasCapacity(preferredLayout, capacity.target())) {
-            if (isDevelopable(preferredLayout, topology)) {
-                return Optional.of(selection(preferredLayout, capacity.target(), topology));
+        if (hasCapacity(preferredLayout, capacity.target())
+                && isDevelopable(preferredLayout, topology)) {
+            Optional<SuburbLayout> routedPreferred = layoutFinalizer.finalize(preferredLayout);
+            if (routedPreferred.isPresent()) {
+                SuburbLayout layout = routedPreferred.orElseThrow();
+                if (isDevelopable(layout, topology)) {
+                    return Optional.of(selection(layout, capacity.target(), topology));
+                }
             }
         }
 
+        return selectReducedCapacity(
+                surveyBounds,
+                capacity,
+                minimumSize,
+                topology,
+                layoutFactory,
+                layoutFinalizer
+        );
+    }
+
+    private static Optional<SuburbLayoutSelection> selectReducedCapacity(
+            GridBounds surveyBounds,
+            DevelopmentCapacity capacity,
+            GridSize minimumSize,
+            TerrainTopology topology,
+            LayoutFactory layoutFactory,
+            LayoutFinalizer layoutFinalizer
+    ) {
         for (int allocatedCapacity = capacity.target(); allocatedCapacity >= capacity.minimum(); allocatedCapacity--) {
             Optional<SuburbLayoutSelection> selection = selectCapacity(
                     surveyBounds,
                     allocatedCapacity,
                     minimumSize,
                     topology,
-                    layoutFactory
+                    layoutFactory,
+                    layoutFinalizer
             );
             if (selection.isPresent()) {
                 return selection;
@@ -51,7 +80,8 @@ final class AdaptiveSuburbLayoutSelector {
             int allocatedCapacity,
             GridSize minimumSize,
             TerrainTopology topology,
-            LayoutFactory layoutFactory
+            LayoutFactory layoutFactory,
+            LayoutFinalizer layoutFinalizer
     ) {
         Optional<GridSize> layoutSize = minimumLayoutSize(
                 surveyBounds,
@@ -67,7 +97,8 @@ final class AdaptiveSuburbLayoutSelector {
                 allocatedCapacity,
                 layoutSize.orElseThrow(),
                 topology,
-                layoutFactory
+                layoutFactory,
+                layoutFinalizer
         );
     }
 
@@ -95,30 +126,40 @@ final class AdaptiveSuburbLayoutSelector {
             int targetParcelCount,
             GridSize layoutSize,
             TerrainTopology topology,
-            LayoutFactory layoutFactory
+            LayoutFactory layoutFactory,
+            LayoutFinalizer layoutFinalizer
     ) {
-        LayoutCandidate best = null;
+        List<UnroutedLayoutCandidate> candidates = new ArrayList<>();
         int maxX = surveyBounds.maxXExclusive() - layoutSize.width();
         int maxZ = surveyBounds.maxZExclusive() - layoutSize.depth();
         for (int z = surveyBounds.minZ(); z <= maxZ; z++) {
             for (int x = surveyBounds.minX(); x <= maxX; x++) {
                 GridBounds bounds = new GridBounds(new GridPoint(x, z), layoutSize);
                 SuburbLayout layout = layoutFactory.create(bounds, targetParcelCount);
-                Optional<LayoutCandidate> candidate = candidate(
+                Optional<UnroutedLayoutCandidate> candidate = unroutedCandidate(
                         layout,
                         targetParcelCount,
                         topology,
                         surveyBounds
                 );
-                if (candidate.isPresent() && candidate.orElseThrow().isBetterThan(best)) {
-                    best = candidate.orElseThrow();
-                }
+                candidate.ifPresent(candidates::add);
             }
         }
-        return Optional.ofNullable(best).map(LayoutCandidate::selection);
+        candidates.sort(UnroutedLayoutCandidate.ORDER);
+        for (UnroutedLayoutCandidate candidate : candidates) {
+            Optional<SuburbLayout> routed = layoutFinalizer.finalize(candidate.layout());
+            if (routed.isEmpty()) {
+                continue;
+            }
+            SuburbLayout routedLayout = routed.orElseThrow();
+            if (isDevelopable(routedLayout, topology)) {
+                return Optional.of(selection(routedLayout, targetParcelCount, topology));
+            }
+        }
+        return Optional.empty();
     }
 
-    private static Optional<LayoutCandidate> candidate(
+    private static Optional<UnroutedLayoutCandidate> unroutedCandidate(
             SuburbLayout layout,
             int targetParcelCount,
             TerrainTopology topology,
@@ -131,9 +172,8 @@ final class AdaptiveSuburbLayoutSelector {
             return Optional.empty();
         }
         DevelopableRegion region = topology.regionAt(layout.plannedFootprints().getFirst().origin()).orElseThrow();
-        SuburbLayoutSelection selection = selection(layout, targetParcelCount, topology);
-        return Optional.of(new LayoutCandidate(
-                selection,
+        return Optional.of(new UnroutedLayoutCandidate(
+                layout,
                 region.area(),
                 centerDistance(layout.bounds(), surveyBounds),
                 layout.bounds().minX(),
@@ -257,37 +297,33 @@ final class AdaptiveSuburbLayoutSelector {
         SuburbLayout create(GridBounds bounds, int parcelCapacity);
     }
 
-    private record LayoutCandidate(
-            SuburbLayoutSelection selection,
+    @FunctionalInterface
+    interface LayoutFinalizer {
+        Optional<SuburbLayout> finalize(SuburbLayout layout);
+    }
+
+    private record UnroutedLayoutCandidate(
+            SuburbLayout layout,
             int regionArea,
             long centerDistance,
             int minX,
             int minZ
     ) {
-        private LayoutCandidate {
-            Objects.requireNonNull(selection, "selection");
+        private static final Comparator<UnroutedLayoutCandidate> ORDER = Comparator
+                .comparingInt(UnroutedLayoutCandidate::regionArea)
+                .reversed()
+                .thenComparingLong(UnroutedLayoutCandidate::centerDistance)
+                .thenComparingInt(UnroutedLayoutCandidate::minX)
+                .thenComparingInt(UnroutedLayoutCandidate::minZ);
+
+        private UnroutedLayoutCandidate {
+            Objects.requireNonNull(layout, "layout");
             if (regionArea <= 0) {
                 throw new IllegalArgumentException("regionArea must be positive");
             }
             if (centerDistance < 0L) {
                 throw new IllegalArgumentException("centerDistance must not be negative");
             }
-        }
-
-        private boolean isBetterThan(LayoutCandidate other) {
-            if (other == null) {
-                return true;
-            }
-            if (regionArea != other.regionArea) {
-                return regionArea > other.regionArea;
-            }
-            if (centerDistance != other.centerDistance) {
-                return centerDistance < other.centerDistance;
-            }
-            if (minX != other.minX) {
-                return minX < other.minX;
-            }
-            return minZ < other.minZ;
         }
     }
 }

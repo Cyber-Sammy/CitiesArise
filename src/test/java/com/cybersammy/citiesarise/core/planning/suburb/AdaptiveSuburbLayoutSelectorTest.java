@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
+import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
@@ -15,9 +16,40 @@ import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopology;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopologyAnalyzer;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 final class AdaptiveSuburbLayoutSelectorTest {
+    @Test
+    void finalizesPreferredLayoutOnlyOnce() {
+        GridBounds surveyBounds = bounds(0, 0, 20, 20);
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                TerrainSurvey.sample(
+                        surveyBounds,
+                        point -> Optional.of(cell(point, false))
+                ),
+                cell -> true
+        );
+        SuburbLayout preferredLayout = layout(surveyBounds, 4);
+        AtomicInteger finalizationCount = new AtomicInteger();
+
+        SuburbLayoutSelection selected = new AdaptiveSuburbLayoutSelector().select(
+                surveyBounds,
+                DevelopmentCapacity.fixed(4),
+                new GridSize(4, 10),
+                topology,
+                preferredLayout,
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout,
+                layout -> {
+                    finalizationCount.incrementAndGet();
+                    return Optional.of(layout);
+                }
+        ).orElseThrow();
+
+        assertSame(preferredLayout, selected.layout());
+        assertEquals(1, finalizationCount.get());
+    }
+
     @Test
     void doesNotApplyBuildingShoulderRadiusToWholeParcel() {
         GridBounds surveyBounds = bounds(0, 0, 20, 20);
@@ -35,6 +67,7 @@ final class AdaptiveSuburbLayoutSelectorTest {
                 10,
                 List.of(),
                 List.of(parcelBounds),
+                Optional.of(RoadGraph.empty()),
                 List.of(parcelBounds),
                 List.of(
                         new PotentialTerrainPreparationFootprint(parcelBounds, 0),
@@ -48,7 +81,8 @@ final class AdaptiveSuburbLayoutSelectorTest {
                 new GridSize(10, 10),
                 topology,
                 preferredLayout,
-                (ignored, capacity) -> preferredLayout
+                (ignored, capacity) -> preferredLayout,
+                Optional::of
         ).orElseThrow();
 
         assertSame(preferredLayout, selected.layout());
@@ -66,7 +100,8 @@ final class AdaptiveSuburbLayoutSelectorTest {
                 new GridSize(4, 10),
                 topology,
                 preferredLayout,
-                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout,
+                Optional::of
         ).orElseThrow();
 
         assertEquals(3, selected.allocatedCapacity());
@@ -85,7 +120,8 @@ final class AdaptiveSuburbLayoutSelectorTest {
                 new GridSize(4, 10),
                 topology,
                 layout(surveyBounds, 4),
-                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout,
+                Optional::of
         ).isEmpty());
     }
 
@@ -113,6 +149,7 @@ final class AdaptiveSuburbLayoutSelectorTest {
                 bounds.minZ() + (bounds.size().depth() / 2),
                 List.of(),
                 parcels,
+                Optional.of(RoadGraph.empty()),
                 List.of(bounds),
                 List.of(new PotentialTerrainPreparationFootprint(bounds, 0))
         );

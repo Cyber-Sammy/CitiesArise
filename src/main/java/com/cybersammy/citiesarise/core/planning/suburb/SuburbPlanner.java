@@ -4,6 +4,7 @@ import com.cybersammy.citiesarise.core.earthwork.BuildingTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteAssessment;
 import com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
+import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -40,6 +41,7 @@ public final class SuburbPlanner {
     private static final int MAX_ROAD_ELEVATION_NODE_DISTANCE = 3;
     private static final TerrainTopologyAnalyzer TOPOLOGY_ANALYZER = new TerrainTopologyAnalyzer();
     private static final AdaptiveSuburbLayoutSelector LAYOUT_SELECTOR = new AdaptiveSuburbLayoutSelector();
+    private static final TerrainAwareRoadGraphRouter ROAD_GRAPH_ROUTER = new TerrainAwareRoadGraphRouter();
     private final TerrainSuitabilityScorer terrainScorer;
     private final PlanValidator planValidator;
 
@@ -140,7 +142,11 @@ public final class SuburbPlanner {
     }
 
     private static int minimumSurveyDepth(SuburbPlanningSettings settings) {
-        return 2 * (settings.roadWidth() + settings.parcelDepth());
+        return 2 * (
+                settings.roadWidth()
+                        + RoadTerrainShoulderPolicy.RADIUS
+                        + settings.parcelDepth()
+        );
     }
 
     private boolean roadFitsSurvey(SuburbPlanningSettings settings, GridBounds bounds) {
@@ -302,7 +308,8 @@ public final class SuburbPlanner {
                 ),
                 topology,
                 preferredLayout,
-                (bounds, capacity) -> createLayout(request, bounds, capacity)
+                (bounds, capacity) -> createLayout(request, bounds, capacity),
+                layout -> routeLayout(request, layout)
         );
     }
 
@@ -330,24 +337,53 @@ public final class SuburbPlanner {
                 sideRoadCorridors,
                 parcelCapacity
         );
-        List<GridBounds> plannedFootprints = plannedFootprints(request, bounds, mainRoadZ, sideRoadCorridors, parcelBounds);
+        List<GridBounds> plannedFootprints = List.copyOf(parcelBounds);
         List<PotentialTerrainPreparationFootprint> terrainPreparationFootprints =
-                terrainPreparationFootprints(request, bounds, mainRoadZ, sideRoadCorridors, parcelBounds);
+                terrainPreparationFootprints(request, List.of(), parcelBounds);
 
         return new SuburbLayout(
                 bounds,
                 mainRoadZ,
                 sideRoadXs,
                 parcelBounds,
+                Optional.empty(),
                 plannedFootprints,
                 terrainPreparationFootprints
         );
     }
 
+    private Optional<SuburbLayout> routeLayout(SuburbPlanningRequest request, SuburbLayout layout) {
+        RoadGraph sourceRoadGraph = createRoadGraph(
+                request,
+                layout.bounds(),
+                layout.mainRoadZ(),
+                layout.sideRoadXs()
+        );
+        Optional<RoadGraph> routedRoadGraph = ROAD_GRAPH_ROUTER.route(
+                request,
+                layout.bounds(),
+                sourceRoadGraph,
+                layout.parcelBounds()
+        );
+        if (routedRoadGraph.isEmpty()) {
+            return Optional.empty();
+        }
+        List<GridBounds> roadCorridors = roadCorridors(routedRoadGraph.orElseThrow());
+        return Optional.of(new SuburbLayout(
+                layout.bounds(),
+                layout.mainRoadZ(),
+                layout.sideRoadXs(),
+                layout.parcelBounds(),
+                routedRoadGraph,
+                plannedFootprints(roadCorridors, layout.parcelBounds()),
+                terrainPreparationFootprints(request, roadCorridors, layout.parcelBounds())
+        ));
+    }
+
     private SettlementPlan createPlan(SuburbPlanningRequest request, SuburbLayoutSelection selection) {
         SuburbLayout layout = selection.layout();
-        GridBounds bounds = layout.bounds();
-        RoadGraph roadGraph = createRoadGraph(request, bounds, layout.mainRoadZ(), layout.sideRoadXs());
+        RoadGraph roadGraph = layout.routedRoadGraph()
+                .orElseThrow(() -> new IllegalStateException("selected layout has no routed road graph"));
         roadGraph = RoadGraphSegmenter.splitLongSegments(roadGraph, MAX_ROAD_ELEVATION_NODE_DISTANCE);
         List<Parcel> parcels = createParcels(request, layout.parcelBounds());
         List<BuildingSlot> buildingSlots = createBuildingSlots(request, parcels);
@@ -516,8 +552,12 @@ public final class SuburbPlanner {
             int parcelCapacity
     ) {
         List<GridBounds> parcelBounds = new ArrayList<>();
-        int northZ = mainRoadZ - request.settings().roadWidth() - request.settings().parcelDepth();
-        int southZ = mainRoadZ + request.settings().roadWidth();
+        int routingMargin = RoadTerrainShoulderPolicy.RADIUS;
+        int northZ = mainRoadZ
+                - request.settings().roadWidth()
+                - routingMargin
+                - request.settings().parcelDepth();
+        int southZ = mainRoadZ + request.settings().roadWidth() + routingMargin;
         int startX = bounds.minX() + request.settings().roadWidth();
         int candidateIndex = 0;
 
@@ -550,15 +590,11 @@ public final class SuburbPlanner {
     }
 
     private static List<GridBounds> plannedFootprints(
-            SuburbPlanningRequest request,
-            GridBounds bounds,
-            int mainRoadZ,
-            List<GridBounds> sideRoadCorridors,
+            List<GridBounds> roadCorridors,
             List<GridBounds> parcelBounds
     ) {
         List<GridBounds> footprints = new ArrayList<>();
-        footprints.add(mainRoadCorridor(request, bounds, mainRoadZ));
-        footprints.addAll(sideRoadCorridors);
+        footprints.addAll(roadCorridors);
         footprints.addAll(parcelBounds);
 
         return List.copyOf(footprints);
@@ -566,17 +602,11 @@ public final class SuburbPlanner {
 
     private static List<PotentialTerrainPreparationFootprint> terrainPreparationFootprints(
             SuburbPlanningRequest request,
-            GridBounds bounds,
-            int mainRoadZ,
-            List<GridBounds> sideRoadCorridors,
+            List<GridBounds> roadCorridors,
             List<GridBounds> parcelBounds
     ) {
         List<PotentialTerrainPreparationFootprint> footprints = new ArrayList<>();
-        footprints.add(new PotentialTerrainPreparationFootprint(
-                mainRoadCorridor(request, bounds, mainRoadZ),
-                RoadTerrainShoulderPolicy.RADIUS
-        ));
-        for (GridBounds roadBounds : sideRoadCorridors) {
+        for (GridBounds roadBounds : roadCorridors) {
             footprints.add(new PotentialTerrainPreparationFootprint(
                     roadBounds,
                     RoadTerrainShoulderPolicy.RADIUS
@@ -590,6 +620,28 @@ public final class SuburbPlanner {
             ));
         }
         return List.copyOf(footprints);
+    }
+
+    private static List<GridBounds> roadCorridors(RoadGraph roadGraph) {
+        Map<PlanElementId, RoadNode> nodes = new java.util.HashMap<>();
+        for (RoadNode node : roadGraph.nodes()) {
+            nodes.put(node.id(), node);
+        }
+        List<GridBounds> corridors = new ArrayList<>();
+        for (RoadSegment segment : roadGraph.segments()) {
+            RoadNode start = requiredRoadNode(nodes, segment.startNodeId());
+            RoadNode end = requiredRoadNode(nodes, segment.endNodeId());
+            corridors.add(AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width()));
+        }
+        return List.copyOf(corridors);
+    }
+
+    private static RoadNode requiredRoadNode(Map<PlanElementId, RoadNode> nodes, PlanElementId id) {
+        RoadNode node = nodes.get(id);
+        if (node == null) {
+            throw new IllegalStateException("road segment references missing node: " + id.value());
+        }
+        return node;
     }
 
     private static GridBounds mainRoadCorridor(SuburbPlanningRequest request, GridBounds bounds, int mainRoadZ) {

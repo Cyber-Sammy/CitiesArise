@@ -2,17 +2,10 @@ package com.cybersammy.citiesarise.core.earthwork;
 
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
 public final class BuildingAccessResolver {
-    private static final Comparator<BuildingAccess> ACCESS_ORDER = Comparator
-            .comparingInt(BuildingAccess::distance)
-            .thenComparing(access -> access.roadZone().sourceElementId().value())
-            .thenComparingInt(access -> access.anchor().x())
-            .thenComparingInt(access -> access.anchor().z());
-
     private BuildingAccessResolver() {
     }
 
@@ -70,7 +63,7 @@ public final class BuildingAccessResolver {
                         point,
                         distanceToBounds(point, roadZone.bounds())
                 );
-                if (shouldReplace(nearest, candidate)) {
+                if (shouldReplace(nearest, candidate, buildingBounds)) {
                     nearest = candidate;
                 }
             }
@@ -78,11 +71,43 @@ public final class BuildingAccessResolver {
         return nearest;
     }
 
-    private static boolean shouldReplace(BuildingAccess current, BuildingAccess candidate) {
+    private static boolean shouldReplace(
+            BuildingAccess current,
+            BuildingAccess candidate,
+            GridBounds buildingBounds
+    ) {
         if (current == null) {
             return true;
         }
-        return ACCESS_ORDER.compare(candidate, current) < 0;
+        int comparison = Integer.compare(candidate.distance(), current.distance());
+        if (comparison != 0) {
+            return comparison < 0;
+        }
+        comparison = Long.compare(
+                centerOffset(candidate.anchor(), buildingBounds),
+                centerOffset(current.anchor(), buildingBounds)
+        );
+        if (comparison != 0) {
+            return comparison < 0;
+        }
+        comparison = candidate.roadZone().sourceElementId().value()
+                .compareTo(current.roadZone().sourceElementId().value());
+        if (comparison != 0) {
+            return comparison < 0;
+        }
+        comparison = Integer.compare(candidate.anchor().x(), current.anchor().x());
+        if (comparison != 0) {
+            return comparison < 0;
+        }
+        return candidate.anchor().z() < current.anchor().z();
+    }
+
+    private static long centerOffset(GridPoint point, GridBounds bounds) {
+        long doubledCenterX = (long) bounds.minX() + bounds.maxXExclusive() - 1L;
+        long doubledCenterZ = (long) bounds.minZ() + bounds.maxZExclusive() - 1L;
+        long xOffset = Math.abs((point.x() * 2L) - doubledCenterX);
+        long zOffset = Math.abs((point.z() * 2L) - doubledCenterZ);
+        return Math.addExact(xOffset, zOffset);
     }
 
     private static int distanceToBounds(GridPoint point, GridBounds bounds) {

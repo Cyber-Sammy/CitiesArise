@@ -10,6 +10,7 @@ import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.Surf
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.OptionalInt;
 
 final class WorldgenChunkPlacement {
     int apply(WorldgenBlockAccess level, DebugChunkPlacementPlan placementPlan) {
@@ -17,6 +18,7 @@ final class WorldgenChunkPlacement {
         Objects.requireNonNull(placementPlan, "placementPlan");
 
         Map<GridPoint, SurfaceColumn> surfaceColumns = surfaceColumns(level, placementPlan);
+        stabilizeLateFluids(level, surfaceColumns);
         preparePlatforms(level, placementPlan, surfaceColumns);
         clearVegetation(level, vegetationColumns(level, placementPlan, surfaceColumns));
 
@@ -35,6 +37,27 @@ final class WorldgenChunkPlacement {
             }
         }
         return placedBlocks;
+    }
+
+    private static void stabilizeLateFluids(
+            WorldgenBlockAccess level,
+            Map<GridPoint, SurfaceColumn> columns
+    ) {
+        for (SurfaceColumn column : columns.values()) {
+            if (column.fluidTopY().isEmpty()) {
+                continue;
+            }
+            int fluidTopY = column.fluidTopY().getAsInt();
+            for (int y = column.solidSupportY() + 1; y <= fluidTopY; y++) {
+                WorldgenBlockPosition position = new WorldgenBlockPosition(column.point().x(), y, column.point().z());
+                if (!level.canWrite(position)) {
+                    continue;
+                }
+                if (level.material(position) == WorldgenSurfaceMaterial.FLUID) {
+                    level.placeBlock(position, DebugPlacementRole.FOUNDATION);
+                }
+            }
+        }
     }
 
     private static void preparePlatforms(
@@ -153,8 +176,25 @@ final class WorldgenChunkPlacement {
                 level.minBuildHeight(),
                 y -> surfaceBlock(level, point.x(), y, point.z())
         );
-        int placementY = Math.max(level.minBuildHeight(), sample.height() - 1);
-        return new SurfaceColumn(point, placementY, topHeight);
+        int solidSupportY = Math.max(level.minBuildHeight(), sample.height() - 1);
+        OptionalInt fluidTopY = fluidTopY(level, point, solidSupportY, topHeight);
+        int placementY = fluidTopY.orElse(solidSupportY);
+        return new SurfaceColumn(point, solidSupportY, placementY, topHeight, fluidTopY);
+    }
+
+    private static OptionalInt fluidTopY(
+            WorldgenBlockAccess level,
+            GridPoint point,
+            int solidSupportY,
+            int topHeight
+    ) {
+        for (int y = topHeight - 1; y > solidSupportY; y--) {
+            WorldgenBlockPosition position = new WorldgenBlockPosition(point.x(), y, point.z());
+            if (level.material(position) == WorldgenSurfaceMaterial.FLUID) {
+                return OptionalInt.of(y);
+            }
+        }
+        return OptionalInt.empty();
     }
 
     private static Map<GridPoint, SurfaceColumn> vegetationColumns(
@@ -255,7 +295,20 @@ final class WorldgenChunkPlacement {
         return targetY;
     }
 
-    private record SurfaceColumn(GridPoint point, int placementY, int topHeight) {
+    private record SurfaceColumn(
+            GridPoint point,
+            int solidSupportY,
+            int placementY,
+            int topHeight,
+            OptionalInt fluidTopY
+    ) {
+        private SurfaceColumn {
+            Objects.requireNonNull(point, "point");
+            Objects.requireNonNull(fluidTopY, "fluidTopY");
+            if (solidSupportY > placementY) {
+                throw new IllegalArgumentException("solidSupportY must not exceed placementY");
+            }
+        }
     }
 
     private record PlatformPreparation(

@@ -112,6 +112,30 @@ class WorldgenPlacementApplierTest {
     }
 
     @Test
+    void stabilizesLateFluidInsideOccupiedColumnWithoutPlatformElevation() {
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(operation(8, 8, "late_lava_yard")));
+        DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
+                .partition(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.surfaceHeight(8, 8, 65);
+        level.put(8, 63, 8, WorldgenSurfaceMaterial.FLUID);
+        level.put(8, 64, 8, WorldgenSurfaceMaterial.FLUID);
+        level.put(9, 63, 8, WorldgenSurfaceMaterial.FLUID);
+        level.put(9, 64, 8, WorldgenSurfaceMaterial.FLUID);
+
+        new WorldgenChunkPlacement().apply(level, chunkPlan);
+
+        assertTrue(level.hasPlacement(8, 63, 8, DebugPlacementRole.FOUNDATION));
+        assertTrue(level.hasPlacement(8, 64, 8, DebugPlacementRole.FOUNDATION));
+        assertTrue(level.hasPlacement(8, 64, 8, DebugPlacementRole.ROAD_SURFACE));
+        assertEquals(WorldgenSurfaceMaterial.OTHER, level.materialAt(8, 63, 8));
+        assertEquals(WorldgenSurfaceMaterial.OTHER, level.materialAt(8, 64, 8));
+        assertEquals(WorldgenSurfaceMaterial.FLUID, level.materialAt(9, 63, 8));
+        assertEquals(WorldgenSurfaceMaterial.FLUID, level.materialAt(9, 64, 8));
+    }
+
+    @Test
     void clearsVegetationAboveAStaleWorldgenSurfaceHeight() {
         DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(operation(8, 8, "forest_road")));
         DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
@@ -292,6 +316,7 @@ class WorldgenPlacementApplierTest {
             writes.add(position);
             placedMarkers.add(position);
             placements.add(new Placement(position, role));
+            states.put(position, WorldgenSurfaceMaterial.OTHER);
             return true;
         }
 

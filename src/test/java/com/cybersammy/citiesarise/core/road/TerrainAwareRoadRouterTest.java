@@ -194,6 +194,35 @@ final class TerrainAwareRoadRouterTest {
     }
 
     @Test
+    void evaluatesSupportShoulderOutsideRoutingBounds() {
+        GridPoint water = new GridPoint(3, 0);
+        TerrainSurvey survey = survey(
+                7,
+                5,
+                point -> cell(point, 64, point.equals(water), 0.0, TerrainCategory.BUILDABLE)
+        );
+        GridBounds routingBounds = new GridBounds(new GridPoint(1, 1), new GridSize(5, 3));
+
+        RoadRoute route = ROUTER.route(new RoadRoutingRequest(
+                survey,
+                routingBounds,
+                survey.bounds(),
+                new GridPoint(1, 1),
+                new GridPoint(5, 1),
+                1,
+                1,
+                0.25,
+                TerrainResponsePolicy.defaults(),
+                RoadRoutingCostPolicy.defaults(),
+                List.of(),
+                List.of()
+        )).route().orElseThrow();
+
+        assertFalse(route.points().contains(new GridPoint(3, 1)));
+        assertTrue(route.points().stream().allMatch(routingBounds::contains));
+    }
+
+    @Test
     void repeatedRoutingUsesStableTieBreaking() {
         GridPoint water = new GridPoint(2, 2);
         TerrainSurvey survey = survey(
@@ -229,6 +258,7 @@ final class TerrainAwareRoadRouterTest {
         return new RoadRoutingRequest(
                 survey,
                 survey.bounds(),
+                survey.bounds(),
                 start,
                 destination,
                 width,
@@ -236,6 +266,7 @@ final class TerrainAwareRoadRouterTest {
                 0.25,
                 responsePolicy,
                 costPolicy,
+                List.of(),
                 List.of()
         );
     }

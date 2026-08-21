@@ -174,7 +174,7 @@ public final class TerrainAwareRoadRouter {
         }
         return footprintEvaluation(
                 request,
-                expandWithin(pointBounds, request.routingBounds(), request.supportRadius()),
+                expandWithin(pointBounds, request.terrainCheckBounds(), request.supportRadius()),
                 pointBounds,
                 point,
                 point
@@ -192,7 +192,7 @@ public final class TerrainAwareRoadRouter {
         }
         StepEvaluation evaluation = footprintEvaluation(
                 request,
-                expandWithin(corridor, request.routingBounds(), request.supportRadius()),
+                expandWithin(corridor, request.terrainCheckBounds(), request.supportRadius()),
                 corridor,
                 start,
                 destination
@@ -214,10 +214,14 @@ public final class TerrainAwareRoadRouter {
             GridPoint start,
             GridPoint destination
     ) {
-        if (!request.routingBounds().contains(footprint)) {
+        if (!request.terrainCheckBounds().contains(footprint)) {
             return StepEvaluation.blocked();
         }
-        if (intersectsReservedBounds(collisionFootprint, request.reservedBounds())) {
+        if (intersectsReservedBounds(
+                collisionFootprint,
+                request.reservedBounds(),
+                request.allowedReservedOverlapBounds()
+        )) {
             return StepEvaluation.blocked();
         }
         TerrainFeatureType crossingFeature = null;
@@ -308,9 +312,34 @@ public final class TerrainAwareRoadRouter {
                 .orElseThrow(() -> new IllegalStateException("routing point is outside terrain survey: " + point));
     }
 
-    private static boolean intersectsReservedBounds(GridBounds footprint, List<GridBounds> reservedBounds) {
+    private static boolean intersectsReservedBounds(
+            GridBounds footprint,
+            List<GridBounds> reservedBounds,
+            List<GridBounds> allowedOverlapBounds
+    ) {
         for (GridBounds reserved : reservedBounds) {
-            if (footprint.intersects(reserved)) {
+            if (footprint.intersects(reserved) && !intersectionIsAllowed(footprint, reserved, allowedOverlapBounds)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean intersectionIsAllowed(
+            GridBounds first,
+            GridBounds second,
+            List<GridBounds> allowedOverlapBounds
+    ) {
+        int minX = Math.max(first.minX(), second.minX());
+        int minZ = Math.max(first.minZ(), second.minZ());
+        int maxX = Math.min(first.maxXExclusive(), second.maxXExclusive());
+        int maxZ = Math.min(first.maxZExclusive(), second.maxZExclusive());
+        GridBounds intersection = new GridBounds(
+                new GridPoint(minX, minZ),
+                new GridSize(maxX - minX, maxZ - minZ)
+        );
+        for (GridBounds allowed : allowedOverlapBounds) {
+            if (allowed.contains(intersection)) {
                 return true;
             }
         }

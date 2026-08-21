@@ -10,6 +10,7 @@ import java.util.Objects;
 public record RoadRoutingRequest(
         TerrainSurvey survey,
         GridBounds routingBounds,
+        GridBounds terrainCheckBounds,
         GridPoint start,
         GridPoint destination,
         int roadWidth,
@@ -17,11 +18,13 @@ public record RoadRoutingRequest(
         double maxBuildableSlope,
         TerrainResponsePolicy terrainResponsePolicy,
         RoadRoutingCostPolicy costPolicy,
-        List<GridBounds> reservedBounds
+        List<GridBounds> reservedBounds,
+        List<GridBounds> allowedReservedOverlapBounds
 ) {
     public RoadRoutingRequest {
         Objects.requireNonNull(survey, "survey");
         Objects.requireNonNull(routingBounds, "routingBounds");
+        Objects.requireNonNull(terrainCheckBounds, "terrainCheckBounds");
         Objects.requireNonNull(start, "start");
         Objects.requireNonNull(destination, "destination");
         requirePositive(roadWidth, "roadWidth");
@@ -31,7 +34,10 @@ public record RoadRoutingRequest(
         Objects.requireNonNull(costPolicy, "costPolicy");
         Objects.requireNonNull(reservedBounds, "reservedBounds");
         reservedBounds = List.copyOf(reservedBounds);
-        requireContainedBySurvey(routingBounds, survey.bounds());
+        Objects.requireNonNull(allowedReservedOverlapBounds, "allowedReservedOverlapBounds");
+        allowedReservedOverlapBounds = List.copyOf(allowedReservedOverlapBounds);
+        requireContainedBySurvey(terrainCheckBounds, survey.bounds(), "terrainCheckBounds");
+        requireContainedBySurvey(routingBounds, terrainCheckBounds, "routingBounds");
         requireContainedPoint(start, routingBounds, "start");
         requireContainedPoint(destination, routingBounds, "destination");
     }
@@ -54,9 +60,9 @@ public record RoadRoutingRequest(
         }
     }
 
-    private static void requireContainedBySurvey(GridBounds routingBounds, GridBounds surveyBounds) {
-        if (!surveyBounds.contains(routingBounds)) {
-            throw new IllegalArgumentException("routingBounds must be inside survey bounds");
+    private static void requireContainedBySurvey(GridBounds bounds, GridBounds limit, String name) {
+        if (!limit.contains(bounds)) {
+            throw new IllegalArgumentException(name + " must be inside its containing bounds");
         }
     }
 

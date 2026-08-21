@@ -124,7 +124,7 @@ public final class CitiesAriseCommands {
         }
 
         var located = result.settlement().orElseThrow();
-        String summary = "Best Cities Arise settlement: ["
+        String summary = "Best checked Cities Arise settlement: ["
                 + located.blockX()
                 + ", ~, "
                 + located.blockZ()

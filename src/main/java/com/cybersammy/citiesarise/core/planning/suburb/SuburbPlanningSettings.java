@@ -28,7 +28,7 @@ public record SuburbPlanningSettings(
     public static final int DEFAULT_PREFERRED_MAX_FILL_DEPTH = 3;
     public static final int DEFAULT_MAX_CUT_DEPTH = 6;
     public static final int DEFAULT_MAX_FILL_DEPTH = 8;
-    public static final int DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH = 4;
+    public static final int DEFAULT_MAX_BUILDING_FOUNDATION_DEPTH = 6;
     public static final long DEFAULT_MAX_EARTHWORK_VOLUME = 20_000L;
 
     public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, int targetParcelCount) {

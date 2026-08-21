@@ -51,6 +51,7 @@ public final class WorldgenSettlementLocator {
                 origin.getZ(),
                 CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
                 CitiesAriseWorldgenConfig.locateMaxCandidateAttempts(),
+                CitiesAriseWorldgenConfig.locateImprovementCandidateAttempts(),
                 region -> candidateSelector.isCandidate(worldSeed, region, regionModulo),
                 region -> evaluate(context, seaLevel, region, rejectionCounts),
                 EarthworkSiteAssessment::compareTo,

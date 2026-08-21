@@ -252,11 +252,43 @@ final class TerrainPreparationPlannerTest {
     }
 
     @Test
+    void acceptsParcelPadWithModerateFoundationFill() {
+        GridPoint lowPoint = new GridPoint(4, 4);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithHeightAt(lowPoint, 59),
+                42L,
+                settings(3, 8)
+        );
+        ElevationZone parcel = new ElevationZone(
+                id("parcel"),
+                ElevationZoneType.PARCEL_PAD,
+                new GridBounds(new GridPoint(4, 4), new GridSize(3, 3)),
+                64
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                new RegionalElevationPlan(List.of(parcel), List.of())
+        );
+
+        assertTrue(assessment.plan().isPresent());
+        assertEquals(6, assessment.plan()
+                .orElseThrow()
+                .columns()
+                .stream()
+                .filter(column -> column.point().equals(lowPoint))
+                .findFirst()
+                .orElseThrow()
+                .fillDepth());
+    }
+
+    @Test
     void rejectsParcelPadOverDeepRavine() {
         GridPoint ravinePoint = new GridPoint(4, 4);
         SuburbPlanningRequest request = new SuburbPlanningRequest(
                 id("settlement"),
-                surveyWithHeightAt(ravinePoint, 59),
+                surveyWithHeightAt(ravinePoint, 57),
                 42L,
                 settings(3, 8)
         );
@@ -274,7 +306,7 @@ final class TerrainPreparationPlannerTest {
 
         assertFalse(assessment.plan().isPresent());
         assertEquals(ravinePoint, assessment.diagnostic().orElseThrow().cell().point());
-        assertEquals(4L, assessment.diagnostic()
+        assertEquals(6L, assessment.diagnostic()
                 .orElseThrow()
                 .optionalPreparationLimit()
                 .orElseThrow()

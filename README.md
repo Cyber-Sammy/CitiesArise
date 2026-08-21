@@ -50,6 +50,7 @@ settlementProfileId = "cities_arise:suburb"
 candidateRegionModulo = 16
 locateSearchRadiusRegions = 64
 locateMaxCandidateAttempts = 256
+locateImprovementCandidateAttempts = 16
 ```
 
 NeoForge 21.1 stores this config in the physical client or dedicated server `config` directory, so the setting applies to every world started by that installation. It requires a world restart, only affects newly generated chunks, and has no undo command. Back up important worlds before enabling it and disable it again when testing is complete.
@@ -76,7 +77,7 @@ Operators can also run the Cities Arise planner diagnostic:
 
 The command prepares an immutable planning context on the server thread, then runs candidate planning on one dedicated locate worker. The worker receives no live Minecraft level and reads only parallel-safe chunk-generator data through the worldgen terrain provider. Results return to chat on the server thread, and a second locate request is rejected while one is active. The worker is stopped with the server.
 
-The diagnostic uses the same world seed, candidate density, settlement profile, terrain survey, and plan cache as automatic generation. It does not load chunks. `locateSearchRadiusRegions` controls the geographic radius and `locateMaxCandidateAttempts` limits expensive full planning; the defaults search up to 64 settlement regions away and evaluate at most 256 deterministic candidates. Among accepted candidates, the command deterministically selects the best site by quantitative earthwork cost (`totalVolume + preferredDepthExcess`), maximum depth, density across columns that actually require cut or fill, and remaining deterministic metrics. `DIRECT`, `MODERATE`, and `MAJOR` are descriptive categories and do not create a hard ranking boundary. Distance and region coordinates remain the final tie-break order. A failed search reports rejection counts by reason.
+The diagnostic uses the same world seed, candidate density, settlement profile, terrain survey, and plan cache as automatic generation. It does not load chunks. `locateSearchRadiusRegions` controls the geographic radius and `locateMaxCandidateAttempts` limits expensive full planning. The search stops earlier after finding an accepted site and checking `locateImprovementCandidateAttempts` additional deterministic candidates; the default improvement window is `16`. Among candidates checked inside that bounded window, the command selects the best site by quantitative earthwork cost (`totalVolume + preferredDepthExcess`), maximum depth, density across columns that actually require cut or fill, and remaining deterministic metrics. `DIRECT`, `MODERATE`, and `MAJOR` are descriptive categories and do not create a hard ranking boundary. Distance and region coordinates remain the final tie-break order. A failed search still checks up to the configured maximum and reports rejection counts by reason.
 
 The diagnostic coordinates are the center of a planner-accepted settlement region, not proof that Minecraft has created a structure start there. Use `/locate structure cities_arise:suburb` for the registered structure. Chunks generated before Cities Arise worldgen was enabled cannot be retroactively populated.
 
@@ -171,7 +172,7 @@ Example `data/my_pack/settlement_profiles/large_suburb.json`:
     "preferredMaxFillDepth": 3,
     "maxCutDepth": 6,
     "maxFillDepth": 8,
-    "maxBuildingFoundationDepth": 4,
+    "maxBuildingFoundationDepth": 6,
     "maxEarthworkVolume": 20000,
     "minimumParcelCount": 6,
     "targetParcelCount": 8,
@@ -212,7 +213,7 @@ Use `/citiesarise debug dump` to inspect the generated plan and confirm that the
 
 `terrainPolicy.capabilities` accepts `bridge`, `tunnel`, `canal`, and `major_terraforming`. `cross_if_supported` requires a matching capability: water requires `bridge`, while blocked terrain and steep slopes require `tunnel`. Invalid combinations are rejected when the profile loads. A valid combination resolves to a semantic crossing action, but it does not place infrastructure in the current version.
 
-`preferredMaxCutDepth` and `preferredMaxFillDepth` describe the normal grading range for a settlement profile. `maxCutDepth` and `maxFillDepth` are separate absolute safety limits. `maxBuildingFoundationDepth` applies the stricter visible-support limit used by building pads, so relaxed road grading cannot produce houses on tall exposed foundation columns. Dry terrain between the preferred and absolute limits is accepted with bounded earthworks instead of being discarded, while columns beyond the applicable absolute limit are still rejected. `maxEarthworkVolume` limits the summed cut and fill volume across semantic road and building preparation areas. This keeps moderate correctable terrain usable without allowing the basic suburb profile to bridge ravines with unbounded foundations or bury buildings into cliffs. Connected road segments are constrained to at most one block of elevation difference.
+`preferredMaxCutDepth` and `preferredMaxFillDepth` describe the normal grading range for a settlement profile. `maxCutDepth` and `maxFillDepth` are separate absolute safety limits. `maxBuildingFoundationDepth` applies the stricter visible-support limit used by building and parcel pads, so relaxed road grading cannot produce houses on tall exposed foundation columns. The built-in suburb permits up to six blocks of bounded foundation support while retaining an eight-block general fill limit and the aggregate earthwork budget. Dry terrain between the preferred and absolute limits is accepted with bounded earthworks instead of being discarded, while columns beyond the applicable absolute limit are still rejected. `maxEarthworkVolume` limits the summed cut and fill volume across semantic road and building preparation areas. This keeps moderate correctable terrain usable without allowing the basic suburb profile to bridge ravines with unbounded foundations or bury buildings into cliffs. Connected road segments are constrained to at most one block of elevation difference.
 
 `maxElevationRange` is deprecated and remains accepted in the current profile schema only for compatibility. It will be removed in a future profile schema version. The suburb planner no longer rejects the total settlement height span globally. Long roads are currently divided into deterministic six-block flat grading segments by maximum distance between their nodes, while concrete cut, fill, road-transition, and total earthwork limits decide whether terrain is usable.
 

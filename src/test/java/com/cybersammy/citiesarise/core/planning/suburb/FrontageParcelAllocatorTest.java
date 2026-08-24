@@ -3,6 +3,7 @@ package com.cybersammy.citiesarise.core.planning.suburb;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
@@ -20,6 +21,7 @@ import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopology;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopologyAnalyzer;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -157,6 +159,33 @@ final class FrontageParcelAllocatorTest {
         for (GridBounds corridor : corridors) {
             assertFalse(parcels.getFirst().intersects(expand(corridor, district, RoadTerrainShoulderPolicy.RADIUS)));
         }
+    }
+
+    @Test
+    void rejectsNearUnsatisfiableDenseFrontageWithinBoundedTime() {
+        GridBounds district = bounds(0, 0, 300, 60);
+        TerrainSurvey survey = TerrainSurvey.sample(
+                district,
+                point -> Optional.of(cell(point, point.z() >= 33))
+        );
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                survey,
+                cell -> cell.terrainCategory() != TerrainCategory.BLOCKED
+        );
+
+        List<GridBounds> parcels = assertTimeoutPreemptively(
+                Duration.ofSeconds(2),
+                () -> allocate(
+                        horizontalRoad(0, 30, 299, SETTINGS.roadWidth()),
+                        district,
+                        survey,
+                        13L,
+                        51,
+                        Optional.of(topology)
+                )
+        );
+
+        assertTrue(parcels.isEmpty());
     }
 
     private List<GridBounds> allocate(

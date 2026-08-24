@@ -22,6 +22,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class FrontageParcelAllocator {
+    static final int MAX_SELECTION_SEARCH_NODES = 20_000;
+
     List<GridBounds> allocate(
             RoadGraph roadGraph,
             GridBounds districtBounds,
@@ -67,20 +69,25 @@ final class FrontageParcelAllocator {
             List<ParcelCandidate> candidates,
             int capacity
     ) {
-        return selectCompatibleParcels(candidates, capacity, 0, new ArrayList<>());
+        SelectionSearch search = new SelectionSearch(MAX_SELECTION_SEARCH_NODES);
+        return selectCompatibleParcels(candidates, capacity, 0, new ArrayList<>(), search);
     }
 
     private static Optional<List<GridBounds>> selectCompatibleParcels(
             List<ParcelCandidate> candidates,
             int capacity,
             int startIndex,
-            List<GridBounds> selected
+            List<GridBounds> selected,
+            SelectionSearch search
     ) {
+        if (!search.visit()) {
+            return Optional.empty();
+        }
         if (selected.size() == capacity) {
             return Optional.of(List.copyOf(selected));
         }
         int required = capacity - selected.size();
-        if (compatibleCandidateCount(candidates, startIndex, selected) < required) {
+        if (compatibleCapacityUpperBound(candidates, startIndex, selected) < required) {
             return Optional.empty();
         }
 
@@ -95,28 +102,65 @@ final class FrontageParcelAllocator {
                     candidates,
                     capacity,
                     index + 1,
-                    selected
+                    selected,
+                    search
             );
             selected.removeLast();
             if (result.isPresent()) {
                 return result;
             }
+            if (search.exhausted()) {
+                return Optional.empty();
+            }
         }
         return Optional.empty();
     }
 
-    private static int compatibleCandidateCount(
+    private static int compatibleCapacityUpperBound(
             List<ParcelCandidate> candidates,
             int startIndex,
             List<GridBounds> selected
     ) {
-        int count = 0;
+        Map<FrontageKey, List<GridBounds>> candidatesByFrontage = new HashMap<>();
         for (int index = startIndex; index < candidates.size(); index++) {
-            if (!intersectsAny(candidates.get(index).bounds(), selected)) {
-                count++;
+            ParcelCandidate candidate = candidates.get(index);
+            if (intersectsAny(candidate.bounds(), selected)) {
+                continue;
             }
+            candidatesByFrontage.computeIfAbsent(candidate.frontage(), ignored -> new ArrayList<>())
+                    .add(candidate.bounds());
+        }
+        int capacity = 0;
+        for (Map.Entry<FrontageKey, List<GridBounds>> entry : candidatesByFrontage.entrySet()) {
+            capacity += maximumNonOverlappingIntervals(entry.getValue(), entry.getKey().side());
+        }
+        return capacity;
+    }
+
+    private static int maximumNonOverlappingIntervals(List<GridBounds> candidates, ParcelSide side) {
+        List<GridBounds> ordered = candidates.stream()
+                .sorted(Comparator
+                        .comparingInt((GridBounds bounds) -> axisMaximum(bounds, side))
+                        .thenComparingInt(bounds -> axisMinimum(bounds, side)))
+                .toList();
+        int count = 0;
+        int previousMaximum = Integer.MIN_VALUE;
+        for (GridBounds candidate : ordered) {
+            if (axisMinimum(candidate, side) < previousMaximum) {
+                continue;
+            }
+            count++;
+            previousMaximum = axisMaximum(candidate, side);
         }
         return count;
+    }
+
+    private static int axisMinimum(GridBounds bounds, ParcelSide side) {
+        return side.horizontal() ? bounds.minX() : bounds.minZ();
+    }
+
+    private static int axisMaximum(GridBounds bounds, ParcelSide side) {
+        return side.horizontal() ? bounds.maxXExclusive() : bounds.maxZExclusive();
     }
 
     private static List<ParcelCandidate> collectCandidates(
@@ -213,7 +257,8 @@ final class FrontageParcelAllocator {
                 bounds,
                 maximumCorrection,
                 totalCorrection,
-                stableOrder(seed, segmentId.value(), side.ordinal())
+                stableOrder(seed, segmentId.value(), side.ordinal()),
+                new FrontageKey(segmentId, side)
         );
     }
 
@@ -366,7 +411,8 @@ final class FrontageParcelAllocator {
             GridBounds bounds,
             int maximumCorrection,
             long totalCorrection,
-            long stableOrder
+            long stableOrder,
+            FrontageKey frontage
     ) {
         private static final Comparator<ParcelCandidate> ORDER = Comparator
                 .comparingInt(ParcelCandidate::maximumCorrection)
@@ -377,6 +423,32 @@ final class FrontageParcelAllocator {
 
         private ParcelCandidate {
             Objects.requireNonNull(bounds, "bounds");
+            Objects.requireNonNull(frontage, "frontage");
+        }
+    }
+
+    private record FrontageKey(PlanElementId segmentId, ParcelSide side) {
+        private FrontageKey {
+            Objects.requireNonNull(segmentId, "segmentId");
+            Objects.requireNonNull(side, "side");
+        }
+    }
+
+    private static final class SelectionSearch {
+        private final int nodeLimit;
+        private int visitedNodes;
+
+        private SelectionSearch(int nodeLimit) {
+            this.nodeLimit = nodeLimit;
+        }
+
+        private boolean visit() {
+            visitedNodes++;
+            return visitedNodes <= nodeLimit;
+        }
+
+        private boolean exhausted() {
+            return visitedNodes > nodeLimit;
         }
     }
 }

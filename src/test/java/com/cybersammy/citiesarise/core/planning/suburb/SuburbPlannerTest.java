@@ -141,11 +141,11 @@ final class SuburbPlannerTest {
 
     @Test
     void routesMainRoadAroundLocalWater() {
-        GridPoint waterPoint = new GridPoint(5, 15);
+        GridPoint waterPoint = new GridPoint(5, 20);
         SuburbPlanningSettings settings = SuburbPlanningSettings.defaults();
 
         SuburbPlanningResult result = planner.plan(request(
-                surveyWithSingleWaterCell(40, 30, waterPoint),
+                surveyWithSingleWaterCell(60, 40, waterPoint),
                 100L,
                 settings
         ));

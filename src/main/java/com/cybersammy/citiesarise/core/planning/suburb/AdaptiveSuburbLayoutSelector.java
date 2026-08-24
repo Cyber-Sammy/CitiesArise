@@ -12,6 +12,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class AdaptiveSuburbLayoutSelector {
+    private static final List<Integer> DISTRICT_GROWTH_STEPS = List.of(0, 4, 8, 16);
+
     Optional<SuburbLayoutSelection> select(
             GridBounds surveyBounds,
             DevelopmentCapacity capacity,
@@ -92,14 +94,37 @@ final class AdaptiveSuburbLayoutSelector {
         if (layoutSize.isEmpty()) {
             return Optional.empty();
         }
-        return bestCandidate(
-                surveyBounds,
-                allocatedCapacity,
-                layoutSize.orElseThrow(),
-                topology,
-                layoutFactory,
-                layoutFinalizer
-        );
+        for (GridSize candidateSize : candidateSizes(layoutSize.orElseThrow(), surveyBounds.size())) {
+            Optional<SuburbLayoutSelection> selection = bestCandidate(
+                    surveyBounds,
+                    allocatedCapacity,
+                    candidateSize,
+                    topology,
+                    layoutFactory,
+                    layoutFinalizer
+            );
+            if (selection.isPresent()) {
+                return selection;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static List<GridSize> candidateSizes(GridSize minimum, GridSize maximum) {
+        List<GridSize> sizes = new ArrayList<>();
+        for (int growth : DISTRICT_GROWTH_STEPS) {
+            int width = Math.min(maximum.width(), minimum.width() + growth);
+            int depth = Math.min(maximum.depth(), minimum.depth() + growth);
+            addUnique(sizes, new GridSize(width, depth));
+        }
+        addUnique(sizes, maximum);
+        return List.copyOf(sizes);
+    }
+
+    private static void addUnique(List<GridSize> sizes, GridSize candidate) {
+        if (!sizes.contains(candidate)) {
+            sizes.add(candidate);
+        }
     }
 
     private static Optional<GridSize> minimumLayoutSize(

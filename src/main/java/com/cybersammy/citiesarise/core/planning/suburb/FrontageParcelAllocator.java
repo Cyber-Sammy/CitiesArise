@@ -42,32 +42,87 @@ final class FrontageParcelAllocator {
 
         Map<PlanElementId, RoadNode> nodes = nodesById(roadGraph);
         List<GridBounds> roadCorridors = roadCorridors(roadGraph, nodes);
+        List<GridBounds> roadReservations = roadCorridors.stream()
+                .map(corridor -> expandWithin(
+                        corridor,
+                        districtBounds,
+                        RoadTerrainShoulderPolicy.RADIUS
+                ))
+                .toList();
         List<ParcelCandidate> candidates = collectCandidates(
                 roadGraph.segments(),
                 nodes,
-                roadCorridors,
+                roadReservations,
                 districtBounds,
                 survey,
                 settings,
                 seed,
                 topology
         );
-        List<GridBounds> parcels = new ArrayList<>();
-        for (ParcelCandidate candidate : candidates) {
-            if (!intersectsAny(candidate.bounds(), parcels)) {
-                parcels.add(candidate.bounds());
+        return selectCompatibleParcels(candidates, capacity)
+                .orElseGet(List::of);
+    }
+
+    private static Optional<List<GridBounds>> selectCompatibleParcels(
+            List<ParcelCandidate> candidates,
+            int capacity
+    ) {
+        return selectCompatibleParcels(candidates, capacity, 0, new ArrayList<>());
+    }
+
+    private static Optional<List<GridBounds>> selectCompatibleParcels(
+            List<ParcelCandidate> candidates,
+            int capacity,
+            int startIndex,
+            List<GridBounds> selected
+    ) {
+        if (selected.size() == capacity) {
+            return Optional.of(List.copyOf(selected));
+        }
+        int required = capacity - selected.size();
+        if (compatibleCandidateCount(candidates, startIndex, selected) < required) {
+            return Optional.empty();
+        }
+
+        int finalStart = candidates.size() - required;
+        for (int index = startIndex; index <= finalStart; index++) {
+            GridBounds candidate = candidates.get(index).bounds();
+            if (intersectsAny(candidate, selected)) {
+                continue;
             }
-            if (parcels.size() == capacity) {
-                break;
+            selected.add(candidate);
+            Optional<List<GridBounds>> result = selectCompatibleParcels(
+                    candidates,
+                    capacity,
+                    index + 1,
+                    selected
+            );
+            selected.removeLast();
+            if (result.isPresent()) {
+                return result;
             }
         }
-        return List.copyOf(parcels);
+        return Optional.empty();
+    }
+
+    private static int compatibleCandidateCount(
+            List<ParcelCandidate> candidates,
+            int startIndex,
+            List<GridBounds> selected
+    ) {
+        int count = 0;
+        for (int index = startIndex; index < candidates.size(); index++) {
+            if (!intersectsAny(candidates.get(index).bounds(), selected)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static List<ParcelCandidate> collectCandidates(
             List<RoadSegment> segments,
             Map<PlanElementId, RoadNode> nodes,
-            List<GridBounds> roadCorridors,
+            List<GridBounds> roadReservations,
             GridBounds districtBounds,
             TerrainSurvey survey,
             SuburbPlanningSettings settings,
@@ -81,7 +136,7 @@ final class FrontageParcelAllocator {
             GridBounds corridor = AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
             for (ParcelSide side : ParcelSide.values()) {
                 for (GridBounds bounds : candidates(corridor, side, settings)) {
-                    if (!isAvailable(bounds, districtBounds, roadCorridors)) {
+                    if (!isAvailable(bounds, districtBounds, roadReservations)) {
                         continue;
                     }
                     if (!isDevelopable(bounds, settings, topology)) {
@@ -127,12 +182,12 @@ final class FrontageParcelAllocator {
     private static boolean isAvailable(
             GridBounds candidate,
             GridBounds districtBounds,
-            List<GridBounds> roadCorridors
+            List<GridBounds> roadReservations
     ) {
         if (!districtBounds.contains(candidate)) {
             return false;
         }
-        return !intersectsAny(candidate, roadCorridors);
+        return !intersectsAny(candidate, roadReservations);
     }
 
     private static ParcelCandidate candidate(

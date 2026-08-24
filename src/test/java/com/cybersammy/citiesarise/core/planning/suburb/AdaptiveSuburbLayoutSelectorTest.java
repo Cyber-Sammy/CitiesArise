@@ -126,6 +126,37 @@ final class AdaptiveSuburbLayoutSelectorTest {
         ).isEmpty());
     }
 
+    @Test
+    void growsDistrictBeforeReducingParcelCapacity() {
+        GridBounds surveyBounds = bounds(0, 0, 30, 20);
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                TerrainSurvey.sample(surveyBounds, point -> Optional.of(cell(point, false))),
+                cell -> true
+        );
+        SuburbLayout preferredLayout = layout(surveyBounds, 4);
+
+        SuburbLayoutSelection selected = new AdaptiveSuburbLayoutSelector().select(
+                surveyBounds,
+                new DevelopmentCapacity(2, 4, 6),
+                new GridSize(4, 10),
+                topology,
+                preferredLayout,
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout,
+                layout -> {
+                    if (layout == preferredLayout) {
+                        return Optional.empty();
+                    }
+                    if (layout.bounds().size().width() < 20) {
+                        return Optional.empty();
+                    }
+                    return Optional.of(layout);
+                }
+        ).orElseThrow();
+
+        assertEquals(4, selected.allocatedCapacity());
+        assertEquals(20, selected.layout().bounds().size().width());
+    }
+
     private static TerrainTopology topologyWithBarrier(GridBounds bounds, int barrierX) {
         TerrainSurvey survey = TerrainSurvey.sample(
                 bounds,

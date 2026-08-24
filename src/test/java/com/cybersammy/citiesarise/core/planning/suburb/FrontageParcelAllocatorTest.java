@@ -100,6 +100,65 @@ final class FrontageParcelAllocatorTest {
         assertTrue(parcels.stream().allMatch(parcel -> parcel.minZ() > 15));
     }
 
+    @Test
+    void backtracksWhenCheapestParcelBlocksACompleteSelection() {
+        GridBounds district = bounds(0, 0, 36, 60);
+        TerrainSurvey survey = TerrainSurvey.sample(
+                district,
+                point -> Optional.of(new TerrainCell(
+                        point,
+                        point.x() < 9 || point.x() >= 27 ? 65 : 64,
+                        false,
+                        0.0,
+                        BiomeCategory.PLAINS,
+                        point.z() >= 33 ? TerrainCategory.BLOCKED : TerrainCategory.BUILDABLE
+                ))
+        );
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                survey,
+                cell -> cell.terrainCategory() != TerrainCategory.BLOCKED
+        );
+
+        List<GridBounds> parcels = allocate(
+                horizontalRoad(0, 30, 35, SETTINGS.roadWidth()),
+                district,
+                survey,
+                5L,
+                2,
+                Optional.of(topology)
+        );
+
+        assertEquals(2, parcels.size());
+        assertFalse(parcels.get(0).intersects(parcels.get(1)));
+    }
+
+    @Test
+    void keepsParcelsOutsideEveryRoadTerrainShoulder() {
+        GridBounds district = bounds(0, 0, 40, 60);
+        TerrainSurvey survey = TerrainSurvey.sample(
+                district,
+                point -> Optional.of(new TerrainCell(
+                        point,
+                        point.z() < 28 ? 64 : 66,
+                        false,
+                        0.0,
+                        BiomeCategory.PLAINS,
+                        TerrainCategory.BUILDABLE
+                ))
+        );
+        RoadGraph roads = parallelHorizontalRoads(2, 30, 39, SETTINGS.roadWidth());
+
+        List<GridBounds> parcels = allocate(roads, district, survey, 8L, 1, Optional.empty());
+        List<GridBounds> corridors = roads.segments().stream()
+                .map(segment -> corridor(roads, segment))
+                .toList();
+
+        assertEquals(1, parcels.size());
+        for (GridBounds corridor : corridors) {
+            assertFalse(parcels.getFirst().intersects(expand(corridor, district, RoadTerrainShoulderPolicy.RADIUS)));
+        }
+    }
+
     private List<GridBounds> allocate(
             RoadGraph roadGraph,
             GridBounds district,
@@ -153,6 +212,53 @@ final class FrontageParcelAllocatorTest {
                         PlanProperties.empty()
                 ))
         );
+    }
+
+    private static RoadGraph parallelHorizontalRoads(int firstZ, int secondZ, int maxX, int width) {
+        PlanElementId firstStart = new PlanElementId("roads/first-start");
+        PlanElementId firstEnd = new PlanElementId("roads/first-end");
+        PlanElementId secondStart = new PlanElementId("roads/second-start");
+        PlanElementId secondEnd = new PlanElementId("roads/second-end");
+        return new RoadGraph(
+                List.of(
+                        node(firstStart, 0, firstZ),
+                        node(firstEnd, maxX, firstZ),
+                        node(secondStart, 0, secondZ),
+                        node(secondEnd, maxX, secondZ)
+                ),
+                List.of(
+                        segment("roads/first", firstStart, firstEnd, width),
+                        segment("roads/second", secondStart, secondEnd, width)
+                )
+        );
+    }
+
+    private static RoadNode node(PlanElementId id, int x, int z) {
+        return new RoadNode(id, new GridPoint(x, z), Set.of(), PlanProperties.empty());
+    }
+
+    private static RoadSegment segment(String id, PlanElementId start, PlanElementId end, int width) {
+        return new RoadSegment(new PlanElementId(id), start, end, width, Set.of(), PlanProperties.empty());
+    }
+
+    private static GridBounds corridor(RoadGraph graph, RoadSegment segment) {
+        RoadNode start = graph.nodes().stream()
+                .filter(node -> node.id().equals(segment.startNodeId()))
+                .findFirst()
+                .orElseThrow();
+        RoadNode end = graph.nodes().stream()
+                .filter(node -> node.id().equals(segment.endNodeId()))
+                .findFirst()
+                .orElseThrow();
+        return AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
+    }
+
+    private static GridBounds expand(GridBounds bounds, GridBounds limit, int radius) {
+        int minX = Math.max(limit.minX(), bounds.minX() - radius);
+        int minZ = Math.max(limit.minZ(), bounds.minZ() - radius);
+        int maxX = Math.min(limit.maxXExclusive(), bounds.maxXExclusive() + radius);
+        int maxZ = Math.min(limit.maxZExclusive(), bounds.maxZExclusive() + radius);
+        return bounds(minX, minZ, maxX - minX, maxZ - minZ);
     }
 
     private static TerrainSurvey flatSurvey(GridBounds bounds) {

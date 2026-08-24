@@ -15,6 +15,7 @@ import com.cybersammy.citiesarise.core.model.BuildingSlot;
 import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanProperties;
+import com.cybersammy.citiesarise.core.model.PlanPropertyKeys;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
@@ -59,6 +60,22 @@ final class RegionalElevationPlannerTest {
         assertTrue(building.bounds().contains(access.anchor()));
         assertTrue(BuildingAccessResolver.isPerimeterPoint(building.bounds(), access.anchor()));
         assertEquals(building.targetElevation(), access.targetElevation());
+    }
+
+    @Test
+    void assignsOneAuthoritativeElevationToParcelAndBuilding() {
+        RegionalElevationPlanningResult result = RegionalElevationPlanner.plan(request(), settlementPlan());
+        ElevationZone parcel = result.elevationPlan().requiredZone(id("parcel"));
+        ElevationZone building = result.elevationPlan().requiredZone(id("building"));
+
+        assertEquals(ElevationZoneType.PARCEL_PAD, parcel.type());
+        assertEquals(building.targetElevation(), parcel.targetElevation());
+        assertEquals(
+                Integer.toString(parcel.targetElevation()),
+                result.settlementPlan().parcels().getFirst().properties()
+                        .find(PlanPropertyKeys.PLATFORM_Y)
+                        .orElseThrow()
+        );
     }
 
     @Test

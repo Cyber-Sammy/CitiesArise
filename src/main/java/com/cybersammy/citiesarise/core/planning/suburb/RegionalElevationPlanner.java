@@ -10,6 +10,7 @@ import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.model.BuildingSlot;
+import com.cybersammy.citiesarise.core.model.Parcel;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
@@ -30,12 +31,12 @@ final class RegionalElevationPlanner {
             SettlementPlan settlementPlan
     ) {
         RoadGraph elevatedRoadGraph = RoadElevationPlanner.apply(request, settlementPlan.roadGraph());
-        List<BuildingSlot> elevatedBuildingSlots = elevatedBuildingSlots(request, settlementPlan.buildingSlots());
+        ParcelElevationResult parcelElevations = elevateParcelsAndBuildings(request, settlementPlan);
         SettlementPlan elevatedPlan = new SettlementPlan(
                 settlementPlan.id(),
                 elevatedRoadGraph,
-                settlementPlan.parcels(),
-                elevatedBuildingSlots,
+                parcelElevations.parcels(),
+                parcelElevations.buildingSlots(),
                 settlementPlan.tags(),
                 settlementPlan.properties()
         );
@@ -44,21 +45,70 @@ final class RegionalElevationPlanner {
         return new RegionalElevationPlanningResult(elevatedPlan, elevationPlan);
     }
 
-    private static List<BuildingSlot> elevatedBuildingSlots(
+    private static ParcelElevationResult elevateParcelsAndBuildings(
             SuburbPlanningRequest request,
-            List<BuildingSlot> buildingSlots
+            SettlementPlan plan
     ) {
-        List<BuildingSlot> elevatedSlots = new ArrayList<>();
-        for (BuildingSlot slot : buildingSlots) {
-            elevatedSlots.add(new BuildingSlot(
+        Map<PlanElementId, Integer> elevationByParcel = parcelElevations(request, plan);
+        List<Parcel> elevatedParcels = new ArrayList<>();
+        for (Parcel parcel : plan.parcels()) {
+            elevatedParcels.add(new Parcel(
+                    parcel.id(),
+                    parcel.bounds(),
+                    parcel.tags(),
+                    TerrainPlatform.withElevation(
+                            parcel.properties(),
+                            requiredParcelElevation(elevationByParcel, parcel.id())
+                    )
+            ));
+        }
+
+        List<BuildingSlot> elevatedBuildings = new ArrayList<>();
+        for (BuildingSlot slot : plan.buildingSlots()) {
+            elevatedBuildings.add(new BuildingSlot(
                     slot.id(),
                     slot.parcelId(),
                     slot.bounds(),
                     slot.tags(),
-                    TerrainPlatform.withHighestElevation(slot.properties(), request, slot.bounds())
+                    TerrainPlatform.withElevation(
+                            slot.properties(),
+                            requiredParcelElevation(elevationByParcel, slot.parcelId())
+                    )
             ));
         }
-        return List.copyOf(elevatedSlots);
+        return new ParcelElevationResult(
+                List.copyOf(elevatedParcels),
+                List.copyOf(elevatedBuildings)
+        );
+    }
+
+    private static Map<PlanElementId, Integer> parcelElevations(
+            SuburbPlanningRequest request,
+            SettlementPlan plan
+    ) {
+        Map<PlanElementId, Integer> elevations = new HashMap<>();
+        for (BuildingSlot slot : plan.buildingSlots()) {
+            int elevation = TerrainPlatform.highestElevation(request, slot.bounds());
+            elevations.merge(slot.parcelId(), elevation, Math::max);
+        }
+        for (Parcel parcel : plan.parcels()) {
+            elevations.computeIfAbsent(
+                    parcel.id(),
+                    ignored -> TerrainPlatform.highestElevation(request, parcel.bounds())
+            );
+        }
+        return Map.copyOf(elevations);
+    }
+
+    private static int requiredParcelElevation(
+            Map<PlanElementId, Integer> elevations,
+            PlanElementId parcelId
+    ) {
+        Integer elevation = elevations.get(parcelId);
+        if (elevation == null) {
+            throw new IllegalStateException("parcel elevation is missing: " + parcelId.value());
+        }
+        return elevation;
     }
 
     private static List<ElevationZone> elevationZones(SettlementPlan plan) {
@@ -72,6 +122,14 @@ final class RegionalElevationPlanner {
                     ElevationZoneType.ROAD_SEGMENT,
                     AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width()),
                     TerrainPlatform.requiredElevation(segment.properties())
+            ));
+        }
+        for (Parcel parcel : sortedParcels(plan.parcels())) {
+            zones.add(new ElevationZone(
+                    parcel.id(),
+                    ElevationZoneType.PARCEL_PAD,
+                    parcel.bounds(),
+                    TerrainPlatform.requiredElevation(parcel.properties())
             ));
         }
         for (BuildingSlot slot : sortedBuildingSlots(plan.buildingSlots())) {
@@ -186,5 +244,17 @@ final class RegionalElevationPlanner {
         return slots.stream()
                 .sorted(Comparator.comparing(slot -> slot.id().value()))
                 .toList();
+    }
+
+    private static List<Parcel> sortedParcels(List<Parcel> parcels) {
+        return parcels.stream()
+                .sorted(Comparator.comparing(parcel -> parcel.id().value()))
+                .toList();
+    }
+
+    private record ParcelElevationResult(
+            List<Parcel> parcels,
+            List<BuildingSlot> buildingSlots
+    ) {
     }
 }

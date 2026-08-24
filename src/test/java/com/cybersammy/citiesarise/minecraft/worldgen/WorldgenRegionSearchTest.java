@@ -25,6 +25,7 @@ final class WorldgenRegionSearchTest {
                         0,
                         4,
                         10,
+                        10,
                         region -> List.of(nearest, farther).contains(region),
                         region -> Optional.of(region.equals(nearest) ? 10 : 1),
                         Integer::compare
@@ -44,6 +45,7 @@ final class WorldgenRegionSearchTest {
                         0,
                         0,
                         4,
+                        10,
                         10,
                         region -> List.of(nearest, farther).contains(region),
                         region -> Optional.of(1),
@@ -65,6 +67,7 @@ final class WorldgenRegionSearchTest {
                         0,
                         4,
                         10,
+                        10,
                         region -> region.equals(rejected) || region.equals(accepted),
                         region -> region.equals(accepted) ? Optional.of(1) : Optional.empty(),
                         Integer::compare
@@ -82,6 +85,7 @@ final class WorldgenRegionSearchTest {
                 0,
                 4,
                 1,
+                1,
                 region -> true,
                 region -> Optional.empty(),
                 Integer::compare
@@ -97,6 +101,7 @@ final class WorldgenRegionSearchTest {
         var future = search.findBestAsync(
                 0,
                 0,
+                1,
                 1,
                 1,
                 region -> true,
@@ -122,6 +127,7 @@ final class WorldgenRegionSearchTest {
                             0,
                             1,
                             1,
+                            1,
                             region -> true,
                             region -> Optional.of(1),
                             Integer::compare
@@ -137,14 +143,58 @@ final class WorldgenRegionSearchTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> search.findBest(
-                        0, 0, 0, 1, region -> true, region -> Optional.of(1), Integer::compare
+                        0, 0, 0, 1, 1, region -> true, region -> Optional.of(1), Integer::compare
                 )
         );
         assertThrows(
                 IllegalArgumentException.class,
                 () -> search.findBest(
-                        0, 0, 1, 0, region -> true, region -> Optional.of(1), Integer::compare
+                        0, 0, 1, 0, 1, region -> true, region -> Optional.of(1), Integer::compare
                 )
         );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> search.findBest(
+                        0, 0, 1, 1, -1, region -> true, region -> Optional.of(1), Integer::compare
+                )
+        );
+    }
+
+    @Test
+    void stopsAfterDeterministicImprovementWindow() {
+        WorldgenRegionSearch.Outcome<Integer> outcome = search.findBest(
+                0,
+                0,
+                4,
+                20,
+                2,
+                region -> true,
+                region -> Optional.of(1),
+                Integer::compare
+        );
+
+        assertTrue(outcome.result().isPresent());
+        assertEquals(3, outcome.attemptedCandidates());
+    }
+
+    @Test
+    void improvementWindowCanReplaceFirstAcceptedCandidate() {
+        SettlementRegion first = new SettlementRegion(0, 0);
+        SettlementRegion better = new SettlementRegion(1, 0);
+
+        WorldgenRegionSearch.Result<Integer> result = search.findBest(
+                        64,
+                        64,
+                        4,
+                        20,
+                        4,
+                        region -> region.equals(first) || region.equals(better),
+                        region -> Optional.of(region.equals(first) ? 10 : 1),
+                        Integer::compare
+                ).result()
+                .orElseThrow();
+
+        assertEquals(better, result.region());
+        assertEquals(2, result.attemptedCandidates());
     }
 }

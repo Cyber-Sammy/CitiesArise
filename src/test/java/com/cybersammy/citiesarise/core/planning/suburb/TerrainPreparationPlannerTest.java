@@ -195,6 +195,124 @@ final class TerrainPreparationPlannerTest {
         assertTrue(assessment.plan().orElseThrow().fillVolume() >= 2L);
     }
 
+    @Test
+    void emitsOptionalDownhillParcelShoulder() {
+        GridPoint lowShoulderPoint = new GridPoint(3, 4);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithHeightAt(lowShoulderPoint, 62),
+                42L,
+                settings(3, 3)
+        );
+        ElevationZone parcel = new ElevationZone(
+                id("parcel"),
+                ElevationZoneType.PARCEL_PAD,
+                new GridBounds(new GridPoint(4, 4), new GridSize(3, 3)),
+                64
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                new RegionalElevationPlan(List.of(parcel), List.of())
+        );
+
+        assertTrue(assessment.plan().isPresent());
+        assertTrue(assessment.plan().orElseThrow().columns().stream().anyMatch(column ->
+                column.point().equals(lowShoulderPoint)
+                        && column.type() == TerrainPreparationColumnType.PARCEL_SHOULDER
+                        && column.targetElevation() == 63
+                        && column.fillDepth() == 2));
+    }
+
+    @Test
+    void skipsUnsupportedOptionalParcelShoulderWithoutRejectingParcel() {
+        GridPoint deepShoulderPoint = new GridPoint(3, 4);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithHeightAt(deepShoulderPoint, 58),
+                42L,
+                settings(3, 3)
+        );
+        ElevationZone parcel = new ElevationZone(
+                id("parcel"),
+                ElevationZoneType.PARCEL_PAD,
+                new GridBounds(new GridPoint(4, 4), new GridSize(3, 3)),
+                64
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                new RegionalElevationPlan(List.of(parcel), List.of())
+        );
+
+        assertTrue(assessment.plan().isPresent());
+        assertFalse(assessment.plan().orElseThrow().columns().stream().anyMatch(column ->
+                column.point().equals(deepShoulderPoint)
+                        && column.type() == TerrainPreparationColumnType.PARCEL_SHOULDER));
+    }
+
+    @Test
+    void acceptsParcelPadWithModerateFoundationFill() {
+        GridPoint lowPoint = new GridPoint(4, 4);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithHeightAt(lowPoint, 59),
+                42L,
+                settings(3, 8)
+        );
+        ElevationZone parcel = new ElevationZone(
+                id("parcel"),
+                ElevationZoneType.PARCEL_PAD,
+                new GridBounds(new GridPoint(4, 4), new GridSize(3, 3)),
+                64
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                new RegionalElevationPlan(List.of(parcel), List.of())
+        );
+
+        assertTrue(assessment.plan().isPresent());
+        assertEquals(6, assessment.plan()
+                .orElseThrow()
+                .columns()
+                .stream()
+                .filter(column -> column.point().equals(lowPoint))
+                .findFirst()
+                .orElseThrow()
+                .fillDepth());
+    }
+
+    @Test
+    void rejectsParcelPadOverDeepRavine() {
+        GridPoint ravinePoint = new GridPoint(4, 4);
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithHeightAt(ravinePoint, 57),
+                42L,
+                settings(3, 8)
+        );
+        ElevationZone parcel = new ElevationZone(
+                id("parcel"),
+                ElevationZoneType.PARCEL_PAD,
+                new GridBounds(new GridPoint(4, 4), new GridSize(3, 3)),
+                64
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                new RegionalElevationPlan(List.of(parcel), List.of())
+        );
+
+        assertFalse(assessment.plan().isPresent());
+        assertEquals(ravinePoint, assessment.diagnostic().orElseThrow().cell().point());
+        assertEquals(6L, assessment.diagnostic()
+                .orElseThrow()
+                .optionalPreparationLimit()
+                .orElseThrow()
+                .maximumLimit());
+    }
+
     private static SettlementPlan crossingRoadPlan() {
         RoadNode west = node("west", 2, 5);
         RoadNode east = node("east", 8, 5);

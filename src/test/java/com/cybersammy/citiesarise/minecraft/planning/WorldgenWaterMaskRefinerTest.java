@@ -33,14 +33,18 @@ final class WorldgenWaterMaskRefinerTest {
     private static final GridBounds BOUNDS = new GridBounds(new GridPoint(0, 0), new GridSize(40, 30));
 
     @Test
-    void relocatesAfterExactWaterAppearsInsideBuildingShoulder() {
+    void relocatesAfterExactWaterAppearsInsideParcelPad() {
         SuburbPlanner planner = SuburbPlanner.defaults();
         SuburbPlanningResult template = planner.plan(request(flatSurvey()));
         TerrainSurvey terrain = buildingShoulderSurvey(template.plan().orElseThrow());
         SuburbPlanningRequest request = request(terrain);
         SuburbPlanningResult initialResult = planner.plan(request);
+        Set<PlanElementId> parcelIds = initialResult.plan().orElseThrow().parcels().stream()
+                .map(parcel -> parcel.id())
+                .collect(java.util.stream.Collectors.toSet());
         GridPoint shoulderPoint = initialResult.terrainPreparationPlan().orElseThrow().columns().stream()
-                .filter(column -> column.type() == TerrainPreparationColumnType.BUILDING_SHOULDER)
+                .filter(column -> column.type() == TerrainPreparationColumnType.PLATFORM)
+                .filter(column -> parcelIds.contains(column.sourceElementId()))
                 .findFirst()
                 .orElseThrow()
                 .point();
@@ -98,8 +102,12 @@ final class WorldgenWaterMaskRefinerTest {
         TerrainSurvey terrain = buildingShoulderSurvey(bounds, template.plan().orElseThrow());
         SuburbPlanningRequest request = request(terrain);
         SuburbPlanningResult initialResult = planner.plan(request);
+        Set<PlanElementId> parcelIds = initialResult.plan().orElseThrow().parcels().stream()
+                .map(parcel -> parcel.id())
+                .collect(java.util.stream.Collectors.toSet());
         GridPoint firstWaterPoint = initialResult.terrainPreparationPlan().orElseThrow().columns().stream()
-                .filter(column -> column.type() == TerrainPreparationColumnType.BUILDING_SHOULDER)
+                .filter(column -> column.type() == TerrainPreparationColumnType.PLATFORM)
+                .filter(column -> parcelIds.contains(column.sourceElementId()))
                 .findFirst()
                 .orElseThrow()
                 .point();

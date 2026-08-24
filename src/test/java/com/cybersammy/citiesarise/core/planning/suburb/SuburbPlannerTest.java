@@ -8,6 +8,7 @@ import com.cybersammy.citiesarise.config.DebugSuburbPlanningConfig;
 import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteQuality;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationStatus;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
+import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -136,6 +137,35 @@ final class SuburbPlannerTest {
         SuburbPlanningResult result = planner.plan(request(survey, 100L, SuburbPlanningSettings.defaults()));
 
         assertTrue(result.successful());
+    }
+
+    @Test
+    void routesMainRoadAroundLocalWater() {
+        GridPoint waterPoint = new GridPoint(5, 15);
+        SuburbPlanningSettings settings = SuburbPlanningSettings.defaults();
+
+        SuburbPlanningResult result = planner.plan(request(
+                surveyWithSingleWaterCell(40, 30, waterPoint),
+                100L,
+                settings
+        ));
+
+        assertTrue(result.successful(), result.toString());
+        RoadGraph roadGraph = result.plan().orElseThrow().roadGraph();
+        Map<PlanElementId, RoadNode> nodes = nodesById(roadGraph);
+        List<RoadSegment> mainRoadSegments = roadGraph.segments().stream()
+                .filter(segment -> segment.tags().contains(new PlanTag("main_road")))
+                .toList();
+        assertTrue(mainRoadSegments.stream().noneMatch(segment -> roadCorridor(
+                segment,
+                nodes,
+                settings.roadWidth()
+        ).contains(waterPoint)));
+        assertTrue(mainRoadSegments.stream().anyMatch(segment -> {
+            RoadNode start = nodes.get(segment.startNodeId());
+            RoadNode end = nodes.get(segment.endNodeId());
+            return start.point().x() == end.point().x();
+        }));
     }
 
     @Test
@@ -314,6 +344,23 @@ final class SuburbPlannerTest {
     }
 
     @Test
+    void spacesRoadElevationTransitionsAcrossLongerFlatRuns() {
+        SettlementPlan plan = planner.plan(request(flatSurvey(40, 30), 100L, SuburbPlanningSettings.defaults()))
+                .plan()
+                .orElseThrow();
+        Map<PlanElementId, RoadNode> nodes = nodesById(plan.roadGraph());
+        List<Integer> segmentLengths = plan.roadGraph().segments().stream()
+                .map(segment -> manhattanDistance(
+                        nodes.get(segment.startNodeId()).point(),
+                        nodes.get(segment.endNodeId()).point()
+                ))
+                .toList();
+
+        assertTrue(segmentLengths.stream().allMatch(length -> length <= 6));
+        assertTrue(segmentLengths.stream().anyMatch(length -> length > 3));
+    }
+
+    @Test
     void placesBuildingPlatformAtHighestTerrainPointInFootprint() {
         SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 3);
         BuildingSlot flatSlot = planner.plan(request(flatSurvey(40, 30), 100L, settings))
@@ -331,14 +378,30 @@ final class SuburbPlannerTest {
                 .filter(slot -> slot.id().equals(flatSlot.id()))
                 .findFirst()
                 .orElseThrow();
+        PlanElementId parcelId = elevatedSlot.parcelId();
+        Parcel elevatedParcel = result.plan().orElseThrow().parcels().stream()
+                .filter(parcel -> parcel.id().equals(parcelId))
+                .findFirst()
+                .orElseThrow();
         assertEquals(65, platformY(elevatedSlot));
-        var buildingColumns = result.terrainPreparationPlan().orElseThrow().columns().stream()
-                .filter(column -> column.sourceElementId().equals(elevatedSlot.id()))
+        assertEquals(65, platformY(elevatedParcel));
+        var parcelColumns = result.terrainPreparationPlan().orElseThrow().columns().stream()
+                .filter(column -> column.sourceElementId().equals(parcelId))
                 .filter(column -> column.type() == TerrainPreparationColumnType.PLATFORM)
                 .toList();
-        assertTrue(buildingColumns.stream().allMatch(column -> column.targetElevation() == 65));
-        assertTrue(buildingColumns.stream().allMatch(column -> column.cutDepth() == 0));
-        assertTrue(buildingColumns.stream().anyMatch(column -> column.fillDepth() == 2));
+        long preparedParcelPoints = result.terrainPreparationPlan().orElseThrow().columns().stream()
+                .map(column -> column.point())
+                .filter(elevatedParcel.bounds()::contains)
+                .distinct()
+                .count();
+        assertFalse(parcelColumns.isEmpty());
+        assertEquals(
+                elevatedParcel.bounds().size().width() * elevatedParcel.bounds().size().depth(),
+                preparedParcelPoints
+        );
+        assertTrue(parcelColumns.stream().allMatch(column -> column.targetElevation() == 65));
+        assertTrue(parcelColumns.stream().allMatch(column -> column.cutDepth() == 0));
+        assertTrue(parcelColumns.stream().anyMatch(column -> column.fillDepth() == 2));
     }
 
     @Test
@@ -389,7 +452,7 @@ final class SuburbPlannerTest {
 
         assertFalse(result.successful());
         assertEquals(4L, diagnostic.maximumLimit());
-        assertEquals(flatSlot.id(), diagnostic.sourceElementId());
+        assertEquals(flatSlot.parcelId(), diagnostic.sourceElementId());
     }
 
     @Test
@@ -748,6 +811,18 @@ final class SuburbPlannerTest {
         return new GridBounds(new GridPoint(roadX, minZ), new GridSize(roadWidth, maxZ - minZ));
     }
 
+    private static GridBounds roadCorridor(
+            RoadSegment segment,
+            Map<PlanElementId, RoadNode> nodesById,
+            int roadWidth
+    ) {
+        return AxisAlignedGridCorridor.bounds(
+                nodesById.get(segment.startNodeId()).point(),
+                nodesById.get(segment.endNodeId()).point(),
+                roadWidth
+        );
+    }
+
     private static boolean intersectsAny(GridBounds bounds, List<GridBounds> otherBounds) {
         for (GridBounds otherBound : otherBounds) {
             if (bounds.intersects(otherBound)) {
@@ -907,6 +982,14 @@ final class SuburbPlannerTest {
 
     private static int platformY(BuildingSlot slot) {
         return Integer.parseInt(slot.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());
+    }
+
+    private static int manhattanDistance(GridPoint first, GridPoint second) {
+        return Math.abs(first.x() - second.x()) + Math.abs(first.z() - second.z());
+    }
+
+    private static int platformY(Parcel parcel) {
+        return Integer.parseInt(parcel.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());
     }
 
     private static TerrainSuitabilityRule lowScoreRule() {

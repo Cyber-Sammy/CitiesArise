@@ -18,6 +18,7 @@ final class WorldgenRegionSearch {
             int originZ,
             int searchRadius,
             int maxCandidateAttempts,
+            int improvementCandidateAttempts,
             Predicate<SettlementRegion> candidatePredicate,
             Function<SettlementRegion, Optional<T>> evaluator,
             Comparator<T> comparator,
@@ -30,6 +31,7 @@ final class WorldgenRegionSearch {
                         originZ,
                         searchRadius,
                         maxCandidateAttempts,
+                        improvementCandidateAttempts,
                         candidatePredicate,
                         evaluator,
                         comparator
@@ -43,12 +45,14 @@ final class WorldgenRegionSearch {
             int originZ,
             int searchRadius,
             int maxCandidateAttempts,
+            int improvementCandidateAttempts,
             Predicate<SettlementRegion> candidatePredicate,
             Function<SettlementRegion, Optional<T>> evaluator,
             Comparator<T> comparator
     ) {
         requirePositive(searchRadius, "searchRadius");
         requirePositive(maxCandidateAttempts, "maxCandidateAttempts");
+        requireNonNegative(improvementCandidateAttempts, "improvementCandidateAttempts");
         Objects.requireNonNull(candidatePredicate, "candidatePredicate");
         Objects.requireNonNull(evaluator, "evaluator");
         Objects.requireNonNull(comparator, "comparator");
@@ -56,6 +60,7 @@ final class WorldgenRegionSearch {
         List<SettlementRegion> regions = orderedRegions(originX, originZ, searchRadius);
         Optional<Candidate<T>> bestCandidate = Optional.empty();
         int attempts = 0;
+        int firstAcceptedAttempt = -1;
         for (SettlementRegion region : regions) {
             rejectInterruptedSearch();
             if (!candidatePredicate.test(region)) {
@@ -66,8 +71,16 @@ final class WorldgenRegionSearch {
             if (evaluation.isPresent()) {
                 Candidate<T> candidate = new Candidate<>(region, evaluation.orElseThrow());
                 bestCandidate = selectBetter(bestCandidate, candidate, comparator);
+                if (firstAcceptedAttempt < 0) {
+                    firstAcceptedAttempt = attempts;
+                }
             }
-            if (attempts >= maxCandidateAttempts) {
+            if (searchComplete(
+                    attempts,
+                    maxCandidateAttempts,
+                    firstAcceptedAttempt,
+                    improvementCandidateAttempts
+            )) {
                 break;
             }
         }
@@ -127,6 +140,27 @@ final class WorldgenRegionSearch {
         if (value <= 0) {
             throw new IllegalArgumentException(name + " must be positive");
         }
+    }
+
+    private static void requireNonNegative(int value, String name) {
+        if (value < 0) {
+            throw new IllegalArgumentException(name + " must not be negative");
+        }
+    }
+
+    private static boolean searchComplete(
+            int attempts,
+            int maxCandidateAttempts,
+            int firstAcceptedAttempt,
+            int improvementCandidateAttempts
+    ) {
+        if (attempts >= maxCandidateAttempts) {
+            return true;
+        }
+        if (firstAcceptedAttempt < 0) {
+            return false;
+        }
+        return attempts - firstAcceptedAttempt >= improvementCandidateAttempts;
     }
 
     private static void rejectInterruptedSearch() {

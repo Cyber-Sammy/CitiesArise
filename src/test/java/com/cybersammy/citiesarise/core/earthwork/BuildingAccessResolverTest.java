@@ -21,7 +21,7 @@ final class BuildingAccessResolverTest {
         );
 
         assertEquals(road, access.roadZone());
-        assertEquals(new GridPoint(2, 2), access.anchor());
+        assertEquals(new GridPoint(3, 2), access.anchor());
     }
 
     @Test
@@ -34,11 +34,11 @@ final class BuildingAccessResolverTest {
                 building
         );
 
-        assertEquals(new GridPoint(4, 2), access.anchor());
+        assertEquals(new GridPoint(4, 3), access.anchor());
     }
 
     @Test
-    void breaksEqualDistanceTiesByRoadIdBeforeAnchorCoordinates() {
+    void breaksEqualDistanceAndCenterTiesByRoadId() {
         ElevationZone north = road("z_north", 0, 0, 8, 1);
         ElevationZone south = road("a_south", 0, 6, 8, 1);
         ElevationZone building = building(2, 2, 3, 3);
@@ -49,7 +49,20 @@ final class BuildingAccessResolverTest {
         );
 
         assertEquals(south, access.roadZone());
-        assertEquals(new GridPoint(2, 4), access.anchor());
+        assertEquals(new GridPoint(3, 4), access.anchor());
+    }
+
+    @Test
+    void keepsCornerAccessWhenItIsUniquelyNearest() {
+        ElevationZone road = road("road", 0, 0, 1, 1);
+        ElevationZone building = building(2, 2, 3, 3);
+
+        BuildingAccessResolver.BuildingAccess access = BuildingAccessResolver.resolve(
+                List.of(road, building),
+                building
+        );
+
+        assertEquals(new GridPoint(2, 2), access.anchor());
     }
 
     private static ElevationZone road(String name, int x, int z, int width, int depth) {

@@ -10,6 +10,7 @@ public final class CitiesAriseWorldgenConfig {
     private static final ModConfigSpec.IntValue CANDIDATE_REGION_MODULO;
     private static final ModConfigSpec.IntValue LOCATE_SEARCH_RADIUS_REGIONS;
     private static final ModConfigSpec.IntValue LOCATE_MAX_CANDIDATE_ATTEMPTS;
+    private static final ModConfigSpec.IntValue LOCATE_IMPROVEMENT_CANDIDATE_ATTEMPTS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -33,6 +34,9 @@ public final class CitiesAriseWorldgenConfig {
         LOCATE_MAX_CANDIDATE_ATTEMPTS = builder
                 .comment("Maximum deterministic candidates fully planned by /citiesarise locate.")
                 .defineInRange("locateMaxCandidateAttempts", 256, 1, 4096);
+        LOCATE_IMPROVEMENT_CANDIDATE_ATTEMPTS = builder
+                .comment("Additional candidates checked after /citiesarise locate finds its first accepted site.")
+                .defineInRange("locateImprovementCandidateAttempts", 16, 0, 4096);
         builder.pop();
 
         SPEC = builder.build();
@@ -59,5 +63,9 @@ public final class CitiesAriseWorldgenConfig {
 
     public static int locateMaxCandidateAttempts() {
         return LOCATE_MAX_CANDIDATE_ATTEMPTS.get();
+    }
+
+    public static int locateImprovementCandidateAttempts() {
+        return LOCATE_IMPROVEMENT_CANDIDATE_ATTEMPTS.get();
     }
 }

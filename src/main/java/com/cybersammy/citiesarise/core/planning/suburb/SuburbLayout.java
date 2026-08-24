@@ -10,6 +10,7 @@ record SuburbLayout(
         GridBounds bounds,
         int mainRoadZ,
         List<Integer> sideRoadXs,
+        int requestedParcelCapacity,
         List<GridBounds> parcelBounds,
         Optional<RoadGraph> routedRoadGraph,
         List<GridBounds> plannedFootprints,
@@ -17,6 +18,9 @@ record SuburbLayout(
 ) {
     SuburbLayout {
         Objects.requireNonNull(bounds, "bounds");
+        if (requestedParcelCapacity <= 0) {
+            throw new IllegalArgumentException("requestedParcelCapacity must be positive");
+        }
         sideRoadXs = List.copyOf(sideRoadXs);
         parcelBounds = List.copyOf(parcelBounds);
         routedRoadGraph = Objects.requireNonNull(routedRoadGraph, "routedRoadGraph");

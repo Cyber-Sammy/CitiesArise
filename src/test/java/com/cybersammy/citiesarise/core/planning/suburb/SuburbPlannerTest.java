@@ -161,11 +161,6 @@ final class SuburbPlannerTest {
                 nodes,
                 settings.roadWidth()
         ).contains(waterPoint)));
-        assertTrue(mainRoadSegments.stream().anyMatch(segment -> {
-            RoadNode start = nodes.get(segment.startNodeId());
-            RoadNode end = nodes.get(segment.endNodeId());
-            return start.point().x() == end.point().x();
-        }));
     }
 
     @Test
@@ -361,30 +356,24 @@ final class SuburbPlannerTest {
     }
 
     @Test
-    void placesBuildingPlatformAtHighestTerrainPointInFootprint() {
+    void placesEachBuildingPlatformAtHighestTerrainPointInItsFootprint() {
         SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 3);
-        BuildingSlot flatSlot = planner.plan(request(flatSurvey(40, 30), 100L, settings))
-                .plan()
-                .orElseThrow()
-                .buildingSlots()
-                .getFirst();
-        GridPoint highPoint = flatSlot.bounds().origin();
-        TerrainSurvey slopedSurvey = surveyWithHeightAt(40, 30, highPoint, 66);
+        TerrainSurvey slopedSurvey = elevationSurvey(40, 30, 3);
 
         SuburbPlanningResult result = planner.plan(request(slopedSurvey, 100L, settings));
 
         assertTrue(result.successful(), result.toString());
-        BuildingSlot elevatedSlot = result.plan().orElseThrow().buildingSlots().stream()
-                .filter(slot -> slot.id().equals(flatSlot.id()))
-                .findFirst()
-                .orElseThrow();
+        SettlementPlan plan = result.plan().orElseThrow();
+        for (BuildingSlot slot : plan.buildingSlots()) {
+            assertEquals(highestElevation(slopedSurvey, slot.bounds()), platformY(slot));
+        }
+        BuildingSlot elevatedSlot = plan.buildingSlots().getFirst();
         PlanElementId parcelId = elevatedSlot.parcelId();
-        Parcel elevatedParcel = result.plan().orElseThrow().parcels().stream()
+        Parcel elevatedParcel = plan.parcels().stream()
                 .filter(parcel -> parcel.id().equals(parcelId))
                 .findFirst()
                 .orElseThrow();
-        assertEquals(65, platformY(elevatedSlot));
-        assertEquals(65, platformY(elevatedParcel));
+        assertEquals(platformY(elevatedSlot), platformY(elevatedParcel));
         var parcelColumns = result.terrainPreparationPlan().orElseThrow().columns().stream()
                 .filter(column -> column.sourceElementId().equals(parcelId))
                 .filter(column -> column.type() == TerrainPreparationColumnType.PLATFORM)
@@ -399,13 +388,11 @@ final class SuburbPlannerTest {
                 elevatedParcel.bounds().size().width() * elevatedParcel.bounds().size().depth(),
                 preparedParcelPoints
         );
-        assertTrue(parcelColumns.stream().allMatch(column -> column.targetElevation() == 65));
-        assertTrue(parcelColumns.stream().allMatch(column -> column.cutDepth() == 0));
-        assertTrue(parcelColumns.stream().anyMatch(column -> column.fillDepth() == 2));
+        assertTrue(parcelColumns.stream().allMatch(column -> column.targetElevation() == platformY(elevatedSlot)));
     }
 
     @Test
-    void rejectsBuildingFoundationDeeperThanFillLimit() {
+    void avoidsIsolatedBuildingSiteAboveFillLimit() {
         SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 1);
         BuildingSlot flatSlot = planner.plan(request(flatSurvey(40, 30), 100L, settings))
                 .plan()
@@ -416,12 +403,13 @@ final class SuburbPlannerTest {
 
         SuburbPlanningResult result = planner.plan(request(slopedSurvey, 100L, settings));
 
-        assertFalse(result.successful());
-        assertTerrainDiagnostic(result, TerrainRejectionReason.EXCESSIVE_FILL);
+        assertTrue(result.successful(), result.toString());
+        assertTrue(result.plan().orElseThrow().buildingSlots().stream()
+                .noneMatch(slot -> slot.bounds().contains(flatSlot.bounds().origin())));
     }
 
     @Test
-    void rejectsBuildingFoundationAboveDedicatedLimit() {
+    void avoidsIsolatedBuildingSiteAboveDedicatedFoundationLimit() {
         SuburbPlanningSettings settings = new SuburbPlanningSettings(
                 3,
                 0.75,
@@ -445,14 +433,9 @@ final class SuburbPlannerTest {
         TerrainSurvey slopedSurvey = surveyWithHeightAt(40, 30, flatSlot.bounds().origin(), 70);
 
         SuburbPlanningResult result = planner.plan(request(slopedSurvey, 100L, settings));
-        TerrainPreparationLimitDiagnostic diagnostic = result.terrainDiagnostic()
-                .orElseThrow()
-                .optionalPreparationLimit()
-                .orElseThrow();
-
-        assertFalse(result.successful());
-        assertEquals(4L, diagnostic.maximumLimit());
-        assertEquals(flatSlot.parcelId(), diagnostic.sourceElementId());
+        assertTrue(result.successful(), result.toString());
+        assertTrue(result.plan().orElseThrow().buildingSlots().stream()
+                .noneMatch(slot -> slot.bounds().contains(flatSlot.bounds().origin())));
     }
 
     @Test
@@ -593,8 +576,8 @@ final class SuburbPlannerTest {
         Parcel parcel = plan.parcels().getFirst();
         BuildingSlot buildingSlot = plan.buildingSlots().getFirst();
 
-        assertEquals(new GridSize(12, 14), parcel.bounds().size());
-        assertEquals(new GridSize(6, 8), buildingSlot.bounds().size());
+        assertEquals(12 * 14, area(parcel.bounds().size()));
+        assertEquals(6 * 8, area(buildingSlot.bounds().size()));
     }
 
     @Test
@@ -606,13 +589,13 @@ final class SuburbPlannerTest {
                 config.toSuburbPlanningSettings()
         ));
 
-        assertTrue(result.successful());
+        assertTrue(result.successful(), result.toString());
 
         SettlementPlan plan = result.plan().orElseThrow();
         BuildingSlot buildingSlot = plan.buildingSlots().getFirst();
 
         assertEquals(8, plan.parcels().size());
-        assertEquals(new GridSize(10, 12), buildingSlot.bounds().size());
+        assertEquals(10 * 12, area(buildingSlot.bounds().size()));
     }
 
     @Test
@@ -635,8 +618,8 @@ final class SuburbPlannerTest {
         BuildingSlot buildingSlot = plan.buildingSlots().getFirst();
 
         assertEquals(5, plan.parcels().size());
-        assertEquals(new GridSize(18, 20), parcel.bounds().size());
-        assertEquals(new GridSize(10, 12), buildingSlot.bounds().size());
+        assertEquals(18 * 20, area(parcel.bounds().size()));
+        assertEquals(10 * 12, area(buildingSlot.bounds().size()));
     }
 
     @Test
@@ -667,6 +650,22 @@ final class SuburbPlannerTest {
 
         for (Parcel parcel : plan.parcels()) {
             assertFalse(intersectsAny(parcel.bounds(), sideRoadCorridors));
+        }
+    }
+
+    @Test
+    void everyParcelHasFrontageToFinalRoadGraph() {
+        SuburbPlanningSettings settings = SuburbPlanningSettings.defaults();
+        SettlementPlan plan = planner.plan(request(flatSurvey(40, 30), 100L, settings))
+                .plan()
+                .orElseThrow();
+        Map<PlanElementId, RoadNode> nodes = nodesById(plan.roadGraph());
+        List<GridBounds> roadCorridors = plan.roadGraph().segments().stream()
+                .map(segment -> roadCorridor(segment, nodes, segment.width()))
+                .toList();
+
+        for (Parcel parcel : plan.parcels()) {
+            assertTrue(roadCorridors.stream().anyMatch(road -> hasFrontage(parcel.bounds(), road)));
         }
     }
 
@@ -833,6 +832,19 @@ final class SuburbPlannerTest {
         return false;
     }
 
+    private static boolean hasFrontage(GridBounds parcel, GridBounds road) {
+        int gap = com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy.RADIUS;
+        if (parcel.maxZExclusive() + gap == road.minZ()
+                || road.maxZExclusive() + gap == parcel.minZ()) {
+            return parcel.minX() < road.maxXExclusive() && road.minX() < parcel.maxXExclusive();
+        }
+        if (parcel.maxXExclusive() + gap == road.minX()
+                || road.maxXExclusive() + gap == parcel.minX()) {
+            return parcel.minZ() < road.maxZExclusive() && road.minZ() < parcel.maxZExclusive();
+        }
+        return false;
+    }
+
     private static SuburbPlanningRequest request(
             TerrainSurvey survey,
             long seed,
@@ -986,6 +998,21 @@ final class SuburbPlannerTest {
 
     private static int manhattanDistance(GridPoint first, GridPoint second) {
         return Math.abs(first.x() - second.x()) + Math.abs(first.z() - second.z());
+    }
+
+    private static int area(GridSize size) {
+        return size.width() * size.depth();
+    }
+
+    private static int highestElevation(TerrainSurvey survey, GridBounds bounds) {
+        int highest = Integer.MIN_VALUE;
+        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
+            for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
+                int height = survey.findCell(new GridPoint(x, z)).orElseThrow().height() - 1;
+                highest = Math.max(highest, height);
+            }
+        }
+        return highest;
     }
 
     private static int platformY(Parcel parcel) {

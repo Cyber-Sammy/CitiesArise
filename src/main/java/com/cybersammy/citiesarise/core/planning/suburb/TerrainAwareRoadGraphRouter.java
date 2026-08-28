@@ -17,6 +17,7 @@ import com.cybersammy.citiesarise.core.road.RoadRoutingResult;
 import com.cybersammy.citiesarise.core.road.TerrainAwareRoadRouter;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlan;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainPlanningAction;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
 import java.util.ArrayList;
@@ -89,6 +90,10 @@ final class TerrainAwareRoadGraphRouter {
         RoadNode start = requiredNode(sourceNodes, segment.startNodeId());
         RoadNode end = requiredNode(sourceNodes, segment.endNodeId());
         TerrainResponsePolicy routingPolicy = routingPolicy(request.terrainResponsePolicy());
+        TerrainAdaptationPlan routingAdaptationPlan = adaptationPlan.withPolicy(
+                routingPolicy,
+                crossingBarrierOverrides(request.terrainResponsePolicy())
+        );
         RoadRoutingResult result = ROUTER.route(new RoadRoutingRequest(
                 request.survey(),
                 routingBounds,
@@ -99,7 +104,7 @@ final class TerrainAwareRoadGraphRouter {
                 RoadTerrainShoulderPolicy.RADIUS,
                 request.settings().maxBuildableSlope(),
                 routingPolicy,
-                adaptationPlan.withPolicy(routingPolicy),
+                routingAdaptationPlan,
                 RoadRoutingCostPolicy.defaults(),
                 reservedBounds,
                 List.of(
@@ -124,6 +129,18 @@ final class TerrainAwareRoadGraphRouter {
             );
         }
         return new TerrainResponsePolicy(responses, source.capabilities(), source.adaptationSettings());
+    }
+
+    private static Map<TerrainFeatureType, TerrainPlanningAction> crossingBarrierOverrides(
+            TerrainResponsePolicy source
+    ) {
+        Map<TerrainFeatureType, TerrainPlanningAction> overrides = new EnumMap<>(TerrainFeatureType.class);
+        for (TerrainFeatureType featureType : TerrainFeatureType.values()) {
+            if (source.responseFor(featureType) == TerrainResponse.CROSS_IF_SUPPORTED) {
+                overrides.put(featureType, TerrainPlanningAction.ROUTE_AROUND);
+            }
+        }
+        return Map.copyOf(overrides);
     }
 
     private static GridBounds junctionBounds(GridPoint point, int width) {

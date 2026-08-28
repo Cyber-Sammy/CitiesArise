@@ -16,6 +16,7 @@ import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationSettings;
 import com.cybersammy.citiesarise.core.terrain.policy.InfrastructureCapability;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse;
@@ -82,7 +83,8 @@ final class TerrainAwareRoadGraphRouterTest {
                         TerrainFeatureType.STEEP_SLOPE,
                         TerrainResponse.TERRAFORM
                 ),
-                Set.of(InfrastructureCapability.BRIDGE)
+                Set.of(InfrastructureCapability.BRIDGE),
+                new TerrainAdaptationSettings(0.0, 16, 4, 64L)
         );
         RoadGraph source = graph(
                 List.of(node("west", 0, 4), node("east", 8, 4)),

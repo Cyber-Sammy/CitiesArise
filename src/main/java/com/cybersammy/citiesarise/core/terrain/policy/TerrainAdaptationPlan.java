@@ -44,7 +44,16 @@ public final class TerrainAdaptationPlan {
     }
 
     public TerrainAdaptationPlan withPolicy(TerrainResponsePolicy replacement) {
+        return withPolicy(replacement, Map.of());
+    }
+
+    public TerrainAdaptationPlan withPolicy(
+            TerrainResponsePolicy replacement,
+            Map<TerrainFeatureType, TerrainPlanningAction> actionOverrides
+    ) {
         Objects.requireNonNull(replacement, "replacement");
+        Objects.requireNonNull(actionOverrides, "actionOverrides");
+        Map<TerrainFeatureType, TerrainPlanningAction> overrides = Map.copyOf(actionOverrides);
         List<TerrainFeatureRegion> updated = features.stream()
                 .map(feature -> new TerrainFeatureRegion(
                         feature.id(),
@@ -52,14 +61,26 @@ public final class TerrainAdaptationPlan {
                         feature.points(),
                         feature.bounds(),
                         feature.metrics(),
-                        TerrainAdaptationPlanner.resolveAction(
-                                replacement,
-                                feature.type(),
-                                feature.metrics()
-                        )
+                        resolvedAction(replacement, overrides, feature)
                 ))
                 .toList();
         return new TerrainAdaptationPlan(replacement, updated);
+    }
+
+    private static TerrainPlanningAction resolvedAction(
+            TerrainResponsePolicy replacement,
+            Map<TerrainFeatureType, TerrainPlanningAction> overrides,
+            TerrainFeatureRegion feature
+    ) {
+        TerrainPlanningAction override = overrides.get(feature.type());
+        if (override != null) {
+            return override;
+        }
+        return TerrainAdaptationPlanner.resolveAction(
+                replacement,
+                feature.type(),
+                feature.metrics()
+        );
     }
 
     private static Map<GridPoint, TerrainFeatureRegion> indexFeatures(

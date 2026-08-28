@@ -139,7 +139,7 @@ public final class MinecraftSettlementProfileJsonParser {
     private static TerrainAdaptationSettings parseTerrainAdaptationSettings(JsonObject policy) {
         TerrainAdaptationSettings defaults = TerrainAdaptationSettings.defaults();
         if (!policy.has("adaptation")) {
-            return defaults;
+            return TerrainAdaptationSettings.disabled();
         }
         JsonObject adaptation = requiredObject(policy, "adaptation");
         return new TerrainAdaptationSettings(

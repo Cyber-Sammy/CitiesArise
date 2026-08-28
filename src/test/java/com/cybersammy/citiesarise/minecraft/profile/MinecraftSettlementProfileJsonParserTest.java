@@ -99,6 +99,10 @@ final class MinecraftSettlementProfileJsonParserTest {
         );
         assertEquals(4, profile.terrainResponsePolicy().capabilities().size());
         assertTrue(profile.terrainResponsePolicy().supports(InfrastructureCapability.BRIDGE));
+        assertEquals(
+                TerrainAdaptationSettings.disabled(),
+                profile.terrainResponsePolicy().adaptationSettings()
+        );
     }
 
     @Test

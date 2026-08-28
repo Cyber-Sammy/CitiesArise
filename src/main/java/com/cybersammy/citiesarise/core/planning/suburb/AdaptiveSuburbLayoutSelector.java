@@ -12,6 +12,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class AdaptiveSuburbLayoutSelector {
+    private static final List<Integer> DISTRICT_GROWTH_STEPS = List.of(0, 4, 8, 16);
+
     Optional<SuburbLayoutSelection> select(
             GridBounds surveyBounds,
             DevelopmentCapacity capacity,
@@ -92,14 +94,37 @@ final class AdaptiveSuburbLayoutSelector {
         if (layoutSize.isEmpty()) {
             return Optional.empty();
         }
-        return bestCandidate(
-                surveyBounds,
-                allocatedCapacity,
-                layoutSize.orElseThrow(),
-                topology,
-                layoutFactory,
-                layoutFinalizer
-        );
+        for (GridSize candidateSize : candidateSizes(layoutSize.orElseThrow(), surveyBounds.size())) {
+            Optional<SuburbLayoutSelection> selection = bestCandidate(
+                    surveyBounds,
+                    allocatedCapacity,
+                    candidateSize,
+                    topology,
+                    layoutFactory,
+                    layoutFinalizer
+            );
+            if (selection.isPresent()) {
+                return selection;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static List<GridSize> candidateSizes(GridSize minimum, GridSize maximum) {
+        List<GridSize> sizes = new ArrayList<>();
+        for (int growth : DISTRICT_GROWTH_STEPS) {
+            int width = Math.min(maximum.width(), minimum.width() + growth);
+            int depth = Math.min(maximum.depth(), minimum.depth() + growth);
+            addUnique(sizes, new GridSize(width, depth));
+        }
+        addUnique(sizes, maximum);
+        return List.copyOf(sizes);
+    }
+
+    private static void addUnique(List<GridSize> sizes, GridSize candidate) {
+        if (!sizes.contains(candidate)) {
+            sizes.add(candidate);
+        }
     }
 
     private static Optional<GridSize> minimumLayoutSize(
@@ -171,7 +196,7 @@ final class AdaptiveSuburbLayoutSelector {
         if (!isDevelopable(layout, topology)) {
             return Optional.empty();
         }
-        DevelopableRegion region = topology.regionAt(layout.plannedFootprints().getFirst().origin()).orElseThrow();
+        DevelopableRegion region = candidateRegion(layout, topology).orElseThrow();
         return Optional.of(new UnroutedLayoutCandidate(
                 layout,
                 region.area(),
@@ -186,7 +211,7 @@ final class AdaptiveSuburbLayoutSelector {
             int allocatedCapacity,
             TerrainTopology topology
     ) {
-        DevelopableRegion region = topology.regionAt(layout.plannedFootprints().getFirst().origin()).orElseThrow();
+        DevelopableRegion region = candidateRegion(layout, topology).orElseThrow();
         return new SuburbLayoutSelection(
                 layout,
                 new DistrictAnchor(region.id(), anchorPoint(layout.bounds(), region)),
@@ -241,6 +266,9 @@ final class AdaptiveSuburbLayoutSelector {
     }
 
     private static boolean isDevelopable(SuburbLayout layout, TerrainTopology topology) {
+        if (layout.routedRoadGraph().isEmpty()) {
+            return candidateRegion(layout, topology).isPresent();
+        }
         Integer regionId = null;
         for (PotentialTerrainPreparationFootprint footprint : layout.terrainPreparationFootprints()) {
             GridBounds preparationBounds = expandWithin(
@@ -261,6 +289,35 @@ final class AdaptiveSuburbLayoutSelector {
             }
         }
         return true;
+    }
+
+    private static Optional<DevelopableRegion> candidateRegion(
+            SuburbLayout layout,
+            TerrainTopology topology
+    ) {
+        GridPoint center = new GridPoint(
+                layout.bounds().minX() + (layout.bounds().size().width() / 2),
+                layout.bounds().minZ() + (layout.bounds().size().depth() / 2)
+        );
+        DevelopableRegion best = null;
+        long bestDistance = Long.MAX_VALUE;
+        for (DevelopableRegion region : topology.regions()) {
+            for (GridPoint point : region.points()) {
+                if (!layout.bounds().contains(point)) {
+                    continue;
+                }
+                long distance = manhattanDistance(point, center);
+                if (best == null || distance < bestDistance) {
+                    best = region;
+                    bestDistance = distance;
+                    continue;
+                }
+                if (distance == bestDistance && region.id() < best.id()) {
+                    best = region;
+                }
+            }
+        }
+        return Optional.ofNullable(best);
     }
 
     private static GridBounds expandWithin(GridBounds bounds, GridBounds limit, int radius) {

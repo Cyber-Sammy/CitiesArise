@@ -22,7 +22,7 @@ Cities Arise will follow a plan-first pipeline:
 
 The core planner must stay independent from Minecraft and NeoForge. Loader-specific code belongs in adapter layers.
 
-The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, terrain surveys, semantic terrain preparation, and plan transforms. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. Water and blocked terrain remain hard rejections for the current suburb profile. A steep terrain sample is treated as correctable when the resulting flat platforms stay within profile cut, fill, and total earthwork limits.
+The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, terrain surveys, connected terrain features, semantic terrain preparation, and plan transforms. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. The built-in suburb preserves large water bodies and major slopes but may absorb small local features through bounded earthworks. Blocked terrain remains a strict barrier.
 
 The suburb planner now analyzes connected developable terrain before giving up on its preferred layout. When a local water or blocked-terrain barrier intersects that layout, it can move the complete suburb into another connected area within the same survey while preserving terrain-support clearance. Datapack profiles may define minimum, target, and maximum parcel capacity. The planner prefers the target and tries several bounded district expansions before deterministically reducing toward the minimum; falling below the minimum remains a controlled rejection. The selected developable-region id, district anchor, and allocated capacity are stored in plan properties.
 
@@ -183,11 +183,17 @@ Example `data/my_pack/settlement_profiles/large_suburb.json`:
   },
   "terrainPolicy": {
     "responses": {
-      "water": "avoid",
+      "water": "build_around",
       "blockedTerrain": "avoid",
-      "steepSlope": "terraform"
+      "steepSlope": "build_around"
     },
-    "capabilities": []
+    "capabilities": [],
+    "adaptation": {
+      "sensitivity": 0.5,
+      "maxTerraformArea": 32,
+      "maxTerraformRelief": 4,
+      "maxTerraformVolume": 160
+    }
   }
 }
 ```
@@ -209,7 +215,9 @@ Then run:
 
 Use `/citiesarise debug dump` to inspect the generated plan and confirm that the profile changed the survey, parcel, and building slot scale.
 
-`terrainPolicy.responses` controls how the profile treats observed terrain. Supported values are `avoid`, `preserve`, `terraform`, `build_around`, `cross_if_supported`, and `ignore`. They resolve to distinct semantic actions: relocate, preserve in place, direct terraforming, route around, create a crossing, or allow standard placement. The current suburb planner can route roads around barriers and can identify profile-approved crossing spans, but it accepts a final settlement only when every road can currently be materialized without a bridge or tunnel. Preserve-in-place geometry and infrastructure crossings remain later stages. `ignore` does not preserve a feature; it removes that feature as a planning constraint, so ordinary terrain preparation may replace it. The default policy avoids water and blocked terrain while allowing bounded slope terraforming.
+`terrainPolicy.responses` controls how the profile treats observed terrain. Supported values are `avoid`, `preserve`, `terraform`, `build_around`, `cross_if_supported`, and `ignore`. They resolve to distinct semantic actions: relocate, preserve in place, direct terraforming, route around, create a crossing, or allow standard placement. The planner groups adjacent water, blocked cells, and steep cells into deterministic terrain features. For `build_around`, the adaptation settings decide whether a small feature can be handled by ordinary bounded earthworks or must remain a routing barrier. Explicit `avoid` and `preserve` are never weakened by sensitivity. Preserve-in-place geometry and infrastructure crossings remain later stages. `ignore` does not preserve a feature; it removes that feature as a planning constraint, so ordinary terrain preparation may replace it.
+
+`terrainPolicy.adaptation.sensitivity` ranges from `0.0` to `1.0`. Lower values permit more local reshaping; higher values preserve more observed terrain. `maxTerraformArea`, `maxTerraformRelief`, and `maxTerraformVolume` define the most aggressive limit at sensitivity `0.0`; the effective limits shrink linearly toward zero as sensitivity approaches `1.0`. The same point-aware decision plan is used by connected-area analysis, road routing, footprint validation, and terrain preparation. Current metrics are two-dimensional survey estimates. Bridges, tunnels, canals, amenity integration, and complete three-dimensional cave or ravine analysis are not implemented yet.
 
 `terrainPolicy.capabilities` accepts `bridge`, `tunnel`, `canal`, and `major_terraforming`. `cross_if_supported` requires a matching capability: water requires `bridge`, while blocked terrain and steep slopes require `tunnel`. Invalid combinations are rejected when the profile loads. A valid combination resolves to a semantic crossing action, but it does not place infrastructure in the current version.
 

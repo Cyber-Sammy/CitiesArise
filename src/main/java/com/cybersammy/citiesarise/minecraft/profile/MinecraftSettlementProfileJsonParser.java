@@ -6,6 +6,7 @@ import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
 import com.cybersammy.citiesarise.core.terrain.policy.InfrastructureCapability;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationSettings;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
@@ -128,7 +129,25 @@ public final class MinecraftSettlementProfileJsonParser {
         Set<InfrastructureCapability> capabilities = policy.has("capabilities")
                 ? parseCapabilities(policy)
                 : Set.of();
-        return new TerrainResponsePolicy(responses, capabilities);
+        return new TerrainResponsePolicy(
+                responses,
+                capabilities,
+                parseTerrainAdaptationSettings(policy)
+        );
+    }
+
+    private static TerrainAdaptationSettings parseTerrainAdaptationSettings(JsonObject policy) {
+        TerrainAdaptationSettings defaults = TerrainAdaptationSettings.defaults();
+        if (!policy.has("adaptation")) {
+            return defaults;
+        }
+        JsonObject adaptation = requiredObject(policy, "adaptation");
+        return new TerrainAdaptationSettings(
+                optionalDouble(adaptation, "sensitivity", defaults.sensitivity()),
+                optionalInt(adaptation, "maxTerraformArea", defaults.maxTerraformArea()),
+                optionalInt(adaptation, "maxTerraformRelief", defaults.maxTerraformRelief()),
+                optionalLong(adaptation, "maxTerraformVolume", defaults.maxTerraformVolume())
+        );
     }
 
     private static void parseTerrainResponses(
@@ -204,6 +223,13 @@ public final class MinecraftSettlementProfileJsonParser {
             return defaultValue;
         }
         return requiredLong(parent, name);
+    }
+
+    private static double optionalDouble(JsonObject parent, String name, double defaultValue) {
+        if (!parent.has(name)) {
+            return defaultValue;
+        }
+        return requiredDouble(parent, name);
     }
 
     private static JsonObject requiredObject(JsonObject parent, String name) {

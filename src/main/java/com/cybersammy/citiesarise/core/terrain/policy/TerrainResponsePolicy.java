@@ -9,11 +9,20 @@ import java.util.Set;
 
 public record TerrainResponsePolicy(
         Map<TerrainFeatureType, TerrainResponse> responses,
-        Set<InfrastructureCapability> capabilities
+        Set<InfrastructureCapability> capabilities,
+        TerrainAdaptationSettings adaptationSettings
 ) {
+    public TerrainResponsePolicy(
+            Map<TerrainFeatureType, TerrainResponse> responses,
+            Set<InfrastructureCapability> capabilities
+    ) {
+        this(responses, capabilities, TerrainAdaptationSettings.disabled());
+    }
+
     public TerrainResponsePolicy {
         Objects.requireNonNull(responses, "responses");
         Objects.requireNonNull(capabilities, "capabilities");
+        Objects.requireNonNull(adaptationSettings, "adaptationSettings");
         EnumMap<TerrainFeatureType, TerrainResponse> responseCopy = new EnumMap<>(TerrainFeatureType.class);
         responseCopy.putAll(responses);
         for (TerrainFeatureType featureType : TerrainFeatureType.values()) {

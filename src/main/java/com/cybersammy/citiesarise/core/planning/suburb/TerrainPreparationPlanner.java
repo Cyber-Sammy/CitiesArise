@@ -19,6 +19,8 @@ import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlan;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlanner;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability;
 import java.util.ArrayList;
@@ -37,6 +39,19 @@ final class TerrainPreparationPlanner {
             SuburbPlanningRequest request,
             RegionalElevationPlan elevationPlan
     ) {
+        TerrainAdaptationPlan adaptationPlan = new TerrainAdaptationPlanner().plan(
+                request.survey(),
+                request.settings().maxBuildableSlope(),
+                request.terrainResponsePolicy()
+        );
+        return plan(request, elevationPlan, adaptationPlan);
+    }
+
+    static TerrainPreparationAssessment plan(
+            SuburbPlanningRequest request,
+            RegionalElevationPlan elevationPlan,
+            TerrainAdaptationPlan adaptationPlan
+    ) {
         List<ElevationZone> zones = elevationPlan.zones();
         Map<GridPoint, TerrainPreparationColumn> columns = new LinkedHashMap<>();
 
@@ -50,13 +65,19 @@ final class TerrainPreparationPlanner {
         Optional<SuburbTerrainDiagnostic> transitionDiagnostic = addTransitions(
                 request,
                 elevationPlan,
+                adaptationPlan,
                 columns
         );
         if (transitionDiagnostic.isPresent()) {
             return TerrainPreparationAssessment.rejected(transitionDiagnostic.orElseThrow());
         }
 
-        Optional<SuburbTerrainDiagnostic> shoulderDiagnostic = addTerrainShoulders(request, zones, columns);
+        Optional<SuburbTerrainDiagnostic> shoulderDiagnostic = addTerrainShoulders(
+                request,
+                zones,
+                adaptationPlan,
+                columns
+        );
         if (shoulderDiagnostic.isPresent()) {
             return TerrainPreparationAssessment.rejected(shoulderDiagnostic.orElseThrow());
         }
@@ -80,6 +101,7 @@ final class TerrainPreparationPlanner {
     private static Optional<SuburbTerrainDiagnostic> addTransitions(
             SuburbPlanningRequest request,
             RegionalElevationPlan elevationPlan,
+            TerrainAdaptationPlan adaptationPlan,
             Map<GridPoint, TerrainPreparationColumn> columns
     ) {
         Map<PlanElementId, ElevationZone> zonesById = zonesById(elevationPlan.zones());
@@ -94,6 +116,7 @@ final class TerrainPreparationPlanner {
                     transition,
                     source,
                     target,
+                    adaptationPlan,
                     columns
             );
             if (diagnostic.isPresent()) {
@@ -116,6 +139,7 @@ final class TerrainPreparationPlanner {
             ElevationTransition transition,
             ElevationZone source,
             ElevationZone target,
+            TerrainAdaptationPlan adaptationPlan,
             Map<GridPoint, TerrainPreparationColumn> columns
     ) {
         TerrainPreparationColumnType flatType = transitionFlatType(transition.type());
@@ -124,7 +148,10 @@ final class TerrainPreparationPlanner {
         for (ElevationTransitionPolicy.TransitionPoint point
                 : ElevationTransitionPolicy.materialize(transition, source, target)) {
             TerrainCell cell = TerrainPlatform.requiredTerrainCell(request, point.point());
-            Optional<SuburbTerrainDiagnostic> terrainDiagnostic = shoulderTerrainDiagnostic(request, cell);
+            Optional<SuburbTerrainDiagnostic> terrainDiagnostic = shoulderTerrainDiagnostic(
+                    cell,
+                    adaptationPlan
+            );
             if (terrainDiagnostic.isPresent()) {
                 return terrainDiagnostic;
             }
@@ -195,6 +222,7 @@ final class TerrainPreparationPlanner {
     private static Optional<SuburbTerrainDiagnostic> addTerrainShoulders(
             SuburbPlanningRequest request,
             List<ElevationZone> zones,
+            TerrainAdaptationPlan adaptationPlan,
             Map<GridPoint, TerrainPreparationColumn> columns
     ) {
         for (ShoulderKind kind : ShoulderKind.values()) {
@@ -206,6 +234,7 @@ final class TerrainPreparationPlanner {
                         request,
                         zone,
                         kind,
+                        adaptationPlan,
                         columns
                 );
                 if (diagnostic.isPresent()) {
@@ -220,6 +249,7 @@ final class TerrainPreparationPlanner {
             SuburbPlanningRequest request,
             ElevationZone zone,
             ShoulderKind kind,
+            TerrainAdaptationPlan adaptationPlan,
             Map<GridPoint, TerrainPreparationColumn> columns
     ) {
         int radius = kind.radius();
@@ -234,6 +264,7 @@ final class TerrainPreparationPlanner {
                         zone,
                         kind,
                         new GridPoint(x, z),
+                        adaptationPlan,
                         columns
                 );
                 if (diagnostic.isPresent()) {
@@ -249,6 +280,7 @@ final class TerrainPreparationPlanner {
             ElevationZone zone,
             ShoulderKind kind,
             GridPoint point,
+            TerrainAdaptationPlan adaptationPlan,
             Map<GridPoint, TerrainPreparationColumn> columns
     ) {
         if (!kind.contains(zone.bounds(), point)) {
@@ -261,7 +293,10 @@ final class TerrainPreparationPlanner {
             return Optional.empty();
         }
         TerrainCell cell = TerrainPlatform.requiredTerrainCell(request, point);
-        Optional<SuburbTerrainDiagnostic> terrainDiagnostic = shoulderTerrainDiagnostic(request, cell);
+        Optional<SuburbTerrainDiagnostic> terrainDiagnostic = shoulderTerrainDiagnostic(
+                cell,
+                adaptationPlan
+        );
         if (terrainDiagnostic.isPresent()) {
             if (kind.optional()) {
                 return Optional.empty();
@@ -343,21 +378,21 @@ final class TerrainPreparationPlanner {
     }
 
     private static Optional<SuburbTerrainDiagnostic> shoulderTerrainDiagnostic(
-            SuburbPlanningRequest request,
-            TerrainCell cell
+            TerrainCell cell,
+            TerrainAdaptationPlan adaptationPlan
     ) {
         if (cell.water()) {
             return terrainDiagnostic(
-                    request,
                     cell,
+                    adaptationPlan,
                     TerrainFeatureType.WATER,
                     TerrainRejectionReason.WATER
             );
         }
         if (cell.terrainCategory() == TerrainCategory.BLOCKED) {
             return terrainDiagnostic(
-                    request,
                     cell,
+                    adaptationPlan,
                     TerrainFeatureType.BLOCKED_TERRAIN,
                     TerrainRejectionReason.BLOCKED_TERRAIN
             );
@@ -366,12 +401,12 @@ final class TerrainPreparationPlanner {
     }
 
     private static Optional<SuburbTerrainDiagnostic> terrainDiagnostic(
-            SuburbPlanningRequest request,
             TerrainCell cell,
+            TerrainAdaptationPlan adaptationPlan,
             TerrainFeatureType featureType,
             TerrainRejectionReason reason
     ) {
-        if (request.terrainResponsePolicy().permitsCurrentPlacement(featureType)) {
+        if (adaptationPlan.permitsCurrentPlacement(cell.point(), featureType)) {
             return Optional.empty();
         }
         return Optional.of(rejectionDiagnostic(cell, reason));

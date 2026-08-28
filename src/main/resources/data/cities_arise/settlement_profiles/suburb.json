@@ -22,10 +22,16 @@
   },
   "terrainPolicy": {
     "responses": {
-      "water": "avoid",
+      "water": "build_around",
       "blockedTerrain": "avoid",
-      "steepSlope": "terraform"
+      "steepSlope": "build_around"
     },
-    "capabilities": []
+    "capabilities": [],
+    "adaptation": {
+      "sensitivity": 0.5,
+      "maxTerraformArea": 32,
+      "maxTerraformRelief": 4,
+      "maxTerraformVolume": 160
+    }
   }
 }

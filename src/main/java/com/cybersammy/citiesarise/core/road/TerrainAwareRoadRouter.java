@@ -232,8 +232,8 @@ public final class TerrainAwareRoadRouter {
                 TerrainCell cell = requiredCell(request, new GridPoint(x, z));
                 Optional<TerrainFeatureType> featureType = featureType(request, cell);
                 if (featureType.isPresent()) {
-                    TerrainPlanningAction action = request.terrainResponsePolicy()
-                            .actionFor(featureType.orElseThrow());
+                    TerrainPlanningAction action = request.terrainAdaptationPlan()
+                            .actionAt(cell.point(), featureType.orElseThrow());
                     if (blocksRouting(action)) {
                         return StepEvaluation.blocked();
                     }

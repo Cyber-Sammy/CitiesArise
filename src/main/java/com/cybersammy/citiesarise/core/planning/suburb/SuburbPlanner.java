@@ -19,6 +19,8 @@ import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlan;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlanner;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityContext;
@@ -43,6 +45,7 @@ public final class SuburbPlanner {
     private static final AdaptiveSuburbLayoutSelector LAYOUT_SELECTOR = new AdaptiveSuburbLayoutSelector();
     private static final TerrainAwareRoadGraphRouter ROAD_GRAPH_ROUTER = new TerrainAwareRoadGraphRouter();
     private static final FrontageParcelAllocator PARCEL_ALLOCATOR = new FrontageParcelAllocator();
+    private static final TerrainAdaptationPlanner TERRAIN_ADAPTATION_PLANNER = new TerrainAdaptationPlanner();
     private final TerrainSuitabilityScorer terrainScorer;
     private final PlanValidator planValidator;
 
@@ -62,16 +65,24 @@ public final class SuburbPlanner {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.SURVEY_TOO_SMALL);
         }
 
-        Optional<SuburbLayoutSelection> selection = createAdaptiveLayout(request);
+        TerrainAdaptationPlan adaptationPlan = createTerrainAdaptationPlan(request);
+        Optional<SuburbLayoutSelection> selection = createAdaptiveLayout(request, adaptationPlan);
         if (selection.isEmpty()) {
-            Optional<SuburbTerrainDiagnostic> compatibilityDiagnostic = fixedCapacityTerrainDiagnostic(request);
+            Optional<SuburbTerrainDiagnostic> compatibilityDiagnostic = fixedCapacityTerrainDiagnostic(
+                    request,
+                    adaptationPlan
+            );
             if (compatibilityDiagnostic.isPresent()) {
                 return SuburbPlanningResult.rejectedTerrain(compatibilityDiagnostic.orElseThrow());
             }
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_PARCEL_SPACE);
         }
         SuburbLayout layout = selection.orElseThrow().layout();
-        Optional<SuburbTerrainDiagnostic> terrainDiagnostic = findTerrainDiagnostic(request, layout);
+        Optional<SuburbTerrainDiagnostic> terrainDiagnostic = findTerrainDiagnostic(
+                request,
+                layout,
+                adaptationPlan
+        );
 
         if (terrainDiagnostic.isPresent()) {
             return SuburbPlanningResult.rejectedTerrain(terrainDiagnostic.orElseThrow());
@@ -86,7 +97,8 @@ public final class SuburbPlanner {
         plan = elevationPlanning.settlementPlan();
         TerrainPreparationAssessment preparation = TerrainPreparationPlanner.plan(
                 request,
-                elevationPlanning.elevationPlan()
+                elevationPlanning.elevationPlan(),
+                adaptationPlan
         );
         if (preparation.diagnostic().isPresent()) {
             return SuburbPlanningResult.rejectedTerrain(preparation.diagnostic().orElseThrow());
@@ -111,7 +123,10 @@ public final class SuburbPlanner {
         return layout.parcelBounds().size() >= request.settings().minimumParcelCount();
     }
 
-    private Optional<SuburbTerrainDiagnostic> fixedCapacityTerrainDiagnostic(SuburbPlanningRequest request) {
+    private Optional<SuburbTerrainDiagnostic> fixedCapacityTerrainDiagnostic(
+            SuburbPlanningRequest request,
+            TerrainAdaptationPlan adaptationPlan
+    ) {
         DevelopmentCapacity capacity = request.settings().parcelCapacity();
         if (capacity.minimum() != capacity.target()) {
             return Optional.empty();
@@ -121,7 +136,7 @@ public final class SuburbPlanner {
                 request.survey().bounds(),
                 capacity.target()
         );
-        return findTerrainDiagnostic(request, preferredLayout);
+        return findTerrainDiagnostic(request, preferredLayout, adaptationPlan);
     }
 
     private boolean hasEnoughSpace(SuburbPlanningRequest request) {
@@ -162,11 +177,20 @@ public final class SuburbPlanner {
         return true;
     }
 
-    private Optional<SuburbTerrainDiagnostic> findTerrainDiagnostic(SuburbPlanningRequest request, SuburbLayout layout) {
+    private Optional<SuburbTerrainDiagnostic> findTerrainDiagnostic(
+            SuburbPlanningRequest request,
+            SuburbLayout layout,
+            TerrainAdaptationPlan adaptationPlan
+    ) {
         TerrainSuitabilityContext context = new TerrainSuitabilityContext(request.settings().maxBuildableSlope());
 
         for (GridBounds footprint : layout.plannedFootprints()) {
-            Optional<SuburbTerrainDiagnostic> diagnostic = findFootprintTerrainDiagnostic(request, footprint, context);
+            Optional<SuburbTerrainDiagnostic> diagnostic = findFootprintTerrainDiagnostic(
+                    request,
+                    footprint,
+                    context,
+                    adaptationPlan
+            );
 
             if (diagnostic.isPresent()) {
                 return diagnostic;
@@ -185,10 +209,17 @@ public final class SuburbPlanner {
     private Optional<SuburbTerrainDiagnostic> findFootprintTerrainDiagnostic(
             SuburbPlanningRequest request,
             GridBounds footprint,
-            TerrainSuitabilityContext context
+            TerrainSuitabilityContext context,
+            TerrainAdaptationPlan adaptationPlan
     ) {
         for (int z = footprint.minZ(); z < footprint.maxZExclusive(); z++) {
-            Optional<SuburbTerrainDiagnostic> diagnostic = findFootprintRowTerrainDiagnostic(request, footprint, context, z);
+            Optional<SuburbTerrainDiagnostic> diagnostic = findFootprintRowTerrainDiagnostic(
+                    request,
+                    footprint,
+                    context,
+                    adaptationPlan,
+                    z
+            );
 
             if (diagnostic.isPresent()) {
                 return diagnostic;
@@ -202,12 +233,14 @@ public final class SuburbPlanner {
             SuburbPlanningRequest request,
             GridBounds footprint,
             TerrainSuitabilityContext context,
+            TerrainAdaptationPlan adaptationPlan,
             int z
     ) {
         for (int x = footprint.minX(); x < footprint.maxXExclusive(); x++) {
             Optional<SuburbTerrainDiagnostic> diagnostic = findFootprintPointTerrainDiagnostic(
                     request,
                     context,
+                    adaptationPlan,
                     new GridPoint(x, z)
             );
 
@@ -222,13 +255,14 @@ public final class SuburbPlanner {
     private Optional<SuburbTerrainDiagnostic> findFootprintPointTerrainDiagnostic(
             SuburbPlanningRequest request,
             TerrainSuitabilityContext context,
+            TerrainAdaptationPlan adaptationPlan,
             GridPoint point
     ) {
         TerrainCell cell = requiredTerrainCell(request, point);
 
         TerrainSuitability suitability = terrainScorer.score(cell, context);
 
-        if (isTerrainCellAccepted(request, cell, suitability)) {
+        if (isTerrainCellAccepted(request, cell, suitability, adaptationPlan)) {
             return Optional.empty();
         }
 
@@ -238,10 +272,11 @@ public final class SuburbPlanner {
     private boolean isTerrainCellAccepted(
             SuburbPlanningRequest request,
             TerrainCell cell,
-            TerrainSuitability suitability
+            TerrainSuitability suitability,
+            TerrainAdaptationPlan adaptationPlan
     ) {
         if (suitability.rejected()) {
-            return hasOnlyPermittedRejections(request, cell, suitability);
+            return hasOnlyPermittedRejections(request, cell, suitability, adaptationPlan);
         }
 
         return suitability.score() >= 0.25;
@@ -250,13 +285,14 @@ public final class SuburbPlanner {
     private static boolean hasOnlyPermittedRejections(
             SuburbPlanningRequest request,
             TerrainCell cell,
-            TerrainSuitability suitability
+            TerrainSuitability suitability,
+            TerrainAdaptationPlan adaptationPlan
     ) {
         if (suitability.rejectionReasons().isEmpty()) {
             return false;
         }
         for (TerrainRejectionReason reason : suitability.rejectionReasons()) {
-            if (!isRejectionPermitted(request, cell, reason)) {
+            if (!isRejectionPermitted(cell, reason, adaptationPlan)) {
                 return false;
             }
         }
@@ -264,15 +300,15 @@ public final class SuburbPlanner {
     }
 
     private static boolean isRejectionPermitted(
-            SuburbPlanningRequest request,
             TerrainCell cell,
-            TerrainRejectionReason reason
+            TerrainRejectionReason reason,
+            TerrainAdaptationPlan adaptationPlan
     ) {
         Optional<TerrainFeatureType> featureType = featureType(cell, reason);
         if (featureType.isEmpty()) {
             return false;
         }
-        return request.terrainResponsePolicy().permitsCurrentPlacement(featureType.orElseThrow());
+        return adaptationPlan.permitsCurrentPlacement(cell.point(), featureType.orElseThrow());
     }
 
     private static Optional<TerrainFeatureType> featureType(
@@ -293,8 +329,11 @@ public final class SuburbPlanner {
         return Optional.empty();
     }
 
-    private Optional<SuburbLayoutSelection> createAdaptiveLayout(SuburbPlanningRequest request) {
-        TerrainTopology topology = analyzeTopology(request);
+    private Optional<SuburbLayoutSelection> createAdaptiveLayout(
+            SuburbPlanningRequest request,
+            TerrainAdaptationPlan adaptationPlan
+    ) {
+        TerrainTopology topology = analyzeTopology(request, adaptationPlan);
         SuburbLayout preferredLayout = createLayout(
                 request,
                 request.survey().bounds(),
@@ -310,15 +349,31 @@ public final class SuburbPlanner {
                 topology,
                 preferredLayout,
                 (bounds, capacity) -> createLayout(request, bounds, capacity),
-                layout -> routeLayout(request, layout, topology)
+                layout -> routeLayout(request, layout, topology, adaptationPlan)
         );
     }
 
-    private TerrainTopology analyzeTopology(SuburbPlanningRequest request) {
+    private TerrainTopology analyzeTopology(
+            SuburbPlanningRequest request,
+            TerrainAdaptationPlan adaptationPlan
+    ) {
         TerrainSuitabilityContext context = new TerrainSuitabilityContext(request.settings().maxBuildableSlope());
         return TOPOLOGY_ANALYZER.analyze(
                 request.survey(),
-                cell -> isTerrainCellAccepted(request, cell, terrainScorer.score(cell, context))
+                cell -> isTerrainCellAccepted(
+                        request,
+                        cell,
+                        terrainScorer.score(cell, context),
+                        adaptationPlan
+                )
+        );
+    }
+
+    private static TerrainAdaptationPlan createTerrainAdaptationPlan(SuburbPlanningRequest request) {
+        return TERRAIN_ADAPTATION_PLANNER.plan(
+                request.survey(),
+                request.settings().maxBuildableSlope(),
+                request.terrainResponsePolicy()
         );
     }
 
@@ -357,7 +412,8 @@ public final class SuburbPlanner {
     private Optional<SuburbLayout> routeLayout(
             SuburbPlanningRequest request,
             SuburbLayout layout,
-            TerrainTopology topology
+            TerrainTopology topology,
+            TerrainAdaptationPlan adaptationPlan
     ) {
         RoadGraph sourceRoadGraph = createRoadGraph(
                 request,
@@ -369,7 +425,8 @@ public final class SuburbPlanner {
                 request,
                 layout.bounds(),
                 sourceRoadGraph,
-                List.of()
+                List.of(),
+                adaptationPlan
         );
         if (routedRoadGraph.isEmpty()) {
             return Optional.empty();

@@ -12,6 +12,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class AdaptiveSuburbLayoutSelector {
+    static final int MAX_LAYOUT_FINALIZATION_ATTEMPTS = 128;
+    private static final int MAX_FINALIZATION_ATTEMPTS_PER_SIZE = 16;
     private static final List<Integer> DISTRICT_GROWTH_STEPS = List.of(0, 4, 8, 16);
 
     Optional<SuburbLayoutSelection> select(
@@ -30,9 +32,11 @@ final class AdaptiveSuburbLayoutSelector {
         Objects.requireNonNull(preferredLayout, "preferredLayout");
         Objects.requireNonNull(layoutFactory, "layoutFactory");
         Objects.requireNonNull(layoutFinalizer, "layoutFinalizer");
+        LayoutSearchBudget searchBudget = new LayoutSearchBudget(MAX_LAYOUT_FINALIZATION_ATTEMPTS);
 
         if (hasCapacity(preferredLayout, capacity.target())
-                && isDevelopable(preferredLayout, topology)) {
+                && isDevelopable(preferredLayout, topology)
+                && searchBudget.visit()) {
             Optional<SuburbLayout> routedPreferred = layoutFinalizer.finalize(preferredLayout);
             if (routedPreferred.isPresent()) {
                 SuburbLayout layout = routedPreferred.orElseThrow();
@@ -48,7 +52,8 @@ final class AdaptiveSuburbLayoutSelector {
                 minimumSize,
                 topology,
                 layoutFactory,
-                layoutFinalizer
+                layoutFinalizer,
+                searchBudget
         );
     }
 
@@ -58,16 +63,21 @@ final class AdaptiveSuburbLayoutSelector {
             GridSize minimumSize,
             TerrainTopology topology,
             LayoutFactory layoutFactory,
-            LayoutFinalizer layoutFinalizer
+            LayoutFinalizer layoutFinalizer,
+            LayoutSearchBudget searchBudget
     ) {
         for (int allocatedCapacity = capacity.target(); allocatedCapacity >= capacity.minimum(); allocatedCapacity--) {
+            if (searchBudget.exhausted()) {
+                return Optional.empty();
+            }
             Optional<SuburbLayoutSelection> selection = selectCapacity(
                     surveyBounds,
                     allocatedCapacity,
                     minimumSize,
                     topology,
                     layoutFactory,
-                    layoutFinalizer
+                    layoutFinalizer,
+                    searchBudget
             );
             if (selection.isPresent()) {
                 return selection;
@@ -83,7 +93,8 @@ final class AdaptiveSuburbLayoutSelector {
             GridSize minimumSize,
             TerrainTopology topology,
             LayoutFactory layoutFactory,
-            LayoutFinalizer layoutFinalizer
+            LayoutFinalizer layoutFinalizer,
+            LayoutSearchBudget searchBudget
     ) {
         Optional<GridSize> layoutSize = minimumLayoutSize(
                 surveyBounds,
@@ -95,13 +106,17 @@ final class AdaptiveSuburbLayoutSelector {
             return Optional.empty();
         }
         for (GridSize candidateSize : candidateSizes(layoutSize.orElseThrow(), surveyBounds.size())) {
+            if (searchBudget.exhausted()) {
+                return Optional.empty();
+            }
             Optional<SuburbLayoutSelection> selection = bestCandidate(
                     surveyBounds,
                     allocatedCapacity,
                     candidateSize,
                     topology,
                     layoutFactory,
-                    layoutFinalizer
+                    layoutFinalizer,
+                    searchBudget
             );
             if (selection.isPresent()) {
                 return selection;
@@ -152,7 +167,8 @@ final class AdaptiveSuburbLayoutSelector {
             GridSize layoutSize,
             TerrainTopology topology,
             LayoutFactory layoutFactory,
-            LayoutFinalizer layoutFinalizer
+            LayoutFinalizer layoutFinalizer,
+            LayoutSearchBudget searchBudget
     ) {
         List<UnroutedLayoutCandidate> candidates = new ArrayList<>();
         int maxX = surveyBounds.maxXExclusive() - layoutSize.width();
@@ -171,7 +187,10 @@ final class AdaptiveSuburbLayoutSelector {
             }
         }
         candidates.sort(UnroutedLayoutCandidate.ORDER);
-        for (UnroutedLayoutCandidate candidate : candidates) {
+        for (UnroutedLayoutCandidate candidate : finalizationCandidates(candidates)) {
+            if (!searchBudget.visit()) {
+                return Optional.empty();
+            }
             Optional<SuburbLayout> routed = layoutFinalizer.finalize(candidate.layout());
             if (routed.isEmpty()) {
                 continue;
@@ -182,6 +201,39 @@ final class AdaptiveSuburbLayoutSelector {
             }
         }
         return Optional.empty();
+    }
+
+    private static List<UnroutedLayoutCandidate> finalizationCandidates(
+            List<UnroutedLayoutCandidate> candidates
+    ) {
+        if (candidates.size() <= MAX_FINALIZATION_ATTEMPTS_PER_SIZE) {
+            return List.copyOf(candidates);
+        }
+        int preferredCount = MAX_FINALIZATION_ATTEMPTS_PER_SIZE / 2;
+        boolean[] selected = new boolean[candidates.size()];
+        for (int index = 0; index < preferredCount; index++) {
+            selected[index] = true;
+        }
+        int representativeCount = MAX_FINALIZATION_ATTEMPTS_PER_SIZE - preferredCount;
+        int remainingCandidates = candidates.size() - preferredCount;
+        for (int index = 0; index < representativeCount; index++) {
+            int offset = representativeOffset(index, representativeCount, remainingCandidates);
+            selected[preferredCount + offset] = true;
+        }
+        List<UnroutedLayoutCandidate> result = new ArrayList<>(MAX_FINALIZATION_ATTEMPTS_PER_SIZE);
+        for (int index = 0; index < candidates.size(); index++) {
+            if (selected[index]) {
+                result.add(candidates.get(index));
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private static int representativeOffset(int index, int count, int candidateCount) {
+        if (count == 1) {
+            return candidateCount - 1;
+        }
+        return (int) (((long) index * (candidateCount - 1)) / (count - 1));
     }
 
     private static Optional<UnroutedLayoutCandidate> unroutedCandidate(
@@ -357,6 +409,26 @@ final class AdaptiveSuburbLayoutSelector {
     @FunctionalInterface
     interface LayoutFinalizer {
         Optional<SuburbLayout> finalize(SuburbLayout layout);
+    }
+
+    private static final class LayoutSearchBudget {
+        private int remainingAttempts;
+
+        private LayoutSearchBudget(int maximumAttempts) {
+            remainingAttempts = maximumAttempts;
+        }
+
+        private boolean visit() {
+            if (exhausted()) {
+                return false;
+            }
+            remainingAttempts--;
+            return true;
+        }
+
+        private boolean exhausted() {
+            return remainingAttempts == 0;
+        }
     }
 
     private record UnroutedLayoutCandidate(

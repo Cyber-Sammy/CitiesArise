@@ -157,6 +157,33 @@ final class AdaptiveSuburbLayoutSelectorTest {
         assertEquals(20, selected.layout().bounds().size().width());
     }
 
+    @Test
+    void boundsExpensiveLayoutFinalizationAttempts() {
+        GridBounds surveyBounds = bounds(0, 0, 40, 20);
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                TerrainSurvey.sample(surveyBounds, point -> Optional.of(cell(point, false))),
+                cell -> true
+        );
+        AtomicInteger finalizationCount = new AtomicInteger();
+
+        assertTrue(new AdaptiveSuburbLayoutSelector().select(
+                surveyBounds,
+                new DevelopmentCapacity(2, 4, 6),
+                new GridSize(4, 10),
+                topology,
+                layout(surveyBounds, 4),
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout,
+                layout -> {
+                    finalizationCount.incrementAndGet();
+                    return Optional.empty();
+                }
+        ).isEmpty());
+
+        assertTrue(finalizationCount.get() > 0);
+        assertTrue(finalizationCount.get()
+                <= AdaptiveSuburbLayoutSelector.MAX_LAYOUT_FINALIZATION_ATTEMPTS);
+    }
+
     private static TerrainTopology topologyWithBarrier(GridBounds bounds, int barrierX) {
         TerrainSurvey survey = TerrainSurvey.sample(
                 bounds,

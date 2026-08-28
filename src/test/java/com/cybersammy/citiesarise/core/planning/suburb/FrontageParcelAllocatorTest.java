@@ -162,6 +162,40 @@ final class FrontageParcelAllocatorTest {
     }
 
     @Test
+    void reusesTerrainEvaluationsAcrossRepeatedAllocations() {
+        GridBounds district = bounds(0, 0, 40, 30);
+        TerrainSurvey survey = flatSurvey(district);
+        RoadGraph roadGraph = horizontalRoad(0, 15, 39, SETTINGS.roadWidth());
+        ParcelTerrainEvaluationCache terrainEvaluations = new ParcelTerrainEvaluationCache(survey, SETTINGS);
+
+        List<GridBounds> first = allocator.allocate(
+                roadGraph,
+                district,
+                survey,
+                SETTINGS,
+                42L,
+                6,
+                Optional.empty(),
+                terrainEvaluations
+        );
+        int cachedEvaluationCount = terrainEvaluations.size();
+        List<GridBounds> second = allocator.allocate(
+                roadGraph,
+                district,
+                survey,
+                SETTINGS,
+                42L,
+                6,
+                Optional.empty(),
+                terrainEvaluations
+        );
+
+        assertEquals(first, second);
+        assertTrue(cachedEvaluationCount > 0);
+        assertEquals(cachedEvaluationCount, terrainEvaluations.size());
+    }
+
+    @Test
     void rejectsNearUnsatisfiableDenseFrontageWithinBoundedTime() {
         GridBounds district = bounds(0, 0, 300, 60);
         TerrainSurvey survey = TerrainSurvey.sample(

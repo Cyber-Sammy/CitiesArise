@@ -10,7 +10,6 @@ import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
-import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopology;
 import java.util.ArrayList;
@@ -33,14 +32,38 @@ final class FrontageParcelAllocator {
             int capacity,
             Optional<TerrainTopology> topology
     ) {
+        return allocate(
+                roadGraph,
+                districtBounds,
+                survey,
+                settings,
+                seed,
+                capacity,
+                topology,
+                new ParcelTerrainEvaluationCache(survey, settings)
+        );
+    }
+
+    List<GridBounds> allocate(
+            RoadGraph roadGraph,
+            GridBounds districtBounds,
+            TerrainSurvey survey,
+            SuburbPlanningSettings settings,
+            long seed,
+            int capacity,
+            Optional<TerrainTopology> topology,
+            ParcelTerrainEvaluationCache terrainEvaluations
+    ) {
         Objects.requireNonNull(roadGraph, "roadGraph");
         Objects.requireNonNull(districtBounds, "districtBounds");
         Objects.requireNonNull(survey, "survey");
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(topology, "topology");
+        Objects.requireNonNull(terrainEvaluations, "terrainEvaluations");
         if (capacity <= 0) {
             throw new IllegalArgumentException("capacity must be positive");
         }
+        terrainEvaluations.requireCompatible(survey, settings);
 
         Map<PlanElementId, RoadNode> nodes = nodesById(roadGraph);
         List<GridBounds> roadCorridors = roadCorridors(roadGraph, nodes);
@@ -56,7 +79,7 @@ final class FrontageParcelAllocator {
                 nodes,
                 roadReservations,
                 districtBounds,
-                survey,
+                terrainEvaluations,
                 settings,
                 seed,
                 topology
@@ -168,7 +191,7 @@ final class FrontageParcelAllocator {
             Map<PlanElementId, RoadNode> nodes,
             List<GridBounds> roadReservations,
             GridBounds districtBounds,
-            TerrainSurvey survey,
+            ParcelTerrainEvaluationCache terrainEvaluations,
             SuburbPlanningSettings settings,
             long seed,
             Optional<TerrainTopology> topology
@@ -186,7 +209,13 @@ final class FrontageParcelAllocator {
                     if (!isDevelopable(bounds, settings, topology)) {
                         continue;
                     }
-                    ParcelCandidate candidate = candidate(bounds, survey, settings, seed, segment.id(), side);
+                    ParcelCandidate candidate = candidate(
+                            bounds,
+                            terrainEvaluations,
+                            seed,
+                            segment.id(),
+                            side
+                    );
                     candidatesByBounds.merge(
                             bounds,
                             candidate,
@@ -236,45 +265,19 @@ final class FrontageParcelAllocator {
 
     private static ParcelCandidate candidate(
             GridBounds bounds,
-            TerrainSurvey survey,
-            SuburbPlanningSettings settings,
+            ParcelTerrainEvaluationCache terrainEvaluations,
             long seed,
             PlanElementId segmentId,
             ParcelSide side
     ) {
-        GridBounds building = SuburbParcelGeometry.buildingBounds(settings, bounds);
-        int targetHeight = maximumHeight(building, survey);
-        int maximumCorrection = 0;
-        long totalCorrection = 0L;
-        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
-            for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
-                int correction = Math.abs(targetHeight - requiredCell(survey, new GridPoint(x, z)).height());
-                maximumCorrection = Math.max(maximumCorrection, correction);
-                totalCorrection += correction;
-            }
-        }
+        ParcelTerrainEvaluation evaluation = terrainEvaluations.evaluate(bounds);
         return new ParcelCandidate(
                 bounds,
-                maximumCorrection,
-                totalCorrection,
+                evaluation.maximumCorrection(),
+                evaluation.totalCorrection(),
                 stableOrder(seed, segmentId.value(), side.ordinal()),
                 new FrontageKey(segmentId, side)
         );
-    }
-
-    private static int maximumHeight(GridBounds bounds, TerrainSurvey survey) {
-        int maximum = Integer.MIN_VALUE;
-        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
-            for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
-                maximum = Math.max(maximum, requiredCell(survey, new GridPoint(x, z)).height());
-            }
-        }
-        return maximum;
-    }
-
-    private static TerrainCell requiredCell(TerrainSurvey survey, GridPoint point) {
-        return survey.findCell(point)
-                .orElseThrow(() -> new IllegalArgumentException("parcel point is outside terrain survey: " + point));
     }
 
     private static ParcelCandidate betterCandidate(ParcelCandidate first, ParcelCandidate second) {

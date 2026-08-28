@@ -336,10 +336,15 @@ public final class SuburbPlanner {
     ) {
         TerrainTopology topology = analyzeTopology(request, adaptationPlan);
         RoadTerrainEvaluationCache roadTerrainEvaluations = new RoadTerrainEvaluationCache();
+        ParcelTerrainEvaluationCache parcelTerrainEvaluations = new ParcelTerrainEvaluationCache(
+                request.survey(),
+                request.settings()
+        );
         SuburbLayout preferredLayout = createLayout(
                 request,
                 request.survey().bounds(),
-                request.settings().targetParcelCount()
+                request.settings().targetParcelCount(),
+                parcelTerrainEvaluations
         );
         return LAYOUT_SELECTOR.select(
                 request.survey().bounds(),
@@ -350,13 +355,14 @@ public final class SuburbPlanner {
                 ),
                 topology,
                 preferredLayout,
-                (bounds, capacity) -> createLayout(request, bounds, capacity),
+                (bounds, capacity) -> createLayout(request, bounds, capacity, parcelTerrainEvaluations),
                 layout -> routeLayout(
                         request,
                         layout,
                         topology,
                         adaptationPlan,
-                        roadTerrainEvaluations
+                        roadTerrainEvaluations,
+                        parcelTerrainEvaluations
                 )
         );
     }
@@ -390,6 +396,20 @@ public final class SuburbPlanner {
             GridBounds bounds,
             int parcelCapacity
     ) {
+        return createLayout(
+                request,
+                bounds,
+                parcelCapacity,
+                new ParcelTerrainEvaluationCache(request.survey(), request.settings())
+        );
+    }
+
+    private SuburbLayout createLayout(
+            SuburbPlanningRequest request,
+            GridBounds bounds,
+            int parcelCapacity,
+            ParcelTerrainEvaluationCache parcelTerrainEvaluations
+    ) {
         Random random = new Random(request.seed());
         int mainRoadZ = centerZ(bounds);
         List<Integer> sideRoadXs = sideRoadXs(bounds, random);
@@ -402,7 +422,8 @@ public final class SuburbPlanner {
                 request.settings(),
                 request.seed(),
                 parcelCapacity,
-                Optional.empty()
+                Optional.empty(),
+                parcelTerrainEvaluations
         );
 
         return new SuburbLayout(
@@ -422,7 +443,8 @@ public final class SuburbPlanner {
             SuburbLayout layout,
             TerrainTopology topology,
             TerrainAdaptationPlan adaptationPlan,
-            RoadTerrainEvaluationCache terrainEvaluations
+            RoadTerrainEvaluationCache terrainEvaluations,
+            ParcelTerrainEvaluationCache parcelTerrainEvaluations
     ) {
         RoadGraph sourceRoadGraph = createRoadGraph(
                 request,
@@ -450,7 +472,8 @@ public final class SuburbPlanner {
                 request.settings(),
                 request.seed(),
                 layout.requestedParcelCapacity(),
-                Optional.of(topology)
+                Optional.of(topology),
+                parcelTerrainEvaluations
         );
         if (parcelBounds.size() < layout.requestedParcelCapacity()) {
             return Optional.empty();

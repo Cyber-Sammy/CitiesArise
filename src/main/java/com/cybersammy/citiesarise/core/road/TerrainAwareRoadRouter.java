@@ -32,8 +32,19 @@ public final class TerrainAwareRoadRouter {
             .thenComparingInt(node -> node.point().z());
 
     public RoadRoutingResult route(RoadRoutingRequest request) {
+        return route(request, new RoadTerrainEvaluationCache());
+    }
+
+    public RoadRoutingResult route(
+            RoadRoutingRequest request,
+            RoadTerrainEvaluationCache terrainEvaluations
+    ) {
         Objects.requireNonNull(request, "request");
-        EvaluationCache evaluations = new EvaluationCache(request);
+        Objects.requireNonNull(terrainEvaluations, "terrainEvaluations");
+        EvaluationCache evaluations = new EvaluationCache(
+                request,
+                terrainEvaluations.contextFor(request)
+        );
         StepEvaluation start = evaluations.point(request.start());
         if (!start.traversable()) {
             return RoadRoutingResult.rejected(RoadRoutingFailureReason.START_BLOCKED);
@@ -170,7 +181,11 @@ public final class TerrainAwareRoadRouter {
         }
     }
 
-    private static StepEvaluation evaluatePoint(RoadRoutingRequest request, GridPoint point) {
+    private static StepEvaluation evaluatePoint(
+            RoadRoutingRequest request,
+            GridPoint point,
+            RoadTerrainEvaluationCache.Context terrainEvaluations
+    ) {
         GridBounds pointBounds = AxisAlignedGridCorridor.bounds(point, point, request.roadWidth());
         if (!request.routingBounds().contains(pointBounds)) {
             return StepEvaluation.blocked();
@@ -180,13 +195,15 @@ public final class TerrainAwareRoadRouter {
                 expandWithin(pointBounds, request.terrainCheckBounds(), request.supportRadius()),
                 pointBounds,
                 point,
-                point
+                point,
+                terrainEvaluations
         );
     }
 
     private static StepEvaluation evaluateStep(
             RoadRoutingRequest request,
             EvaluationCache evaluations,
+            RoadTerrainEvaluationCache.Context terrainEvaluations,
             GridPoint start,
             GridPoint destination
     ) {
@@ -199,7 +216,8 @@ public final class TerrainAwareRoadRouter {
                 expandWithin(corridor, request.terrainCheckBounds(), request.supportRadius()),
                 corridor,
                 start,
-                destination
+                destination,
+                terrainEvaluations
         );
         if (!evaluation.traversable()) {
             return evaluation;
@@ -216,7 +234,8 @@ public final class TerrainAwareRoadRouter {
             GridBounds footprint,
             GridBounds collisionFootprint,
             GridPoint start,
-            GridPoint destination
+            GridPoint destination,
+            RoadTerrainEvaluationCache.Context terrainEvaluations
     ) {
         if (!request.terrainCheckBounds().contains(footprint)) {
             return StepEvaluation.blocked();
@@ -228,6 +247,40 @@ public final class TerrainAwareRoadRouter {
         )) {
             return StepEvaluation.blocked();
         }
+        TerrainFootprintEvaluation terrain = requestTerrainEvaluation(
+                request,
+                footprint,
+                terrainEvaluations
+        );
+        if (!terrain.traversable()) {
+            return StepEvaluation.blocked();
+        }
+        long cost = movementCost(
+                request,
+                start,
+                destination,
+                terrain.maximumSlope(),
+                terrain.roughCells(),
+                terrain.crossingFeature().orElse(null)
+        );
+        return StepEvaluation.traversable(cost, terrain.crossingFeature().orElse(null));
+    }
+
+    private static TerrainFootprintEvaluation requestTerrainEvaluation(
+            RoadRoutingRequest request,
+            GridBounds footprint,
+            RoadTerrainEvaluationCache.Context evaluations
+    ) {
+        return evaluations.getOrCreate(
+                footprint,
+                () -> evaluateTerrainFootprint(request, footprint)
+        );
+    }
+
+    private static TerrainFootprintEvaluation evaluateTerrainFootprint(
+            RoadRoutingRequest request,
+            GridBounds footprint
+    ) {
         TerrainFeatureType crossingFeature = null;
         double maximumSlope = 0.0;
         int roughCells = 0;
@@ -239,7 +292,7 @@ public final class TerrainAwareRoadRouter {
                     TerrainPlanningAction action = request.terrainAdaptationPlan()
                             .actionAt(cell.point(), featureType.orElseThrow());
                     if (blocksRouting(action)) {
-                        return StepEvaluation.blocked();
+                        return TerrainFootprintEvaluation.blocked();
                     }
                     if (action == TerrainPlanningAction.CROSS) {
                         crossingFeature = preferredCrossing(crossingFeature, featureType.orElseThrow());
@@ -251,8 +304,7 @@ public final class TerrainAwareRoadRouter {
                 }
             }
         }
-        long cost = movementCost(request, start, destination, maximumSlope, roughCells, crossingFeature);
-        return StepEvaluation.traversable(cost, crossingFeature);
+        return TerrainFootprintEvaluation.traversable(maximumSlope, roughCells, crossingFeature);
     }
 
     private static boolean blocksRouting(TerrainPlanningAction action) {
@@ -400,24 +452,35 @@ public final class TerrainAwareRoadRouter {
 
     private static final class EvaluationCache {
         private final RoadRoutingRequest request;
+        private final RoadTerrainEvaluationCache.Context terrainEvaluations;
         private final Map<GridPoint, StepEvaluation> pointEvaluations = new HashMap<>();
         private final Map<RouteStep, StepEvaluation> stepEvaluations = new HashMap<>();
 
-        private EvaluationCache(RoadRoutingRequest request) {
+        private EvaluationCache(
+                RoadRoutingRequest request,
+                RoadTerrainEvaluationCache.Context terrainEvaluations
+        ) {
             this.request = request;
+            this.terrainEvaluations = terrainEvaluations;
         }
 
         private StepEvaluation point(GridPoint point) {
             return pointEvaluations.computeIfAbsent(
                     point,
-                    candidate -> evaluatePoint(request, candidate)
+                    candidate -> evaluatePoint(request, candidate, terrainEvaluations)
             );
         }
 
         private StepEvaluation step(GridPoint start, GridPoint destination) {
             return stepEvaluations.computeIfAbsent(
                     new RouteStep(start, destination),
-                    candidate -> evaluateStep(request, this, candidate.start(), candidate.destination())
+                    candidate -> evaluateStep(
+                            request,
+                            this,
+                            terrainEvaluations,
+                            candidate.start(),
+                            candidate.destination()
+                    )
             );
         }
     }

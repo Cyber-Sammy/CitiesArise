@@ -18,6 +18,7 @@ import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
 import com.cybersammy.citiesarise.core.model.SettlementPlan;
+import com.cybersammy.citiesarise.core.road.RoadTerrainEvaluationCache;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlan;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlanner;
@@ -334,6 +335,7 @@ public final class SuburbPlanner {
             TerrainAdaptationPlan adaptationPlan
     ) {
         TerrainTopology topology = analyzeTopology(request, adaptationPlan);
+        RoadTerrainEvaluationCache roadTerrainEvaluations = new RoadTerrainEvaluationCache();
         SuburbLayout preferredLayout = createLayout(
                 request,
                 request.survey().bounds(),
@@ -349,7 +351,13 @@ public final class SuburbPlanner {
                 topology,
                 preferredLayout,
                 (bounds, capacity) -> createLayout(request, bounds, capacity),
-                layout -> routeLayout(request, layout, topology, adaptationPlan)
+                layout -> routeLayout(
+                        request,
+                        layout,
+                        topology,
+                        adaptationPlan,
+                        roadTerrainEvaluations
+                )
         );
     }
 
@@ -413,7 +421,8 @@ public final class SuburbPlanner {
             SuburbPlanningRequest request,
             SuburbLayout layout,
             TerrainTopology topology,
-            TerrainAdaptationPlan adaptationPlan
+            TerrainAdaptationPlan adaptationPlan,
+            RoadTerrainEvaluationCache terrainEvaluations
     ) {
         RoadGraph sourceRoadGraph = createRoadGraph(
                 request,
@@ -426,7 +435,8 @@ public final class SuburbPlanner {
                 layout.bounds(),
                 sourceRoadGraph,
                 List.of(),
-                adaptationPlan
+                adaptationPlan,
+                terrainEvaluations
         );
         if (routedRoadGraph.isEmpty()) {
             return Optional.empty();

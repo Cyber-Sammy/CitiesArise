@@ -12,8 +12,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class AdaptiveSuburbLayoutSelector {
-    static final int MAX_LAYOUT_FINALIZATION_ATTEMPTS = 128;
-    private static final int MAX_FINALIZATION_ATTEMPTS_PER_SIZE = 16;
+    static final int MAX_LAYOUT_FINALIZATION_ATTEMPTS = 32;
+    private static final int MAX_FINALIZATION_ATTEMPTS_PER_SIZE = 8;
     private static final List<Integer> DISTRICT_GROWTH_STEPS = List.of(0, 4, 8, 16);
 
     Optional<SuburbLayoutSelection> select(

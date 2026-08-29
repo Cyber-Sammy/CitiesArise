@@ -336,6 +336,10 @@ public final class SuburbPlanner {
     ) {
         TerrainTopology topology = analyzeTopology(request, adaptationPlan);
         RoadTerrainEvaluationCache roadTerrainEvaluations = new RoadTerrainEvaluationCache();
+        TerrainAwareRoadGraphRouter.RoutingContext routingContext = ROAD_GRAPH_ROUTER.routingContext(
+                request.terrainResponsePolicy(),
+                adaptationPlan
+        );
         ParcelTerrainEvaluationCache parcelTerrainEvaluations = new ParcelTerrainEvaluationCache(
                 request.survey(),
                 request.settings()
@@ -360,7 +364,7 @@ public final class SuburbPlanner {
                         request,
                         layout,
                         topology,
-                        adaptationPlan,
+                        routingContext,
                         roadTerrainEvaluations,
                         parcelTerrainEvaluations
                 )
@@ -442,7 +446,7 @@ public final class SuburbPlanner {
             SuburbPlanningRequest request,
             SuburbLayout layout,
             TerrainTopology topology,
-            TerrainAdaptationPlan adaptationPlan,
+            TerrainAwareRoadGraphRouter.RoutingContext routingContext,
             RoadTerrainEvaluationCache terrainEvaluations,
             ParcelTerrainEvaluationCache parcelTerrainEvaluations
     ) {
@@ -457,7 +461,7 @@ public final class SuburbPlanner {
                 layout.bounds(),
                 sourceRoadGraph,
                 List.of(),
-                adaptationPlan,
+                routingContext,
                 terrainEvaluations
         );
         if (routedRoadGraph.isEmpty()) {

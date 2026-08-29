@@ -181,7 +181,43 @@ final class AdaptiveSuburbLayoutSelectorTest {
 
         assertTrue(finalizationCount.get() > 0);
         assertTrue(finalizationCount.get()
-                <= AdaptiveSuburbLayoutSelector.MAX_LAYOUT_FINALIZATION_ATTEMPTS);
+                <= AdaptiveSuburbLayoutSelector.maximumLayoutFinalizationAttempts(
+                        new DevelopmentCapacity(2, 4, 6)
+                ));
+    }
+
+    @Test
+    void preservesFinalizationBudgetForMinimumCapacityFallback() {
+        GridBounds surveyBounds = bounds(0, 0, 40, 20);
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                TerrainSurvey.sample(surveyBounds, point -> Optional.of(cell(point, false))),
+                cell -> true
+        );
+        DevelopmentCapacity capacity = new DevelopmentCapacity(2, 4, 6);
+        AtomicInteger finalizationCount = new AtomicInteger();
+        AtomicInteger minimumCapacityAttempts = new AtomicInteger();
+
+        SuburbLayoutSelection selected = new AdaptiveSuburbLayoutSelector().select(
+                surveyBounds,
+                capacity,
+                new GridSize(4, 10),
+                topology,
+                layout(surveyBounds, 4),
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout,
+                layout -> {
+                    finalizationCount.incrementAndGet();
+                    if (layout.requestedParcelCapacity() != capacity.minimum()) {
+                        return Optional.empty();
+                    }
+                    minimumCapacityAttempts.incrementAndGet();
+                    return Optional.of(layout);
+                }
+        ).orElseThrow();
+
+        assertEquals(capacity.minimum(), selected.allocatedCapacity());
+        assertEquals(1, minimumCapacityAttempts.get());
+        assertTrue(finalizationCount.get()
+                <= AdaptiveSuburbLayoutSelector.maximumLayoutFinalizationAttempts(capacity));
     }
 
     private static TerrainTopology topologyWithBarrier(GridBounds bounds, int barrierX) {

@@ -12,7 +12,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class AdaptiveSuburbLayoutSelector {
-    static final int MAX_LAYOUT_FINALIZATION_ATTEMPTS = 32;
+    private static final int BASE_MAX_LAYOUT_FINALIZATION_ATTEMPTS = 32;
+    private static final int MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY = 4;
+    static final int MAX_FINALIZATION_ATTEMPTS_PER_CAPACITY = 16;
     private static final int MAX_FINALIZATION_ATTEMPTS_PER_SIZE = 8;
     private static final List<Integer> DISTRICT_GROWTH_STEPS = List.of(0, 4, 8, 16);
 
@@ -32,7 +34,7 @@ final class AdaptiveSuburbLayoutSelector {
         Objects.requireNonNull(preferredLayout, "preferredLayout");
         Objects.requireNonNull(layoutFactory, "layoutFactory");
         Objects.requireNonNull(layoutFinalizer, "layoutFinalizer");
-        LayoutSearchBudget searchBudget = new LayoutSearchBudget(MAX_LAYOUT_FINALIZATION_ATTEMPTS);
+        LayoutSearchBudget searchBudget = new LayoutSearchBudget(maximumLayoutFinalizationAttempts(capacity));
 
         if (hasCapacity(preferredLayout, capacity.target())
                 && isDevelopable(preferredLayout, topology)
@@ -64,12 +66,11 @@ final class AdaptiveSuburbLayoutSelector {
             TerrainTopology topology,
             LayoutFactory layoutFactory,
             LayoutFinalizer layoutFinalizer,
-            LayoutSearchBudget searchBudget
+        LayoutSearchBudget searchBudget
     ) {
         for (int allocatedCapacity = capacity.target(); allocatedCapacity >= capacity.minimum(); allocatedCapacity--) {
-            if (searchBudget.exhausted()) {
-                return Optional.empty();
-            }
+            int lowerCapacityCount = allocatedCapacity - capacity.minimum();
+            LayoutSearchBudget capacityBudget = searchBudget.capacityBudget(lowerCapacityCount);
             Optional<SuburbLayoutSelection> selection = selectCapacity(
                     surveyBounds,
                     allocatedCapacity,
@@ -77,7 +78,7 @@ final class AdaptiveSuburbLayoutSelector {
                     topology,
                     layoutFactory,
                     layoutFinalizer,
-                    searchBudget
+                    capacityBudget
             );
             if (selection.isPresent()) {
                 return selection;
@@ -201,6 +202,16 @@ final class AdaptiveSuburbLayoutSelector {
             }
         }
         return Optional.empty();
+    }
+
+    static int maximumLayoutFinalizationAttempts(DevelopmentCapacity capacity) {
+        Objects.requireNonNull(capacity, "capacity");
+        int capacityCount = Math.addExact(Math.subtractExact(capacity.target(), capacity.minimum()), 1);
+        int reservedAttempts = Math.addExact(
+                Math.multiplyExact(capacityCount, MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY),
+                1
+        );
+        return Math.max(BASE_MAX_LAYOUT_FINALIZATION_ATTEMPTS, reservedAttempts);
     }
 
     private static List<UnroutedLayoutCandidate> finalizationCandidates(
@@ -412,10 +423,34 @@ final class AdaptiveSuburbLayoutSelector {
     }
 
     private static final class LayoutSearchBudget {
+        private final LayoutSearchBudget parent;
         private int remainingAttempts;
 
         private LayoutSearchBudget(int maximumAttempts) {
+            this(maximumAttempts, null);
+        }
+
+        private LayoutSearchBudget(int maximumAttempts, LayoutSearchBudget parent) {
+            if (maximumAttempts < 0) {
+                throw new IllegalArgumentException("maximumAttempts must not be negative");
+            }
             remainingAttempts = maximumAttempts;
+            this.parent = parent;
+        }
+
+        private LayoutSearchBudget capacityBudget(int lowerCapacityCount) {
+            if (parent != null) {
+                throw new IllegalStateException("only the root budget can allocate capacity budgets");
+            }
+            int reservedForLowerCapacities = Math.multiplyExact(
+                    lowerCapacityCount,
+                    MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY
+            );
+            int available = Math.max(0, remainingAttempts - reservedForLowerCapacities);
+            return new LayoutSearchBudget(
+                    Math.min(MAX_FINALIZATION_ATTEMPTS_PER_CAPACITY, available),
+                    this
+            );
         }
 
         private boolean visit() {
@@ -423,11 +458,14 @@ final class AdaptiveSuburbLayoutSelector {
                 return false;
             }
             remainingAttempts--;
+            if (parent != null && !parent.visit()) {
+                throw new IllegalStateException("capacity budget exceeded its root budget");
+            }
             return true;
         }
 
         private boolean exhausted() {
-            return remainingAttempts == 0;
+            return remainingAttempts == 0 || (parent != null && parent.exhausted());
         }
     }
 

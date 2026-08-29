@@ -203,6 +203,62 @@ public final class DebugPlacementPlanConverter {
         for (RoadSegment segment : roadGraph.segments()) {
             addRoadSegmentOperations(segment, nodesById, operationsByPosition);
         }
+        addRoadEndCurbOperations(roadGraph, nodesById, operationsByPosition);
+    }
+
+    private static void addRoadEndCurbOperations(
+            RoadGraph roadGraph,
+            Map<PlanElementId, RoadNode> nodesById,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
+    ) {
+        for (RoadNode node : roadGraph.nodes()) {
+            if (!node.tags().contains(PlanTags.DEAD_END)) {
+                continue;
+            }
+            List<RoadSegment> connected = roadGraph.segments().stream()
+                    .filter(segment -> segment.startNodeId().equals(node.id())
+                            || segment.endNodeId().equals(node.id()))
+                    .toList();
+            if (connected.size() != 1) {
+                continue;
+            }
+            RoadSegment segment = connected.getFirst();
+            RoadNode other = requiredNode(
+                    nodesById,
+                    segment.startNodeId().equals(node.id()) ? segment.endNodeId() : segment.startNodeId()
+            );
+            addRoadEndCurb(node.point(), other.point(), segment, operationsByPosition);
+        }
+    }
+
+    private static void addRoadEndCurb(
+            GridPoint endpoint,
+            GridPoint connectedPoint,
+            RoadSegment segment,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
+    ) {
+        GridBounds roadBounds = AxisAlignedGridCorridor.bounds(endpoint, connectedPoint, segment.width());
+        if (endpoint.z() == connectedPoint.z()) {
+            for (int z = roadBounds.minZ(); z < roadBounds.maxZExclusive(); z++) {
+                addOperation(
+                        new GridPoint(endpoint.x(), z),
+                        FIRST_WALL_OFFSET,
+                        DebugPlacementRole.ROAD_END_CURB,
+                        segment.id(),
+                        operationsByPosition
+                );
+            }
+            return;
+        }
+        for (int x = roadBounds.minX(); x < roadBounds.maxXExclusive(); x++) {
+            addOperation(
+                    new GridPoint(x, endpoint.z()),
+                    FIRST_WALL_OFFSET,
+                    DebugPlacementRole.ROAD_END_CURB,
+                    segment.id(),
+                    operationsByPosition
+            );
+        }
     }
 
     private static Map<PlanElementId, RoadNode> nodesById(RoadGraph roadGraph) {

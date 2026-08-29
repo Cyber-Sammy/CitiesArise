@@ -76,22 +76,35 @@ final class TerrainAwareRoadGraphRouter {
             TerrainAdaptationPlan adaptationPlan,
             RoadTerrainEvaluationCache terrainEvaluations
     ) {
+        return route(
+                request,
+                routingBounds,
+                source,
+                reservedBounds,
+                routingContext(request.terrainResponsePolicy(), adaptationPlan),
+                terrainEvaluations
+        );
+    }
+
+    Optional<RoadGraph> route(
+            SuburbPlanningRequest request,
+            GridBounds routingBounds,
+            RoadGraph source,
+            List<GridBounds> reservedBounds,
+            RoutingContext routingContext,
+            RoadTerrainEvaluationCache terrainEvaluations
+    ) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(routingBounds, "routingBounds");
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(reservedBounds, "reservedBounds");
-        Objects.requireNonNull(adaptationPlan, "adaptationPlan");
+        Objects.requireNonNull(routingContext, "routingContext");
         Objects.requireNonNull(terrainEvaluations, "terrainEvaluations");
 
         Map<PlanElementId, RoadNode> sourceNodes = nodesById(source);
         List<RoadNode> routedNodes = new ArrayList<>(source.nodes());
         List<RoadSegment> routedSegments = new ArrayList<>();
         List<GridBounds> dynamicReservations = new ArrayList<>(reservedBounds);
-        TerrainResponsePolicy routingPolicy = routingPolicy(request.terrainResponsePolicy());
-        TerrainAdaptationPlan routingAdaptationPlan = adaptationPlan.withPolicy(
-                routingPolicy,
-                crossingBarrierOverrides(request.terrainResponsePolicy())
-        );
         for (RoadSegment segment : source.segments()) {
             Optional<RoutedSegment> routed = routeSegment(
                     request,
@@ -99,8 +112,8 @@ final class TerrainAwareRoadGraphRouter {
                     segment,
                     sourceNodes,
                     dynamicReservations,
-                    routingPolicy,
-                    routingAdaptationPlan,
+                    routingContext.policy(),
+                    routingContext.adaptationPlan(),
                     terrainEvaluations
             );
             if (routed.isEmpty()) {
@@ -111,6 +124,19 @@ final class TerrainAwareRoadGraphRouter {
             dynamicReservations.addAll(routeCorridors(routed.orElseThrow().route(), segment.width()));
         }
         return Optional.of(new RoadGraph(routedNodes, routedSegments));
+    }
+
+    RoutingContext routingContext(
+            TerrainResponsePolicy sourcePolicy,
+            TerrainAdaptationPlan adaptationPlan
+    ) {
+        Objects.requireNonNull(sourcePolicy, "sourcePolicy");
+        Objects.requireNonNull(adaptationPlan, "adaptationPlan");
+        TerrainResponsePolicy routingPolicy = routingPolicy(sourcePolicy);
+        return new RoutingContext(
+                routingPolicy,
+                adaptationPlan.withPolicy(routingPolicy, crossingBarrierOverrides(sourcePolicy))
+        );
     }
 
     private static Optional<RoutedSegment> routeSegment(
@@ -279,6 +305,13 @@ final class TerrainAwareRoadGraphRouter {
             nodes = List.copyOf(nodes);
             segments = List.copyOf(segments);
             Objects.requireNonNull(route, "route");
+        }
+    }
+
+    record RoutingContext(TerrainResponsePolicy policy, TerrainAdaptationPlan adaptationPlan) {
+        RoutingContext {
+            Objects.requireNonNull(policy, "policy");
+            Objects.requireNonNull(adaptationPlan, "adaptationPlan");
         }
     }
 }

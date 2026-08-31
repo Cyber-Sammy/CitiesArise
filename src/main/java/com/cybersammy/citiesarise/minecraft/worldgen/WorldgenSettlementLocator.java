@@ -183,8 +183,20 @@ public final class WorldgenSettlementLocator {
         }
 
         private ChunkPos potentialChunk(SettlementRegion region) {
-            return placement.getPotentialStructureChunk(worldSeed, region.x(), region.z());
+            return potentialChunkForRegion(placement, worldSeed, region);
         }
+    }
+
+    static ChunkPos potentialChunkForRegion(
+            RandomSpreadStructurePlacement placement,
+            long worldSeed,
+            SettlementRegion region
+    ) {
+        Objects.requireNonNull(placement, "placement");
+        Objects.requireNonNull(region, "region");
+        int probeChunkX = WorldgenPlacementCoordinates.probeChunk(region.x(), placement.spacing());
+        int probeChunkZ = WorldgenPlacementCoordinates.probeChunk(region.z(), placement.spacing());
+        return placement.getPotentialStructureChunk(worldSeed, probeChunkX, probeChunkZ);
     }
 
     public record LocatedSettlement(

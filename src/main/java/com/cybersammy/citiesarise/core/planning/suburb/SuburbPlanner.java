@@ -536,8 +536,8 @@ public final class SuburbPlanner {
                 PlanPropertyKeys.DISTRICT_FOOTPRINT_AREA,
                 Integer.toString(selection.layout().districtFootprint().area())
         ).with(
-                PlanPropertyKeys.PRESERVED_GAP_AREA,
-                Integer.toString(selection.layout().districtFootprint().preservedGapArea())
+                PlanPropertyKeys.EXCLUDED_FOOTPRINT_AREA,
+                Integer.toString(selection.layout().districtFootprint().excludedArea())
         );
     }
 

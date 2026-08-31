@@ -182,7 +182,7 @@ final class SuburbPlannerTest {
         SettlementPlan plan = result.plan().orElseThrow();
         assertTrue(roadCorridors(plan.roadGraph()).stream()
                 .anyMatch(corridor -> corridor.contains(waterPoint)));
-        assertEquals("0", plan.properties().find(PlanPropertyKeys.PRESERVED_GAP_AREA).orElseThrow());
+        assertEquals("0", plan.properties().find(PlanPropertyKeys.EXCLUDED_FOOTPRINT_AREA).orElseThrow());
     }
 
     @Test
@@ -204,7 +204,7 @@ final class SuburbPlannerTest {
         assertTrue(roadCorridors(plan.roadGraph()).stream()
                 .noneMatch(corridor -> corridor.contains(waterPoint)));
         assertTrue(plan.parcels().stream().noneMatch(parcel -> parcel.bounds().contains(waterPoint)));
-        assertEquals("1", plan.properties().find(PlanPropertyKeys.PRESERVED_GAP_AREA).orElseThrow());
+        assertEquals("1", plan.properties().find(PlanPropertyKeys.EXCLUDED_FOOTPRINT_AREA).orElseThrow());
     }
 
     @Test
@@ -750,7 +750,7 @@ final class SuburbPlannerTest {
         assertTrue(plan.properties().find(PlanPropertyKeys.DISTRICT_ANCHOR_Z).isPresent());
         assertTrue(plan.properties().find(PlanPropertyKeys.DEVELOPABLE_REGION_ID).isPresent());
         assertTrue(plan.properties().find(PlanPropertyKeys.DISTRICT_FOOTPRINT_AREA).isPresent());
-        assertTrue(plan.properties().find(PlanPropertyKeys.PRESERVED_GAP_AREA).isPresent());
+        assertTrue(plan.properties().find(PlanPropertyKeys.EXCLUDED_FOOTPRINT_AREA).isPresent());
     }
 
     @Test

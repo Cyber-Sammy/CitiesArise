@@ -27,7 +27,7 @@ final class DistrictFootprintTest {
         ).orElseThrow();
 
         assertEquals(48, footprint.area());
-        assertEquals(1, footprint.preservedGapArea());
+        assertEquals(1, footprint.excludedArea());
         assertFalse(footprint.contains(preserved));
         assertTrue(footprint.contains(bounds(0, 0, 3, 3)));
         assertFalse(footprint.contains(bounds(2, 2, 3, 3)));
@@ -42,7 +42,7 @@ final class DistrictFootprintTest {
         ).orElseThrow();
 
         assertEquals(15, footprint.area());
-        assertEquals(20, footprint.preservedGapArea());
+        assertEquals(20, footprint.excludedArea());
         assertTrue(footprint.contains(new GridPoint(0, 0)));
         assertFalse(footprint.contains(new GridPoint(4, 0)));
         assertEquals(0, footprint.developableRegionId());

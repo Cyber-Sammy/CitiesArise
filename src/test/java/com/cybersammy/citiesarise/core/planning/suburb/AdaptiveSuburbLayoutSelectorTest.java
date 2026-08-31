@@ -186,6 +186,40 @@ final class AdaptiveSuburbLayoutSelectorTest {
     }
 
     @Test
+    void ranksEnvelopeByTheSameLargestComponentUsedDuringFinalization() {
+        GridBounds surveyBounds = bounds(0, 0, 12, 6);
+        TerrainSurvey survey = TerrainSurvey.sample(
+                surveyBounds,
+                point -> Optional.of(cell(point, !rankingFixtureDevelopable(point)))
+        );
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                survey,
+                cell -> cell.terrainCategory() != TerrainCategory.BLOCKED
+        );
+        SuburbLayout preferredLayout = unroutedLayout(surveyBounds, 1);
+        java.util.concurrent.atomic.AtomicReference<GridBounds> firstCandidate =
+                new java.util.concurrent.atomic.AtomicReference<>();
+
+        new AdaptiveSuburbLayoutSelector().select(
+                surveyBounds,
+                DevelopmentCapacity.fixed(1),
+                new GridSize(6, 6),
+                topology,
+                preferredLayout,
+                AdaptiveSuburbLayoutSelectorTest::unroutedLayout,
+                layout -> {
+                    if (layout == preferredLayout) {
+                        return Optional.empty();
+                    }
+                    firstCandidate.compareAndSet(null, layout.bounds());
+                    return Optional.of(layout);
+                }
+        ).orElseThrow();
+
+        assertEquals(bounds(0, 0, 6, 6), firstCandidate.get());
+    }
+
+    @Test
     void boundsExpensiveLayoutFinalizationAttempts() {
         GridBounds surveyBounds = bounds(0, 0, 40, 20);
         TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
@@ -261,6 +295,26 @@ final class AdaptiveSuburbLayoutSelectorTest {
 
     private static SuburbLayout capacityLimitedLayout(GridBounds bounds, int requestedCapacity) {
         return layout(bounds, Math.min(requestedCapacity, bounds.size().width() / 4));
+    }
+
+    private static SuburbLayout unroutedLayout(GridBounds bounds, int requestedCapacity) {
+        return new SuburbLayout(
+                bounds,
+                bounds.minZ() + (bounds.size().depth() / 2),
+                List.of(),
+                requestedCapacity,
+                List.of(bounds(bounds.minX(), bounds.minZ(), 1, 1)),
+                Optional.empty(),
+                List.of(bounds),
+                List.of(new PotentialTerrainPreparationFootprint(bounds, 0))
+        );
+    }
+
+    private static boolean rankingFixtureDevelopable(GridPoint point) {
+        boolean largeLeftRegion = point.x() <= 2 && !(point.x() == 2 && point.z() == 3);
+        boolean centralIsland = point.equals(new GridPoint(3, 3));
+        boolean mediumRightRegion = point.x() >= 9 && point.x() <= 10;
+        return largeLeftRegion || centralIsland || mediumRightRegion;
     }
 
     private static SuburbLayout layout(GridBounds bounds, int parcelCount) {

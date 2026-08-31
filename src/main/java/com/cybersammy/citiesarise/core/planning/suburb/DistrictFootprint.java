@@ -125,7 +125,7 @@ final class DistrictFootprint {
         return points.size();
     }
 
-    int preservedGapArea() {
+    int excludedArea() {
         return Math.subtractExact(
                 Math.multiplyExact(bounds.size().width(), bounds.size().depth()),
                 area()

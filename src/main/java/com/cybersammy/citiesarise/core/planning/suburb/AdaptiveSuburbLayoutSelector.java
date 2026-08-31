@@ -274,13 +274,14 @@ final class AdaptiveSuburbLayoutSelector {
         if (!hasCapacity(layout, targetParcelCount)) {
             return Optional.empty();
         }
-        if (!isDevelopable(layout, topology)) {
+        Optional<DistrictFootprint> footprint = DistrictFootprint.fromTopology(layout.bounds(), topology);
+        if (footprint.isEmpty()) {
             return Optional.empty();
         }
-        DevelopableRegion region = candidateRegion(layout, topology).orElseThrow();
         return Optional.of(new UnroutedLayoutCandidate(
                 layout,
-                region.area(),
+                footprint.orElseThrow().area(),
+                excludedSupportCells(layout, footprint.orElseThrow(), topology),
                 centerDistance(layout.bounds(), surveyBounds),
                 layout.bounds().minX(),
                 layout.bounds().minZ()
@@ -419,6 +420,34 @@ final class AdaptiveSuburbLayoutSelector {
         );
     }
 
+    private static int excludedSupportCells(
+            SuburbLayout layout,
+            DistrictFootprint footprint,
+            TerrainTopology topology
+    ) {
+        int supportRadius = layout.terrainPreparationFootprints().stream()
+                .mapToInt(PotentialTerrainPreparationFootprint::supportRadius)
+                .max()
+                .orElse(0);
+        if (supportRadius == 0) {
+            return 0;
+        }
+        GridBounds expanded = expandWithin(layout.bounds(), topology.bounds(), supportRadius);
+        int excluded = 0;
+        for (int z = expanded.minZ(); z < expanded.maxZExclusive(); z++) {
+            for (int x = expanded.minX(); x < expanded.maxXExclusive(); x++) {
+                GridPoint point = new GridPoint(x, z);
+                if (layout.bounds().contains(point)) {
+                    continue;
+                }
+                if (topology.regionIdAt(point).orElse(-1) != footprint.developableRegionId()) {
+                    excluded++;
+                }
+            }
+        }
+        return excluded;
+    }
+
     private static int subtractClamped(int value, int offset) {
         long result = (long) value - offset;
         return (int) Math.max(Integer.MIN_VALUE, result);
@@ -497,6 +526,7 @@ final class AdaptiveSuburbLayoutSelector {
     private record UnroutedLayoutCandidate(
             SuburbLayout layout,
             int regionArea,
+            int excludedSupportCells,
             long centerDistance,
             int minX,
             int minZ
@@ -504,6 +534,7 @@ final class AdaptiveSuburbLayoutSelector {
         private static final Comparator<UnroutedLayoutCandidate> ORDER = Comparator
                 .comparingInt(UnroutedLayoutCandidate::regionArea)
                 .reversed()
+                .thenComparingInt(UnroutedLayoutCandidate::excludedSupportCells)
                 .thenComparingLong(UnroutedLayoutCandidate::centerDistance)
                 .thenComparingInt(UnroutedLayoutCandidate::minX)
                 .thenComparingInt(UnroutedLayoutCandidate::minZ);
@@ -512,6 +543,9 @@ final class AdaptiveSuburbLayoutSelector {
             Objects.requireNonNull(layout, "layout");
             if (regionArea <= 0) {
                 throw new IllegalArgumentException("regionArea must be positive");
+            }
+            if (excludedSupportCells < 0) {
+                throw new IllegalArgumentException("excludedSupportCells must not be negative");
             }
             if (centerDistance < 0L) {
                 throw new IllegalArgumentException("centerDistance must not be negative");

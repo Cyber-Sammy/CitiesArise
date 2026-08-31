@@ -2,6 +2,7 @@ package com.cybersammy.citiesarise.core.planning.suburb;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
@@ -13,6 +14,7 @@ import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopology;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopologyAnalyzer;
+import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +48,31 @@ final class DistrictFootprintTest {
         assertTrue(footprint.contains(new GridPoint(0, 0)));
         assertFalse(footprint.contains(new GridPoint(4, 0)));
         assertEquals(0, footprint.developableRegionId());
+    }
+
+    @Test
+    void ranksThousandsOfSlidingCandidatesWithinTheCheapSearchBudget() {
+        GridBounds surveyBounds = bounds(0, 0, 120, 72);
+        TerrainTopology topology = topology(
+                surveyBounds,
+                point -> point.x() % 29 != 0 && (point.z() % 23 != 0 || point.x() % 7 != 0)
+        );
+        DistrictFootprint.RegionMap regionMap = DistrictFootprint.RegionMap.from(topology);
+
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            int selections = 0;
+            for (int z = 0; z <= 42; z++) {
+                for (int x = 0; x <= 80; x++) {
+                    DistrictFootprint.ComponentSelection selection = DistrictFootprint.selectionFromRegionMap(
+                            bounds(x, z, 40, 30),
+                            regionMap
+                    ).orElseThrow();
+                    assertTrue(selection.area() > 0);
+                    selections++;
+                }
+            }
+            assertEquals(3_483, selections);
+        });
     }
 
     private static TerrainTopology topology(

@@ -5,6 +5,7 @@ import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopology;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -68,35 +69,110 @@ final class DistrictFootprint {
     }
 
     static Optional<DistrictFootprint> fromTopology(GridBounds bounds, TerrainTopology topology) {
+        return fromRegionMap(bounds, RegionMap.from(topology));
+    }
+
+    static Optional<DistrictFootprint> fromRegionMap(GridBounds bounds, RegionMap regionMap) {
+        Optional<ComponentScan> scan = scanComponents(bounds, regionMap, true);
+        if (scan.isEmpty()) {
+            return Optional.empty();
+        }
+        ComponentScan selected = scan.orElseThrow();
+        List<GridPoint> points = new ArrayList<>(selected.selection().area());
+        int width = bounds.size().width();
+        for (int index : selected.pointIndices()) {
+            points.add(point(bounds, width, index));
+        }
+        return Optional.of(new DistrictFootprint(
+                bounds,
+                selected.selection().regionId(),
+                points
+        ));
+    }
+
+    static Optional<ComponentSelection> selectionFromTopology(GridBounds bounds, TerrainTopology topology) {
+        return selectionFromRegionMap(bounds, RegionMap.from(topology));
+    }
+
+    static Optional<ComponentSelection> selectionFromRegionMap(GridBounds bounds, RegionMap regionMap) {
+        return scanComponents(bounds, regionMap, false).map(ComponentScan::selection);
+    }
+
+    private static Optional<ComponentScan> scanComponents(
+            GridBounds bounds,
+            RegionMap regionMap,
+            boolean capturePoints
+    ) {
         Objects.requireNonNull(bounds, "bounds");
-        Objects.requireNonNull(topology, "topology");
-        if (!topology.bounds().contains(bounds)) {
+        Objects.requireNonNull(regionMap, "regionMap");
+        if (!regionMap.bounds().contains(bounds)) {
             throw new IllegalArgumentException("footprint bounds must be inside topology bounds");
         }
 
-        Set<GridPoint> remaining = new HashSet<>();
-        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
-            for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
-                GridPoint point = new GridPoint(x, z);
-                if (topology.regionIdAt(point).isPresent()) {
-                    remaining.add(point);
-                }
-            }
+        int width = bounds.size().width();
+        int depth = bounds.size().depth();
+        int cellCount = Math.multiplyExact(width, depth);
+        int[] regionIds = new int[cellCount];
+        for (int index = 0; index < cellCount; index++) {
+            int x = bounds.minX() + (index % width);
+            int z = bounds.minZ() + (index / width);
+            regionIds[index] = regionMap.regionIdAt(x, z);
         }
 
-        Component best = null;
-        while (!remaining.isEmpty()) {
-            GridPoint start = remaining.stream().min(POINT_ORDER).orElseThrow();
-            int regionId = topology.regionIdAt(start).orElseThrow();
-            Component candidate = component(bounds, topology, remaining, start, regionId);
-            if (best == null || Component.ORDER.compare(candidate, best) < 0) {
+        boolean[] visited = new boolean[cellCount];
+        int[] queue = new int[cellCount];
+        int[] bestIndices = capturePoints ? new int[cellCount] : new int[0];
+        ComponentSelection best = null;
+        for (int start = 0; start < cellCount; start++) {
+            if (regionIds[start] < 0 || visited[start]) {
+                continue;
+            }
+            int regionId = regionIds[start];
+            int head = 0;
+            int tail = 0;
+            queue[tail++] = start;
+            visited[start] = true;
+            long centerDistance = Long.MAX_VALUE;
+            while (head < tail) {
+                int index = queue[head++];
+                int localX = index % width;
+                int localZ = index / width;
+                centerDistance = Math.min(centerDistance, centerDistance(
+                        bounds,
+                        bounds.minX() + localX,
+                        bounds.minZ() + localZ
+                ));
+                if (localX > 0) {
+                    tail = enqueue(index - 1, regionId, regionIds, visited, queue, tail);
+                }
+                if (localX + 1 < width) {
+                    tail = enqueue(index + 1, regionId, regionIds, visited, queue, tail);
+                }
+                if (localZ > 0) {
+                    tail = enqueue(index - width, regionId, regionIds, visited, queue, tail);
+                }
+                if (localZ + 1 < depth) {
+                    tail = enqueue(index + width, regionId, regionIds, visited, queue, tail);
+                }
+            }
+            ComponentSelection candidate = new ComponentSelection(
+                    regionId,
+                    tail,
+                    centerDistance,
+                    point(bounds, width, start)
+            );
+            if (best == null || ComponentSelection.ORDER.compare(candidate, best) < 0) {
                 best = candidate;
+                if (capturePoints) {
+                    System.arraycopy(queue, 0, bestIndices, 0, tail);
+                }
             }
         }
         if (best == null) {
             return Optional.empty();
         }
-        return Optional.of(new DistrictFootprint(bounds, best.regionId(), best.points()));
+        int[] selectedIndices = capturePoints ? Arrays.copyOf(bestIndices, best.area()) : new int[0];
+        return Optional.of(new ComponentScan(best, selectedIndices));
     }
 
     GridBounds bounds() {
@@ -171,46 +247,31 @@ final class DistrictFootprint {
         return List.copyOf(result);
     }
 
-    private static Component component(
-            GridBounds bounds,
-            TerrainTopology topology,
-            Set<GridPoint> remaining,
-            GridPoint start,
-            int regionId
+    private static int enqueue(
+            int index,
+            int regionId,
+            int[] regionIds,
+            boolean[] visited,
+            int[] queue,
+            int tail
     ) {
-        ArrayDeque<GridPoint> pending = new ArrayDeque<>();
-        List<GridPoint> points = new ArrayList<>();
-        pending.add(start);
-        remaining.remove(start);
-        while (!pending.isEmpty()) {
-            GridPoint point = pending.removeFirst();
-            points.add(point);
-            for (int[] offset : NEIGHBOR_OFFSETS) {
-                GridPoint neighbor = new GridPoint(point.x() + offset[0], point.z() + offset[1]);
-                if (!bounds.contains(neighbor) || !remaining.contains(neighbor)) {
-                    continue;
-                }
-                if (topology.regionIdAt(neighbor).orElseThrow() != regionId) {
-                    continue;
-                }
-                remaining.remove(neighbor);
-                pending.addLast(neighbor);
-            }
+        if (visited[index] || regionIds[index] != regionId) {
+            return tail;
         }
-        points.sort(POINT_ORDER);
-        return new Component(regionId, points, centerDistance(points, bounds), points.getFirst());
+        visited[index] = true;
+        queue[tail] = index;
+        return tail + 1;
     }
 
-    private static long centerDistance(List<GridPoint> points, GridBounds bounds) {
+    private static long centerDistance(GridBounds bounds, int x, int z) {
         long centerX2 = (long) bounds.minX() + bounds.maxXExclusive() - 1L;
         long centerZ2 = (long) bounds.minZ() + bounds.maxZExclusive() - 1L;
-        long best = Long.MAX_VALUE;
-        for (GridPoint point : points) {
-            long distance = Math.abs((2L * point.x()) - centerX2)
-                    + Math.abs((2L * point.z()) - centerZ2);
-            best = Math.min(best, distance);
-        }
-        return best;
+        return Math.abs((2L * x) - centerX2)
+                + Math.abs((2L * z) - centerZ2);
+    }
+
+    private static GridPoint point(GridBounds bounds, int width, int index) {
+        return new GridPoint(bounds.minX() + (index % width), bounds.minZ() + (index / width));
     }
 
     private static void requireConnected(Set<GridPoint> points) {
@@ -234,17 +295,68 @@ final class DistrictFootprint {
         }
     }
 
-    private record Component(int regionId, List<GridPoint> points, long centerDistance, GridPoint firstPoint) {
-        private static final Comparator<Component> ORDER = Comparator
-                .comparingInt((Component component) -> component.points().size())
+    record ComponentSelection(int regionId, int area, long centerDistance, GridPoint firstPoint) {
+        private static final Comparator<ComponentSelection> ORDER = Comparator
+                .comparingInt(ComponentSelection::area)
                 .reversed()
-                .thenComparingLong(Component::centerDistance)
-                .thenComparingInt(Component::regionId)
-                .thenComparing(Component::firstPoint, POINT_ORDER);
+                .thenComparingLong(ComponentSelection::centerDistance)
+                .thenComparingInt(ComponentSelection::regionId)
+                .thenComparing(ComponentSelection::firstPoint, POINT_ORDER);
 
-        private Component {
-            points = List.copyOf(points);
+        ComponentSelection {
+            if (regionId < 0 || area <= 0 || centerDistance < 0L) {
+                throw new IllegalArgumentException("invalid component selection");
+            }
             Objects.requireNonNull(firstPoint, "firstPoint");
+        }
+    }
+
+    static final class RegionMap {
+        private final GridBounds bounds;
+        private final int[] regionIds;
+
+        private RegionMap(GridBounds bounds, int[] regionIds) {
+            this.bounds = Objects.requireNonNull(bounds, "bounds");
+            this.regionIds = regionIds.clone();
+        }
+
+        static RegionMap from(TerrainTopology topology) {
+            Objects.requireNonNull(topology, "topology");
+            GridBounds bounds = topology.bounds();
+            int width = bounds.size().width();
+            int cellCount = Math.multiplyExact(width, bounds.size().depth());
+            int[] regionIds = new int[cellCount];
+            Arrays.fill(regionIds, -1);
+            for (int index = 0; index < cellCount; index++) {
+                regionIds[index] = topology.regionIdAt(point(bounds, width, index)).orElse(-1);
+            }
+            return new RegionMap(bounds, regionIds);
+        }
+
+        GridBounds bounds() {
+            return bounds;
+        }
+
+        int regionIdAt(int x, int z) {
+            if (x < bounds.minX() || x >= bounds.maxXExclusive()
+                    || z < bounds.minZ() || z >= bounds.maxZExclusive()) {
+                return -1;
+            }
+            int localX = x - bounds.minX();
+            int localZ = z - bounds.minZ();
+            return regionIds[(localZ * bounds.size().width()) + localX];
+        }
+    }
+
+    private record ComponentScan(ComponentSelection selection, int[] pointIndices) {
+        private ComponentScan {
+            Objects.requireNonNull(selection, "selection");
+            pointIndices = pointIndices.clone();
+        }
+
+        @Override
+        public int[] pointIndices() {
+            return pointIndices.clone();
         }
     }
 }

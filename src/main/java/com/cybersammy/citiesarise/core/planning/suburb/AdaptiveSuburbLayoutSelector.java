@@ -34,6 +34,7 @@ final class AdaptiveSuburbLayoutSelector {
         Objects.requireNonNull(layoutFactory, "layoutFactory");
         Objects.requireNonNull(layoutFinalizer, "layoutFinalizer");
         LayoutSearchBudget searchBudget = new LayoutSearchBudget(maximumLayoutFinalizationAttempts(capacity));
+        DistrictFootprint.RegionMap regionMap = DistrictFootprint.RegionMap.from(topology);
 
         if (hasCapacity(preferredLayout, capacity.target())
                 && isDevelopable(preferredLayout, topology)
@@ -52,6 +53,7 @@ final class AdaptiveSuburbLayoutSelector {
                 capacity,
                 minimumSize,
                 topology,
+                regionMap,
                 layoutFactory,
                 layoutFinalizer,
                 searchBudget
@@ -63,6 +65,7 @@ final class AdaptiveSuburbLayoutSelector {
             DevelopmentCapacity capacity,
             GridSize minimumSize,
             TerrainTopology topology,
+            DistrictFootprint.RegionMap regionMap,
             LayoutFactory layoutFactory,
             LayoutFinalizer layoutFinalizer,
         LayoutSearchBudget searchBudget
@@ -75,6 +78,7 @@ final class AdaptiveSuburbLayoutSelector {
                     allocatedCapacity,
                     minimumSize,
                     topology,
+                    regionMap,
                     layoutFactory,
                     layoutFinalizer,
                     capacityBudget
@@ -92,6 +96,7 @@ final class AdaptiveSuburbLayoutSelector {
             int allocatedCapacity,
             GridSize minimumSize,
             TerrainTopology topology,
+            DistrictFootprint.RegionMap regionMap,
             LayoutFactory layoutFactory,
             LayoutFinalizer layoutFinalizer,
             LayoutSearchBudget searchBudget
@@ -119,6 +124,7 @@ final class AdaptiveSuburbLayoutSelector {
                             allocatedCapacity,
                             sizes.get(sizeIndex),
                             topology,
+                            regionMap,
                             layoutFactory
                     ));
                     candidatesBySize.set(sizeIndex, candidates);
@@ -184,6 +190,7 @@ final class AdaptiveSuburbLayoutSelector {
             int targetParcelCount,
             GridSize layoutSize,
             TerrainTopology topology,
+            DistrictFootprint.RegionMap regionMap,
             LayoutFactory layoutFactory
     ) {
         List<UnroutedLayoutCandidate> candidates = new ArrayList<>();
@@ -197,6 +204,7 @@ final class AdaptiveSuburbLayoutSelector {
                         layout,
                         targetParcelCount,
                         topology,
+                        regionMap,
                         surveyBounds
                 );
                 candidate.ifPresent(candidates::add);
@@ -269,19 +277,22 @@ final class AdaptiveSuburbLayoutSelector {
             SuburbLayout layout,
             int targetParcelCount,
             TerrainTopology topology,
+            DistrictFootprint.RegionMap regionMap,
             GridBounds surveyBounds
     ) {
         if (!hasCapacity(layout, targetParcelCount)) {
             return Optional.empty();
         }
-        Optional<DistrictFootprint> footprint = DistrictFootprint.fromTopology(layout.bounds(), topology);
-        if (footprint.isEmpty()) {
+        Optional<DistrictFootprint.ComponentSelection> component =
+                DistrictFootprint.selectionFromRegionMap(layout.bounds(), regionMap);
+        if (component.isEmpty()) {
             return Optional.empty();
         }
+        DistrictFootprint.ComponentSelection selected = component.orElseThrow();
         return Optional.of(new UnroutedLayoutCandidate(
                 layout,
-                footprint.orElseThrow().area(),
-                excludedSupportCells(layout, footprint.orElseThrow(), topology),
+                selected.area(),
+                excludedSupportCells(layout, selected.regionId(), topology, regionMap),
                 centerDistance(layout.bounds(), surveyBounds),
                 layout.bounds().minX(),
                 layout.bounds().minZ()
@@ -422,8 +433,9 @@ final class AdaptiveSuburbLayoutSelector {
 
     private static int excludedSupportCells(
             SuburbLayout layout,
-            DistrictFootprint footprint,
-            TerrainTopology topology
+            int selectedRegionId,
+            TerrainTopology topology,
+            DistrictFootprint.RegionMap regionMap
     ) {
         int supportRadius = layout.terrainPreparationFootprints().stream()
                 .mapToInt(PotentialTerrainPreparationFootprint::supportRadius)
@@ -436,11 +448,10 @@ final class AdaptiveSuburbLayoutSelector {
         int excluded = 0;
         for (int z = expanded.minZ(); z < expanded.maxZExclusive(); z++) {
             for (int x = expanded.minX(); x < expanded.maxXExclusive(); x++) {
-                GridPoint point = new GridPoint(x, z);
-                if (layout.bounds().contains(point)) {
+                if (layout.bounds().contains(new GridPoint(x, z))) {
                     continue;
                 }
-                if (topology.regionIdAt(point).orElse(-1) != footprint.developableRegionId()) {
+                if (regionMap.regionIdAt(x, z) != selectedRegionId) {
                     excluded++;
                 }
             }

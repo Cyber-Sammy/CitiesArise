@@ -54,8 +54,30 @@ final class FrontageParcelAllocator {
             Optional<TerrainTopology> topology,
             ParcelTerrainEvaluationCache terrainEvaluations
     ) {
+        return allocate(
+                roadGraph,
+                DistrictFootprint.rectangle(districtBounds),
+                survey,
+                settings,
+                seed,
+                capacity,
+                topology,
+                terrainEvaluations
+        );
+    }
+
+    List<GridBounds> allocate(
+            RoadGraph roadGraph,
+            DistrictFootprint districtFootprint,
+            TerrainSurvey survey,
+            SuburbPlanningSettings settings,
+            long seed,
+            int capacity,
+            Optional<TerrainTopology> topology,
+            ParcelTerrainEvaluationCache terrainEvaluations
+    ) {
         Objects.requireNonNull(roadGraph, "roadGraph");
-        Objects.requireNonNull(districtBounds, "districtBounds");
+        Objects.requireNonNull(districtFootprint, "districtFootprint");
         Objects.requireNonNull(survey, "survey");
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(topology, "topology");
@@ -64,6 +86,7 @@ final class FrontageParcelAllocator {
             throw new IllegalArgumentException("capacity must be positive");
         }
         terrainEvaluations.requireCompatible(survey, settings);
+        GridBounds districtBounds = districtFootprint.bounds();
 
         Map<PlanElementId, RoadNode> nodes = nodesById(roadGraph);
         List<GridBounds> roadCorridors = roadCorridors(roadGraph, nodes);
@@ -78,7 +101,7 @@ final class FrontageParcelAllocator {
                 roadGraph.segments(),
                 nodes,
                 roadReservations,
-                districtBounds,
+                districtFootprint,
                 terrainEvaluations,
                 settings,
                 seed,
@@ -179,7 +202,7 @@ final class FrontageParcelAllocator {
             List<RoadSegment> segments,
             Map<PlanElementId, RoadNode> nodes,
             List<GridBounds> roadReservations,
-            GridBounds districtBounds,
+            DistrictFootprint districtFootprint,
             ParcelTerrainEvaluationCache terrainEvaluations,
             SuburbPlanningSettings settings,
             long seed,
@@ -192,7 +215,7 @@ final class FrontageParcelAllocator {
             GridBounds corridor = AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
             for (ParcelSide side : ParcelSide.values()) {
                 for (GridBounds bounds : candidates(corridor, side, settings)) {
-                    if (!isAvailable(bounds, districtBounds, roadReservations)) {
+                    if (!isAvailable(bounds, districtFootprint, roadReservations)) {
                         continue;
                     }
                     if (!isDevelopable(bounds, settings, topology)) {
@@ -243,10 +266,10 @@ final class FrontageParcelAllocator {
 
     private static boolean isAvailable(
             GridBounds candidate,
-            GridBounds districtBounds,
+            DistrictFootprint districtFootprint,
             List<GridBounds> roadReservations
     ) {
-        if (!districtBounds.contains(candidate)) {
+        if (!districtFootprint.contains(candidate)) {
             return false;
         }
         return !intersectsAny(candidate, roadReservations);

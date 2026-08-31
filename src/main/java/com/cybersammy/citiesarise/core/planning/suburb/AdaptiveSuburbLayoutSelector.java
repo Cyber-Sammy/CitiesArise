@@ -295,12 +295,13 @@ final class AdaptiveSuburbLayoutSelector {
         DevelopableRegion region = candidateRegion(layout, topology).orElseThrow();
         return new SuburbLayoutSelection(
                 layout,
-                new DistrictAnchor(region.id(), anchorPoint(layout.bounds(), region)),
+                new DistrictAnchor(region.id(), anchorPoint(layout.districtFootprint(), region)),
                 allocatedCapacity
         );
     }
 
-    private static GridPoint anchorPoint(GridBounds layoutBounds, DevelopableRegion region) {
+    private static GridPoint anchorPoint(DistrictFootprint footprint, DevelopableRegion region) {
+        GridBounds layoutBounds = footprint.bounds();
         GridPoint center = new GridPoint(
                 layoutBounds.minX() + (layoutBounds.size().width() / 2),
                 layoutBounds.minZ() + (layoutBounds.size().depth() / 2)
@@ -308,7 +309,7 @@ final class AdaptiveSuburbLayoutSelector {
         GridPoint best = null;
         long bestDistance = Long.MAX_VALUE;
         for (GridPoint point : region.points()) {
-            if (!layoutBounds.contains(point)) {
+            if (!footprint.contains(point)) {
                 continue;
             }
             long distance = manhattanDistance(point, center);
@@ -376,6 +377,12 @@ final class AdaptiveSuburbLayoutSelector {
             SuburbLayout layout,
             TerrainTopology topology
     ) {
+        int footprintRegionId = layout.districtFootprint().developableRegionId();
+        if (footprintRegionId >= 0) {
+            return topology.regions().stream()
+                    .filter(region -> region.id() == footprintRegionId)
+                    .findFirst();
+        }
         GridPoint center = new GridPoint(
                 layout.bounds().minX() + (layout.bounds().size().width() / 2),
                 layout.bounds().minZ() + (layout.bounds().size().depth() / 2)

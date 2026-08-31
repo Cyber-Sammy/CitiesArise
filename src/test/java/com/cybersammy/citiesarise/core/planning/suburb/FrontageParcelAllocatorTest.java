@@ -103,6 +103,35 @@ final class FrontageParcelAllocatorTest {
     }
 
     @Test
+    void constrainsParcelsToIrregularDistrictFootprintWithoutTopologyFallback() {
+        GridBounds district = bounds(0, 0, 40, 30);
+        TerrainSurvey survey = TerrainSurvey.sample(
+                district,
+                point -> Optional.of(cell(point, point.z() < 12))
+        );
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                survey,
+                cell -> cell.terrainCategory() != TerrainCategory.BLOCKED
+        );
+        DistrictFootprint footprint = DistrictFootprint.fromTopology(district, topology).orElseThrow();
+
+        List<GridBounds> parcels = allocator.allocate(
+                horizontalRoad(0, 15, 39, SETTINGS.roadWidth()),
+                footprint,
+                survey,
+                SETTINGS,
+                11L,
+                4,
+                Optional.empty(),
+                new ParcelTerrainEvaluationCache(survey, SETTINGS)
+        );
+
+        assertEquals(4, parcels.size());
+        assertTrue(parcels.stream().allMatch(footprint::contains));
+        assertTrue(parcels.stream().allMatch(parcel -> parcel.minZ() > 15));
+    }
+
+    @Test
     void backtracksWhenCheapestParcelBlocksACompleteSelection() {
         GridBounds district = bounds(0, 0, 36, 60);
         TerrainSurvey survey = TerrainSurvey.sample(

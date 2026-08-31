@@ -22,11 +22,11 @@ Cities Arise will follow a plan-first pipeline:
 
 The core planner must stay independent from Minecraft and NeoForge. Loader-specific code belongs in adapter layers.
 
-The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, terrain surveys, semantic terrain preparation, and plan transforms. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. Water and blocked terrain remain hard rejections for the current suburb profile. A steep terrain sample is treated as correctable when the resulting flat platforms stay within profile cut, fill, and total earthwork limits.
+The current core model can represent settlement ids, grid bounds, road graphs, parcels, building slots, semantic tags, simple plan properties, terrain surveys, connected terrain features, semantic terrain preparation, and plan transforms. Basic validation reports duplicate element ids, missing road nodes, missing parcels, and building slots that do not fit inside their parcels. The built-in suburb preserves large water bodies and major slopes but may absorb small local features through bounded earthworks. Blocked terrain remains a strict barrier.
 
 The suburb planner now analyzes connected developable terrain before giving up on its preferred layout. When a local water or blocked-terrain barrier intersects that layout, it can move the complete suburb into another connected area within the same survey while preserving terrain-support clearance. Datapack profiles may define minimum, target, and maximum parcel capacity. The planner prefers the target and tries several bounded district expansions before deterministically reducing toward the minimum; falling below the minimum remains a controlled rejection. The selected developable-region id, district anchor, and allocated capacity are stored in plan properties.
 
-Roads use a deterministic loader-agnostic A* router inside the selected district. Route cost includes distance, height changes, slope, rough terrain, and profile-approved crossings. The router validates the complete road width and terrain-support shoulders and returns a structured no-route result instead of forcing a road through a barrier. Actual routed corridors drive terrain validation, exact water refinement, earthwork preparation, elevation solving, and placement. Parcels are allocated procedurally from available frontage along those final corridors instead of using a fixed north/south row pattern. They rotate with the road, avoid roads, road-support shoulders, and other parcels, prefer less expensive terrain, and preserve deterministic results for the same seed and profile. Allocation searches for a complete compatible set, so one inexpensive overlapping candidate cannot incorrectly reduce district capacity. The compatibility search is bounded to keep difficult layouts responsive; when its limit is reached, the planner tries another district or lower allowed capacity. Each rectangular parcel and its building share one authoritative prepared elevation. The complete yard participates in cut, fill, foundation-depth, and total-earthwork limits, so a parcel cannot silently follow a ravine below its building. Irregular parcel shapes, preserved internal gaps, bridges, and tunnels remain future work.
+Roads use a deterministic loader-agnostic A* router inside the selected district. Route cost includes distance, height changes, slope, rough terrain, and profile-approved crossings. The router validates the complete road width and terrain-support shoulders and returns a structured no-route result instead of forcing a road through a barrier. Actual routed corridors drive terrain validation, exact water refinement, earthwork preparation, elevation solving, and placement. Expensive routed-layout finalization is intentionally bounded and heuristic: each district size finalizes a deterministic sample of preferred and representative origins instead of exhaustively routing every possible origin. Search budgets reserve attempts for every allowed parcel capacity, so an expensive target-capacity search cannot prevent fallback through the configured minimum. A valid but unsampled district may still be skipped in favor of another region or lower capacity. Parcels are allocated procedurally from available frontage along those final corridors instead of using a fixed north/south row pattern. They rotate with the road, avoid roads, road-support shoulders, and other parcels, prefer less expensive terrain, and preserve deterministic results for the same seed and profile. Allocation searches for a complete compatible set, so one inexpensive overlapping candidate cannot incorrectly reduce district capacity. The compatibility search is bounded to keep difficult layouts responsive; when its limit is reached, the planner tries another district or lower allowed capacity. Each rectangular parcel and its building share one authoritative prepared elevation. The complete yard participates in cut, fill, foundation-depth, and total-earthwork limits, so a parcel cannot silently follow a ravine below its building. Irregular parcel shapes, preserved internal gaps, bridges, and tunnels remain future work.
 
 The mod also includes a debug command that samples real Minecraft terrain around the player's region and runs the suburb planner without placing blocks:
 
@@ -183,11 +183,17 @@ Example `data/my_pack/settlement_profiles/large_suburb.json`:
   },
   "terrainPolicy": {
     "responses": {
-      "water": "avoid",
+      "water": "build_around",
       "blockedTerrain": "avoid",
-      "steepSlope": "terraform"
+      "steepSlope": "build_around"
     },
-    "capabilities": []
+    "capabilities": [],
+    "adaptation": {
+      "sensitivity": 0.5,
+      "maxTerraformArea": 32,
+      "maxTerraformRelief": 4,
+      "maxTerraformVolume": 160
+    }
   }
 }
 ```
@@ -209,7 +215,11 @@ Then run:
 
 Use `/citiesarise debug dump` to inspect the generated plan and confirm that the profile changed the survey, parcel, and building slot scale.
 
-`terrainPolicy.responses` controls how the profile treats observed terrain. Supported values are `avoid`, `preserve`, `terraform`, `build_around`, `cross_if_supported`, and `ignore`. They resolve to distinct semantic actions: relocate, preserve in place, direct terraforming, route around, create a crossing, or allow standard placement. The current suburb planner can route roads around barriers and can identify profile-approved crossing spans, but it accepts a final settlement only when every road can currently be materialized without a bridge or tunnel. Preserve-in-place geometry and infrastructure crossings remain later stages. `ignore` does not preserve a feature; it removes that feature as a planning constraint, so ordinary terrain preparation may replace it. The default policy avoids water and blocked terrain while allowing bounded slope terraforming.
+`terrainPolicy.responses` controls how the profile treats observed terrain. Supported values are `avoid`, `preserve`, `terraform`, `build_around`, `cross_if_supported`, and `ignore`. They resolve to distinct semantic actions: relocate, preserve in place, direct terraforming, route around, create a crossing, or allow standard placement. The planner groups adjacent water, blocked cells, and steep cells into deterministic terrain features. For `build_around`, the adaptation settings decide whether a small feature can be handled by ordinary bounded earthworks or must remain a routing barrier. Explicit `avoid` and `preserve` are never weakened by sensitivity. Preserve-in-place geometry and infrastructure crossings remain later stages. `ignore` does not preserve a feature; it removes that feature as a planning constraint, so ordinary terrain preparation may replace it.
+
+`terrainPolicy.adaptation.sensitivity` ranges from `0.0` to `1.0`. Lower values permit more local reshaping; higher values preserve more observed terrain. `maxTerraformArea`, `maxTerraformRelief`, and `maxTerraformVolume` define the most aggressive limit at sensitivity `0.0`; the effective limits shrink linearly toward zero as sensitivity approaches `1.0`. The same point-aware decision plan is used by connected-area analysis, road routing, footprint validation, and terrain preparation. Current metrics are two-dimensional survey estimates. Bridges, tunnels, canals, amenity integration, and complete three-dimensional cave or ravine analysis are not implemented yet.
+
+Terrain adaptation is opt-in for datapacks. A `terrainPolicy` without an `adaptation` object preserves the pre-adaptation behavior, so existing `build_around` responses continue to route around every matching feature. The bundled suburb profile enables adaptation explicitly.
 
 `terrainPolicy.capabilities` accepts `bridge`, `tunnel`, `canal`, and `major_terraforming`. `cross_if_supported` requires a matching capability: water requires `bridge`, while blocked terrain and steep slopes require `tunnel`. Invalid combinations are rejected when the profile loads. A valid combination resolves to a semantic crossing action, but it does not place infrastructure in the current version.
 

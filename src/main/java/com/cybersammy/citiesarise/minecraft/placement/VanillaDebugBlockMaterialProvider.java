@@ -13,6 +13,7 @@ public final class VanillaDebugBlockMaterialProvider implements DebugBlockMateri
             case ROAD_SURFACE -> Blocks.STONE_BRICKS.defaultBlockState();
             case WORN_ROAD_SURFACE -> Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
             case ROAD_TRANSITION_STEP -> Blocks.STONE_BRICK_SLAB.defaultBlockState();
+            case ROAD_END_CURB -> Blocks.STONE_BRICK_SLAB.defaultBlockState();
             case BUILDING_ACCESS_SURFACE -> Blocks.STONE_BRICKS.defaultBlockState();
             case BUILDING_ACCESS_STEP -> Blocks.STONE_BRICK_SLAB.defaultBlockState();
             case PARCEL_YARD -> Blocks.GRASS_BLOCK.defaultBlockState();
@@ -21,7 +22,7 @@ public final class VanillaDebugBlockMaterialProvider implements DebugBlockMateri
             case BUILDING_WALL -> Blocks.STRIPPED_OAK_LOG.defaultBlockState();
             case BUILDING_DOORWAY -> Blocks.AIR.defaultBlockState();
             case BUILDING_ROOF -> Blocks.YELLOW_TERRACOTTA.defaultBlockState();
-            case DECAYED_BUILDING_WALL -> Blocks.MOSSY_COBBLESTONE.defaultBlockState();
+            case DECAYED_BUILDING_WALL -> Blocks.STRIPPED_DARK_OAK_LOG.defaultBlockState();
             case DECAYED_BUILDING_ROOF -> Blocks.BROWN_TERRACOTTA.defaultBlockState();
         };
     }

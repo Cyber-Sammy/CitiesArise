@@ -246,6 +246,61 @@ final class TerrainAwareRoadRouterTest {
         );
     }
 
+    @Test
+    void reusesTerrainFootprintsAcrossRoutes() {
+        TerrainSurvey survey = survey(7, 7, point -> cell(point, 64, false, 0.0, TerrainCategory.BUILDABLE));
+        RoadRoutingRequest request = request(
+                survey,
+                new GridPoint(1, 3),
+                new GridPoint(5, 3),
+                1,
+                1,
+                TerrainResponsePolicy.defaults(),
+                RoadRoutingCostPolicy.defaults()
+        );
+        RoadTerrainEvaluationCache terrainEvaluations = new RoadTerrainEvaluationCache();
+
+        assertTrue(ROUTER.route(request, terrainEvaluations).successful());
+        int cachedFootprints = terrainEvaluations.size();
+        assertTrue(cachedFootprints > 0);
+
+        assertTrue(ROUTER.route(request, terrainEvaluations).successful());
+        assertEquals(cachedFootprints, terrainEvaluations.size());
+    }
+
+    @Test
+    void sharedTerrainCacheDoesNotCacheDynamicReservations() {
+        TerrainSurvey survey = survey(7, 7, point -> cell(point, 64, false, 0.0, TerrainCategory.BUILDABLE));
+        RoadRoutingRequest unrestricted = request(
+                survey,
+                new GridPoint(1, 3),
+                new GridPoint(5, 3),
+                1,
+                0,
+                TerrainResponsePolicy.defaults(),
+                RoadRoutingCostPolicy.defaults()
+        );
+        RoadRoutingRequest blocked = new RoadRoutingRequest(
+                survey,
+                survey.bounds(),
+                survey.bounds(),
+                unrestricted.start(),
+                unrestricted.destination(),
+                unrestricted.roadWidth(),
+                unrestricted.supportRadius(),
+                unrestricted.maxBuildableSlope(),
+                unrestricted.terrainResponsePolicy(),
+                unrestricted.terrainAdaptationPlan(),
+                unrestricted.costPolicy(),
+                List.of(new GridBounds(new GridPoint(3, 0), new GridSize(1, 7))),
+                List.of()
+        );
+        RoadTerrainEvaluationCache terrainEvaluations = new RoadTerrainEvaluationCache();
+
+        assertTrue(ROUTER.route(unrestricted, terrainEvaluations).successful());
+        assertFalse(ROUTER.route(blocked, terrainEvaluations).successful());
+    }
+
     private static RoadRoutingRequest request(
             TerrainSurvey survey,
             GridPoint start,

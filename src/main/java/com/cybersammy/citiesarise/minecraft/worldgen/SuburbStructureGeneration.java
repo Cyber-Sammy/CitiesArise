@@ -118,12 +118,12 @@ final class SuburbStructureGeneration {
         int minY = minimumStructureY(snapshot, profile, context);
         int maxY = maximumStructureY(snapshot, profile, context);
         return new BoundingBox(
-                snapshot.minimumX(),
+                snapshot.minimumX() - WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
                 minY,
-                snapshot.minimumZ(),
-                snapshot.maximumX(),
+                snapshot.minimumZ() - WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
+                snapshot.maximumX() + WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
                 maxY,
-                snapshot.maximumZ()
+                snapshot.maximumZ() + WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS
         );
     }
 

@@ -10,7 +10,6 @@ import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
-import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopology;
 import java.util.ArrayList;
@@ -22,7 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class FrontageParcelAllocator {
-    static final int MAX_SELECTION_SEARCH_NODES = 20_000;
+    static final int MAX_SELECTION_SEARCH_NODES = 5_000;
 
     List<GridBounds> allocate(
             RoadGraph roadGraph,
@@ -33,14 +32,38 @@ final class FrontageParcelAllocator {
             int capacity,
             Optional<TerrainTopology> topology
     ) {
+        return allocate(
+                roadGraph,
+                districtBounds,
+                survey,
+                settings,
+                seed,
+                capacity,
+                topology,
+                new ParcelTerrainEvaluationCache(survey, settings)
+        );
+    }
+
+    List<GridBounds> allocate(
+            RoadGraph roadGraph,
+            GridBounds districtBounds,
+            TerrainSurvey survey,
+            SuburbPlanningSettings settings,
+            long seed,
+            int capacity,
+            Optional<TerrainTopology> topology,
+            ParcelTerrainEvaluationCache terrainEvaluations
+    ) {
         Objects.requireNonNull(roadGraph, "roadGraph");
         Objects.requireNonNull(districtBounds, "districtBounds");
         Objects.requireNonNull(survey, "survey");
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(topology, "topology");
+        Objects.requireNonNull(terrainEvaluations, "terrainEvaluations");
         if (capacity <= 0) {
             throw new IllegalArgumentException("capacity must be positive");
         }
+        terrainEvaluations.requireCompatible(survey, settings);
 
         Map<PlanElementId, RoadNode> nodes = nodesById(roadGraph);
         List<GridBounds> roadCorridors = roadCorridors(roadGraph, nodes);
@@ -56,7 +79,7 @@ final class FrontageParcelAllocator {
                 nodes,
                 roadReservations,
                 districtBounds,
-                survey,
+                terrainEvaluations,
                 settings,
                 seed,
                 topology
@@ -70,11 +93,12 @@ final class FrontageParcelAllocator {
             int capacity
     ) {
         SelectionSearch search = new SelectionSearch(MAX_SELECTION_SEARCH_NODES);
-        return selectCompatibleParcels(candidates, capacity, 0, new ArrayList<>(), search);
+        SelectionCandidates selectionCandidates = new SelectionCandidates(candidates);
+        return selectCompatibleParcels(selectionCandidates, capacity, 0, new ArrayList<>(), search);
     }
 
     private static Optional<List<GridBounds>> selectCompatibleParcels(
-            List<ParcelCandidate> candidates,
+            SelectionCandidates candidates,
             int capacity,
             int startIndex,
             List<GridBounds> selected,
@@ -117,42 +141,30 @@ final class FrontageParcelAllocator {
     }
 
     private static int compatibleCapacityUpperBound(
-            List<ParcelCandidate> candidates,
+            SelectionCandidates candidates,
             int startIndex,
             List<GridBounds> selected
     ) {
-        Map<FrontageKey, List<GridBounds>> candidatesByFrontage = new HashMap<>();
-        for (int index = startIndex; index < candidates.size(); index++) {
-            ParcelCandidate candidate = candidates.get(index);
-            if (intersectsAny(candidate.bounds(), selected)) {
-                continue;
-            }
-            candidatesByFrontage.computeIfAbsent(candidate.frontage(), ignored -> new ArrayList<>())
-                    .add(candidate.bounds());
-        }
         int capacity = 0;
-        for (Map.Entry<FrontageKey, List<GridBounds>> entry : candidatesByFrontage.entrySet()) {
-            capacity += maximumNonOverlappingIntervals(entry.getValue(), entry.getKey().side());
+        for (Map.Entry<FrontageKey, List<Integer>> entry : candidates.indicesByFrontage().entrySet()) {
+            int previousMaximum = Integer.MIN_VALUE;
+            for (int index : entry.getValue()) {
+                if (index < startIndex) {
+                    continue;
+                }
+                GridBounds bounds = candidates.get(index).bounds();
+                if (intersectsAny(bounds, selected)) {
+                    continue;
+                }
+                int minimum = axisMinimum(bounds, entry.getKey().side());
+                if (minimum < previousMaximum) {
+                    continue;
+                }
+                capacity++;
+                previousMaximum = axisMaximum(bounds, entry.getKey().side());
+            }
         }
         return capacity;
-    }
-
-    private static int maximumNonOverlappingIntervals(List<GridBounds> candidates, ParcelSide side) {
-        List<GridBounds> ordered = candidates.stream()
-                .sorted(Comparator
-                        .comparingInt((GridBounds bounds) -> axisMaximum(bounds, side))
-                        .thenComparingInt(bounds -> axisMinimum(bounds, side)))
-                .toList();
-        int count = 0;
-        int previousMaximum = Integer.MIN_VALUE;
-        for (GridBounds candidate : ordered) {
-            if (axisMinimum(candidate, side) < previousMaximum) {
-                continue;
-            }
-            count++;
-            previousMaximum = axisMaximum(candidate, side);
-        }
-        return count;
     }
 
     private static int axisMinimum(GridBounds bounds, ParcelSide side) {
@@ -168,7 +180,7 @@ final class FrontageParcelAllocator {
             Map<PlanElementId, RoadNode> nodes,
             List<GridBounds> roadReservations,
             GridBounds districtBounds,
-            TerrainSurvey survey,
+            ParcelTerrainEvaluationCache terrainEvaluations,
             SuburbPlanningSettings settings,
             long seed,
             Optional<TerrainTopology> topology
@@ -186,7 +198,13 @@ final class FrontageParcelAllocator {
                     if (!isDevelopable(bounds, settings, topology)) {
                         continue;
                     }
-                    ParcelCandidate candidate = candidate(bounds, survey, settings, seed, segment.id(), side);
+                    ParcelCandidate candidate = candidate(
+                            bounds,
+                            terrainEvaluations,
+                            seed,
+                            segment.id(),
+                            side
+                    );
                     candidatesByBounds.merge(
                             bounds,
                             candidate,
@@ -236,45 +254,19 @@ final class FrontageParcelAllocator {
 
     private static ParcelCandidate candidate(
             GridBounds bounds,
-            TerrainSurvey survey,
-            SuburbPlanningSettings settings,
+            ParcelTerrainEvaluationCache terrainEvaluations,
             long seed,
             PlanElementId segmentId,
             ParcelSide side
     ) {
-        GridBounds building = SuburbParcelGeometry.buildingBounds(settings, bounds);
-        int targetHeight = maximumHeight(building, survey);
-        int maximumCorrection = 0;
-        long totalCorrection = 0L;
-        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
-            for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
-                int correction = Math.abs(targetHeight - requiredCell(survey, new GridPoint(x, z)).height());
-                maximumCorrection = Math.max(maximumCorrection, correction);
-                totalCorrection += correction;
-            }
-        }
+        ParcelTerrainEvaluation evaluation = terrainEvaluations.evaluate(bounds);
         return new ParcelCandidate(
                 bounds,
-                maximumCorrection,
-                totalCorrection,
+                evaluation.maximumCorrection(),
+                evaluation.totalCorrection(),
                 stableOrder(seed, segmentId.value(), side.ordinal()),
                 new FrontageKey(segmentId, side)
         );
-    }
-
-    private static int maximumHeight(GridBounds bounds, TerrainSurvey survey) {
-        int maximum = Integer.MIN_VALUE;
-        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
-            for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
-                maximum = Math.max(maximum, requiredCell(survey, new GridPoint(x, z)).height());
-            }
-        }
-        return maximum;
-    }
-
-    private static TerrainCell requiredCell(TerrainSurvey survey, GridPoint point) {
-        return survey.findCell(point)
-                .orElseThrow(() -> new IllegalArgumentException("parcel point is outside terrain survey: " + point));
     }
 
     private static ParcelCandidate betterCandidate(ParcelCandidate first, ParcelCandidate second) {
@@ -431,6 +423,38 @@ final class FrontageParcelAllocator {
         private FrontageKey {
             Objects.requireNonNull(segmentId, "segmentId");
             Objects.requireNonNull(side, "side");
+        }
+    }
+
+    private static final class SelectionCandidates {
+        private final List<ParcelCandidate> candidates;
+        private final Map<FrontageKey, List<Integer>> indicesByFrontage;
+
+        private SelectionCandidates(List<ParcelCandidate> candidates) {
+            this.candidates = List.copyOf(candidates);
+            Map<FrontageKey, List<Integer>> grouped = new HashMap<>();
+            for (int index = 0; index < candidates.size(); index++) {
+                grouped.computeIfAbsent(candidates.get(index).frontage(), ignored -> new ArrayList<>())
+                        .add(index);
+            }
+            grouped.forEach((frontage, indices) -> indices.sort(Comparator
+                    .comparingInt((Integer index) -> axisMaximum(candidates.get(index).bounds(), frontage.side()))
+                    .thenComparingInt(index -> axisMinimum(candidates.get(index).bounds(), frontage.side()))));
+            Map<FrontageKey, List<Integer>> immutable = new HashMap<>();
+            grouped.forEach((frontage, indices) -> immutable.put(frontage, List.copyOf(indices)));
+            this.indicesByFrontage = Map.copyOf(immutable);
+        }
+
+        private int size() {
+            return candidates.size();
+        }
+
+        private ParcelCandidate get(int index) {
+            return candidates.get(index);
+        }
+
+        private Map<FrontageKey, List<Integer>> indicesByFrontage() {
+            return indicesByFrontage;
         }
     }
 

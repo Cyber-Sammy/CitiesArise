@@ -3,6 +3,7 @@ package com.cybersammy.citiesarise.core.road;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlan;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
 import java.util.List;
 import java.util.Objects;
@@ -17,6 +18,7 @@ public record RoadRoutingRequest(
         int supportRadius,
         double maxBuildableSlope,
         TerrainResponsePolicy terrainResponsePolicy,
+        TerrainAdaptationPlan terrainAdaptationPlan,
         RoadRoutingCostPolicy costPolicy,
         List<GridBounds> reservedBounds,
         List<GridBounds> allowedReservedOverlapBounds
@@ -31,6 +33,7 @@ public record RoadRoutingRequest(
         requireNonNegative(supportRadius, "supportRadius");
         requireFiniteNonNegative(maxBuildableSlope, "maxBuildableSlope");
         Objects.requireNonNull(terrainResponsePolicy, "terrainResponsePolicy");
+        Objects.requireNonNull(terrainAdaptationPlan, "terrainAdaptationPlan");
         Objects.requireNonNull(costPolicy, "costPolicy");
         Objects.requireNonNull(reservedBounds, "reservedBounds");
         reservedBounds = List.copyOf(reservedBounds);
@@ -40,6 +43,37 @@ public record RoadRoutingRequest(
         requireContainedBySurvey(routingBounds, terrainCheckBounds, "routingBounds");
         requireContainedPoint(start, routingBounds, "start");
         requireContainedPoint(destination, routingBounds, "destination");
+    }
+
+    public RoadRoutingRequest(
+            TerrainSurvey survey,
+            GridBounds routingBounds,
+            GridBounds terrainCheckBounds,
+            GridPoint start,
+            GridPoint destination,
+            int roadWidth,
+            int supportRadius,
+            double maxBuildableSlope,
+            TerrainResponsePolicy terrainResponsePolicy,
+            RoadRoutingCostPolicy costPolicy,
+            List<GridBounds> reservedBounds,
+            List<GridBounds> allowedReservedOverlapBounds
+    ) {
+        this(
+                survey,
+                routingBounds,
+                terrainCheckBounds,
+                start,
+                destination,
+                roadWidth,
+                supportRadius,
+                maxBuildableSlope,
+                terrainResponsePolicy,
+                TerrainAdaptationPlan.empty(terrainResponsePolicy),
+                costPolicy,
+                reservedBounds,
+                allowedReservedOverlapBounds
+        );
     }
 
     private static void requirePositive(int value, String name) {

@@ -63,6 +63,26 @@ final class DebugPlacementPlanConverterTest {
     }
 
     @Test
+    void addsRaisedCurbAcrossTaggedDeadEnd() {
+        PlanElementId roadId = id("road");
+        PlanElementId startId = id("start");
+        PlanElementId endId = id("end");
+        RoadGraph graph = new RoadGraph(
+                List.of(
+                        roadNode(startId, point(0, 0)),
+                        new RoadNode(endId, point(4, 0), Set.of(PlanTags.DEAD_END), PlanProperties.empty())
+                ),
+                List.of(roadSegment(roadId, startId, endId, 3))
+        );
+
+        DebugPlacementPlan placementPlan = converter.convert(plan(graph, List.of(), List.of()));
+
+        assertOperation(placementPlan, point(4, -1), 1, DebugPlacementRole.ROAD_END_CURB, roadId);
+        assertOperation(placementPlan, point(4, 0), 1, DebugPlacementRole.ROAD_END_CURB, roadId);
+        assertOperation(placementPlan, point(4, 1), 1, DebugPlacementRole.ROAD_END_CURB, roadId);
+    }
+
+    @Test
     void carriesSemanticPlatformElevationIntoPlacementOperations() {
         PlanElementId roadId = id("road");
         PlanElementId startId = id("start");

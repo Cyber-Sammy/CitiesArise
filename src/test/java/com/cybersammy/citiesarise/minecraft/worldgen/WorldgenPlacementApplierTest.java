@@ -112,13 +112,14 @@ class WorldgenPlacementApplierTest {
     }
 
     @Test
-    void stabilizesLateFluidInsideOccupiedColumnWithoutPlatformElevation() {
+    void stabilizesLateFluidInsideOccupiedColumnAndSafetyEdge() {
         DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(operation(8, 8, "late_lava_yard")));
         DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
                 .partition(completePlan)
                 .slice(TARGET_CHUNK);
         FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
         level.surfaceHeight(8, 8, 65);
+        level.surfaceHeight(9, 8, 65);
         level.put(8, 63, 8, WorldgenSurfaceMaterial.FLUID);
         level.put(8, 64, 8, WorldgenSurfaceMaterial.FLUID);
         level.put(9, 63, 8, WorldgenSurfaceMaterial.FLUID);
@@ -131,8 +132,10 @@ class WorldgenPlacementApplierTest {
         assertTrue(level.hasPlacement(8, 64, 8, DebugPlacementRole.ROAD_SURFACE));
         assertEquals(WorldgenSurfaceMaterial.OTHER, level.materialAt(8, 63, 8));
         assertEquals(WorldgenSurfaceMaterial.OTHER, level.materialAt(8, 64, 8));
-        assertEquals(WorldgenSurfaceMaterial.FLUID, level.materialAt(9, 63, 8));
-        assertEquals(WorldgenSurfaceMaterial.FLUID, level.materialAt(9, 64, 8));
+        assertTrue(level.hasPlacement(9, 63, 8, DebugPlacementRole.FOUNDATION));
+        assertTrue(level.hasPlacement(9, 64, 8, DebugPlacementRole.FOUNDATION));
+        assertEquals(WorldgenSurfaceMaterial.OTHER, level.materialAt(9, 63, 8));
+        assertEquals(WorldgenSurfaceMaterial.OTHER, level.materialAt(9, 64, 8));
     }
 
     @Test
@@ -152,6 +155,44 @@ class WorldgenPlacementApplierTest {
         assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(8, 81, 8));
         assertTrue(level.reads().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
         assertTrue(level.writes().stream().allMatch(WorldgenPlacementApplierTest::isInsideTargetChunk));
+    }
+
+    @Test
+    void reinforcesShallowVoidBelowPlannedFoundation() {
+        PlanElementId roadId = new PlanElementId("cities_arise:shallow_road_void");
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(
+                foundationOperation(8, 8, roadId, 64),
+                platformOperation(8, 8, roadId, 64)
+        ));
+        DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
+                .partition(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.put(8, 61, 8, WorldgenSurfaceMaterial.AIR);
+        level.put(8, 62, 8, WorldgenSurfaceMaterial.AIR);
+
+        new WorldgenChunkPlacement().apply(level, chunkPlan);
+
+        assertTrue(level.hasPlacement(8, 61, 8, DebugPlacementRole.FOUNDATION));
+        assertTrue(level.hasPlacement(8, 62, 8, DebugPlacementRole.FOUNDATION));
+    }
+
+    @Test
+    void clearsVegetationFromPlannedElevationWhenEarlierChunkRaisedDetectedSurface() {
+        PlanElementId roadId = new PlanElementId("cities_arise:ordered_chunk_road");
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(
+                platformOperation(8, 8, roadId, 64)
+        ));
+        DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
+                .partition(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.surfaceHeight(9, 8, 81);
+        level.put(9, 65, 8, WorldgenSurfaceMaterial.LEAVES);
+
+        new WorldgenChunkPlacement().apply(level, chunkPlan);
+
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(9, 65, 8));
     }
 
     @Test
@@ -188,6 +229,73 @@ class WorldgenPlacementApplierTest {
 
         assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(8, 70, 8));
         assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(12, 75, 8));
+    }
+
+    @Test
+    void finalCleanupRemovesVegetationPlacedAfterStructureProcessing() {
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(
+                platformOperation(8, 8, new PlanElementId("cities_arise:late_tree_road"), 64)
+        ));
+        DebugChunkPlacementPlan chunkPlan = new DebugPlacementChunkProjector()
+                .partition(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        WorldgenChunkPlacement placement = new WorldgenChunkPlacement();
+
+        placement.apply(level, chunkPlan);
+        level.surfaceHeight(9, 8, 76);
+        level.put(8, 65, 8, WorldgenSurfaceMaterial.LOGS);
+        level.put(9, 65, 8, WorldgenSurfaceMaterial.LOGS);
+        level.put(9, 75, 9, WorldgenSurfaceMaterial.LEAVES);
+
+        WorldgenVegetationCleanupPlan cleanupPlan = new WorldgenVegetationCleanupIndex(completePlan)
+                .slice(TARGET_CHUNK);
+        placement.clearVegetation(level, cleanupPlan);
+
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(8, 65, 8));
+        assertEquals(WorldgenSurfaceMaterial.LOGS, level.materialAt(9, 65, 8));
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(9, 75, 9));
+    }
+
+    @Test
+    void finalCleanupPreservesPlacedLogWallsButRemovesLateLogsAboveThem() {
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(
+                buildingWallOperation(8, 8, 64)
+        ));
+        WorldgenVegetationCleanupPlan cleanupPlan = new WorldgenVegetationCleanupIndex(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.surfaceHeight(8, 8, 76);
+        level.put(8, 65, 8, WorldgenSurfaceMaterial.LOGS);
+        level.put(8, 66, 8, WorldgenSurfaceMaterial.LOGS);
+
+        new WorldgenChunkPlacement().clearVegetation(level, cleanupPlan);
+
+        assertEquals(WorldgenSurfaceMaterial.LOGS, level.materialAt(8, 65, 8));
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(8, 66, 8));
+    }
+
+    @Test
+    void finalCleanupProjectsClearanceAcrossChunkBoundaries() {
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(
+                platformOperation(15, 8, new PlanElementId("cities_arise:edge_road"), 64)
+        ));
+        PlacementChunk neighboringChunk = new PlacementChunk(1, 0);
+        WorldgenVegetationCleanupPlan cleanupPlan = new WorldgenVegetationCleanupIndex(completePlan)
+                .slice(neighboringChunk);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.surfaceHeight(16, 8, 76);
+        level.surfaceHeight(16, 9, 76);
+        level.put(16, 65, 8, WorldgenSurfaceMaterial.LOGS);
+        level.put(16, 75, 9, WorldgenSurfaceMaterial.LEAVES);
+        level.put(17, 75, 8, WorldgenSurfaceMaterial.LEAVES);
+
+        new WorldgenChunkPlacement().clearVegetation(level, cleanupPlan);
+
+        assertEquals(WorldgenSurfaceMaterial.LOGS, level.materialAt(16, 65, 8));
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(16, 75, 9));
+        assertEquals(WorldgenSurfaceMaterial.LEAVES, level.materialAt(17, 75, 8));
+        assertTrue(level.writes().stream().allMatch(position -> position.x() >= 16));
     }
 
     @Test
@@ -234,6 +342,31 @@ class WorldgenPlacementApplierTest {
                 0,
                 DebugPlacementRole.ROAD_SURFACE,
                 id,
+                OptionalInt.of(platformY)
+        );
+    }
+
+    private static DebugBlockPlacementOperation foundationOperation(
+            int x,
+            int z,
+            PlanElementId id,
+            int platformY
+    ) {
+        return new DebugBlockPlacementOperation(
+                new GridPoint(x, z),
+                -1,
+                DebugPlacementRole.FOUNDATION,
+                id,
+                OptionalInt.of(platformY)
+        );
+    }
+
+    private static DebugBlockPlacementOperation buildingWallOperation(int x, int z, int platformY) {
+        return new DebugBlockPlacementOperation(
+                new GridPoint(x, z),
+                1,
+                DebugPlacementRole.BUILDING_WALL,
+                new PlanElementId("cities_arise:log_wall"),
                 OptionalInt.of(platformY)
         );
     }

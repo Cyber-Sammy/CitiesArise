@@ -12,6 +12,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class AdaptiveSuburbLayoutSelector {
+    private static final int MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY = 6;
+    static final int MAX_FINALIZATION_ATTEMPTS_PER_CAPACITY = 6;
+    private static final int MAX_FINALIZATION_ATTEMPTS_PER_SIZE = 2;
     private static final List<Integer> DISTRICT_GROWTH_STEPS = List.of(0, 4, 8, 16);
 
     Optional<SuburbLayoutSelection> select(
@@ -30,9 +33,11 @@ final class AdaptiveSuburbLayoutSelector {
         Objects.requireNonNull(preferredLayout, "preferredLayout");
         Objects.requireNonNull(layoutFactory, "layoutFactory");
         Objects.requireNonNull(layoutFinalizer, "layoutFinalizer");
+        LayoutSearchBudget searchBudget = new LayoutSearchBudget(maximumLayoutFinalizationAttempts(capacity));
 
         if (hasCapacity(preferredLayout, capacity.target())
-                && isDevelopable(preferredLayout, topology)) {
+                && isDevelopable(preferredLayout, topology)
+                && searchBudget.visit()) {
             Optional<SuburbLayout> routedPreferred = layoutFinalizer.finalize(preferredLayout);
             if (routedPreferred.isPresent()) {
                 SuburbLayout layout = routedPreferred.orElseThrow();
@@ -48,7 +53,8 @@ final class AdaptiveSuburbLayoutSelector {
                 minimumSize,
                 topology,
                 layoutFactory,
-                layoutFinalizer
+                layoutFinalizer,
+                searchBudget
         );
     }
 
@@ -58,16 +64,20 @@ final class AdaptiveSuburbLayoutSelector {
             GridSize minimumSize,
             TerrainTopology topology,
             LayoutFactory layoutFactory,
-            LayoutFinalizer layoutFinalizer
+            LayoutFinalizer layoutFinalizer,
+        LayoutSearchBudget searchBudget
     ) {
         for (int allocatedCapacity = capacity.target(); allocatedCapacity >= capacity.minimum(); allocatedCapacity--) {
+            int lowerCapacityCount = allocatedCapacity - capacity.minimum();
+            LayoutSearchBudget capacityBudget = searchBudget.capacityBudget(lowerCapacityCount);
             Optional<SuburbLayoutSelection> selection = selectCapacity(
                     surveyBounds,
                     allocatedCapacity,
                     minimumSize,
                     topology,
                     layoutFactory,
-                    layoutFinalizer
+                    layoutFinalizer,
+                    capacityBudget
             );
             if (selection.isPresent()) {
                 return selection;
@@ -83,7 +93,8 @@ final class AdaptiveSuburbLayoutSelector {
             GridSize minimumSize,
             TerrainTopology topology,
             LayoutFactory layoutFactory,
-            LayoutFinalizer layoutFinalizer
+            LayoutFinalizer layoutFinalizer,
+            LayoutSearchBudget searchBudget
     ) {
         Optional<GridSize> layoutSize = minimumLayoutSize(
                 surveyBounds,
@@ -94,17 +105,39 @@ final class AdaptiveSuburbLayoutSelector {
         if (layoutSize.isEmpty()) {
             return Optional.empty();
         }
-        for (GridSize candidateSize : candidateSizes(layoutSize.orElseThrow(), surveyBounds.size())) {
-            Optional<SuburbLayoutSelection> selection = bestCandidate(
-                    surveyBounds,
-                    allocatedCapacity,
-                    candidateSize,
-                    topology,
-                    layoutFactory,
-                    layoutFinalizer
-            );
-            if (selection.isPresent()) {
-                return selection;
+        List<GridSize> sizes = candidateSizes(layoutSize.orElseThrow(), surveyBounds.size());
+        List<List<UnroutedLayoutCandidate>> candidatesBySize = new ArrayList<>(sizes.size());
+        for (int index = 0; index < sizes.size(); index++) {
+            candidatesBySize.add(null);
+        }
+        for (int attemptIndex = 0; attemptIndex < MAX_FINALIZATION_ATTEMPTS_PER_SIZE; attemptIndex++) {
+            for (int sizeIndex = 0; sizeIndex < sizes.size(); sizeIndex++) {
+                List<UnroutedLayoutCandidate> candidates = candidatesBySize.get(sizeIndex);
+                if (candidates == null) {
+                    candidates = finalizationCandidates(unroutedCandidates(
+                            surveyBounds,
+                            allocatedCapacity,
+                            sizes.get(sizeIndex),
+                            topology,
+                            layoutFactory
+                    ));
+                    candidatesBySize.set(sizeIndex, candidates);
+                }
+                if (attemptIndex >= candidates.size()) {
+                    continue;
+                }
+                if (!searchBudget.visit()) {
+                    return Optional.empty();
+                }
+                Optional<SuburbLayoutSelection> selection = finalizeCandidate(
+                        candidates.get(attemptIndex),
+                        allocatedCapacity,
+                        topology,
+                        layoutFinalizer
+                );
+                if (selection.isPresent()) {
+                    return selection;
+                }
             }
         }
         return Optional.empty();
@@ -146,13 +179,12 @@ final class AdaptiveSuburbLayoutSelector {
         return Optional.empty();
     }
 
-    private static Optional<SuburbLayoutSelection> bestCandidate(
+    private static List<UnroutedLayoutCandidate> unroutedCandidates(
             GridBounds surveyBounds,
             int targetParcelCount,
             GridSize layoutSize,
             TerrainTopology topology,
-            LayoutFactory layoutFactory,
-            LayoutFinalizer layoutFinalizer
+            LayoutFactory layoutFactory
     ) {
         List<UnroutedLayoutCandidate> candidates = new ArrayList<>();
         int maxX = surveyBounds.maxXExclusive() - layoutSize.width();
@@ -171,17 +203,66 @@ final class AdaptiveSuburbLayoutSelector {
             }
         }
         candidates.sort(UnroutedLayoutCandidate.ORDER);
-        for (UnroutedLayoutCandidate candidate : candidates) {
-            Optional<SuburbLayout> routed = layoutFinalizer.finalize(candidate.layout());
-            if (routed.isEmpty()) {
-                continue;
-            }
-            SuburbLayout routedLayout = routed.orElseThrow();
-            if (isDevelopable(routedLayout, topology)) {
-                return Optional.of(selection(routedLayout, targetParcelCount, topology));
-            }
+        return List.copyOf(candidates);
+    }
+
+    private static Optional<SuburbLayoutSelection> finalizeCandidate(
+            UnroutedLayoutCandidate candidate,
+            int targetParcelCount,
+            TerrainTopology topology,
+            LayoutFinalizer layoutFinalizer
+    ) {
+        Optional<SuburbLayout> routed = layoutFinalizer.finalize(candidate.layout());
+        if (routed.isEmpty()) {
+            return Optional.empty();
+        }
+        SuburbLayout routedLayout = routed.orElseThrow();
+        if (isDevelopable(routedLayout, topology)) {
+            return Optional.of(selection(routedLayout, targetParcelCount, topology));
         }
         return Optional.empty();
+    }
+
+    static int maximumLayoutFinalizationAttempts(DevelopmentCapacity capacity) {
+        Objects.requireNonNull(capacity, "capacity");
+        int capacityCount = Math.addExact(Math.subtractExact(capacity.target(), capacity.minimum()), 1);
+        return Math.addExact(
+                Math.multiplyExact(capacityCount, MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY),
+                1
+        );
+    }
+
+    private static List<UnroutedLayoutCandidate> finalizationCandidates(
+            List<UnroutedLayoutCandidate> candidates
+    ) {
+        if (candidates.size() <= MAX_FINALIZATION_ATTEMPTS_PER_SIZE) {
+            return List.copyOf(candidates);
+        }
+        int preferredCount = MAX_FINALIZATION_ATTEMPTS_PER_SIZE / 2;
+        boolean[] selected = new boolean[candidates.size()];
+        for (int index = 0; index < preferredCount; index++) {
+            selected[index] = true;
+        }
+        int representativeCount = MAX_FINALIZATION_ATTEMPTS_PER_SIZE - preferredCount;
+        int remainingCandidates = candidates.size() - preferredCount;
+        for (int index = 0; index < representativeCount; index++) {
+            int offset = representativeOffset(index, representativeCount, remainingCandidates);
+            selected[preferredCount + offset] = true;
+        }
+        List<UnroutedLayoutCandidate> result = new ArrayList<>(MAX_FINALIZATION_ATTEMPTS_PER_SIZE);
+        for (int index = 0; index < candidates.size(); index++) {
+            if (selected[index]) {
+                result.add(candidates.get(index));
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private static int representativeOffset(int index, int count, int candidateCount) {
+        if (count == 1) {
+            return candidateCount - 1;
+        }
+        return (int) (((long) index * (candidateCount - 1)) / (count - 1));
     }
 
     private static Optional<UnroutedLayoutCandidate> unroutedCandidate(
@@ -357,6 +438,53 @@ final class AdaptiveSuburbLayoutSelector {
     @FunctionalInterface
     interface LayoutFinalizer {
         Optional<SuburbLayout> finalize(SuburbLayout layout);
+    }
+
+    private static final class LayoutSearchBudget {
+        private final LayoutSearchBudget parent;
+        private int remainingAttempts;
+
+        private LayoutSearchBudget(int maximumAttempts) {
+            this(maximumAttempts, null);
+        }
+
+        private LayoutSearchBudget(int maximumAttempts, LayoutSearchBudget parent) {
+            if (maximumAttempts < 0) {
+                throw new IllegalArgumentException("maximumAttempts must not be negative");
+            }
+            remainingAttempts = maximumAttempts;
+            this.parent = parent;
+        }
+
+        private LayoutSearchBudget capacityBudget(int lowerCapacityCount) {
+            if (parent != null) {
+                throw new IllegalStateException("only the root budget can allocate capacity budgets");
+            }
+            int reservedForLowerCapacities = Math.multiplyExact(
+                    lowerCapacityCount,
+                    MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY
+            );
+            int available = Math.max(0, remainingAttempts - reservedForLowerCapacities);
+            return new LayoutSearchBudget(
+                    Math.min(MAX_FINALIZATION_ATTEMPTS_PER_CAPACITY, available),
+                    this
+            );
+        }
+
+        private boolean visit() {
+            if (exhausted()) {
+                return false;
+            }
+            remainingAttempts--;
+            if (parent != null && !parent.visit()) {
+                throw new IllegalStateException("capacity budget exceeded its root budget");
+            }
+            return true;
+        }
+
+        private boolean exhausted() {
+            return remainingAttempts == 0 || (parent != null && parent.exhausted());
+        }
     }
 
     private record UnroutedLayoutCandidate(

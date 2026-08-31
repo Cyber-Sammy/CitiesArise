@@ -11,11 +11,14 @@ import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
 import com.cybersammy.citiesarise.core.road.RoadRoute;
+import com.cybersammy.citiesarise.core.road.RoadTerrainEvaluationCache;
 import com.cybersammy.citiesarise.core.road.RoadRoutingCostPolicy;
 import com.cybersammy.citiesarise.core.road.RoadRoutingRequest;
 import com.cybersammy.citiesarise.core.road.RoadRoutingResult;
 import com.cybersammy.citiesarise.core.road.TerrainAwareRoadRouter;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlan;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainPlanningAction;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
 import java.util.ArrayList;
@@ -36,10 +39,67 @@ final class TerrainAwareRoadGraphRouter {
             RoadGraph source,
             List<GridBounds> reservedBounds
     ) {
+        TerrainAdaptationPlan adaptationPlan = new com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlanner()
+                .plan(request.survey(), request.settings().maxBuildableSlope(), request.terrainResponsePolicy());
+        return route(
+                request,
+                routingBounds,
+                source,
+                reservedBounds,
+                adaptationPlan,
+                new RoadTerrainEvaluationCache()
+        );
+    }
+
+    Optional<RoadGraph> route(
+            SuburbPlanningRequest request,
+            GridBounds routingBounds,
+            RoadGraph source,
+            List<GridBounds> reservedBounds,
+            TerrainAdaptationPlan adaptationPlan
+    ) {
+        return route(
+                request,
+                routingBounds,
+                source,
+                reservedBounds,
+                adaptationPlan,
+                new RoadTerrainEvaluationCache()
+        );
+    }
+
+    Optional<RoadGraph> route(
+            SuburbPlanningRequest request,
+            GridBounds routingBounds,
+            RoadGraph source,
+            List<GridBounds> reservedBounds,
+            TerrainAdaptationPlan adaptationPlan,
+            RoadTerrainEvaluationCache terrainEvaluations
+    ) {
+        return route(
+                request,
+                routingBounds,
+                source,
+                reservedBounds,
+                routingContext(request.terrainResponsePolicy(), adaptationPlan),
+                terrainEvaluations
+        );
+    }
+
+    Optional<RoadGraph> route(
+            SuburbPlanningRequest request,
+            GridBounds routingBounds,
+            RoadGraph source,
+            List<GridBounds> reservedBounds,
+            RoutingContext routingContext,
+            RoadTerrainEvaluationCache terrainEvaluations
+    ) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(routingBounds, "routingBounds");
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(reservedBounds, "reservedBounds");
+        Objects.requireNonNull(routingContext, "routingContext");
+        Objects.requireNonNull(terrainEvaluations, "terrainEvaluations");
 
         Map<PlanElementId, RoadNode> sourceNodes = nodesById(source);
         List<RoadNode> routedNodes = new ArrayList<>(source.nodes());
@@ -51,7 +111,10 @@ final class TerrainAwareRoadGraphRouter {
                     routingBounds,
                     segment,
                     sourceNodes,
-                    dynamicReservations
+                    dynamicReservations,
+                    routingContext.policy(),
+                    routingContext.adaptationPlan(),
+                    terrainEvaluations
             );
             if (routed.isEmpty()) {
                 return Optional.empty();
@@ -63,12 +126,28 @@ final class TerrainAwareRoadGraphRouter {
         return Optional.of(new RoadGraph(routedNodes, routedSegments));
     }
 
+    RoutingContext routingContext(
+            TerrainResponsePolicy sourcePolicy,
+            TerrainAdaptationPlan adaptationPlan
+    ) {
+        Objects.requireNonNull(sourcePolicy, "sourcePolicy");
+        Objects.requireNonNull(adaptationPlan, "adaptationPlan");
+        TerrainResponsePolicy routingPolicy = routingPolicy(sourcePolicy);
+        return new RoutingContext(
+                routingPolicy,
+                adaptationPlan.withPolicy(routingPolicy, crossingBarrierOverrides(sourcePolicy))
+        );
+    }
+
     private static Optional<RoutedSegment> routeSegment(
             SuburbPlanningRequest request,
             GridBounds routingBounds,
             RoadSegment segment,
             Map<PlanElementId, RoadNode> sourceNodes,
-            List<GridBounds> reservedBounds
+            List<GridBounds> reservedBounds,
+            TerrainResponsePolicy routingPolicy,
+            TerrainAdaptationPlan routingAdaptationPlan,
+            RoadTerrainEvaluationCache terrainEvaluations
     ) {
         RoadNode start = requiredNode(sourceNodes, segment.startNodeId());
         RoadNode end = requiredNode(sourceNodes, segment.endNodeId());
@@ -81,14 +160,15 @@ final class TerrainAwareRoadGraphRouter {
                 segment.width(),
                 RoadTerrainShoulderPolicy.RADIUS,
                 request.settings().maxBuildableSlope(),
-                routingPolicy(request.terrainResponsePolicy()),
+                routingPolicy,
+                routingAdaptationPlan,
                 RoadRoutingCostPolicy.defaults(),
                 reservedBounds,
                 List.of(
                         junctionBounds(start.point(), segment.width()),
                         junctionBounds(end.point(), segment.width())
                 )
-        ));
+        ), terrainEvaluations);
         if (!result.successful()) {
             return Optional.empty();
         }
@@ -105,7 +185,19 @@ final class TerrainAwareRoadGraphRouter {
                     response == TerrainResponse.CROSS_IF_SUPPORTED ? TerrainResponse.BUILD_AROUND : response
             );
         }
-        return new TerrainResponsePolicy(responses, source.capabilities());
+        return new TerrainResponsePolicy(responses, source.capabilities(), source.adaptationSettings());
+    }
+
+    private static Map<TerrainFeatureType, TerrainPlanningAction> crossingBarrierOverrides(
+            TerrainResponsePolicy source
+    ) {
+        Map<TerrainFeatureType, TerrainPlanningAction> overrides = new EnumMap<>(TerrainFeatureType.class);
+        for (TerrainFeatureType featureType : TerrainFeatureType.values()) {
+            if (source.responseFor(featureType) == TerrainResponse.CROSS_IF_SUPPORTED) {
+                overrides.put(featureType, TerrainPlanningAction.ROUTE_AROUND);
+            }
+        }
+        return Map.copyOf(overrides);
     }
 
     private static GridBounds junctionBounds(GridPoint point, int width) {
@@ -213,6 +305,13 @@ final class TerrainAwareRoadGraphRouter {
             nodes = List.copyOf(nodes);
             segments = List.copyOf(segments);
             Objects.requireNonNull(route, "route");
+        }
+    }
+
+    record RoutingContext(TerrainResponsePolicy policy, TerrainAdaptationPlan adaptationPlan) {
+        RoutingContext {
+            Objects.requireNonNull(policy, "policy");
+            Objects.requireNonNull(adaptationPlan, "adaptationPlan");
         }
     }
 }

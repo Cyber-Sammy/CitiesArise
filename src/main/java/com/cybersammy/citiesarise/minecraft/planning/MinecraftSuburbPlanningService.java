@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 
 public final class MinecraftSuburbPlanningService {
     private static final int MAX_CACHED_PROFILES = 32;
+    private static final String OVERWORLD_DIMENSION_ID = "minecraft:overworld";
 
     private final SuburbPlanner planner;
     private final SuburbPlanTransformService transformService;
@@ -201,17 +202,16 @@ public final class MinecraftSuburbPlanningService {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(position, "position");
 
-        SettlementRegion region = SettlementRegion.fromBlockPosition(position.getX(), position.getZ());
-        GridBounds bounds = region.surveyBounds(context.surveySize());
-        PlanElementId settlementId = settlementId(region);
-        long seed = SettlementSeed.forRegion(context.worldSeed(), region, settlementId);
-        return createPlan(
-                region,
-                bounds,
-                settlementId,
-                seed,
+        return planAt(
+                OVERWORLD_DIMENSION_ID,
+                context.worldSeed(),
+                position.getX(),
+                position.getZ(),
+                context.profileId(),
+                context.surveySize(),
                 context.planningSettings(),
                 context.terrainResponsePolicy(),
+                TerrainSurveySource.WORLDGEN_BASE,
                 context.terrainProvider(),
                 context.terrainLoggingEnabled(),
                 context.planningLoggingEnabled()

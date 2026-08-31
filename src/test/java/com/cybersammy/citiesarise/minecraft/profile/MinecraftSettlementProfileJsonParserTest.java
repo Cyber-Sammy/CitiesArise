@@ -10,6 +10,7 @@ import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
 import com.cybersammy.citiesarise.core.terrain.policy.InfrastructureCapability;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationSettings;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
@@ -98,6 +99,48 @@ final class MinecraftSettlementProfileJsonParserTest {
         );
         assertEquals(4, profile.terrainResponsePolicy().capabilities().size());
         assertTrue(profile.terrainResponsePolicy().supports(InfrastructureCapability.BRIDGE));
+        assertEquals(
+                TerrainAdaptationSettings.disabled(),
+                profile.terrainResponsePolicy().adaptationSettings()
+        );
+    }
+
+    @Test
+    void parsesTerrainAdaptationSettings() {
+        JsonObject json = validJson();
+        json.add("terrainPolicy", JsonParser.parseString("""
+                {
+                  "responses": {
+                    "water": "build_around"
+                  },
+                  "adaptation": {
+                    "sensitivity": 0.7,
+                    "maxTerraformArea": 40,
+                    "maxTerraformRelief": 5,
+                    "maxTerraformVolume": 240
+                  }
+                }
+                """));
+
+        SettlementProfile profile = parser.parse(id(), json);
+
+        assertEquals(
+                new TerrainAdaptationSettings(0.7, 40, 5, 240L),
+                profile.terrainResponsePolicy().adaptationSettings()
+        );
+    }
+
+    @Test
+    void rejectsInvalidTerrainAdaptationSensitivity() {
+        JsonObject json = withTerrainPolicy("""
+                {
+                  "adaptation": {
+                    "sensitivity": 1.1
+                  }
+                }
+                """);
+
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), json));
     }
 
     @Test

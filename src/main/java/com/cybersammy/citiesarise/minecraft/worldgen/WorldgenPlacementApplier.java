@@ -23,4 +23,12 @@ public final class WorldgenPlacementApplier {
         Objects.requireNonNull(level, "level");
         return chunkPlacement.apply(new MinecraftWorldgenBlockAccess(level, materialProvider), placementPlan);
     }
+
+    void clearVegetation(WorldGenLevel level, WorldgenVegetationCleanupPlan cleanupPlan) {
+        Objects.requireNonNull(level, "level");
+        chunkPlacement.clearVegetation(
+                new MinecraftWorldgenBlockAccess(level, materialProvider),
+                cleanupPlan
+        );
+    }
 }

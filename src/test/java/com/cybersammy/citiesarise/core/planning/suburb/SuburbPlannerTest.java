@@ -30,6 +30,7 @@ import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType;
+import com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationSettings;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse;
 import com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitabilityContribution;
@@ -161,6 +162,44 @@ final class SuburbPlannerTest {
                 nodes,
                 settings.roadWidth()
         ).contains(waterPoint)));
+    }
+
+    @Test
+    void lowSensitivityCanTerraformSmallPondInsideRoadFootprint() {
+        GridPoint waterPoint = new GridPoint(5, 20);
+        SuburbPlanningSettings settings = SuburbPlanningSettings.defaults();
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                SETTLEMENT_ID,
+                surveyWithSingleWaterCell(60, 40, waterPoint),
+                100L,
+                settings,
+                adaptivePolicy(0.0)
+        );
+
+        SuburbPlanningResult result = planner.plan(request);
+
+        assertTrue(result.successful(), result.toString());
+        assertTrue(roadCorridors(result.plan().orElseThrow().roadGraph()).stream()
+                .anyMatch(corridor -> corridor.contains(waterPoint)));
+    }
+
+    @Test
+    void highSensitivityPreservesSmallPondAndRoutesAroundIt() {
+        GridPoint waterPoint = new GridPoint(5, 20);
+        SuburbPlanningSettings settings = SuburbPlanningSettings.defaults();
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                SETTLEMENT_ID,
+                surveyWithSingleWaterCell(60, 40, waterPoint),
+                100L,
+                settings,
+                adaptivePolicy(1.0)
+        );
+
+        SuburbPlanningResult result = planner.plan(request);
+
+        assertTrue(result.successful(), result.toString());
+        assertTrue(roadCorridors(result.plan().orElseThrow().roadGraph()).stream()
+                .noneMatch(corridor -> corridor.contains(waterPoint)));
     }
 
     @Test
@@ -861,6 +900,24 @@ final class SuburbPlannerTest {
                 new EnumMap<>(TerrainResponsePolicy.defaults().responses());
         responses.put(featureType, response);
         return new TerrainResponsePolicy(responses, Set.of());
+    }
+
+    private static List<GridBounds> roadCorridors(RoadGraph roadGraph) {
+        Map<PlanElementId, RoadNode> nodes = nodesById(roadGraph);
+        return roadGraph.segments().stream()
+                .map(segment -> roadCorridor(segment, nodes, segment.width()))
+                .toList();
+    }
+
+    private static TerrainResponsePolicy adaptivePolicy(double sensitivity) {
+        EnumMap<TerrainFeatureType, TerrainResponse> responses =
+                new EnumMap<>(TerrainResponsePolicy.defaults().responses());
+        responses.put(TerrainFeatureType.WATER, TerrainResponse.BUILD_AROUND);
+        return new TerrainResponsePolicy(
+                responses,
+                Set.of(),
+                new TerrainAdaptationSettings(sensitivity, 8, 4, 64L)
+        );
     }
 
     private static TerrainSurvey flatSurvey(int width, int depth) {

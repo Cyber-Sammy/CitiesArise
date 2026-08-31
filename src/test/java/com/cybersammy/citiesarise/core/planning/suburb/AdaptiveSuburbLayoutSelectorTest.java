@@ -157,6 +157,97 @@ final class AdaptiveSuburbLayoutSelectorTest {
         assertEquals(20, selected.layout().bounds().size().width());
     }
 
+    @Test
+    void givesEveryDistrictSizeOneAttemptBeforeReducingCapacity() {
+        GridBounds surveyBounds = bounds(0, 0, 40, 20);
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                TerrainSurvey.sample(surveyBounds, point -> Optional.of(cell(point, false))),
+                cell -> true
+        );
+        SuburbLayout preferredLayout = layout(surveyBounds, 4);
+
+        SuburbLayoutSelection selected = new AdaptiveSuburbLayoutSelector().select(
+                surveyBounds,
+                new DevelopmentCapacity(2, 4, 6),
+                new GridSize(4, 10),
+                topology,
+                preferredLayout,
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout,
+                layout -> {
+                    if (layout == preferredLayout || layout.bounds().size().width() < 24) {
+                        return Optional.empty();
+                    }
+                    return Optional.of(layout);
+                }
+        ).orElseThrow();
+
+        assertEquals(4, selected.allocatedCapacity());
+        assertEquals(24, selected.layout().bounds().size().width());
+    }
+
+    @Test
+    void boundsExpensiveLayoutFinalizationAttempts() {
+        GridBounds surveyBounds = bounds(0, 0, 40, 20);
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                TerrainSurvey.sample(surveyBounds, point -> Optional.of(cell(point, false))),
+                cell -> true
+        );
+        AtomicInteger finalizationCount = new AtomicInteger();
+
+        assertTrue(new AdaptiveSuburbLayoutSelector().select(
+                surveyBounds,
+                new DevelopmentCapacity(2, 4, 6),
+                new GridSize(4, 10),
+                topology,
+                layout(surveyBounds, 4),
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout,
+                layout -> {
+                    finalizationCount.incrementAndGet();
+                    return Optional.empty();
+                }
+        ).isEmpty());
+
+        assertTrue(finalizationCount.get() > 0);
+        assertTrue(finalizationCount.get()
+                <= AdaptiveSuburbLayoutSelector.maximumLayoutFinalizationAttempts(
+                        new DevelopmentCapacity(2, 4, 6)
+                ));
+    }
+
+    @Test
+    void preservesFinalizationBudgetForMinimumCapacityFallback() {
+        GridBounds surveyBounds = bounds(0, 0, 40, 20);
+        TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(
+                TerrainSurvey.sample(surveyBounds, point -> Optional.of(cell(point, false))),
+                cell -> true
+        );
+        DevelopmentCapacity capacity = new DevelopmentCapacity(2, 4, 6);
+        AtomicInteger finalizationCount = new AtomicInteger();
+        AtomicInteger minimumCapacityAttempts = new AtomicInteger();
+
+        SuburbLayoutSelection selected = new AdaptiveSuburbLayoutSelector().select(
+                surveyBounds,
+                capacity,
+                new GridSize(4, 10),
+                topology,
+                layout(surveyBounds, 4),
+                AdaptiveSuburbLayoutSelectorTest::capacityLimitedLayout,
+                layout -> {
+                    finalizationCount.incrementAndGet();
+                    if (layout.requestedParcelCapacity() != capacity.minimum()) {
+                        return Optional.empty();
+                    }
+                    minimumCapacityAttempts.incrementAndGet();
+                    return Optional.of(layout);
+                }
+        ).orElseThrow();
+
+        assertEquals(capacity.minimum(), selected.allocatedCapacity());
+        assertEquals(1, minimumCapacityAttempts.get());
+        assertTrue(finalizationCount.get()
+                <= AdaptiveSuburbLayoutSelector.maximumLayoutFinalizationAttempts(capacity));
+    }
+
     private static TerrainTopology topologyWithBarrier(GridBounds bounds, int barrierX) {
         TerrainSurvey survey = TerrainSurvey.sample(
                 bounds,

@@ -8,10 +8,12 @@ import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole;
 import com.cybersammy.citiesarise.minecraft.placement.PlacementChunk;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
+import java.util.Set;
 
 final class WorldgenChunkPlacement {
     private static final int LATE_FLUID_STABILIZATION_RADIUS = 1;
@@ -24,7 +26,7 @@ final class WorldgenChunkPlacement {
         stabilizeLateFluids(level, surfaceColumns);
         reinforceFoundations(level, placementPlan);
         preparePlatforms(level, placementPlan, surfaceColumns);
-        clearVegetationColumns(level, vegetationColumns(level, placementPlan, surfaceColumns), true);
+        clearVegetationColumns(level, vegetationColumns(level, placementPlan, surfaceColumns));
 
         int placedBlocks = 0;
         for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
@@ -47,7 +49,7 @@ final class WorldgenChunkPlacement {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(cleanupPlan, "cleanupPlan");
 
-        clearVegetationColumns(level, vegetationColumns(level, cleanupPlan), false);
+        clearVegetationColumns(level, vegetationColumns(level, cleanupPlan));
     }
 
     private static void stabilizeLateFluids(
@@ -272,13 +274,22 @@ final class WorldgenChunkPlacement {
         Map<GridPoint, VegetationColumn> columns = new LinkedHashMap<>();
         occupiedColumns.forEach((point, column) -> columns.put(
                 point,
-                new VegetationColumn(column, column.placementY())
+                new VegetationColumn(column, column.placementY(), true, Set.of())
         ));
         for (DebugBlockPlacementOperation operation : plan.operations()) {
             int plannedBaseY = operation.platformY().orElseGet(
                     () -> occupiedColumns.get(operation.point()).placementY()
             );
-            addVegetationClearanceColumns(level, plan.chunk(), columns, operation.point(), plannedBaseY);
+            addVegetationClearanceColumns(
+                    level,
+                    plan.chunk(),
+                    columns,
+                    operation.point(),
+                    plannedBaseY,
+                    WorldgenPlacementPolicy.VEGETATION_CLEARANCE_RADIUS,
+                    true,
+                    OptionalInt.empty()
+            );
         }
         return Map.copyOf(columns);
     }
@@ -298,27 +309,30 @@ final class WorldgenChunkPlacement {
                     columns,
                     operation.point(),
                     plannedBaseY,
-                    WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS
+                    WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
+                    false,
+                    OptionalInt.empty()
+            );
+            addVegetationClearanceColumns(
+                    level,
+                    plan.chunk(),
+                    columns,
+                    operation.point(),
+                    plannedBaseY,
+                    0,
+                    true,
+                    protectedLogY(operation, plannedBaseY)
             );
         }
         return Map.copyOf(columns);
     }
 
-    private static void addVegetationClearanceColumns(
-            WorldgenBlockAccess level,
-            PlacementChunk chunk,
-            Map<GridPoint, VegetationColumn> columns,
-            GridPoint center,
-            int plannedBaseY
-    ) {
-        addVegetationClearanceColumns(
-                level,
-                chunk,
-                columns,
-                center,
-                plannedBaseY,
-                WorldgenPlacementPolicy.VEGETATION_CLEARANCE_RADIUS
-        );
+    private static OptionalInt protectedLogY(DebugBlockPlacementOperation operation, int plannedBaseY) {
+        if (operation.role() != DebugPlacementRole.BUILDING_WALL
+                && operation.role() != DebugPlacementRole.DECAYED_BUILDING_WALL) {
+            return OptionalInt.empty();
+        }
+        return OptionalInt.of(plannedBaseY + operation.verticalOffset());
     }
 
     private static void addVegetationClearanceColumns(
@@ -327,7 +341,9 @@ final class WorldgenChunkPlacement {
             Map<GridPoint, VegetationColumn> columns,
             GridPoint center,
             int plannedBaseY,
-            int radius
+            int radius,
+            boolean clearLogs,
+            OptionalInt protectedLogY
     ) {
         for (int zOffset = -radius; zOffset <= radius; zOffset++) {
             for (int xOffset = -radius; xOffset <= radius; xOffset++) {
@@ -340,7 +356,16 @@ final class WorldgenChunkPlacement {
                         int clearanceBaseY = existing == null
                                 ? plannedBaseY
                                 : Math.min(existing.clearanceBaseY(), plannedBaseY);
-                        return new VegetationColumn(surface, clearanceBaseY);
+                        Set<Integer> protectedLogYs = existing == null
+                                ? new HashSet<>()
+                                : new HashSet<>(existing.protectedLogYs());
+                        protectedLogY.ifPresent(protectedLogYs::add);
+                        return new VegetationColumn(
+                                surface,
+                                clearanceBaseY,
+                                clearLogs || (existing != null && existing.clearLogs()),
+                                protectedLogYs
+                        );
                     });
                 }
             }
@@ -366,8 +391,7 @@ final class WorldgenChunkPlacement {
 
     private static void clearVegetationColumns(
             WorldgenBlockAccess level,
-            Map<GridPoint, VegetationColumn> columns,
-            boolean clearLogs
+            Map<GridPoint, VegetationColumn> columns
     ) {
         for (VegetationColumn vegetationColumn : columns.values()) {
             SurfaceColumn column = vegetationColumn.surface();
@@ -379,7 +403,9 @@ final class WorldgenChunkPlacement {
                     continue;
                 }
                 WorldgenSurfaceMaterial material = level.material(position);
-                if (isVegetation(material, clearLogs)) {
+                boolean clearLog = vegetationColumn.clearLogs()
+                        && !vegetationColumn.protectedLogYs().contains(y);
+                if (isVegetation(material, clearLog)) {
                     level.clearBlock(position);
                 }
             }
@@ -438,9 +464,16 @@ final class WorldgenChunkPlacement {
         }
     }
 
-    private record VegetationColumn(SurfaceColumn surface, int clearanceBaseY) {
+    private record VegetationColumn(
+            SurfaceColumn surface,
+            int clearanceBaseY,
+            boolean clearLogs,
+            Set<Integer> protectedLogYs
+    ) {
         private VegetationColumn {
             Objects.requireNonNull(surface, "surface");
+            Objects.requireNonNull(protectedLogYs, "protectedLogYs");
+            protectedLogYs = Set.copyOf(protectedLogYs);
         }
     }
 

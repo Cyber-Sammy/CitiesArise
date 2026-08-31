@@ -244,6 +244,7 @@ class WorldgenPlacementApplierTest {
 
         placement.apply(level, chunkPlan);
         level.surfaceHeight(9, 8, 76);
+        level.put(8, 65, 8, WorldgenSurfaceMaterial.LOGS);
         level.put(9, 65, 8, WorldgenSurfaceMaterial.LOGS);
         level.put(9, 75, 9, WorldgenSurfaceMaterial.LEAVES);
 
@@ -251,8 +252,27 @@ class WorldgenPlacementApplierTest {
                 .slice(TARGET_CHUNK);
         placement.clearVegetation(level, cleanupPlan);
 
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(8, 65, 8));
         assertEquals(WorldgenSurfaceMaterial.LOGS, level.materialAt(9, 65, 8));
         assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(9, 75, 9));
+    }
+
+    @Test
+    void finalCleanupPreservesPlacedLogWallsButRemovesLateLogsAboveThem() {
+        DebugPlacementPlan completePlan = new DebugPlacementPlan(List.of(
+                buildingWallOperation(8, 8, 64)
+        ));
+        WorldgenVegetationCleanupPlan cleanupPlan = new WorldgenVegetationCleanupIndex(completePlan)
+                .slice(TARGET_CHUNK);
+        FakeWorldgenBlockAccess level = new FakeWorldgenBlockAccess();
+        level.surfaceHeight(8, 8, 76);
+        level.put(8, 65, 8, WorldgenSurfaceMaterial.LOGS);
+        level.put(8, 66, 8, WorldgenSurfaceMaterial.LOGS);
+
+        new WorldgenChunkPlacement().clearVegetation(level, cleanupPlan);
+
+        assertEquals(WorldgenSurfaceMaterial.LOGS, level.materialAt(8, 65, 8));
+        assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(8, 66, 8));
     }
 
     @Test
@@ -337,6 +357,16 @@ class WorldgenPlacementApplierTest {
                 -1,
                 DebugPlacementRole.FOUNDATION,
                 id,
+                OptionalInt.of(platformY)
+        );
+    }
+
+    private static DebugBlockPlacementOperation buildingWallOperation(int x, int z, int platformY) {
+        return new DebugBlockPlacementOperation(
+                new GridPoint(x, z),
+                1,
+                DebugPlacementRole.BUILDING_WALL,
+                new PlanElementId("cities_arise:log_wall"),
                 OptionalInt.of(platformY)
         );
     }

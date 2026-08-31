@@ -12,8 +12,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class AdaptiveSuburbLayoutSelector {
-    private static final int MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY = 4;
-    static final int MAX_FINALIZATION_ATTEMPTS_PER_CAPACITY = 4;
+    private static final int MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY = 6;
+    static final int MAX_FINALIZATION_ATTEMPTS_PER_CAPACITY = 6;
     private static final int MAX_FINALIZATION_ATTEMPTS_PER_SIZE = 2;
     private static final List<Integer> DISTRICT_GROWTH_STEPS = List.of(0, 4, 8, 16);
 
@@ -105,21 +105,39 @@ final class AdaptiveSuburbLayoutSelector {
         if (layoutSize.isEmpty()) {
             return Optional.empty();
         }
-        for (GridSize candidateSize : candidateSizes(layoutSize.orElseThrow(), surveyBounds.size())) {
-            if (searchBudget.exhausted()) {
-                return Optional.empty();
-            }
-            Optional<SuburbLayoutSelection> selection = bestCandidate(
-                    surveyBounds,
-                    allocatedCapacity,
-                    candidateSize,
-                    topology,
-                    layoutFactory,
-                    layoutFinalizer,
-                    searchBudget
-            );
-            if (selection.isPresent()) {
-                return selection;
+        List<GridSize> sizes = candidateSizes(layoutSize.orElseThrow(), surveyBounds.size());
+        List<List<UnroutedLayoutCandidate>> candidatesBySize = new ArrayList<>(sizes.size());
+        for (int index = 0; index < sizes.size(); index++) {
+            candidatesBySize.add(null);
+        }
+        for (int attemptIndex = 0; attemptIndex < MAX_FINALIZATION_ATTEMPTS_PER_SIZE; attemptIndex++) {
+            for (int sizeIndex = 0; sizeIndex < sizes.size(); sizeIndex++) {
+                List<UnroutedLayoutCandidate> candidates = candidatesBySize.get(sizeIndex);
+                if (candidates == null) {
+                    candidates = finalizationCandidates(unroutedCandidates(
+                            surveyBounds,
+                            allocatedCapacity,
+                            sizes.get(sizeIndex),
+                            topology,
+                            layoutFactory
+                    ));
+                    candidatesBySize.set(sizeIndex, candidates);
+                }
+                if (attemptIndex >= candidates.size()) {
+                    continue;
+                }
+                if (!searchBudget.visit()) {
+                    return Optional.empty();
+                }
+                Optional<SuburbLayoutSelection> selection = finalizeCandidate(
+                        candidates.get(attemptIndex),
+                        allocatedCapacity,
+                        topology,
+                        layoutFinalizer
+                );
+                if (selection.isPresent()) {
+                    return selection;
+                }
             }
         }
         return Optional.empty();
@@ -161,14 +179,12 @@ final class AdaptiveSuburbLayoutSelector {
         return Optional.empty();
     }
 
-    private static Optional<SuburbLayoutSelection> bestCandidate(
+    private static List<UnroutedLayoutCandidate> unroutedCandidates(
             GridBounds surveyBounds,
             int targetParcelCount,
             GridSize layoutSize,
             TerrainTopology topology,
-            LayoutFactory layoutFactory,
-            LayoutFinalizer layoutFinalizer,
-            LayoutSearchBudget searchBudget
+            LayoutFactory layoutFactory
     ) {
         List<UnroutedLayoutCandidate> candidates = new ArrayList<>();
         int maxX = surveyBounds.maxXExclusive() - layoutSize.width();
@@ -187,18 +203,22 @@ final class AdaptiveSuburbLayoutSelector {
             }
         }
         candidates.sort(UnroutedLayoutCandidate.ORDER);
-        for (UnroutedLayoutCandidate candidate : finalizationCandidates(candidates)) {
-            if (!searchBudget.visit()) {
-                return Optional.empty();
-            }
-            Optional<SuburbLayout> routed = layoutFinalizer.finalize(candidate.layout());
-            if (routed.isEmpty()) {
-                continue;
-            }
-            SuburbLayout routedLayout = routed.orElseThrow();
-            if (isDevelopable(routedLayout, topology)) {
-                return Optional.of(selection(routedLayout, targetParcelCount, topology));
-            }
+        return List.copyOf(candidates);
+    }
+
+    private static Optional<SuburbLayoutSelection> finalizeCandidate(
+            UnroutedLayoutCandidate candidate,
+            int targetParcelCount,
+            TerrainTopology topology,
+            LayoutFinalizer layoutFinalizer
+    ) {
+        Optional<SuburbLayout> routed = layoutFinalizer.finalize(candidate.layout());
+        if (routed.isEmpty()) {
+            return Optional.empty();
+        }
+        SuburbLayout routedLayout = routed.orElseThrow();
+        if (isDevelopable(routedLayout, topology)) {
+            return Optional.of(selection(routedLayout, targetParcelCount, topology));
         }
         return Optional.empty();
     }

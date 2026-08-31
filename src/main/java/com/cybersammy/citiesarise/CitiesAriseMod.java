@@ -7,6 +7,7 @@ import com.cybersammy.citiesarise.minecraft.planning.MinecraftCacheLifecycle;
 import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningService;
 import com.cybersammy.citiesarise.minecraft.profile.ReloadableSettlementProfileStore;
 import com.cybersammy.citiesarise.minecraft.worldgen.CitiesAriseWorldgen;
+import com.cybersammy.citiesarise.minecraft.worldgen.WorldgenVegetationCleanup;
 import com.mojang.logging.LogUtils;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -47,6 +48,8 @@ public final class CitiesAriseMod {
         NeoForge.EVENT_BUS.addListener(cacheLifecycle::onDatapackSync);
         NeoForge.EVENT_BUS.addListener(cacheLifecycle::onServerStopped);
         NeoForge.EVENT_BUS.addListener(profileStore::register);
+        NeoForge.EVENT_BUS.addListener(WorldgenVegetationCleanup::onServerTick);
+        NeoForge.EVENT_BUS.addListener(WorldgenVegetationCleanup::onServerStopped);
     }
 
     private static void registerClientOnlyFeatures() {

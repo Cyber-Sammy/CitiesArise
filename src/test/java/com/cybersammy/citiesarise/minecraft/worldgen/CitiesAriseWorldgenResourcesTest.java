@@ -36,6 +36,7 @@ class CitiesAriseWorldgenResourcesTest {
              InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
             JsonObject structureSet = JsonParser.parseReader(reader).getAsJsonObject();
             JsonObject placement = structureSet.getAsJsonObject("placement");
+            JsonObject exclusionZone = placement.getAsJsonObject("exclusion_zone");
 
             assertEquals("cities_arise:suburb", structureSet
                     .getAsJsonArray("structures")
@@ -46,6 +47,8 @@ class CitiesAriseWorldgenResourcesTest {
             assertEquals("minecraft:random_spread", placement.get("type").getAsString());
             assertEquals(SettlementRegion.REGION_CHUNKS, placement.get("spacing").getAsInt());
             assertEquals(SettlementRegion.REGION_CHUNKS - 1, placement.get("separation").getAsInt());
+            assertEquals("minecraft:villages", exclusionZone.get("other_set").getAsString());
+            assertEquals(12, exclusionZone.get("chunk_count").getAsInt());
         }
     }
 

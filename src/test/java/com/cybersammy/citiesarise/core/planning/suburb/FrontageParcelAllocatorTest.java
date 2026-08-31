@@ -208,7 +208,7 @@ final class FrontageParcelAllocatorTest {
         );
 
         List<GridBounds> parcels = assertTimeoutPreemptively(
-                Duration.ofSeconds(2),
+                Duration.ofSeconds(1),
                 () -> allocate(
                         horizontalRoad(0, 30, 299, SETTINGS.roadWidth()),
                         district,

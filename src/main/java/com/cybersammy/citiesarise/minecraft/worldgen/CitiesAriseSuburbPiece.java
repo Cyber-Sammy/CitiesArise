@@ -19,17 +19,20 @@ import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSeriali
 public final class CitiesAriseSuburbPiece extends StructurePiece {
     private final SuburbStructurePlacementSnapshot snapshot;
     private final DebugChunkPlacementIndex placementIndex;
+    private final WorldgenVegetationCleanupIndex vegetationCleanupIndex;
 
     CitiesAriseSuburbPiece(BoundingBox boundingBox, SuburbStructurePlacementSnapshot snapshot) {
         super(CitiesAriseWorldgen.SUBURB_PIECE_TYPE.get(), 0, Objects.requireNonNull(boundingBox, "boundingBox"));
         this.snapshot = Objects.requireNonNull(snapshot, "snapshot");
         this.placementIndex = createPlacementIndex(snapshot);
+        this.vegetationCleanupIndex = createVegetationCleanupIndex(snapshot);
     }
 
     CitiesAriseSuburbPiece(CompoundTag tag) {
         super(CitiesAriseWorldgen.SUBURB_PIECE_TYPE.get(), Objects.requireNonNull(tag, "tag"));
         this.snapshot = SuburbStructurePlacementSnapshot.load(tag);
         this.placementIndex = createPlacementIndex(snapshot);
+        this.vegetationCleanupIndex = createVegetationCleanupIndex(snapshot);
     }
 
     @Override
@@ -51,13 +54,22 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
         Objects.requireNonNull(chunkPos, "chunkPos");
         PlacementChunk chunk = new PlacementChunk(chunkPos.x, chunkPos.z);
         DebugChunkPlacementPlan chunkPlan = placementIndex.slice(chunk);
-        if (chunkPlan.operations().isEmpty()) {
-            return;
+        if (!chunkPlan.operations().isEmpty()) {
+            new WorldgenPlacementApplier().apply(level, chunkPlan);
         }
-        new WorldgenPlacementApplier().apply(level, chunkPlan);
+        WorldgenVegetationCleanupPlan cleanupPlan = vegetationCleanupIndex.slice(chunk);
+        if (!cleanupPlan.influencingOperations().isEmpty()) {
+            WorldgenVegetationCleanup.enqueue(level.getLevel().dimension(), cleanupPlan);
+        }
     }
 
     private static DebugChunkPlacementIndex createPlacementIndex(SuburbStructurePlacementSnapshot snapshot) {
         return new DebugPlacementChunkProjector().partition(snapshot.toPlacementPlan());
+    }
+
+    private static WorldgenVegetationCleanupIndex createVegetationCleanupIndex(
+            SuburbStructurePlacementSnapshot snapshot
+    ) {
+        return new WorldgenVegetationCleanupIndex(snapshot.toPlacementPlan());
     }
 }

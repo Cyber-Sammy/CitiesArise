@@ -12,10 +12,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class AdaptiveSuburbLayoutSelector {
-    private static final int BASE_MAX_LAYOUT_FINALIZATION_ATTEMPTS = 32;
     private static final int MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY = 4;
-    static final int MAX_FINALIZATION_ATTEMPTS_PER_CAPACITY = 16;
-    private static final int MAX_FINALIZATION_ATTEMPTS_PER_SIZE = 8;
+    static final int MAX_FINALIZATION_ATTEMPTS_PER_CAPACITY = 4;
+    private static final int MAX_FINALIZATION_ATTEMPTS_PER_SIZE = 2;
     private static final List<Integer> DISTRICT_GROWTH_STEPS = List.of(0, 4, 8, 16);
 
     Optional<SuburbLayoutSelection> select(
@@ -207,11 +206,10 @@ final class AdaptiveSuburbLayoutSelector {
     static int maximumLayoutFinalizationAttempts(DevelopmentCapacity capacity) {
         Objects.requireNonNull(capacity, "capacity");
         int capacityCount = Math.addExact(Math.subtractExact(capacity.target(), capacity.minimum()), 1);
-        int reservedAttempts = Math.addExact(
+        return Math.addExact(
                 Math.multiplyExact(capacityCount, MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY),
                 1
         );
-        return Math.max(BASE_MAX_LAYOUT_FINALIZATION_ATTEMPTS, reservedAttempts);
     }
 
     private static List<UnroutedLayoutCandidate> finalizationCandidates(

@@ -5,6 +5,7 @@ import com.cybersammy.citiesarise.core.earthwork.BuildingTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.minecraft.placement.DebugBlockPlacementOperation;
 import com.cybersammy.citiesarise.minecraft.placement.DebugChunkPlacementPlan;
 import com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole;
+import com.cybersammy.citiesarise.minecraft.placement.PlacementChunk;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
 import java.util.LinkedHashMap;
@@ -13,14 +14,17 @@ import java.util.Objects;
 import java.util.OptionalInt;
 
 final class WorldgenChunkPlacement {
+    private static final int LATE_FLUID_STABILIZATION_RADIUS = 1;
+
     int apply(WorldgenBlockAccess level, DebugChunkPlacementPlan placementPlan) {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(placementPlan, "placementPlan");
 
         Map<GridPoint, SurfaceColumn> surfaceColumns = surfaceColumns(level, placementPlan);
         stabilizeLateFluids(level, surfaceColumns);
+        reinforceFoundations(level, placementPlan);
         preparePlatforms(level, placementPlan, surfaceColumns);
-        clearVegetation(level, vegetationColumns(level, placementPlan, surfaceColumns));
+        clearVegetationColumns(level, vegetationColumns(level, placementPlan, surfaceColumns), true);
 
         int placedBlocks = 0;
         for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
@@ -37,6 +41,13 @@ final class WorldgenChunkPlacement {
             }
         }
         return placedBlocks;
+    }
+
+    void clearVegetation(WorldgenBlockAccess level, WorldgenVegetationCleanupPlan cleanupPlan) {
+        Objects.requireNonNull(level, "level");
+        Objects.requireNonNull(cleanupPlan, "cleanupPlan");
+
+        clearVegetationColumns(level, vegetationColumns(level, cleanupPlan), false);
     }
 
     private static void stabilizeLateFluids(
@@ -164,9 +175,65 @@ final class WorldgenChunkPlacement {
     private static Map<GridPoint, SurfaceColumn> surfaceColumns(WorldgenBlockAccess level, DebugChunkPlacementPlan plan) {
         Map<GridPoint, SurfaceColumn> columns = new LinkedHashMap<>();
         for (DebugBlockPlacementOperation operation : plan.operations()) {
-            columns.computeIfAbsent(operation.point(), point -> surfaceColumn(level, point));
+            addSurfaceColumns(
+                    level,
+                    plan,
+                    columns,
+                    operation.point(),
+                    LATE_FLUID_STABILIZATION_RADIUS
+            );
         }
         return Map.copyOf(columns);
+    }
+
+    private static void addSurfaceColumns(
+            WorldgenBlockAccess level,
+            DebugChunkPlacementPlan plan,
+            Map<GridPoint, SurfaceColumn> columns,
+            GridPoint center,
+            int radius
+    ) {
+        for (int zOffset = -radius; zOffset <= radius; zOffset++) {
+            for (int xOffset = -radius; xOffset <= radius; xOffset++) {
+                GridPoint point = new GridPoint(center.x() + xOffset, center.z() + zOffset);
+                if (plan.chunk().contains(point)) {
+                    columns.computeIfAbsent(point, ignored -> surfaceColumn(level, point));
+                }
+            }
+        }
+    }
+
+    private static void reinforceFoundations(
+            WorldgenBlockAccess level,
+            DebugChunkPlacementPlan placementPlan
+    ) {
+        for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
+            if (operation.role() != DebugPlacementRole.FOUNDATION || operation.platformY().isEmpty()) {
+                continue;
+            }
+            int foundationTop = operation.platformY().getAsInt() + operation.verticalOffset();
+            int minimumY = Math.max(
+                    level.minBuildHeight(),
+                    foundationTop - WorldgenPlacementPolicy.FOUNDATION_REINFORCEMENT_DEPTH + 1
+            );
+            for (int y = foundationTop; y >= minimumY; y--) {
+                WorldgenBlockPosition position = new WorldgenBlockPosition(
+                        operation.point().x(),
+                        y,
+                        operation.point().z()
+                );
+                if (!level.canWrite(position)) {
+                    continue;
+                }
+                if (isUnsupportedFoundationMaterial(level.material(position))) {
+                    level.placeBlock(position, DebugPlacementRole.FOUNDATION);
+                }
+            }
+        }
+    }
+
+    private static boolean isUnsupportedFoundationMaterial(WorldgenSurfaceMaterial material) {
+        return material != WorldgenSurfaceMaterial.OTHER;
     }
 
     private static SurfaceColumn surfaceColumn(WorldgenBlockAccess level, GridPoint point) {
@@ -197,30 +264,84 @@ final class WorldgenChunkPlacement {
         return OptionalInt.empty();
     }
 
-    private static Map<GridPoint, SurfaceColumn> vegetationColumns(
+    private static Map<GridPoint, VegetationColumn> vegetationColumns(
             WorldgenBlockAccess level,
             DebugChunkPlacementPlan plan,
             Map<GridPoint, SurfaceColumn> occupiedColumns
     ) {
-        Map<GridPoint, SurfaceColumn> columns = new LinkedHashMap<>(occupiedColumns);
+        Map<GridPoint, VegetationColumn> columns = new LinkedHashMap<>();
+        occupiedColumns.forEach((point, column) -> columns.put(
+                point,
+                new VegetationColumn(column, column.placementY())
+        ));
         for (DebugBlockPlacementOperation operation : plan.operations()) {
-            addVegetationClearanceColumns(level, plan, columns, operation.point());
+            int plannedBaseY = operation.platformY().orElseGet(
+                    () -> occupiedColumns.get(operation.point()).placementY()
+            );
+            addVegetationClearanceColumns(level, plan.chunk(), columns, operation.point(), plannedBaseY);
+        }
+        return Map.copyOf(columns);
+    }
+
+    private static Map<GridPoint, VegetationColumn> vegetationColumns(
+            WorldgenBlockAccess level,
+            WorldgenVegetationCleanupPlan plan
+    ) {
+        Map<GridPoint, VegetationColumn> columns = new LinkedHashMap<>();
+        for (DebugBlockPlacementOperation operation : plan.influencingOperations()) {
+            int plannedBaseY = operation.platformY().orElseGet(
+                    () -> surfaceColumn(level, nearestPointInChunk(plan.chunk(), operation.point())).placementY()
+            );
+            addVegetationClearanceColumns(
+                    level,
+                    plan.chunk(),
+                    columns,
+                    operation.point(),
+                    plannedBaseY,
+                    WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS
+            );
         }
         return Map.copyOf(columns);
     }
 
     private static void addVegetationClearanceColumns(
             WorldgenBlockAccess level,
-            DebugChunkPlacementPlan plan,
-            Map<GridPoint, SurfaceColumn> columns,
-            GridPoint center
+            PlacementChunk chunk,
+            Map<GridPoint, VegetationColumn> columns,
+            GridPoint center,
+            int plannedBaseY
     ) {
-        int radius = WorldgenPlacementPolicy.VEGETATION_CLEARANCE_RADIUS;
+        addVegetationClearanceColumns(
+                level,
+                chunk,
+                columns,
+                center,
+                plannedBaseY,
+                WorldgenPlacementPolicy.VEGETATION_CLEARANCE_RADIUS
+        );
+    }
+
+    private static void addVegetationClearanceColumns(
+            WorldgenBlockAccess level,
+            PlacementChunk chunk,
+            Map<GridPoint, VegetationColumn> columns,
+            GridPoint center,
+            int plannedBaseY,
+            int radius
+    ) {
         for (int zOffset = -radius; zOffset <= radius; zOffset++) {
             for (int xOffset = -radius; xOffset <= radius; xOffset++) {
                 GridPoint point = new GridPoint(center.x() + xOffset, center.z() + zOffset);
-                if (plan.chunk().contains(point)) {
-                    columns.computeIfAbsent(point, ignored -> surfaceColumn(level, point));
+                if (chunk.contains(point)) {
+                    columns.compute(point, (ignored, existing) -> {
+                        SurfaceColumn surface = existing == null
+                                ? surfaceColumn(level, point)
+                                : existing.surface();
+                        int clearanceBaseY = existing == null
+                                ? plannedBaseY
+                                : Math.min(existing.clearanceBaseY(), plannedBaseY);
+                        return new VegetationColumn(surface, clearanceBaseY);
+                    });
                 }
             }
         }
@@ -243,16 +364,22 @@ final class WorldgenChunkPlacement {
         return material == WorldgenSurfaceMaterial.VEGETATION;
     }
 
-    private static void clearVegetation(WorldgenBlockAccess level, Map<GridPoint, SurfaceColumn> columns) {
-        for (SurfaceColumn column : columns.values()) {
+    private static void clearVegetationColumns(
+            WorldgenBlockAccess level,
+            Map<GridPoint, VegetationColumn> columns,
+            boolean clearLogs
+    ) {
+        for (VegetationColumn vegetationColumn : columns.values()) {
+            SurfaceColumn column = vegetationColumn.surface();
             int clearanceTop = vegetationClearanceTop(level, column);
-            for (int y = column.placementY() + 1; y < clearanceTop; y++) {
+            int clearanceBottom = Math.min(column.placementY(), vegetationColumn.clearanceBaseY()) + 1;
+            for (int y = clearanceBottom; y < clearanceTop; y++) {
                 WorldgenBlockPosition position = new WorldgenBlockPosition(column.point().x(), y, column.point().z());
                 if (!level.canWrite(position)) {
                     continue;
                 }
                 WorldgenSurfaceMaterial material = level.material(position);
-                if (isVegetation(material)) {
+                if (isVegetation(material, clearLogs)) {
                     level.clearBlock(position);
                 }
             }
@@ -265,11 +392,11 @@ final class WorldgenChunkPlacement {
         return Math.min(level.maxBuildHeight(), detectedTop);
     }
 
-    private static boolean isVegetation(WorldgenSurfaceMaterial material) {
+    private static boolean isVegetation(WorldgenSurfaceMaterial material, boolean clearLogs) {
         if (material == WorldgenSurfaceMaterial.LEAVES) {
             return true;
         }
-        if (material == WorldgenSurfaceMaterial.LOGS) {
+        if (clearLogs && material == WorldgenSurfaceMaterial.LOGS) {
             return true;
         }
         return material == WorldgenSurfaceMaterial.VEGETATION;
@@ -309,6 +436,23 @@ final class WorldgenChunkPlacement {
                 throw new IllegalArgumentException("solidSupportY must not exceed placementY");
             }
         }
+    }
+
+    private record VegetationColumn(SurfaceColumn surface, int clearanceBaseY) {
+        private VegetationColumn {
+            Objects.requireNonNull(surface, "surface");
+        }
+    }
+
+    private static GridPoint nearestPointInChunk(PlacementChunk chunk, GridPoint point) {
+        int minimumX = chunk.x() * PlacementChunk.BLOCK_SIZE;
+        int minimumZ = chunk.z() * PlacementChunk.BLOCK_SIZE;
+        int maximumX = minimumX + PlacementChunk.BLOCK_SIZE - 1;
+        int maximumZ = minimumZ + PlacementChunk.BLOCK_SIZE - 1;
+        return new GridPoint(
+                Math.max(minimumX, Math.min(maximumX, point.x())),
+                Math.max(minimumZ, Math.min(maximumZ, point.z()))
+        );
     }
 
     private record PlatformPreparation(

@@ -21,7 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 final class FrontageParcelAllocator {
-    static final int MAX_SELECTION_SEARCH_NODES = 20_000;
+    static final int MAX_SELECTION_SEARCH_NODES = 5_000;
 
     List<GridBounds> allocate(
             RoadGraph roadGraph,
@@ -93,11 +93,12 @@ final class FrontageParcelAllocator {
             int capacity
     ) {
         SelectionSearch search = new SelectionSearch(MAX_SELECTION_SEARCH_NODES);
-        return selectCompatibleParcels(candidates, capacity, 0, new ArrayList<>(), search);
+        SelectionCandidates selectionCandidates = new SelectionCandidates(candidates);
+        return selectCompatibleParcels(selectionCandidates, capacity, 0, new ArrayList<>(), search);
     }
 
     private static Optional<List<GridBounds>> selectCompatibleParcels(
-            List<ParcelCandidate> candidates,
+            SelectionCandidates candidates,
             int capacity,
             int startIndex,
             List<GridBounds> selected,
@@ -140,42 +141,30 @@ final class FrontageParcelAllocator {
     }
 
     private static int compatibleCapacityUpperBound(
-            List<ParcelCandidate> candidates,
+            SelectionCandidates candidates,
             int startIndex,
             List<GridBounds> selected
     ) {
-        Map<FrontageKey, List<GridBounds>> candidatesByFrontage = new HashMap<>();
-        for (int index = startIndex; index < candidates.size(); index++) {
-            ParcelCandidate candidate = candidates.get(index);
-            if (intersectsAny(candidate.bounds(), selected)) {
-                continue;
-            }
-            candidatesByFrontage.computeIfAbsent(candidate.frontage(), ignored -> new ArrayList<>())
-                    .add(candidate.bounds());
-        }
         int capacity = 0;
-        for (Map.Entry<FrontageKey, List<GridBounds>> entry : candidatesByFrontage.entrySet()) {
-            capacity += maximumNonOverlappingIntervals(entry.getValue(), entry.getKey().side());
+        for (Map.Entry<FrontageKey, List<Integer>> entry : candidates.indicesByFrontage().entrySet()) {
+            int previousMaximum = Integer.MIN_VALUE;
+            for (int index : entry.getValue()) {
+                if (index < startIndex) {
+                    continue;
+                }
+                GridBounds bounds = candidates.get(index).bounds();
+                if (intersectsAny(bounds, selected)) {
+                    continue;
+                }
+                int minimum = axisMinimum(bounds, entry.getKey().side());
+                if (minimum < previousMaximum) {
+                    continue;
+                }
+                capacity++;
+                previousMaximum = axisMaximum(bounds, entry.getKey().side());
+            }
         }
         return capacity;
-    }
-
-    private static int maximumNonOverlappingIntervals(List<GridBounds> candidates, ParcelSide side) {
-        List<GridBounds> ordered = candidates.stream()
-                .sorted(Comparator
-                        .comparingInt((GridBounds bounds) -> axisMaximum(bounds, side))
-                        .thenComparingInt(bounds -> axisMinimum(bounds, side)))
-                .toList();
-        int count = 0;
-        int previousMaximum = Integer.MIN_VALUE;
-        for (GridBounds candidate : ordered) {
-            if (axisMinimum(candidate, side) < previousMaximum) {
-                continue;
-            }
-            count++;
-            previousMaximum = axisMaximum(candidate, side);
-        }
-        return count;
     }
 
     private static int axisMinimum(GridBounds bounds, ParcelSide side) {
@@ -434,6 +423,38 @@ final class FrontageParcelAllocator {
         private FrontageKey {
             Objects.requireNonNull(segmentId, "segmentId");
             Objects.requireNonNull(side, "side");
+        }
+    }
+
+    private static final class SelectionCandidates {
+        private final List<ParcelCandidate> candidates;
+        private final Map<FrontageKey, List<Integer>> indicesByFrontage;
+
+        private SelectionCandidates(List<ParcelCandidate> candidates) {
+            this.candidates = List.copyOf(candidates);
+            Map<FrontageKey, List<Integer>> grouped = new HashMap<>();
+            for (int index = 0; index < candidates.size(); index++) {
+                grouped.computeIfAbsent(candidates.get(index).frontage(), ignored -> new ArrayList<>())
+                        .add(index);
+            }
+            grouped.forEach((frontage, indices) -> indices.sort(Comparator
+                    .comparingInt((Integer index) -> axisMaximum(candidates.get(index).bounds(), frontage.side()))
+                    .thenComparingInt(index -> axisMinimum(candidates.get(index).bounds(), frontage.side()))));
+            Map<FrontageKey, List<Integer>> immutable = new HashMap<>();
+            grouped.forEach((frontage, indices) -> immutable.put(frontage, List.copyOf(indices)));
+            this.indicesByFrontage = Map.copyOf(immutable);
+        }
+
+        private int size() {
+            return candidates.size();
+        }
+
+        private ParcelCandidate get(int index) {
+            return candidates.get(index);
+        }
+
+        private Map<FrontageKey, List<Integer>> indicesByFrontage() {
+            return indicesByFrontage;
         }
     }
 

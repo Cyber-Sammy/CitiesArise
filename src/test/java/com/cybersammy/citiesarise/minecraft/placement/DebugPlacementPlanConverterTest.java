@@ -13,6 +13,7 @@ import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationArea;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
+import com.cybersammy.citiesarise.core.earthwork.TerrainTransitionSettings;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -251,6 +252,52 @@ final class DebugPlacementPlanConverterTest {
         assertEquals(64, firstRing.platformY().orElseThrow());
         assertEquals(DebugPlacementRole.TERRAIN_SURFACE, thirdRing.role());
         assertEquals(61, thirdRing.platformY().orElseThrow());
+    }
+
+    @Test
+    void materializesRetainingWallThroughApprovedFillDepth() {
+        Parcel parcel = elevatedParcel(id("parcel"), bounds(10, 10, 4, 4), 64);
+        BuildingSlot buildingSlot = elevatedBuildingSlot(id("slot"), parcel.id(), bounds(11, 11, 2, 2), 64);
+        SettlementPlan plan = plan(RoadGraph.empty(), List.of(parcel), List.of(buildingSlot));
+        TerrainPreparationPlan base = buildingPreparationPlan(parcel, buildingSlot, 64);
+        List<TerrainPreparationColumn> columns = base.columns().stream()
+                .map(column -> column.point().equals(point(8, 11))
+                        ? new TerrainPreparationColumn(
+                                column.point(),
+                                column.sourceElementId(),
+                                column.targetElevation(),
+                                column.cutDepth(),
+                                column.fillDepth(),
+                                TerrainPreparationColumnType.RETAINING_WALL
+                        )
+                        : column)
+                .toList();
+        TerrainTransitionSettings settings = new TerrainTransitionSettings(
+                1, 2, 2, 3, 3, 3, 3, true, 2
+        );
+        TerrainPreparationPlan preparationPlan = TerrainPreparationPlan.of(
+                base.elevationPlan(),
+                base.areas(),
+                columns,
+                settings
+        );
+
+        DebugPlacementPlan placementPlan = converter.convert(plan, preparationPlan);
+
+        assertOperation(
+                placementPlan,
+                point(8, 11),
+                -2,
+                DebugPlacementRole.TERRAIN_RETAINING_WALL,
+                buildingSlot.id()
+        );
+        assertOperation(
+                placementPlan,
+                point(8, 11),
+                0,
+                DebugPlacementRole.TERRAIN_RETAINING_WALL,
+                buildingSlot.id()
+        );
     }
 
     @Test

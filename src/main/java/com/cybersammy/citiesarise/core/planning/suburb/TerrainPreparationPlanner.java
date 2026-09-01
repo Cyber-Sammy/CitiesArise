@@ -13,6 +13,7 @@ import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
 import com.cybersammy.citiesarise.core.earthwork.ParcelTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
 import com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy;
+import com.cybersammy.citiesarise.core.earthwork.TerrainTransitionSettings;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
@@ -86,7 +87,8 @@ final class TerrainPreparationPlanner {
         TerrainPreparationPlan preparationPlan = TerrainPreparationPlan.of(
                 elevationPlan,
                 areas,
-                List.copyOf(columns.values())
+                List.copyOf(columns.values()),
+                request.settings().terrainTransitions()
         );
         if (preparationPlan.totalVolume() > request.settings().maxEarthworkVolume()) {
             return TerrainPreparationAssessment.rejected(totalVolumeDiagnostic(
@@ -252,7 +254,8 @@ final class TerrainPreparationPlanner {
             TerrainAdaptationPlan adaptationPlan,
             Map<GridPoint, TerrainPreparationColumn> columns
     ) {
-        int radius = kind.radius();
+        TerrainTransitionSettings settings = request.settings().terrainTransitions();
+        int radius = kind.radius(settings);
         int minX = Math.subtractExact(zone.bounds().minX(), radius);
         int minZ = Math.subtractExact(zone.bounds().minZ(), radius);
         int maxXExclusive = Math.addExact(zone.bounds().maxXExclusive(), radius);
@@ -283,7 +286,8 @@ final class TerrainPreparationPlanner {
             TerrainAdaptationPlan adaptationPlan,
             Map<GridPoint, TerrainPreparationColumn> columns
     ) {
-        if (!kind.contains(zone.bounds(), point)) {
+        TerrainTransitionSettings settings = request.settings().terrainTransitions();
+        if (!kind.contains(zone.bounds(), point, settings)) {
             return Optional.empty();
         }
         if (!request.survey().bounds().contains(point)) {
@@ -308,7 +312,7 @@ final class TerrainPreparationPlanner {
         if (fillDepth <= 0) {
             return Optional.empty();
         }
-        if (fillDepth > kind.maximumFillDepth()) {
+        if (fillDepth > kind.maximumFillDepth(settings)) {
             if (kind.optional()) {
                 return Optional.empty();
             }
@@ -316,7 +320,7 @@ final class TerrainPreparationPlanner {
                     zone,
                     cell,
                     fillDepth,
-                    kind.maximumFillDepth(),
+                    kind.maximumFillDepth(settings),
                     TerrainRejectionReason.EXCESSIVE_FILL
             ));
         }
@@ -326,7 +330,7 @@ final class TerrainPreparationPlanner {
                 targetElevation,
                 0,
                 fillDepth,
-                kind.columnType()
+                kind.columnType(settings, fillDepth)
         ));
         return Optional.empty();
     }
@@ -593,42 +597,30 @@ final class TerrainPreparationPlanner {
         ROAD(
                 ElevationZoneType.ROAD_SEGMENT,
                 TerrainPreparationColumnType.ROAD_SHOULDER,
-                RoadTerrainShoulderPolicy.RADIUS,
-                RoadTerrainShoulderPolicy.MAX_FILL_DEPTH,
                 false
         ),
         PARCEL(
                 ElevationZoneType.PARCEL_PAD,
                 TerrainPreparationColumnType.PARCEL_SHOULDER,
-                ParcelTerrainShoulderPolicy.RADIUS,
-                ParcelTerrainShoulderPolicy.MAX_FILL_DEPTH,
                 true
         ),
         BUILDING(
                 ElevationZoneType.BUILDING_PAD,
                 TerrainPreparationColumnType.BUILDING_SHOULDER,
-                BuildingTerrainShoulderPolicy.RADIUS,
-                BuildingTerrainShoulderPolicy.MAX_FILL_DEPTH,
                 false
         );
 
         private final ElevationZoneType zoneType;
         private final TerrainPreparationColumnType columnType;
-        private final int radius;
-        private final int maximumFillDepth;
         private final boolean optional;
 
         ShoulderKind(
                 ElevationZoneType zoneType,
                 TerrainPreparationColumnType columnType,
-                int radius,
-                int maximumFillDepth,
                 boolean optional
         ) {
             this.zoneType = zoneType;
             this.columnType = columnType;
-            this.radius = radius;
-            this.maximumFillDepth = maximumFillDepth;
             this.optional = optional;
         }
 
@@ -636,30 +628,42 @@ final class TerrainPreparationPlanner {
             return zoneType;
         }
 
-        TerrainPreparationColumnType columnType() {
+        TerrainPreparationColumnType columnType(TerrainTransitionSettings settings, int fillDepth) {
+            if (settings.retainingWalls() && fillDepth >= settings.retainingWallMinimumHeight()) {
+                return TerrainPreparationColumnType.RETAINING_WALL;
+            }
             return columnType;
         }
 
-        int radius() {
-            return radius;
+        int radius(TerrainTransitionSettings settings) {
+            return switch (this) {
+                case ROAD -> settings.roadShoulderRadius();
+                case PARCEL -> settings.parcelShoulderRadius();
+                case BUILDING -> settings.buildingShoulderRadius();
+            };
         }
 
-        int maximumFillDepth() {
-            return maximumFillDepth;
+        int maximumFillDepth(TerrainTransitionSettings settings) {
+            return switch (this) {
+                case ROAD -> settings.roadShoulderMaxFillDepth();
+                case PARCEL -> settings.parcelShoulderMaxFillDepth();
+                case BUILDING -> settings.buildingShoulderMaxFillDepth();
+            };
         }
 
         boolean optional() {
             return optional;
         }
 
-        boolean contains(GridBounds bounds, GridPoint point) {
+        boolean contains(GridBounds bounds, GridPoint point, TerrainTransitionSettings settings) {
+            int radius = radius(settings);
             if (this == ROAD) {
-                return RoadTerrainShoulderPolicy.contains(bounds, point);
+                return RoadTerrainShoulderPolicy.contains(bounds, point, radius);
             }
             if (this == PARCEL) {
-                return ParcelTerrainShoulderPolicy.contains(bounds, point);
+                return ParcelTerrainShoulderPolicy.contains(bounds, point, radius);
             }
-            return BuildingTerrainShoulderPolicy.contains(bounds, point);
+            return BuildingTerrainShoulderPolicy.contains(bounds, point, radius);
         }
 
         int targetElevation(ElevationZone zone, GridPoint point) {

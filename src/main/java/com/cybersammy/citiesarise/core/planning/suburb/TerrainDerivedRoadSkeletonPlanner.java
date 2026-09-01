@@ -1,6 +1,5 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
-import com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.PlanProperties;
@@ -27,7 +26,8 @@ final class TerrainDerivedRoadSkeletonPlanner {
         Objects.requireNonNull(footprint, "footprint");
         Objects.requireNonNull(settings, "settings");
 
-        int supportRadius = ((settings.roadWidth() - 1) / 2) + RoadTerrainShoulderPolicy.RADIUS;
+        int supportRadius = ((settings.roadWidth() - 1) / 2)
+                + settings.terrainTransitions().roadShoulderRadius();
         Axis axis = preferredAxis(footprint, supportRadius);
         Line mainLine = bestLine(footprint, axis, supportRadius);
         Random random = new Random(seed);

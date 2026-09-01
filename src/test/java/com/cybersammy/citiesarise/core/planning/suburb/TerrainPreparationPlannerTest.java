@@ -8,6 +8,7 @@ import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
 import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
+import com.cybersammy.citiesarise.core.earthwork.TerrainTransitionSettings;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
@@ -193,6 +194,38 @@ final class TerrainPreparationPlannerTest {
                         && column.type() == TerrainPreparationColumnType.ROAD_SHOULDER
                         && column.fillDepth() == 2));
         assertTrue(assessment.plan().orElseThrow().fillVolume() >= 2L);
+    }
+
+    @Test
+    void profileMaterializesDeepShoulderAsRetainingWall() {
+        GridPoint lowShoulderPoint = new GridPoint(1, 5);
+        TerrainTransitionSettings transitions = new TerrainTransitionSettings(
+                1, 2, 2, 3, 3, 3, 3, true, 2
+        );
+        SuburbPlanningRequest request = new SuburbPlanningRequest(
+                id("settlement"),
+                surveyWithHeightAt(lowShoulderPoint, 62),
+                42L,
+                settings(1, 3).withTerrainTransitions(transitions)
+        );
+        ElevationZone road = new ElevationZone(
+                id("road"),
+                ElevationZoneType.ROAD_SEGMENT,
+                new GridBounds(new GridPoint(2, 5), new GridSize(7, 1)),
+                64
+        );
+
+        TerrainPreparationAssessment assessment = TerrainPreparationPlanner.plan(
+                request,
+                new RegionalElevationPlan(List.of(road), List.of())
+        );
+
+        assertTrue(assessment.plan().isPresent());
+        assertEquals(transitions, assessment.plan().orElseThrow().transitionSettings());
+        assertTrue(assessment.plan().orElseThrow().columns().stream().anyMatch(column ->
+                column.point().equals(lowShoulderPoint)
+                        && column.type() == TerrainPreparationColumnType.RETAINING_WALL
+                        && column.fillDepth() == 2));
     }
 
     @Test

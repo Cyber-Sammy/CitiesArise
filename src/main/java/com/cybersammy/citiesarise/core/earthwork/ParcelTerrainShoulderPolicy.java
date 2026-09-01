@@ -12,8 +12,12 @@ public final class ParcelTerrainShoulderPolicy {
     }
 
     public static boolean contains(GridBounds bounds, GridPoint point) {
+        return contains(bounds, point, RADIUS);
+    }
+
+    public static boolean contains(GridBounds bounds, GridPoint point, int radius) {
         int distance = distanceFrom(bounds, point);
-        return distance > 0 && distance <= RADIUS;
+        return distance > 0 && distance <= radius;
     }
 
     public static int targetElevation(GridBounds bounds, GridPoint point, int platformElevation) {

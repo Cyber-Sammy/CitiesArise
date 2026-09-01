@@ -1,8 +1,6 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
-import com.cybersammy.citiesarise.core.earthwork.BuildingTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteAssessment;
-import com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
@@ -161,7 +159,7 @@ public final class SuburbPlanner {
     private static int minimumSurveyDepth(SuburbPlanningSettings settings) {
         return 2 * (
                 settings.roadWidth()
-                        + RoadTerrainShoulderPolicy.RADIUS
+                        + settings.terrainTransitions().roadShoulderRadius()
                         + settings.parcelDepth()
         );
     }
@@ -561,14 +559,14 @@ public final class SuburbPlanner {
         for (GridBounds roadBounds : roadCorridors) {
             footprints.add(new PotentialTerrainPreparationFootprint(
                     roadBounds,
-                    RoadTerrainShoulderPolicy.RADIUS
+                    request.settings().terrainTransitions().roadShoulderRadius()
             ));
         }
         for (GridBounds parcelBoundsEntry : parcelBounds) {
             footprints.add(new PotentialTerrainPreparationFootprint(parcelBoundsEntry, 0));
             footprints.add(new PotentialTerrainPreparationFootprint(
                     SuburbParcelGeometry.buildingBounds(request.settings(), parcelBoundsEntry),
-                    BuildingTerrainShoulderPolicy.RADIUS
+                    request.settings().terrainTransitions().buildingShoulderRadius()
             ));
         }
         return List.copyOf(footprints);

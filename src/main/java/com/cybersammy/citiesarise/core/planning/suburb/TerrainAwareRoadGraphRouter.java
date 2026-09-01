@@ -1,6 +1,5 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
-import com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
@@ -158,7 +157,7 @@ final class TerrainAwareRoadGraphRouter {
                 start.point(),
                 end.point(),
                 segment.width(),
-                RoadTerrainShoulderPolicy.RADIUS,
+                request.settings().terrainTransitions().roadShoulderRadius(),
                 request.settings().maxBuildableSlope(),
                 routingPolicy,
                 routingAdaptationPlan,

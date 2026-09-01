@@ -179,7 +179,18 @@ Example `data/my_pack/settlement_profiles/large_suburb.json`:
     "maximumParcelCount": 10,
     "parcelWidth": 18,
     "parcelDepth": 20,
-    "buildingMargin": 4
+    "buildingMargin": 4,
+    "terrainTransitions": {
+      "buildingAccessRunPerRise": 2,
+      "roadShoulderRadius": 2,
+      "roadShoulderMaxFillDepth": 2,
+      "parcelShoulderRadius": 3,
+      "parcelShoulderMaxFillDepth": 3,
+      "buildingShoulderRadius": 3,
+      "buildingShoulderMaxFillDepth": 3,
+      "retainingWalls": true,
+      "retainingWallMinimumHeight": 2
+    }
   },
   "terrainPolicy": {
     "responses": {
@@ -224,6 +235,8 @@ Terrain adaptation is opt-in for datapacks. A `terrainPolicy` without an `adapta
 `terrainPolicy.capabilities` accepts `bridge`, `tunnel`, `canal`, and `major_terraforming`. `cross_if_supported` requires a matching capability: water requires `bridge`, while blocked terrain and steep slopes require `tunnel`. Invalid combinations are rejected when the profile loads. A valid combination resolves to a semantic crossing action, but it does not place infrastructure in the current version.
 
 `preferredMaxCutDepth` and `preferredMaxFillDepth` describe the normal grading range for a settlement profile. `maxCutDepth` and `maxFillDepth` are separate absolute safety limits. `maxBuildingFoundationDepth` applies the stricter visible-support limit used by building and parcel pads, so relaxed road grading cannot produce houses on tall exposed foundation columns. The built-in suburb permits up to six blocks of bounded foundation support while retaining an eight-block general fill limit and the aggregate earthwork budget. Dry terrain between the preferred and absolute limits is accepted with bounded earthworks instead of being discarded, while columns beyond the applicable absolute limit are still rejected. `maxEarthworkVolume` limits the summed cut and fill volume across semantic road and building preparation areas. This keeps moderate correctable terrain usable without allowing the basic suburb profile to bridge ravines with unbounded foundations or bury buildings into cliffs. Connected road segments are constrained to at most one block of elevation difference.
+
+`planning.terrainTransitions` controls local access grades and support geometry. `buildingAccessRunPerRise` reserves the required horizontal run for each one-block rise; larger values produce gentler access paths and reject buildings that cannot be reached inside the available corridor. Road, parcel, and building shoulder radius and fill-depth limits are independently configurable within bounded schema limits. When `retainingWalls` is enabled, approved shoulder fills at least `retainingWallMinimumHeight` blocks high become typed retaining-wall columns and are materialized through their complete planned fill depth. Profiles that omit `terrainTransitions` retain the previous one-block access grade, fixed shoulder defaults, and no retaining-wall materialization.
 
 `maxElevationRange` is deprecated and remains accepted in the current profile schema only for compatibility. It will be removed in a future profile schema version. The suburb planner no longer rejects the total settlement height span globally. Long roads are currently divided into deterministic six-block flat grading segments by maximum distance between their nodes, while concrete cut, fill, road-transition, and total earthwork limits decide whether terrain is usable.
 

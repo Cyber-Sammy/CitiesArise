@@ -37,6 +37,7 @@ public final class TerrainPreparationPlanValidator {
                 zonesById,
                 areasById,
                 preparationPlan.columns(),
+                preparationPlan.transitionSettings(),
                 errors
         );
         validateTransitions(
@@ -247,6 +248,7 @@ public final class TerrainPreparationPlanValidator {
             Map<PlanElementId, ElevationZone> zonesById,
             Map<PlanElementId, TerrainPreparationArea> areasById,
             List<TerrainPreparationColumn> columns,
+            TerrainTransitionSettings settings,
             List<PlanValidationError> errors
     ) {
         for (TerrainPreparationColumn column : columns) {
@@ -256,15 +258,19 @@ public final class TerrainPreparationPlanValidator {
                 continue;
             }
             if (column.type() == TerrainPreparationColumnType.BUILDING_SHOULDER) {
-                validateBuildingShoulderColumn(zonesById, column, errors);
+                validateBuildingShoulderColumn(zonesById, column, settings, errors);
                 continue;
             }
             if (column.type() == TerrainPreparationColumnType.ROAD_SHOULDER) {
-                validateRoadShoulderColumn(zonesById, column, errors);
+                validateRoadShoulderColumn(zonesById, column, settings, errors);
                 continue;
             }
             if (column.type() == TerrainPreparationColumnType.PARCEL_SHOULDER) {
-                validateParcelShoulderColumn(zonesById, column, errors);
+                validateParcelShoulderColumn(zonesById, column, settings, errors);
+                continue;
+            }
+            if (column.type() == TerrainPreparationColumnType.RETAINING_WALL) {
+                validateRetainingWallColumn(zonesById, column, settings, errors);
                 continue;
             }
             if (isTransitionColumn(column)) {
@@ -283,6 +289,7 @@ public final class TerrainPreparationPlanValidator {
     private static void validateRoadShoulderColumn(
             Map<PlanElementId, ElevationZone> zonesById,
             TerrainPreparationColumn column,
+            TerrainTransitionSettings settings,
             List<PlanValidationError> errors
     ) {
         ElevationZone zone = zonesById.get(column.sourceElementId());
@@ -294,7 +301,11 @@ public final class TerrainPreparationPlanValidator {
             errors.add(error(column.sourceElementId(), "road shoulder must belong to a road zone"));
             return;
         }
-        if (!RoadTerrainShoulderPolicy.contains(zone.bounds(), column.point())) {
+        if (!RoadTerrainShoulderPolicy.contains(
+                zone.bounds(),
+                column.point(),
+                settings.roadShoulderRadius()
+        )) {
             errors.add(error(column.sourceElementId(), "road shoulder is outside the supported transition area"));
         }
         int expectedElevation = RoadTerrainShoulderPolicy.targetElevation(
@@ -305,7 +316,7 @@ public final class TerrainPreparationPlanValidator {
         if (column.targetElevation() != expectedElevation) {
             errors.add(error(column.sourceElementId(), "road shoulder elevation does not match support policy"));
         }
-        validateFillOnlySupport(column, RoadTerrainShoulderPolicy.MAX_FILL_DEPTH, "road shoulder", errors);
+        validateFillOnlySupport(column, settings.roadShoulderMaxFillDepth(), "road shoulder", errors);
     }
 
     private static void validateFillOnlySupport(
@@ -328,6 +339,7 @@ public final class TerrainPreparationPlanValidator {
     private static void validateParcelShoulderColumn(
             Map<PlanElementId, ElevationZone> zonesById,
             TerrainPreparationColumn column,
+            TerrainTransitionSettings settings,
             List<PlanValidationError> errors
     ) {
         ElevationZone zone = zonesById.get(column.sourceElementId());
@@ -339,7 +351,11 @@ public final class TerrainPreparationPlanValidator {
             errors.add(error(column.sourceElementId(), "parcel shoulder must belong to a parcel zone"));
             return;
         }
-        if (!ParcelTerrainShoulderPolicy.contains(zone.bounds(), column.point())) {
+        if (!ParcelTerrainShoulderPolicy.contains(
+                zone.bounds(),
+                column.point(),
+                settings.parcelShoulderRadius()
+        )) {
             errors.add(error(column.sourceElementId(), "parcel shoulder is outside the supported transition area"));
         }
         int expectedElevation = ParcelTerrainShoulderPolicy.targetElevation(
@@ -352,7 +368,7 @@ public final class TerrainPreparationPlanValidator {
         }
         validateFillOnlySupport(
                 column,
-                ParcelTerrainShoulderPolicy.MAX_FILL_DEPTH,
+                settings.parcelShoulderMaxFillDepth(),
                 "parcel shoulder",
                 errors
         );
@@ -361,7 +377,77 @@ public final class TerrainPreparationPlanValidator {
     private static boolean isTransitionColumn(TerrainPreparationColumn column) {
         return switch (column.type()) {
             case ROAD_TRANSITION_STEP, BUILDING_ACCESS, BUILDING_ACCESS_STEP -> true;
-            case PLATFORM, BUILDING_SHOULDER, PARCEL_SHOULDER, ROAD_SHOULDER -> false;
+            case PLATFORM, BUILDING_SHOULDER, PARCEL_SHOULDER, ROAD_SHOULDER, RETAINING_WALL -> false;
+        };
+    }
+
+    private static void validateRetainingWallColumn(
+            Map<PlanElementId, ElevationZone> zonesById,
+            TerrainPreparationColumn column,
+            TerrainTransitionSettings settings,
+            List<PlanValidationError> errors
+    ) {
+        ElevationZone zone = zonesById.get(column.sourceElementId());
+        if (zone == null) {
+            errors.add(error(column.sourceElementId(), "retaining wall references missing elevation zone"));
+            return;
+        }
+        if (!settings.retainingWalls()) {
+            errors.add(error(column.sourceElementId(), "retaining wall is disabled by the transition profile"));
+        }
+        if (column.fillDepth() < settings.retainingWallMinimumHeight()) {
+            errors.add(error(column.sourceElementId(), "retaining wall is below the configured minimum height"));
+        }
+        boolean supported = switch (zone.type()) {
+            case ROAD_SEGMENT -> RoadTerrainShoulderPolicy.contains(
+                    zone.bounds(),
+                    column.point(),
+                    settings.roadShoulderRadius()
+            );
+            case PARCEL_PAD -> ParcelTerrainShoulderPolicy.contains(
+                    zone.bounds(),
+                    column.point(),
+                    settings.parcelShoulderRadius()
+            );
+            case BUILDING_PAD -> BuildingTerrainShoulderPolicy.contains(
+                    zone.bounds(),
+                    column.point(),
+                    settings.buildingShoulderRadius()
+            );
+        };
+        if (!supported) {
+            errors.add(error(column.sourceElementId(), "retaining wall is outside the supported transition area"));
+        }
+        int expectedElevation = switch (zone.type()) {
+            case ROAD_SEGMENT -> RoadTerrainShoulderPolicy.targetElevation(
+                    zone.bounds(), column.point(), zone.targetElevation()
+            );
+            case PARCEL_PAD -> ParcelTerrainShoulderPolicy.targetElevation(
+                    zone.bounds(), column.point(), zone.targetElevation()
+            );
+            case BUILDING_PAD -> BuildingTerrainShoulderPolicy.targetElevation(
+                    zone.bounds(), column.point(), zone.targetElevation()
+            );
+        };
+        if (column.targetElevation() != expectedElevation) {
+            errors.add(error(column.sourceElementId(), "retaining wall elevation does not match support policy"));
+        }
+        validateFillOnlySupport(
+                column,
+                retainingMaximumFillDepth(zone.type(), settings),
+                "retaining wall",
+                errors
+        );
+    }
+
+    private static int retainingMaximumFillDepth(
+            ElevationZoneType zoneType,
+            TerrainTransitionSettings settings
+    ) {
+        return switch (zoneType) {
+            case ROAD_SEGMENT -> settings.roadShoulderMaxFillDepth();
+            case PARCEL_PAD -> settings.parcelShoulderMaxFillDepth();
+            case BUILDING_PAD -> settings.buildingShoulderMaxFillDepth();
         };
     }
 
@@ -434,6 +520,7 @@ public final class TerrainPreparationPlanValidator {
     private static void validateBuildingShoulderColumn(
             Map<PlanElementId, ElevationZone> zonesById,
             TerrainPreparationColumn column,
+            TerrainTransitionSettings settings,
             List<PlanValidationError> errors
     ) {
         ElevationZone zone = zonesById.get(column.sourceElementId());
@@ -445,7 +532,11 @@ public final class TerrainPreparationPlanValidator {
             errors.add(error(column.sourceElementId(), "building shoulder must belong to a building zone"));
             return;
         }
-        if (!BuildingTerrainShoulderPolicy.contains(zone.bounds(), column.point())) {
+        if (!BuildingTerrainShoulderPolicy.contains(
+                zone.bounds(),
+                column.point(),
+                settings.buildingShoulderRadius()
+        )) {
             errors.add(error(column.sourceElementId(), "building shoulder is outside the supported transition area"));
         }
         int expectedElevation = BuildingTerrainShoulderPolicy.targetElevation(
@@ -458,7 +549,7 @@ public final class TerrainPreparationPlanValidator {
         }
         validateFillOnlySupport(
                 column,
-                BuildingTerrainShoulderPolicy.MAX_FILL_DEPTH,
+                settings.buildingShoulderMaxFillDepth(),
                 "building shoulder",
                 errors
         );

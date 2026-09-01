@@ -8,8 +8,7 @@ import java.util.Optional;
 
 record SuburbLayout(
         GridBounds bounds,
-        int mainRoadZ,
-        List<Integer> sideRoadXs,
+        DistrictFootprint districtFootprint,
         int requestedParcelCapacity,
         List<GridBounds> parcelBounds,
         Optional<RoadGraph> routedRoadGraph,
@@ -18,13 +17,37 @@ record SuburbLayout(
 ) {
     SuburbLayout {
         Objects.requireNonNull(bounds, "bounds");
+        Objects.requireNonNull(districtFootprint, "districtFootprint");
+        if (!bounds.equals(districtFootprint.bounds())) {
+            throw new IllegalArgumentException("districtFootprint bounds must match layout bounds");
+        }
         if (requestedParcelCapacity <= 0) {
             throw new IllegalArgumentException("requestedParcelCapacity must be positive");
         }
-        sideRoadXs = List.copyOf(sideRoadXs);
         parcelBounds = List.copyOf(parcelBounds);
         routedRoadGraph = Objects.requireNonNull(routedRoadGraph, "routedRoadGraph");
         plannedFootprints = List.copyOf(plannedFootprints);
         terrainPreparationFootprints = List.copyOf(terrainPreparationFootprints);
+    }
+
+    SuburbLayout(
+            GridBounds bounds,
+            int mainRoadZ,
+            List<Integer> sideRoadXs,
+            int requestedParcelCapacity,
+            List<GridBounds> parcelBounds,
+            Optional<RoadGraph> routedRoadGraph,
+            List<GridBounds> plannedFootprints,
+            List<PotentialTerrainPreparationFootprint> terrainPreparationFootprints
+    ) {
+        this(
+                bounds,
+                DistrictFootprint.rectangle(bounds),
+                requestedParcelCapacity,
+                parcelBounds,
+                routedRoadGraph,
+                plannedFootprints,
+                terrainPreparationFootprints
+        );
     }
 }

@@ -14,9 +14,18 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
+import net.minecraft.world.level.levelgen.structure.StructureSet;
+import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
 
 public final class WorldgenSettlementLocator {
+    private static final ResourceLocation SUBURB_STRUCTURE_SET =
+            ResourceLocation.fromNamespaceAndPath("cities_arise", "suburb");
+
     private final MinecraftSuburbPlanningService planningService;
     private final WorldgenRegionCandidateSelector candidateSelector;
     private final WorldgenRegionSearch regionSearch;
@@ -42,6 +51,11 @@ public final class WorldgenSettlementLocator {
         }
 
         WorldgenPlanningContext context = optionalContext.orElseThrow();
+        Optional<PlacementContext> optionalPlacement = placementContext(level, context.worldSeed());
+        if (optionalPlacement.isEmpty()) {
+            return CompletableFuture.completedFuture(placementUnavailableResult());
+        }
+        PlacementContext placement = optionalPlacement.orElseThrow();
         long worldSeed = context.worldSeed();
         int regionModulo = CitiesAriseWorldgenConfig.candidateRegionModulo();
         int seaLevel = level.getSeaLevel();
@@ -52,11 +66,12 @@ public final class WorldgenSettlementLocator {
                 CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
                 CitiesAriseWorldgenConfig.locateMaxCandidateAttempts(),
                 CitiesAriseWorldgenConfig.locateImprovementCandidateAttempts(),
-                region -> candidateSelector.isCandidate(worldSeed, region, regionModulo),
+                region -> candidateSelector.isCandidate(worldSeed, region, regionModulo)
+                        && placement.isStructureRegion(region),
                 region -> evaluate(context, seaLevel, region, rejectionCounts),
                 EarthworkSiteAssessment::compareTo,
                 executor
-        ).thenApply(outcome -> searchResult(outcome, rejectionCounts));
+        ).thenApply(outcome -> searchResult(outcome, rejectionCounts, placement));
     }
 
     private Optional<EarthworkSiteAssessment> evaluate(
@@ -79,14 +94,19 @@ public final class WorldgenSettlementLocator {
 
     private SearchResult searchResult(
             WorldgenRegionSearch.Outcome<EarthworkSiteAssessment> outcome,
-            Map<String, Integer> rejectionCounts
+            Map<String, Integer> rejectionCounts,
+            PlacementContext placement
     ) {
-        Optional<LocatedSettlement> settlement = outcome.result().map(this::locatedSettlement);
+        Optional<LocatedSettlement> settlement = outcome.result().map(result -> locatedSettlement(result, placement));
         return new SearchResult(settlement, outcome.attemptedCandidates(), rejectionCounts);
     }
 
     private static SearchResult profileUnavailableResult() {
         return new SearchResult(Optional.empty(), 0, Map.of("PROFILE_UNAVAILABLE", 1));
+    }
+
+    private static SearchResult placementUnavailableResult() {
+        return new SearchResult(Optional.empty(), 0, Map.of("STRUCTURE_PLACEMENT_UNAVAILABLE", 1));
     }
 
     private static String rejectionReason(SuburbDebugPlanResult result) {
@@ -100,12 +120,16 @@ public final class WorldgenSettlementLocator {
         counts.merge(reason, 1, Integer::sum);
     }
 
-    private LocatedSettlement locatedSettlement(WorldgenRegionSearch.Result<EarthworkSiteAssessment> result) {
+    private LocatedSettlement locatedSettlement(
+            WorldgenRegionSearch.Result<EarthworkSiteAssessment> result,
+            PlacementContext placement
+    ) {
         SettlementRegion region = result.region();
+        BlockPos locatePosition = placement.locatePosition(region);
         return new LocatedSettlement(
                 region,
-                WorldgenRegionSearch.centerCoordinate(region.x()),
-                WorldgenRegionSearch.centerCoordinate(region.z()),
+                locatePosition.getX(),
+                locatePosition.getZ(),
                 result.attemptedCandidates(),
                 result.evaluation()
         );
@@ -119,8 +143,60 @@ public final class WorldgenSettlementLocator {
         );
     }
 
+    private static Optional<PlacementContext> placementContext(ServerLevel level, long worldSeed) {
+        StructureSet structureSet = level.registryAccess()
+                .registryOrThrow(Registries.STRUCTURE_SET)
+                .get(SUBURB_STRUCTURE_SET);
+        if (structureSet == null
+                || !(structureSet.placement() instanceof RandomSpreadStructurePlacement placement)
+                || placement.spacing() != SettlementRegion.REGION_CHUNKS) {
+            return Optional.empty();
+        }
+        return Optional.of(new PlacementContext(
+                placement,
+                level.getChunkSource().getGeneratorState(),
+                worldSeed
+        ));
+    }
+
     public void stop() {
         executor.stop();
+    }
+
+    private record PlacementContext(
+            RandomSpreadStructurePlacement placement,
+            ChunkGeneratorStructureState generatorState,
+            long worldSeed
+    ) {
+        private PlacementContext {
+            Objects.requireNonNull(placement, "placement");
+            Objects.requireNonNull(generatorState, "generatorState");
+        }
+
+        private boolean isStructureRegion(SettlementRegion region) {
+            ChunkPos chunk = potentialChunk(region);
+            return placement.isStructureChunk(generatorState, chunk.x, chunk.z);
+        }
+
+        private BlockPos locatePosition(SettlementRegion region) {
+            return placement.getLocatePos(potentialChunk(region));
+        }
+
+        private ChunkPos potentialChunk(SettlementRegion region) {
+            return potentialChunkForRegion(placement, worldSeed, region);
+        }
+    }
+
+    static ChunkPos potentialChunkForRegion(
+            RandomSpreadStructurePlacement placement,
+            long worldSeed,
+            SettlementRegion region
+    ) {
+        Objects.requireNonNull(placement, "placement");
+        Objects.requireNonNull(region, "region");
+        int probeChunkX = WorldgenPlacementCoordinates.probeChunk(region.x(), placement.spacing());
+        int probeChunkZ = WorldgenPlacementCoordinates.probeChunk(region.z(), placement.spacing());
+        return placement.getPotentialStructureChunk(worldSeed, probeChunkX, probeChunkZ);
     }
 
     public record LocatedSettlement(

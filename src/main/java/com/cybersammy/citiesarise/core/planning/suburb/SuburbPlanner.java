@@ -32,18 +32,18 @@ import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopologyAnalyzer;
 import com.cybersammy.citiesarise.core.validation.PlanValidationError;
 import com.cybersammy.citiesarise.core.validation.PlanValidator;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 
 public final class SuburbPlanner {
     private static final int MAX_ROAD_ELEVATION_NODE_DISTANCE = 6;
     private static final TerrainTopologyAnalyzer TOPOLOGY_ANALYZER = new TerrainTopologyAnalyzer();
     private static final AdaptiveSuburbLayoutSelector LAYOUT_SELECTOR = new AdaptiveSuburbLayoutSelector();
+    private static final TerrainDerivedRoadSkeletonPlanner ROAD_SKELETON_PLANNER =
+            new TerrainDerivedRoadSkeletonPlanner();
     private static final TerrainAwareRoadGraphRouter ROAD_GRAPH_ROUTER = new TerrainAwareRoadGraphRouter();
     private static final FrontageParcelAllocator PARCEL_ALLOCATOR = new FrontageParcelAllocator();
     private static final TerrainAdaptationPlanner TERRAIN_ADAPTATION_PLANNER = new TerrainAdaptationPlanner();
@@ -414,14 +414,17 @@ public final class SuburbPlanner {
             int parcelCapacity,
             ParcelTerrainEvaluationCache parcelTerrainEvaluations
     ) {
-        Random random = new Random(request.seed());
-        int mainRoadZ = centerZ(bounds);
-        List<Integer> sideRoadXs = sideRoadXs(bounds, random);
-        RoadGraph nominalRoadGraph = createRoadGraph(request, bounds, mainRoadZ, sideRoadXs);
+        DistrictFootprint districtFootprint = DistrictFootprint.rectangle(bounds);
+        RoadGraph nominalRoadGraph = ROAD_SKELETON_PLANNER.plan(
+                request.settlementId(),
+                districtFootprint,
+                request.settings(),
+                request.seed()
+        );
         List<GridBounds> roadCorridors = roadCorridors(nominalRoadGraph);
         List<GridBounds> parcelBounds = PARCEL_ALLOCATOR.allocate(
                 nominalRoadGraph,
-                bounds,
+                districtFootprint,
                 request.survey(),
                 request.settings(),
                 request.seed(),
@@ -432,8 +435,7 @@ public final class SuburbPlanner {
 
         return new SuburbLayout(
                 bounds,
-                mainRoadZ,
-                sideRoadXs,
+                districtFootprint,
                 parcelCapacity,
                 parcelBounds,
                 Optional.empty(),
@@ -450,11 +452,16 @@ public final class SuburbPlanner {
             RoadTerrainEvaluationCache terrainEvaluations,
             ParcelTerrainEvaluationCache parcelTerrainEvaluations
     ) {
-        RoadGraph sourceRoadGraph = createRoadGraph(
-                request,
-                layout.bounds(),
-                layout.mainRoadZ(),
-                layout.sideRoadXs()
+        Optional<DistrictFootprint> footprint = DistrictFootprint.fromTopology(layout.bounds(), topology);
+        if (footprint.isEmpty()) {
+            return Optional.empty();
+        }
+        DistrictFootprint districtFootprint = footprint.orElseThrow();
+        RoadGraph sourceRoadGraph = ROAD_SKELETON_PLANNER.plan(
+                request.settlementId(),
+                districtFootprint,
+                request.settings(),
+                request.seed()
         );
         Optional<RoadGraph> routedRoadGraph = ROAD_GRAPH_ROUTER.route(
                 request,
@@ -471,7 +478,7 @@ public final class SuburbPlanner {
         List<GridBounds> roadCorridors = roadCorridors(routedGraph);
         List<GridBounds> parcelBounds = PARCEL_ALLOCATOR.allocate(
                 routedGraph,
-                layout.bounds(),
+                districtFootprint,
                 request.survey(),
                 request.settings(),
                 request.seed(),
@@ -484,8 +491,7 @@ public final class SuburbPlanner {
         }
         return Optional.of(new SuburbLayout(
                 layout.bounds(),
-                layout.mainRoadZ(),
-                layout.sideRoadXs(),
+                districtFootprint,
                 layout.requestedParcelCapacity(),
                 parcelBounds,
                 routedRoadGraph,
@@ -526,136 +532,13 @@ public final class SuburbPlanner {
         ).with(
                 PlanPropertyKeys.ALLOCATED_CAPACITY,
                 Integer.toString(selection.allocatedCapacity())
+        ).with(
+                PlanPropertyKeys.DISTRICT_FOOTPRINT_AREA,
+                Integer.toString(selection.layout().districtFootprint().area())
+        ).with(
+                PlanPropertyKeys.EXCLUDED_FOOTPRINT_AREA,
+                Integer.toString(selection.layout().districtFootprint().excludedArea())
         );
-    }
-
-    private static int centerZ(GridBounds bounds) {
-        return bounds.minZ() + (bounds.size().depth() / 2);
-    }
-
-    private static List<Integer> sideRoadXs(GridBounds bounds, Random random) {
-        int sideRoadCount = 2 + random.nextInt(3);
-        int spacing = bounds.size().width() / (sideRoadCount + 1);
-        List<Integer> sideRoadXs = new ArrayList<>();
-
-        for (int index = 1; index <= sideRoadCount; index++) {
-            sideRoadXs.add(bounds.minX() + (spacing * index));
-        }
-
-        return List.copyOf(sideRoadXs);
-    }
-
-    private RoadGraph createRoadGraph(
-            SuburbPlanningRequest request,
-            GridBounds bounds,
-            int mainRoadZ,
-            List<Integer> sideRoadXs
-    ) {
-        List<RoadNode> nodes = new ArrayList<>();
-        List<RoadSegment> segments = new ArrayList<>();
-        PlanElementId roadsId = request.settlementId().child("roads");
-        PlanElementId westId = roadsId.child("main-west");
-        PlanElementId eastId = roadsId.child("main-east");
-
-        nodes.add(roadNode(westId, bounds.minX(), mainRoadZ, "main_road"));
-        nodes.add(roadNode(eastId, bounds.maxXExclusive() - 1, mainRoadZ, "main_road"));
-
-        for (int index = 0; index < sideRoadXs.size(); index++) {
-            addSideRoadNodes(request, bounds, nodes, sideRoadXs.get(index), mainRoadZ, index);
-        }
-
-        addMainRoadSegments(request, segments, westId, eastId, sideRoadXs.size());
-
-        for (int index = 0; index < sideRoadXs.size(); index++) {
-            addSideRoadSegment(request, segments, index);
-        }
-
-        return new RoadGraph(nodes, segments);
-    }
-
-    private static void addMainRoadSegments(
-            SuburbPlanningRequest request,
-            List<RoadSegment> segments,
-            PlanElementId westId,
-            PlanElementId eastId,
-            int sideRoadCount
-    ) {
-        List<PlanElementId> mainPathIds = mainPathIds(request, westId, eastId, sideRoadCount);
-
-        for (int index = 0; index < mainPathIds.size() - 1; index++) {
-            segments.add(roadSegment(
-                    request.settlementId().child("roads").child("main-" + index),
-                    mainPathIds.get(index),
-                    mainPathIds.get(index + 1),
-                    request.settings().roadWidth(),
-                    "main_road"
-            ));
-        }
-    }
-
-    private static List<PlanElementId> mainPathIds(
-            SuburbPlanningRequest request,
-            PlanElementId westId,
-            PlanElementId eastId,
-            int sideRoadCount
-    ) {
-        List<PlanElementId> mainPathIds = new ArrayList<>();
-        mainPathIds.add(westId);
-
-        for (int index = 0; index < sideRoadCount; index++) {
-            mainPathIds.add(request.settlementId().child("roads").child("side-" + index + "-junction"));
-        }
-
-        mainPathIds.add(eastId);
-        return List.copyOf(mainPathIds);
-    }
-
-    private static void addSideRoadNodes(
-            SuburbPlanningRequest request,
-            GridBounds bounds,
-            List<RoadNode> nodes,
-            int x,
-            int mainRoadZ,
-            int index
-    ) {
-        PlanElementId roadsId = request.settlementId().child("roads");
-        boolean northbound = isNorthbound(index);
-        int deadEndZ = deadEndZ(bounds, request.settings(), mainRoadZ, northbound);
-
-        nodes.add(roadNode(roadsId.child("side-" + index + "-junction"), x, mainRoadZ, "side_road"));
-        nodes.add(roadNode(roadsId.child("side-" + index + "-dead-end"), x, deadEndZ, "dead_end"));
-    }
-
-    private static void addSideRoadSegment(SuburbPlanningRequest request, List<RoadSegment> segments, int index) {
-        PlanElementId roadsId = request.settlementId().child("roads");
-
-        segments.add(roadSegment(
-                roadsId.child("side-" + index),
-                roadsId.child("side-" + index + "-junction"),
-                roadsId.child("side-" + index + "-dead-end"),
-                request.settings().roadWidth(),
-                "side_road",
-                "dead_end"
-        ));
-    }
-
-    private static boolean isNorthbound(int index) {
-        return index % 2 == 0;
-    }
-
-    private static int deadEndZ(
-            GridBounds bounds,
-            SuburbPlanningSettings settings,
-            int mainRoadZ,
-            boolean northbound
-    ) {
-        int reach = settings.parcelDepth() + settings.roadWidth();
-
-        if (northbound) {
-            return Math.max(bounds.minZ() + settings.roadWidth(), mainRoadZ - reach);
-        }
-
-        return Math.min(bounds.maxZExclusive() - settings.roadWidth(), mainRoadZ + reach);
     }
 
     private static List<GridBounds> plannedFootprints(
@@ -752,30 +635,6 @@ public final class SuburbPlanner {
                 Set.of(new PlanTag("residential")),
                 PlanProperties.empty()
         );
-    }
-
-    private static RoadNode roadNode(PlanElementId id, int x, int z, String tag) {
-        return new RoadNode(id, new GridPoint(x, z), Set.of(new PlanTag(tag)), PlanProperties.empty());
-    }
-
-    private static RoadSegment roadSegment(
-            PlanElementId id,
-            PlanElementId startNodeId,
-            PlanElementId endNodeId,
-            int width,
-            String... tags
-    ) {
-        return new RoadSegment(id, startNodeId, endNodeId, width, tagSet(tags), PlanProperties.empty());
-    }
-
-    private static Set<PlanTag> tagSet(String... tags) {
-        Set<PlanTag> planTags = new HashSet<>();
-
-        for (String tag : tags) {
-            planTags.add(new PlanTag(tag));
-        }
-
-        return Set.copyOf(planTags);
     }
 
 }

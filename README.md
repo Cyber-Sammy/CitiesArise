@@ -272,6 +272,8 @@ The generated jar is written to `build/libs`.
 
 Cities Arise creates a common config file with logging options. `debugLoggingEnabled` is the master switch. Terrain, planning, placement, and command logs can be toggled separately and only emit debug details when the master switch is enabled.
 
+Rejected `INVALID_PLAN` diagnostics include the validation error count and the first five errors with their codes, source elements, and messages. Preliminary rectangular road skeletons use an exact constant-time main-axis calculation instead of scanning every cell; irregular footprints retain terrain-aware line scoring.
+
 The debug suburb planner can also be tuned from the same common config:
 
 - `debugSettlementProfileId`: settlement profile id used by the debug planner. The default is `cities_arise:suburb`. Datapacks can add profiles under `data/<namespace>/settlement_profiles/<path>.json`.

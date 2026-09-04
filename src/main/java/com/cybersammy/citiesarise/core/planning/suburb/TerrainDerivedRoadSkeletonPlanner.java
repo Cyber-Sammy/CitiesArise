@@ -118,6 +118,13 @@ final class TerrainDerivedRoadSkeletonPlanner {
 
     private static Line bestLine(DistrictFootprint footprint, Axis axis, int supportRadius) {
         int center = axis.crossCenter(footprint);
+        if (footprint.rectangular()) {
+            // Every in-bounds cross section is supported; the center wins the remaining tie-break.
+            int minimum = axis.minimum(footprint);
+            int maximum = axis.maximum(footprint);
+            int length = (maximum - minimum) + 1;
+            return new Line(center, minimum, maximum, length, length, 0);
+        }
         return axis.occupiedCrossAxes(footprint).stream()
                 .map(crossAxis -> line(footprint, axis, crossAxis, center, supportRadius))
                 .min(Line.QUALITY)

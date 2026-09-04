@@ -26,11 +26,34 @@ import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability;
+import com.cybersammy.citiesarise.core.validation.PlanValidationError;
+import com.cybersammy.citiesarise.core.validation.PlanValidationErrorCode;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class SuburbDebugPlanResultTest {
+    @Test
+    void preservesValidationErrorsAndBoundsTheirSummary() {
+        List<PlanValidationError> errors = java.util.stream.IntStream.range(0, 7)
+                .mapToObj(index -> PlanValidationError.forElement(
+                        PlanValidationErrorCode.TERRAIN_PREPARATION_MISMATCH,
+                        new PlanElementId("parcel/" + index), "invalid support " + index
+                )).toList();
+        SuburbDebugPlanResult result = SuburbDebugPlanResult.from(
+                new SettlementRegion(1, -2),
+                new GridBounds(new GridPoint(10, 20), new GridSize(40, 30)),
+                123L, SuburbPlanningResult.invalid(errors)
+        );
+
+        assertEquals(errors, result.validationErrors());
+        assertTrue(result.summary().contains("rejected=INVALID_PLAN"));
+        assertTrue(result.summary().contains("validationErrorCount=7"));
+        assertTrue(result.summary().contains("code=TERRAIN_PREPARATION_MISMATCH"));
+        assertTrue(result.summary().contains("element=parcel/4, message=invalid support 4"));
+        assertFalse(result.summary().contains("invalid support 5"));
+    }
+
     @Test
     void includesTransformCountsInSuccessfulSummary() {
         SuburbDebugPlanResult result = SuburbDebugPlanResult.from(

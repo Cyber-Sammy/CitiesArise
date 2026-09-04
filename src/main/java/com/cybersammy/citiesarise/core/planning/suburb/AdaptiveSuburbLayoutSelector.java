@@ -368,7 +368,7 @@ final class AdaptiveSuburbLayoutSelector {
             GridBounds preparationBounds = expandWithin(
                     footprint.bounds(),
                     topology.bounds(),
-                    footprint.supportRadius()
+                    footprint.requiredSupportRadius()
             );
             if (!topology.isEntirelyDevelopable(preparationBounds)) {
                 return false;
@@ -438,7 +438,7 @@ final class AdaptiveSuburbLayoutSelector {
             DistrictFootprint.RegionMap regionMap
     ) {
         int supportRadius = layout.terrainPreparationFootprints().stream()
-                .mapToInt(PotentialTerrainPreparationFootprint::supportRadius)
+                .mapToInt(PotentialTerrainPreparationFootprint::requiredSupportRadius)
                 .max()
                 .orElse(0);
         if (supportRadius == 0) {

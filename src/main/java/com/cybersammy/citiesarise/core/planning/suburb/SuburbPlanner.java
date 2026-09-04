@@ -559,13 +559,19 @@ public final class SuburbPlanner {
         for (GridBounds roadBounds : roadCorridors) {
             footprints.add(new PotentialTerrainPreparationFootprint(
                     roadBounds,
+                    request.settings().terrainTransitions().roadShoulderRadius(),
                     request.settings().terrainTransitions().roadShoulderRadius()
             ));
         }
         for (GridBounds parcelBoundsEntry : parcelBounds) {
-            footprints.add(new PotentialTerrainPreparationFootprint(parcelBoundsEntry, 0));
+            footprints.add(new PotentialTerrainPreparationFootprint(
+                    parcelBoundsEntry,
+                    request.settings().terrainTransitions().parcelShoulderRadius(),
+                    0
+            ));
             footprints.add(new PotentialTerrainPreparationFootprint(
                     SuburbParcelGeometry.buildingBounds(request.settings(), parcelBoundsEntry),
+                    request.settings().terrainTransitions().buildingShoulderRadius(),
                     request.settings().terrainTransitions().buildingShoulderRadius()
             ));
         }

@@ -311,7 +311,9 @@ public final class MinecraftSuburbPlanningService {
     ) {
         logTerrainStart(region, bounds, seed, settlementId, terrainLoggingEnabled);
 
+        long started = System.nanoTime();
         TerrainSurvey survey = terrainProvider.sample(bounds);
+        long sampled = System.nanoTime();
         SuburbPlanningRequest request = new SuburbPlanningRequest(
                 settlementId,
                 survey,
@@ -320,13 +322,22 @@ public final class MinecraftSuburbPlanningService {
                 terrainResponsePolicy
         );
         SuburbPlanningResult result = planner.plan(request);
+        long planned = System.nanoTime();
         SuburbPlanningResult refinedResult = WorldgenWaterMaskRefiner.refine(
                 planner,
                 terrainProvider,
                 request,
                 result
         );
+        long refined = System.nanoTime();
         SuburbPlanningResult transformedResult = transformService.apply(refinedResult, seed);
+        long transformed = System.nanoTime();
+        if (planningLoggingEnabled) {
+            logger.info("Planning timings region=({}, {}): surveyMs={}, planMs={}, refinementMs={}, transformMs={}, totalMs={}",
+                    region.x(), region.z(), (sampled - started) / 1_000_000.0, (planned - sampled) / 1_000_000.0,
+                    (refined - planned) / 1_000_000.0, (transformed - refined) / 1_000_000.0,
+                    (transformed - started) / 1_000_000.0);
+        }
         SuburbDebugPlanResult debugResult = SuburbDebugPlanResult.from(region, bounds, seed, transformedResult);
 
         logPlanningResult(debugResult, planningLoggingEnabled);

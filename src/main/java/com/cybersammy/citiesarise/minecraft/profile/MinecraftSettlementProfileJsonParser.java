@@ -1,5 +1,7 @@
 package com.cybersammy.citiesarise.minecraft.profile;
 
+import com.cybersammy.citiesarise.core.building.BuildingContentSettings;
+import com.cybersammy.citiesarise.core.building.BuildingAsset;
 import com.cybersammy.citiesarise.core.geometry.GridSize;
 import com.cybersammy.citiesarise.core.earthwork.TerrainTransitionSettings;
 import com.cybersammy.citiesarise.core.planning.suburb.DevelopmentCapacity;
@@ -44,11 +46,44 @@ public final class MinecraftSettlementProfileJsonParser {
         SettlementProfile profile = new SettlementProfile(
                 id,
                 parseSurveySize(survey),
-                parseSuburbPlanningSettings(planning),
+                parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning)),
                 parseTerrainResponsePolicy(json)
         );
         limits.validate(profile);
         return profile;
+    }
+
+    private static BuildingContentSettings parseBuildings(JsonObject planning) {
+        if (!planning.has("buildings")) return BuildingContentSettings.legacy();
+        JsonObject content = requiredObject(planning, "buildings");
+        if (!content.has("pool") || !content.get("pool").isJsonArray()
+                || !content.has("palettes") || !content.get("palettes").isJsonArray()) {
+            throw new IllegalArgumentException("buildings.pool and buildings.palettes must be arrays");
+        }
+        var pool = new java.util.ArrayList<BuildingContentSettings.Entry>();
+        for (JsonElement value : content.getAsJsonArray("pool")) {
+            if (!value.isJsonObject()) throw new IllegalArgumentException("Building pool entries must be objects");
+            JsonObject entry = value.getAsJsonObject();
+            pool.add(new BuildingContentSettings.Entry(
+                    BuildingAsset.fromId(contentString(entry, "asset")),
+                    requiredInt(entry, "weight")));
+        }
+        var palettes = new java.util.ArrayList<String>();
+        for (JsonElement value : content.getAsJsonArray("palettes")) {
+            if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString()) {
+                throw new IllegalArgumentException("Building palettes must be strings");
+            }
+            palettes.add(value.getAsString());
+        }
+        return new BuildingContentSettings(pool, palettes,
+                BuildingAsset.fromId(contentString(content, "fallback")));
+    }
+
+    private static String contentString(JsonObject object, String key) {
+        if (!object.has(key) || !object.get(key).isJsonPrimitive() || !object.getAsJsonPrimitive(key).isString()) {
+            throw new IllegalArgumentException("buildings." + key + " must be a string");
+        }
+        return object.get(key).getAsString();
     }
 
     private static GridSize parseSurveySize(JsonObject survey) {

@@ -21,6 +21,11 @@ final class MinecraftWorldgenBlockAccess implements WorldgenBlockAccess {
     }
 
     @Override
+    public boolean needsVegetationProtection(DebugPlacementRole role) {
+        return materialProvider.needsVegetationProtection(role);
+    }
+
+    @Override
     public int minBuildHeight() {
         return level.getMinBuildHeight();
     }
@@ -32,7 +37,8 @@ final class MinecraftWorldgenBlockAccess implements WorldgenBlockAccess {
 
     @Override
     public int surfaceHeight(int x, int z) {
-        return level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z);
+        return level.getHeight(level instanceof net.minecraft.server.level.ServerLevel
+                ? Heightmap.Types.WORLD_SURFACE : Heightmap.Types.WORLD_SURFACE_WG, x, z);
     }
 
     @Override

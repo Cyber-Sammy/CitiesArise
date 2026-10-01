@@ -321,15 +321,14 @@ final class WorldgenChunkPlacement {
                     plannedBaseY,
                     0,
                     true,
-                    protectedLogY(operation, plannedBaseY)
+                    protectedVegetationY(level, operation, plannedBaseY)
             );
         }
         return Map.copyOf(columns);
     }
 
-    private static OptionalInt protectedLogY(DebugBlockPlacementOperation operation, int plannedBaseY) {
-        if (operation.role() != DebugPlacementRole.BUILDING_WALL
-                && operation.role() != DebugPlacementRole.DECAYED_BUILDING_WALL) {
+    private static OptionalInt protectedVegetationY(WorldgenBlockAccess level, DebugBlockPlacementOperation operation, int plannedBaseY) {
+        if (!level.needsVegetationProtection(operation.role())) {
             return OptionalInt.empty();
         }
         return OptionalInt.of(plannedBaseY + operation.verticalOffset());
@@ -343,7 +342,7 @@ final class WorldgenChunkPlacement {
             int plannedBaseY,
             int radius,
             boolean clearLogs,
-            OptionalInt protectedLogY
+            OptionalInt protectedVegetationY
     ) {
         for (int zOffset = -radius; zOffset <= radius; zOffset++) {
             for (int xOffset = -radius; xOffset <= radius; xOffset++) {
@@ -356,15 +355,15 @@ final class WorldgenChunkPlacement {
                         int clearanceBaseY = existing == null
                                 ? plannedBaseY
                                 : Math.min(existing.clearanceBaseY(), plannedBaseY);
-                        Set<Integer> protectedLogYs = existing == null
+                        Set<Integer> protectedVegetationYs = existing == null
                                 ? new HashSet<>()
-                                : new HashSet<>(existing.protectedLogYs());
-                        protectedLogY.ifPresent(protectedLogYs::add);
+                                : new HashSet<>(existing.protectedVegetationYs());
+                        protectedVegetationY.ifPresent(protectedVegetationYs::add);
                         return new VegetationColumn(
                                 surface,
                                 clearanceBaseY,
                                 clearLogs || (existing != null && existing.clearLogs()),
-                                protectedLogYs
+                                protectedVegetationYs
                         );
                     });
                 }
@@ -404,8 +403,8 @@ final class WorldgenChunkPlacement {
                 }
                 WorldgenSurfaceMaterial material = level.material(position);
                 boolean clearLog = vegetationColumn.clearLogs()
-                        && !vegetationColumn.protectedLogYs().contains(y);
-                if (isVegetation(material, clearLog)) {
+                        && !vegetationColumn.protectedVegetationYs().contains(y);
+                if (!vegetationColumn.protectedVegetationYs().contains(y) && isVegetation(material, clearLog)) {
                     level.clearBlock(position);
                 }
             }
@@ -468,12 +467,12 @@ final class WorldgenChunkPlacement {
             SurfaceColumn surface,
             int clearanceBaseY,
             boolean clearLogs,
-            Set<Integer> protectedLogYs
+            Set<Integer> protectedVegetationYs
     ) {
         private VegetationColumn {
             Objects.requireNonNull(surface, "surface");
-            Objects.requireNonNull(protectedLogYs, "protectedLogYs");
-            protectedLogYs = Set.copyOf(protectedLogYs);
+            Objects.requireNonNull(protectedVegetationYs, "protectedVegetationYs");
+            protectedVegetationYs = Set.copyOf(protectedVegetationYs);
         }
     }
 

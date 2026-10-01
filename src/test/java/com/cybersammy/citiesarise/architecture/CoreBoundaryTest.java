@@ -95,6 +95,7 @@ final class CoreBoundaryTest {
             return true;
         }
 
-        return false;
+        return line.startsWith("import com.cybersammy.citiesarise.minecraft.")
+                || line.startsWith("import static com.cybersammy.citiesarise.minecraft.");
     }
 }

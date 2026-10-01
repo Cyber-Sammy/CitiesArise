@@ -94,6 +94,34 @@ final class WorldgenWaterMaskRefinerTest {
     }
 
     @Test
+    void omitsOptionalParcelShoulderAfterExactWaterAppearsInsideIt() {
+        SuburbPlanner planner = SuburbPlanner.defaults();
+        SuburbPlanningResult template = planner.plan(request(flatSurvey()));
+        RegionalElevationPlan elevationPlan = template.terrainPreparationPlan().orElseThrow().elevationPlan();
+        TerrainSurvey terrain = parcelShoulderSurvey(elevationPlan);
+        SuburbPlanningRequest request = request(terrain);
+        SuburbPlanningResult initialResult = planner.plan(request);
+        GridPoint shoulderPoint = initialResult.terrainPreparationPlan().orElseThrow().columns().stream()
+                .filter(column -> column.type() == TerrainPreparationColumnType.PARCEL_SHOULDER)
+                .findFirst()
+                .orElseThrow()
+                .point();
+        ExactWaterProvider terrainProvider = new ExactWaterProvider(terrain, shoulderPoint);
+
+        SuburbPlanningResult result = WorldgenWaterMaskRefiner.refine(
+                planner,
+                terrainProvider,
+                request,
+                initialResult
+        );
+
+        assertTrue(result.successful(), result.toString());
+        assertTrue(terrainProvider.checkedPoints.contains(shoulderPoint));
+        assertFalse(containsPreparationPoint(result, shoulderPoint));
+        assertTrue(terrainProvider.checkedPoints.containsAll(refinementFootprint(result)));
+    }
+
+    @Test
     void refinesEveryRelocatedFootprintUntilStable() {
         GridBounds bounds = new GridBounds(new GridPoint(0, 0), new GridSize(128, 30));
         SuburbPlanner planner = SuburbPlanner.defaults();
@@ -221,9 +249,29 @@ final class WorldgenWaterMaskRefinerTest {
         )));
     }
 
+    private static TerrainSurvey parcelShoulderSurvey(RegionalElevationPlan elevationPlan) {
+        return TerrainSurvey.sample(BOUNDS, point -> Optional.of(new TerrainCell(
+                point,
+                belongsToParcel(elevationPlan, point) ? 64 : 62,
+                false,
+                0.0,
+                BiomeCategory.PLAINS,
+                TerrainCategory.BUILDABLE
+        )));
+    }
+
     private static boolean belongsToRoad(RegionalElevationPlan elevationPlan, GridPoint point) {
         for (ElevationZone zone : elevationPlan.zones()) {
             if (zone.type() == ElevationZoneType.ROAD_SEGMENT && zone.bounds().contains(point)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean belongsToParcel(RegionalElevationPlan elevationPlan, GridPoint point) {
+        for (ElevationZone zone : elevationPlan.zones()) {
+            if (zone.type() == ElevationZoneType.PARCEL_PAD && zone.bounds().contains(point)) {
                 return true;
             }
         }

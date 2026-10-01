@@ -10,8 +10,20 @@ public record ElevationTransition(
         PlanElementId targetZoneId,
         GridPoint anchor,
         int sourceElevation,
-        int targetElevation
+        int targetElevation,
+        int minimumRunPerRise
 ) {
+    public ElevationTransition(
+            ElevationTransitionType type,
+            PlanElementId sourceZoneId,
+            PlanElementId targetZoneId,
+            GridPoint anchor,
+            int sourceElevation,
+            int targetElevation
+    ) {
+        this(type, sourceZoneId, targetZoneId, anchor, sourceElevation, targetElevation, 1);
+    }
+
     public ElevationTransition {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(sourceZoneId, "sourceZoneId");
@@ -19,6 +31,9 @@ public record ElevationTransition(
         Objects.requireNonNull(anchor, "anchor");
         if (sourceZoneId.equals(targetZoneId)) {
             throw new IllegalArgumentException("transition must connect different elevation zones");
+        }
+        if (minimumRunPerRise <= 0) {
+            throw new IllegalArgumentException("minimumRunPerRise must be positive");
         }
     }
 

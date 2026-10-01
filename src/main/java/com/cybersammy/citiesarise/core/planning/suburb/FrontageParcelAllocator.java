@@ -1,7 +1,5 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
-import com.cybersammy.citiesarise.core.earthwork.BuildingTerrainShoulderPolicy;
-import com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
@@ -94,7 +92,7 @@ final class FrontageParcelAllocator {
                 .map(corridor -> expandWithin(
                         corridor,
                         districtBounds,
-                        RoadTerrainShoulderPolicy.RADIUS
+                        settings.terrainTransitions().roadShoulderRadius()
                 ))
                 .toList();
         List<ParcelCandidate> candidates = collectCandidates(
@@ -312,7 +310,7 @@ final class FrontageParcelAllocator {
         GridBounds supportedBuilding = expandWithin(
                 building,
                 value.bounds(),
-                BuildingTerrainShoulderPolicy.RADIUS
+                settings.terrainTransitions().buildingShoulderRadius()
         );
         return value.isEntirelyDevelopable(supportedBuilding);
     }
@@ -400,7 +398,7 @@ final class FrontageParcelAllocator {
         }
 
         GridBounds bounds(GridBounds corridor, SuburbPlanningSettings settings, int axis) {
-            int gap = RoadTerrainShoulderPolicy.RADIUS;
+            int gap = settings.terrainTransitions().roadShoulderRadius();
             return switch (this) {
                 case NORTH -> new GridBounds(
                         new GridPoint(axis, corridor.minZ() - gap - settings.parcelDepth()),

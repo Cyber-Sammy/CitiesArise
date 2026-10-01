@@ -10,6 +10,7 @@ public final class VanillaDebugBlockMaterialProvider implements DebugBlockMateri
             case FOUNDATION -> Blocks.COBBLESTONE.defaultBlockState();
             case TERRAIN_FILL -> Blocks.DIRT.defaultBlockState();
             case TERRAIN_SURFACE -> Blocks.GRASS_BLOCK.defaultBlockState();
+            case TERRAIN_RETAINING_WALL -> Blocks.COBBLESTONE.defaultBlockState();
             case ROAD_SURFACE -> Blocks.STONE_BRICKS.defaultBlockState();
             case WORN_ROAD_SURFACE -> Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
             case ROAD_TRANSITION_STEP -> Blocks.STONE_BRICK_SLAB.defaultBlockState();

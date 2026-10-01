@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.minecraft.profile;
 
 import com.cybersammy.citiesarise.core.geometry.GridSize;
+import com.cybersammy.citiesarise.core.earthwork.TerrainTransitionSettings;
 import com.cybersammy.citiesarise.core.planning.suburb.DevelopmentCapacity;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
@@ -110,6 +111,46 @@ public final class MinecraftSettlementProfileJsonParser {
                         planning,
                         "maxEarthworkVolume",
                         SuburbPlanningSettings.DEFAULT_MAX_EARTHWORK_VOLUME
+                ),
+                parseTerrainTransitionSettings(planning)
+        );
+    }
+
+    private static TerrainTransitionSettings parseTerrainTransitionSettings(JsonObject planning) {
+        TerrainTransitionSettings defaults = TerrainTransitionSettings.defaults();
+        if (!planning.has("terrainTransitions")) {
+            return defaults;
+        }
+        JsonObject transitions = requiredObject(planning, "terrainTransitions");
+        return new TerrainTransitionSettings(
+                optionalInt(
+                        transitions,
+                        "buildingAccessRunPerRise",
+                        defaults.buildingAccessRunPerRise()
+                ),
+                optionalInt(transitions, "roadShoulderRadius", defaults.roadShoulderRadius()),
+                optionalInt(
+                        transitions,
+                        "roadShoulderMaxFillDepth",
+                        defaults.roadShoulderMaxFillDepth()
+                ),
+                optionalInt(transitions, "parcelShoulderRadius", defaults.parcelShoulderRadius()),
+                optionalInt(
+                        transitions,
+                        "parcelShoulderMaxFillDepth",
+                        defaults.parcelShoulderMaxFillDepth()
+                ),
+                optionalInt(transitions, "buildingShoulderRadius", defaults.buildingShoulderRadius()),
+                optionalInt(
+                        transitions,
+                        "buildingShoulderMaxFillDepth",
+                        defaults.buildingShoulderMaxFillDepth()
+                ),
+                optionalBoolean(transitions, "retainingWalls", defaults.retainingWalls()),
+                optionalInt(
+                        transitions,
+                        "retainingWallMinimumHeight",
+                        defaults.retainingWallMinimumHeight()
                 )
         );
     }
@@ -230,6 +271,17 @@ public final class MinecraftSettlementProfileJsonParser {
             return defaultValue;
         }
         return requiredDouble(parent, name);
+    }
+
+    private static boolean optionalBoolean(JsonObject parent, String name, boolean defaultValue) {
+        if (!parent.has(name)) {
+            return defaultValue;
+        }
+        JsonElement element = requiredElement(parent, name);
+        if (!element.isJsonPrimitive() || !element.getAsJsonPrimitive().isBoolean()) {
+            throw new IllegalArgumentException(name + " must be a boolean");
+        }
+        return element.getAsBoolean();
     }
 
     private static JsonObject requiredObject(JsonObject parent, String name) {

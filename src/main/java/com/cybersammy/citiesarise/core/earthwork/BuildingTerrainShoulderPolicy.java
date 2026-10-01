@@ -24,11 +24,15 @@ public final class BuildingTerrainShoulderPolicy {
     }
 
     public static boolean contains(GridBounds bounds, GridPoint point) {
+        return contains(bounds, point, RADIUS);
+    }
+
+    public static boolean contains(GridBounds bounds, GridPoint point, int radius) {
         int distance = distanceFrom(bounds, point);
         if (distance == 0) {
             return false;
         }
-        return distance <= RADIUS;
+        return distance <= radius;
     }
 
     private static int axisDistance(int coordinate, int minimum, int maximumExclusive) {

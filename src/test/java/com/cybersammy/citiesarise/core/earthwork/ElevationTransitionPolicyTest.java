@@ -87,6 +87,24 @@ final class ElevationTransitionPolicyTest {
         assertFalse(ElevationTransitionPolicy.canMaterialize(transition, road, building));
     }
 
+    @Test
+    void profileCanRequireLongerRunBetweenBuildingAccessRises() {
+        ElevationZone road = road("road", bounds(0, 4, 3, 3), 64);
+        ElevationZone building = building("building", bounds(7, 4, 4, 4), 67);
+        ElevationTransition transition = new ElevationTransition(
+                ElevationTransitionType.BUILDING_ACCESS,
+                road.sourceElementId(),
+                building.sourceElementId(),
+                point(7, 5),
+                road.targetElevation(),
+                building.targetElevation(),
+                2
+        );
+
+        assertEquals(2, ElevationTransitionPolicy.maximumMaterializableDelta(transition, road));
+        assertFalse(ElevationTransitionPolicy.canMaterialize(transition, road, building));
+    }
+
     private static ElevationTransition transition(
             ElevationTransitionType type,
             ElevationZone source,

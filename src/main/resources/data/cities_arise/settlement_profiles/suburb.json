@@ -18,7 +18,18 @@
     "maxCutDepth": 6,
     "maxFillDepth": 8,
     "maxBuildingFoundationDepth": 6,
-    "maxEarthworkVolume": 20000
+    "maxEarthworkVolume": 20000,
+    "terrainTransitions": {
+      "buildingAccessRunPerRise": 2,
+      "roadShoulderRadius": 2,
+      "roadShoulderMaxFillDepth": 2,
+      "parcelShoulderRadius": 3,
+      "parcelShoulderMaxFillDepth": 3,
+      "buildingShoulderRadius": 3,
+      "buildingShoulderMaxFillDepth": 3,
+      "retainingWalls": true,
+      "retainingWallMinimumHeight": 2
+    }
   },
   "terrainPolicy": {
     "responses": {

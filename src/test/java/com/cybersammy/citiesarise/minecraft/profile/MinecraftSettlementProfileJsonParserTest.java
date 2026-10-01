@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.cybersammy.citiesarise.core.geometry.GridSize;
+import com.cybersammy.citiesarise.core.earthwork.TerrainTransitionSettings;
 import com.cybersammy.citiesarise.core.planning.suburb.DevelopmentCapacity;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
@@ -59,6 +60,38 @@ final class MinecraftSettlementProfileJsonParserTest {
                 new DevelopmentCapacity(4, 7, 10),
                 profile.suburbPlanningSettings().parcelCapacity()
         );
+    }
+
+    @Test
+    void parsesTerrainTransitionSettings() {
+        JsonObject json = validJson();
+        json.getAsJsonObject("planning").add("terrainTransitions", JsonParser.parseString("""
+                {
+                  "buildingAccessRunPerRise": 2,
+                  "roadShoulderRadius": 3,
+                  "roadShoulderMaxFillDepth": 3,
+                  "parcelShoulderRadius": 2,
+                  "parcelShoulderMaxFillDepth": 3,
+                  "buildingShoulderRadius": 4,
+                  "buildingShoulderMaxFillDepth": 3,
+                  "retainingWalls": true,
+                  "retainingWallMinimumHeight": 2
+                }
+                """));
+
+        SettlementProfile profile = parser.parse(id(), json);
+
+        assertEquals(
+                new TerrainTransitionSettings(2, 3, 3, 2, 3, 4, 3, true, 2),
+                profile.suburbPlanningSettings().terrainTransitions()
+        );
+    }
+
+    @Test
+    void oldProfileKeepsLegacyTerrainTransitionDefaults() {
+        SettlementProfile profile = parser.parse(id(), validJson());
+
+        assertEquals(TerrainTransitionSettings.defaults(), profile.suburbPlanningSettings().terrainTransitions());
     }
 
     @Test

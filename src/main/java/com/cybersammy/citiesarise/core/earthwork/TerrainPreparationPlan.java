@@ -12,11 +12,32 @@ public record TerrainPreparationPlan(
         List<TerrainPreparationArea> areas,
         List<TerrainPreparationColumn> columns,
         long cutVolume,
-        long fillVolume
+        long fillVolume,
+        TerrainTransitionSettings transitionSettings
 ) {
+    public TerrainPreparationPlan(
+            RegionalElevationPlan elevationPlan,
+            TerrainPreparationStatus status,
+            List<TerrainPreparationArea> areas,
+            List<TerrainPreparationColumn> columns,
+            long cutVolume,
+            long fillVolume
+    ) {
+        this(
+                elevationPlan,
+                status,
+                areas,
+                columns,
+                cutVolume,
+                fillVolume,
+                TerrainTransitionSettings.defaults()
+        );
+    }
+
     public TerrainPreparationPlan {
         Objects.requireNonNull(elevationPlan, "elevationPlan");
         Objects.requireNonNull(status, "status");
+        Objects.requireNonNull(transitionSettings, "transitionSettings");
         areas = immutableAreas(areas);
         columns = immutableColumns(columns);
         requireSuccessfulStatus(status);
@@ -32,7 +53,17 @@ public record TerrainPreparationPlan(
             List<TerrainPreparationArea> areas,
             List<TerrainPreparationColumn> columns
     ) {
+        return of(elevationPlan, areas, columns, TerrainTransitionSettings.defaults());
+    }
+
+    public static TerrainPreparationPlan of(
+            RegionalElevationPlan elevationPlan,
+            List<TerrainPreparationArea> areas,
+            List<TerrainPreparationColumn> columns,
+            TerrainTransitionSettings transitionSettings
+    ) {
         Objects.requireNonNull(elevationPlan, "elevationPlan");
+        Objects.requireNonNull(transitionSettings, "transitionSettings");
         List<TerrainPreparationArea> immutableAreas = immutableAreas(areas);
         List<TerrainPreparationColumn> immutableColumns = immutableColumns(columns);
         long cutVolume = sumColumnCutVolume(immutableColumns);
@@ -44,7 +75,8 @@ public record TerrainPreparationPlan(
                 immutableAreas,
                 immutableColumns,
                 cutVolume,
-                fillVolume
+                fillVolume,
+                transitionSettings
         );
     }
 

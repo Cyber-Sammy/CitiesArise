@@ -31,7 +31,7 @@ public final class ElevationTransitionPolicy {
             return 1;
         }
         GridPoint start = nearestPoint(source.bounds(), transition.anchor());
-        return manhattanDistance(start, transition.anchor());
+        return manhattanDistance(start, transition.anchor()) / transition.minimumRunPerRise();
     }
 
     public static List<TransitionPoint> materialize(

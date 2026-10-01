@@ -12,6 +12,8 @@ import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningResult;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbTerrainDiagnostic;
 import com.cybersammy.citiesarise.core.planning.suburb.TerrainPreparationLimitDiagnostic;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
+import com.cybersammy.citiesarise.core.validation.PlanValidationError;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -25,8 +27,24 @@ public record SuburbDebugPlanResult(
         SuburbPlanningFailureReason failureReason,
         SuburbTerrainDiagnostic terrainDiagnostic,
         TerrainPreparationPlan terrainPreparationPlan,
-        EarthworkSiteAssessment siteAssessment
+        EarthworkSiteAssessment siteAssessment,
+        List<PlanValidationError> validationErrors
 ) {
+    public SuburbDebugPlanResult(
+            SettlementRegion region,
+            GridBounds surveyBounds,
+            long seed,
+            boolean successful,
+            SettlementPlan plan,
+            SuburbPlanningFailureReason failureReason,
+            SuburbTerrainDiagnostic terrainDiagnostic,
+            TerrainPreparationPlan terrainPreparationPlan,
+            EarthworkSiteAssessment siteAssessment
+    ) {
+        this(region, surveyBounds, seed, successful, plan, failureReason, terrainDiagnostic,
+                terrainPreparationPlan, siteAssessment, List.of());
+    }
+
     public SuburbDebugPlanResult(
             SettlementRegion region,
             GridBounds surveyBounds,
@@ -53,6 +71,7 @@ public record SuburbDebugPlanResult(
     }
 
     public SuburbDebugPlanResult {
+        validationErrors = List.copyOf(validationErrors);
         Objects.requireNonNull(region, "region");
         Objects.requireNonNull(surveyBounds, "surveyBounds");
         rejectMissingOutcome(successful, plan, failureReason);
@@ -77,7 +96,8 @@ public record SuburbDebugPlanResult(
                 result.failureReason().orElse(null),
                 result.terrainDiagnostic().orElse(null),
                 result.terrainPreparationPlan().orElse(null),
-                result.siteAssessment().orElse(null)
+                result.siteAssessment().orElse(null),
+                result.validationErrors()
         );
     }
 
@@ -134,7 +154,19 @@ public record SuburbDebugPlanResult(
                 .map(Enum::name)
                 .orElse("UNKNOWN");
 
-        return baseSummary() + ", rejected=" + reason + terrainDiagnosticSummary();
+        return baseSummary() + ", rejected=" + reason + terrainDiagnosticSummary() + validationSummary();
+    }
+
+    private String validationSummary() {
+        if (validationErrors.isEmpty()) {
+            return "";
+        }
+        return ", validationErrorCount=" + validationErrors.size() + ", validationErrors="
+                + validationErrors.stream().limit(5).map(error ->
+                        "(code=" + error.code()
+                                + ", element=" + error.elementId().map(id -> id.value()).orElse("none")
+                                + ", message=" + error.message() + ")"
+                ).toList();
     }
 
     private String successSummary() {

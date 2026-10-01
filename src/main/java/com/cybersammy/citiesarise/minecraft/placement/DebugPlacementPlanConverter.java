@@ -103,6 +103,10 @@ public final class DebugPlacementPlanConverter {
         if (role == null) {
             return;
         }
+        if (column.type() == TerrainPreparationColumnType.RETAINING_WALL) {
+            addRetainingWallOperations(column, operations);
+            return;
+        }
         DebugBlockPlacementOperation operation = new DebugBlockPlacementOperation(
                 column.point(),
                 SURFACE_OFFSET,
@@ -113,10 +117,27 @@ public final class DebugPlacementPlanConverter {
         addOperation(operation, operations);
     }
 
+    private static void addRetainingWallOperations(
+            TerrainPreparationColumn column,
+            Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations
+    ) {
+        int minimumOffset = Math.subtractExact(1, column.fillDepth());
+        for (int offset = minimumOffset; offset <= SURFACE_OFFSET; offset++) {
+            addOperation(new DebugBlockPlacementOperation(
+                    column.point(),
+                    offset,
+                    DebugPlacementRole.TERRAIN_RETAINING_WALL,
+                    column.sourceElementId(),
+                    OptionalInt.of(column.targetElevation())
+            ), operations);
+        }
+    }
+
     private static DebugPlacementRole preparationRole(TerrainPreparationColumnType type) {
         return switch (type) {
             case PLATFORM -> null;
             case BUILDING_SHOULDER, PARCEL_SHOULDER, ROAD_SHOULDER -> DebugPlacementRole.TERRAIN_SURFACE;
+            case RETAINING_WALL -> DebugPlacementRole.TERRAIN_RETAINING_WALL;
             case ROAD_TRANSITION_STEP -> DebugPlacementRole.ROAD_TRANSITION_STEP;
             case BUILDING_ACCESS -> DebugPlacementRole.BUILDING_ACCESS_SURFACE;
             case BUILDING_ACCESS_STEP -> DebugPlacementRole.BUILDING_ACCESS_STEP;

@@ -71,7 +71,7 @@ final class AdaptiveSuburbLayoutSelectorTest {
                 Optional.of(RoadGraph.empty()),
                 List.of(parcelBounds),
                 List.of(
-                        new PotentialTerrainPreparationFootprint(parcelBounds, 0),
+                        new PotentialTerrainPreparationFootprint(parcelBounds, 3, 0),
                         new PotentialTerrainPreparationFootprint(bounds(8, 8, 4, 4), 3)
                 )
         );
@@ -87,6 +87,10 @@ final class AdaptiveSuburbLayoutSelectorTest {
         ).orElseThrow();
 
         assertSame(preferredLayout, selected.layout());
+        PotentialTerrainPreparationFootprint parcelFootprint =
+                selected.layout().terrainPreparationFootprints().getFirst();
+        assertEquals(3, parcelFootprint.modificationRadius());
+        assertEquals(0, parcelFootprint.requiredSupportRadius());
     }
 
     @Test

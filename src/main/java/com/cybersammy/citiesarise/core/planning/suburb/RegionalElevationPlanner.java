@@ -41,7 +41,10 @@ final class RegionalElevationPlanner {
                 settlementPlan.properties()
         );
         List<ElevationZone> zones = elevationZones(elevatedPlan);
-        RegionalElevationPlan elevationPlan = new RegionalElevationPlan(zones, elevationTransitions(elevatedPlan, zones));
+        RegionalElevationPlan elevationPlan = new RegionalElevationPlan(
+                zones,
+                elevationTransitions(request, elevatedPlan, zones)
+        );
         return new RegionalElevationPlanningResult(elevatedPlan, elevationPlan);
     }
 
@@ -144,13 +147,18 @@ final class RegionalElevationPlanner {
     }
 
     private static List<ElevationTransition> elevationTransitions(
+            SuburbPlanningRequest request,
             SettlementPlan plan,
             List<ElevationZone> zones
     ) {
         Map<PlanElementId, RoadNode> nodesById = nodesById(plan.roadGraph());
         List<ElevationTransition> transitions = new ArrayList<>();
         addRoadTransitions(plan.roadGraph(), nodesById, transitions);
-        addBuildingAccessTransitions(zones, transitions);
+        addBuildingAccessTransitions(
+                zones,
+                request.settings().terrainTransitions().buildingAccessRunPerRise(),
+                transitions
+        );
         return List.copyOf(transitions);
     }
 
@@ -182,6 +190,7 @@ final class RegionalElevationPlanner {
 
     private static void addBuildingAccessTransitions(
             List<ElevationZone> zones,
+            int minimumRunPerRise,
             List<ElevationTransition> transitions
     ) {
         List<ElevationZone> buildingZones = zones.stream()
@@ -196,7 +205,8 @@ final class RegionalElevationPlanner {
                     buildingZone.sourceElementId(),
                     access.anchor(),
                     access.roadZone().targetElevation(),
-                    buildingZone.targetElevation()
+                    buildingZone.targetElevation(),
+                    minimumRunPerRise
             ));
         }
     }

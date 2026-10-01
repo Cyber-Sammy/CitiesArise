@@ -3,6 +3,7 @@ package com.cybersammy.citiesarise.core.planning.suburb;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
 
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
@@ -19,6 +20,8 @@ import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopology;
 import com.cybersammy.citiesarise.core.terrain.topology.TerrainTopologyAnalyzer;
 import java.util.Map;
+import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -28,6 +31,31 @@ final class TerrainDerivedRoadSkeletonPlannerTest {
     private static final PlanElementId SETTLEMENT_ID = new PlanElementId("settlement/test");
     private static final PlanTag MAIN_ROAD = new PlanTag("main_road");
     private final TerrainDerivedRoadSkeletonPlanner planner = new TerrainDerivedRoadSkeletonPlanner();
+
+    @Test
+    void rectangleFastPathMatchesCellBasedSearch() {
+        for (GridBounds envelope : List.of(
+                bounds(-17, 23, 40, 30), bounds(12, -30, 30, 60),
+                bounds(-15, -21, 31, 31), bounds(0, 0, 32, 32))) {
+            DistrictFootprint cells = DistrictFootprint.fromTopology(
+                    envelope, topology(envelope, point -> true)
+            ).orElseThrow();
+            assertFalse(cells.rectangular());
+            for (long seed = 0; seed < 8; seed++) {
+                assertEquals(plan(cells, seed), plan(DistrictFootprint.rectangle(envelope), seed));
+            }
+        }
+    }
+
+    @Test
+    void repeatedRectanglePlanningDoesNotScanTheArea() {
+        DistrictFootprint rectangle = DistrictFootprint.rectangle(bounds(-600, -360, 1200, 720));
+        assertTimeout(Duration.ofSeconds(3), () -> {
+            for (int index = 0; index < 100; index++) {
+                assertFalse(plan(rectangle, index).segments().isEmpty());
+            }
+        });
+    }
 
     @Test
     void followsTheLongHorizontalAxisOfAWideFootprint() {

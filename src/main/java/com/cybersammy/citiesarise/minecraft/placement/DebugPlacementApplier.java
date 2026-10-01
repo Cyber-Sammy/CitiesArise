@@ -4,6 +4,9 @@ import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftVegetationClassifier;
 import java.util.Objects;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
@@ -12,7 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 public final class DebugPlacementApplier {
-    private static final int UPDATE_FLAGS = 3;
+    private static final int UPDATE_FLAGS = 2;
 
     private final DebugBlockMaterialProvider materialProvider;
     private final DebugPlacementUndoStore undoStore;
@@ -37,8 +40,17 @@ public final class DebugPlacementApplier {
         int placedBlocks = 0;
         DebugPlacementSnapshotBuilder snapshotBuilder = new DebugPlacementSnapshotBuilder();
 
+        Map<GridPoint, Integer> baseElevations = new LinkedHashMap<>();
         for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
-            applyOperation(level, operation, snapshotBuilder);
+            baseElevations.computeIfAbsent(operation.point(), point -> {
+                int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, point.x(), point.z());
+                int base = operation.platformY().orElseGet(() -> placementY(level, point.x(), point.z(), top));
+                clearVegetationAbove(level, point.x(), base, point.z(), top, snapshotBuilder);
+                return base;
+            });
+        }
+        for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
+            applyOperation(level, operation, baseElevations.get(operation.point()), snapshotBuilder);
             placedBlocks++;
         }
 
@@ -70,19 +82,18 @@ public final class DebugPlacementApplier {
     private void applyOperation(
             ServerLevel level,
             DebugBlockPlacementOperation operation,
+            int sampledBaseY,
             DebugPlacementSnapshotBuilder snapshotBuilder
     ) {
         int x = operation.point().x();
         int z = operation.point().z();
-        int topHeight = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z);
-        int baseY = placementY(level, x, z, topHeight);
+        int baseY = operation.platformY().orElse(sampledBaseY);
         int targetY = targetY(level, baseY, operation.verticalOffset());
         BlockState state = materialProvider.blockState(operation.role());
         BlockPos position = new BlockPos(x, targetY, z);
 
         snapshotBuilder.capture(position, level.getBlockState(position));
         level.setBlock(position, state, UPDATE_FLAGS);
-        clearVegetationAbove(level, x, baseY, z, topHeight, snapshotBuilder);
     }
 
     private int placementY(ServerLevel level, int x, int z, int topHeight) {

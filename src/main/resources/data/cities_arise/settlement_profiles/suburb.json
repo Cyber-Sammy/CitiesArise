@@ -19,6 +19,15 @@
     "maxFillDepth": 8,
     "maxBuildingFoundationDepth": 6,
     "maxEarthworkVolume": 20000,
+    "buildings": {
+      "pool": [
+        {"asset": "cities_arise:cottage", "weight": 3},
+        {"asset": "cities_arise:bungalow", "weight": 2},
+        {"asset": "cities_arise:studio", "weight": 1}
+      ],
+      "palettes": ["oak", "stone"],
+      "fallback": "cities_arise:placeholder"
+    },
     "terrainTransitions": {
       "buildingAccessRunPerRise": 2,
       "roadShoulderRadius": 2,

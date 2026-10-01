@@ -9,7 +9,7 @@ The long-term goal is to create suburbs, villages, towns, city fragments, indust
 - Minecraft version: 1.21.1
 - NeoForge version: 21.1.227
 - Current implementation: core planner with debug tools and config-gated Structure API worldgen placement
-- Generation gameplay: disabled by default and limited to vanilla placeholder suburb content
+- Generation gameplay: disabled by default; the built-in suburb includes three procedural vanilla house variants
 
 ## How It Will Work
 
@@ -246,7 +246,27 @@ Successful debug summaries report `terrain=ACCEPTED` when no cut or fill is requ
 
 Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, minimum/target/maximum parcel count `128`, parcel width/depth `64`, building margin `8`, cut/fill depth `16`, and total earthwork volume `1000000`.
 
-House assets are future work. The intended direction is a separate provider layer where profiles can reference building pools, weights, footprints, tags, palettes, and structure/NBT assets. The core planner will still work with abstract building slots and provider ids; Minecraft-specific assets will stay in the Minecraft/content layer.
+The built-in suburb now selects three procedural vanilla assets: `cities_arise:cottage` (gable roof), `cities_arise:bungalow` (hip roof), and `cities_arise:studio` (flat roof with a parapet). Houses have glass windows, an oriented two-block oak door at the prepared entrance, ceiling lighting, and a crafting table/bookshelf where space permits. Palettes are `oak` and `stone`; the existing decay transform changes the roof material. These are a first vanilla content set, not imported structure templates.
+
+An optional `planning.buildings` object configures deterministic weighted selection:
+
+```json
+"buildings": {
+  "pool": [
+    {"asset": "cities_arise:cottage", "weight": 3},
+    {"asset": "cities_arise:bungalow", "weight": 2},
+    {"asset": "cities_arise:studio", "weight": 1}
+  ],
+  "palettes": ["oak", "stone"],
+  "fallback": "cities_arise:placeholder"
+}
+```
+
+Procedural houses fit reserved slots between 5 and 32 blocks on each side, with no overhang outside their approved footprint. Incompatible assets are excluded before weighted selection. The declared fallback must fit the profile; assets are never silently clipped. Pools have 1–16 unique entries with integer weights 1–1000; palettes must be a nonempty unique subset of `oak` and `stone`. Missing `buildings` preserves legacy placeholder behavior. Invalid asset ids, weights, palettes, or fallbacks reject the profile with the existing profile diagnostics.
+
+Asset and palette choices appear in building-slot properties in plan dumps and participate in cache identity through planning settings. Chunk placement snapshots persist the resulting material roles, including both door halves. Old snapshot role ids are unchanged. Late vegetation cleanup asks the resolved material provider which generated positions need protection, rather than assuming only walls can contain logs.
+
+Generic NBT/template loading, external provider registration, block-entity furniture/loot, and more extensive decay remain future work. Debug undo still restores block states only; it does not restore block-entity contents.
 
 ## Build
 
@@ -289,3 +309,11 @@ The debug suburb planner can also be tuned from the same common config:
 - `debugPlacementUndoEnabled`: stores one previous debug placement state for `/citiesarise debug undo`.
 
 Full content providers, building asset pools, and external integration points are not implemented yet. This document will be updated as those features become real.
+
+## Playable suburb verification
+
+Run `.\gradlew.bat test` for deterministic planner, content-selection, parser, entrance, and placement regressions. The synthetic acceptance fixtures use seed `42` and survey origin `(0, 0)` for plains, gentle rolling terrain, forest-classified ground, shoreline, and rejected ravine terrain. Their timing report is written to `build/reports/playable-suburb/acceptance.csv`; these numbers measure synthetic planning, not live-world locate latency.
+
+Run `.\gradlew.bat runGameTestServer` for the separate development-only GameTest source set. It exercises real block states, doors, cross-chunk StructurePiece placement after NBT reconstruction, debug placement/undo, and material-driven late vegetation protection. Test classes and templates are excluded from the distributed mod JAR. This fixture does not simulate a complete normal-world server restart or the full biome decoration lifecycle.
+
+With planning logging enabled, uncached planning reports terrain sampling, base planning, exact refinement, transform, and total durations. Final acceptance still includes an ordinary newly generated world: check road-to-door access, roofs and foundations on slopes, trees at chunk edges, and save/reopen the world. The previous `INVALID_PLAN` report has no retained seed/coordinates and is not claimed fixed by this content change.

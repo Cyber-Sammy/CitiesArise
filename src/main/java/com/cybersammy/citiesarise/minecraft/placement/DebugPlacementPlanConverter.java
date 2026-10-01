@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.OptionalInt;
 
 public final class DebugPlacementPlanConverter {
+    private static final BuildingPlacementProvider BUILDING_PROVIDER = new VanillaBuildingPlacementProvider();
     private static final int SURFACE_OFFSET = 0;
     private static final int FOUNDATION_OFFSET = -1;
     private static final int FIRST_WALL_OFFSET = 1;
@@ -364,6 +365,13 @@ public final class DebugPlacementPlanConverter {
             Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (BuildingSlot buildingSlot : plan.buildingSlots()) {
+            if (buildingSlot.properties().find(PlanPropertyKeys.BUILDING_ASSET).isPresent()) {
+                GridPoint entrance = doorwayPoint(buildingSlot.bounds(), buildingAccessAnchors.get(buildingSlot.id()));
+                for (var operation : BUILDING_PROVIDER.create(buildingSlot, entrance)) {
+                    addOperation(operation, operationsByPosition);
+                }
+                continue;
+            }
             DebugPlacementRole wallRole = buildingWallRole(buildingSlot);
             DebugPlacementRole roofRole = buildingRoofRole(buildingSlot);
 

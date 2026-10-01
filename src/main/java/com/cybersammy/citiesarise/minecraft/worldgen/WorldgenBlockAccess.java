@@ -1,6 +1,8 @@
 package com.cybersammy.citiesarise.minecraft.worldgen;
 
 interface WorldgenBlockAccess {
+    boolean needsVegetationProtection(com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole role);
+
     int minBuildHeight();
 
     int maxBuildHeight();

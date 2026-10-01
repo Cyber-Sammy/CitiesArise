@@ -367,6 +367,35 @@ final class MinecraftSettlementProfileJsonParserTest {
         );
     }
 
+    @Test
+    void parsesWeightedBuildingContentAndPreservesLegacyProfiles() {
+        var legacy = parser.parse(id(), validJson()).suburbPlanningSettings();
+        assertEquals(com.cybersammy.citiesarise.core.building.BuildingContentSettings.legacy(), legacy.buildings());
+        JsonObject input = validJson();
+        input.getAsJsonObject("planning").add("buildings", JsonParser.parseString("""
+                {"pool":[{"asset":"cities_arise:cottage","weight":3}],
+                 "palettes":["oak","stone"],"fallback":"cities_arise:placeholder"}
+                """));
+        var configured = parser.parse(id(), input).suburbPlanningSettings();
+        assertEquals(3, configured.buildings().pool().getFirst().weight());
+        assertEquals(2, configured.buildings().palettes().size());
+    }
+
+    @Test
+    void rejectsMalformedBuildingPoolsWithoutSilentlyUsingDefaults() {
+        for (String invalid : new String[] {
+                "{}",
+                "{\"pool\":[],\"palettes\":[\"oak\"],\"fallback\":\"cities_arise:placeholder\"}",
+                "{\"pool\":[{\"asset\":\"unknown:house\",\"weight\":1}],\"palettes\":[\"oak\"],\"fallback\":\"cities_arise:placeholder\"}",
+                "{\"pool\":[{\"asset\":\"cities_arise:cottage\",\"weight\":1.5}],\"palettes\":[\"oak\"],\"fallback\":\"cities_arise:placeholder\"}",
+                "{\"pool\":[{\"asset\":\"cities_arise:cottage\",\"weight\":1}],\"palettes\":[\"unknown\"],\"fallback\":\"cities_arise:placeholder\"}"
+        }) {
+            JsonObject input = validJson();
+            input.getAsJsonObject("planning").add("buildings", JsonParser.parseString(invalid));
+            assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), input), invalid);
+        }
+    }
+
     private static JsonObject validJson() {
         return json("""
                 {

@@ -1,6 +1,8 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
 import com.cybersammy.citiesarise.core.earthwork.TerrainTransitionSettings;
+import com.cybersammy.citiesarise.core.building.BuildingContentSettings;
+import com.cybersammy.citiesarise.core.geometry.GridSize;
 import java.util.Objects;
 
 public record SuburbPlanningSettings(
@@ -17,8 +19,24 @@ public record SuburbPlanningSettings(
         int maxFillDepth,
         int maxBuildingFoundationDepth,
         long maxEarthworkVolume,
-        TerrainTransitionSettings terrainTransitions
+        TerrainTransitionSettings terrainTransitions,
+        BuildingContentSettings buildings
 ) {
+    public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, DevelopmentCapacity parcelCapacity,
+            int parcelWidth, int parcelDepth, int buildingMargin, int maxElevationRange,
+            int preferredMaxCutDepth, int preferredMaxFillDepth, int maxCutDepth, int maxFillDepth,
+            int maxBuildingFoundationDepth, long maxEarthworkVolume, TerrainTransitionSettings terrainTransitions) {
+        this(roadWidth, maxBuildableSlope, parcelCapacity, parcelWidth, parcelDepth, buildingMargin,
+                maxElevationRange, preferredMaxCutDepth, preferredMaxFillDepth, maxCutDepth, maxFillDepth,
+                maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, BuildingContentSettings.legacy());
+    }
+
+    public SuburbPlanningSettings withBuildings(BuildingContentSettings content) {
+        return new SuburbPlanningSettings(roadWidth, maxBuildableSlope, parcelCapacity, parcelWidth, parcelDepth,
+                buildingMargin, maxElevationRange, preferredMaxCutDepth, preferredMaxFillDepth, maxCutDepth,
+                maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, content);
+    }
+
     public static final int DEFAULT_ROAD_WIDTH = 3;
     public static final double DEFAULT_MAX_BUILDABLE_SLOPE = 0.25;
     public static final int DEFAULT_TARGET_PARCEL_COUNT = 6;
@@ -270,6 +288,11 @@ public record SuburbPlanningSettings(
         requireNonNegative(maxBuildingFoundationDepth, "maxBuildingFoundationDepth");
         requireNonNegative(maxEarthworkVolume, "maxEarthworkVolume");
         terrainTransitions = Objects.requireNonNull(terrainTransitions, "terrainTransitions");
+        buildings = Objects.requireNonNull(buildings, "buildings");
+        if (!buildings.fallback().fits(new GridSize(
+                buildingSize(parcelWidth, buildingMargin), buildingSize(parcelDepth, buildingMargin)))) {
+            throw new IllegalArgumentException("Building fallback must fit the profile slot size");
+        }
         requirePreferredLimitWithinMaximum(preferredMaxCutDepth, maxCutDepth, "preferredMaxCutDepth");
         requirePreferredLimitWithinMaximum(preferredMaxFillDepth, maxFillDepth, "preferredMaxFillDepth");
         requirePreferredLimitWithinMaximum(
@@ -325,7 +348,8 @@ public record SuburbPlanningSettings(
                 maxFillDepth,
                 maxBuildingFoundationDepth,
                 maxEarthworkVolume,
-                transitions
+                transitions,
+                buildings
         );
     }
 

@@ -401,6 +401,11 @@ class WorldgenPlacementApplierTest {
     }
 
     private static final class FakeWorldgenBlockAccess implements WorldgenBlockAccess {
+        @Override
+        public boolean needsVegetationProtection(DebugPlacementRole role) {
+            return role == DebugPlacementRole.BUILDING_WALL || role == DebugPlacementRole.DECAYED_BUILDING_WALL;
+        }
+
         private final Map<WorldgenBlockPosition, WorldgenSurfaceMaterial> states = new HashMap<>();
         private final Map<GridPoint, Integer> surfaceHeights = new HashMap<>();
         private final List<WorldgenBlockPosition> reads = new ArrayList<>();

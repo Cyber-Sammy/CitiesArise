@@ -1,5 +1,6 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
+import com.cybersammy.citiesarise.core.building.BuildingSelector;
 import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteAssessment;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
@@ -623,7 +624,8 @@ public final class SuburbPlanner {
         List<BuildingSlot> buildingSlots = new ArrayList<>();
 
         for (int index = 0; index < parcels.size(); index++) {
-            buildingSlots.add(buildingSlot(request, parcels.get(index), index));
+            buildingSlots.add(BuildingSelector.select(
+                    buildingSlot(request, parcels.get(index), index), request.seed(), request.settings().buildings()));
         }
 
         return List.copyOf(buildingSlots);

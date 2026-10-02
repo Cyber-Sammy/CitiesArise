@@ -1,0 +1,899 @@
+{
+  "version": 1,
+  "modules": {
+    "test:ground": {
+      "size": [
+        7,
+        5,
+        7
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            6,
+            4,
+            6
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            6,
+            0,
+            6
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            6,
+            4,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            6
+          ],
+          "to": [
+            6,
+            4,
+            6
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            4,
+            5
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            6,
+            1,
+            1
+          ],
+          "to": [
+            6,
+            4,
+            5
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            6,
+            4,
+            6
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            2,
+            2,
+            6
+          ],
+          "to": [
+            4,
+            2,
+            6
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            3,
+            1,
+            0
+          ],
+          "to": [
+            3,
+            2,
+            0
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            5,
+            0,
+            3
+          ],
+          "to": [
+            5,
+            4,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        }
+      ],
+      "joints": [
+        {
+          "id": "entrance",
+          "type": "test:entrance",
+          "accepts": [],
+          "at": [
+            3,
+            1,
+            0
+          ],
+          "face": "north",
+          "height": 2,
+          "external": true
+        },
+        {
+          "id": "up",
+          "type": "test:up",
+          "accepts": [
+            "test:down"
+          ],
+          "at": [
+            5,
+            5,
+            3
+          ],
+          "face": "up",
+          "optional": false,
+          "capMaterial": "floor"
+        }
+      ],
+      "tags": [
+        "test:style"
+      ],
+      "contract": {
+        "clearance": [
+          [
+            3,
+            1,
+            1
+          ],
+          [
+            3,
+            2,
+            1
+          ]
+        ],
+        "supports": [
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            6,
+            -1,
+            6
+          ]
+        ],
+        "mounts": [
+          {
+            "id": "work_corner",
+            "at": [
+              1,
+              1,
+              3
+            ],
+            "size": [
+              2,
+              1,
+              1
+            ],
+            "pool": [
+              "test:desk"
+            ],
+            "requiredTags": [
+              "test:interior"
+            ]
+          }
+        ],
+        "routes": [
+          {
+            "id": "entrance_to_stairs",
+            "from": [
+              3,
+              1,
+              1
+            ],
+            "to": [
+              5,
+              1,
+              3
+            ],
+            "bodyHeight": 2
+          },
+          {
+            "id": "stairs_to_next_floor",
+            "from": [
+              5,
+              1,
+              3
+            ],
+            "to": [
+              5,
+              4,
+              3
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "test:upper": {
+      "size": [
+        7,
+        5,
+        7
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            6,
+            4,
+            6
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            6,
+            0,
+            6
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            6,
+            4,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            6
+          ],
+          "to": [
+            6,
+            4,
+            6
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            4,
+            5
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            6,
+            1,
+            1
+          ],
+          "to": [
+            6,
+            4,
+            5
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            6,
+            4,
+            6
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            2,
+            2,
+            6
+          ],
+          "to": [
+            4,
+            2,
+            6
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            3,
+            1,
+            0
+          ],
+          "to": [
+            3,
+            2,
+            0
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            5,
+            0,
+            3
+          ],
+          "to": [
+            5,
+            4,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        }
+      ],
+      "joints": [
+        {
+          "id": "down",
+          "type": "test:down",
+          "accepts": [
+            "test:up"
+          ],
+          "at": [
+            5,
+            0,
+            3
+          ],
+          "face": "down"
+        },
+        {
+          "id": "up",
+          "type": "test:up",
+          "accepts": [
+            "test:down"
+          ],
+          "at": [
+            5,
+            5,
+            3
+          ],
+          "face": "up",
+          "optional": true,
+          "capMaterial": "floor"
+        }
+      ],
+      "tags": [
+        "test:style"
+      ],
+      "variants": [
+        {
+          "id": "test:weathered",
+          "severity": 50,
+          "fills": [
+            {
+              "from": [
+                0,
+                0,
+                0
+              ],
+              "to": [
+                6,
+                4,
+                6
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                0,
+                0
+              ],
+              "to": [
+                6,
+                0,
+                6
+              ],
+              "material": "floor"
+            },
+            {
+              "from": [
+                0,
+                1,
+                0
+              ],
+              "to": [
+                6,
+                4,
+                0
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                6
+              ],
+              "to": [
+                6,
+                4,
+                6
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                4,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                6,
+                1,
+                1
+              ],
+              "to": [
+                6,
+                4,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                4,
+                0
+              ],
+              "to": [
+                6,
+                4,
+                6
+              ],
+              "material": "floor"
+            },
+            {
+              "from": [
+                2,
+                2,
+                6
+              ],
+              "to": [
+                4,
+                2,
+                6
+              ],
+              "material": "glass"
+            },
+            {
+              "from": [
+                3,
+                1,
+                0
+              ],
+              "to": [
+                3,
+                2,
+                0
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                5,
+                0,
+                3
+              ],
+              "to": [
+                5,
+                4,
+                3
+              ],
+              "material": "minecraft:ladder[facing=west]"
+            },
+            {
+              "from": [
+                1,
+                3,
+                6
+              ],
+              "to": [
+                2,
+                3,
+                6
+              ],
+              "material": "minecraft:air"
+            }
+          ],
+          "closedJoints": [],
+          "addedJoints": []
+        }
+      ],
+      "contract": {
+        "clearance": [
+          [
+            3,
+            1,
+            1
+          ],
+          [
+            3,
+            2,
+            1
+          ]
+        ],
+        "supports": [
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            6,
+            -1,
+            6
+          ]
+        ],
+        "mounts": [
+          {
+            "id": "work_corner",
+            "at": [
+              1,
+              1,
+              3
+            ],
+            "size": [
+              2,
+              1,
+              1
+            ],
+            "pool": [
+              "test:desk"
+            ],
+            "requiredTags": [
+              "test:interior"
+            ]
+          }
+        ],
+        "routes": [
+          {
+            "id": "entrance_to_stairs",
+            "from": [
+              3,
+              1,
+              1
+            ],
+            "to": [
+              5,
+              1,
+              3
+            ],
+            "bodyHeight": 2
+          },
+          {
+            "id": "arrival_from_lower_floor",
+            "from": [
+              5,
+              0,
+              3
+            ],
+            "to": [
+              3,
+              1,
+              1
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "test:lamp": {
+      "size": [
+        1,
+        3,
+        1
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            1,
+            0
+          ],
+          "material": "minecraft:stone_brick_wall"
+        }
+      ],
+      "cells": [
+        {
+          "at": [
+            0,
+            2,
+            0
+          ],
+          "material": "minecraft:sea_lantern"
+        }
+      ],
+      "tags": [
+        "test:style"
+      ]
+    },
+    "test:desk": {
+      "size": [
+        2,
+        1,
+        1
+      ],
+      "tags": [
+        "test:style",
+        "test:interior"
+      ],
+      "cells": [
+        {
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "material": "minecraft:crafting_table"
+        },
+        {
+          "at": [
+            1,
+            0,
+            0
+          ],
+          "material": "minecraft:bookshelf"
+        }
+      ],
+      "contract": {
+        "supports": [
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            1,
+            -1,
+            0
+          ]
+        ]
+      }
+    }
+  },
+  "compositions": {
+    "test:stack": {
+      "roots": [
+        "test:ground"
+      ],
+      "attachments": [
+        "test:upper"
+      ],
+      "entranceJoint": "entrance",
+      "requiredTags": [
+        "test:style"
+      ],
+      "minimumModules": 2,
+      "maximumModules": 2,
+      "maximumHeight": 12
+    }
+  },
+  "assets": {
+    "test:house": {
+      "provider": "modules",
+      "minimumSize": 7,
+      "maximumSize": 32,
+      "height": 10,
+      "parameters": {
+        "composition": "test:stack"
+      }
+    },
+    "test:empty": {
+      "provider": "placeholder",
+      "minimumSize": 1,
+      "maximumSize": 64,
+      "height": 5
+    }
+  },
+  "palettes": {
+    "test:palette": {
+      "wall": "minecraft:polished_andesite",
+      "floor": "minecraft:stone_bricks",
+      "glass": "minecraft:glass"
+    }
+  },
+  "surfaces": {
+    "ROAD_SURFACE": "minecraft:deepslate_tiles",
+    "PARCEL_BOUNDARY": "minecraft:stone_bricks",
+    "FOUNDATION": "minecraft:andesite",
+    "TERRAIN_FILL": "minecraft:stone"
+  },
+  "props": {
+    "test:yard_lamp": {
+      "anchor": "parcel_corner",
+      "pool": [
+        "test:lamp"
+      ],
+      "palette": "test:palette",
+      "inset": 1,
+      "requiredTags": [
+        "test:style"
+      ]
+    },
+    "test:road_lamp": {
+      "anchor": "road_edge",
+      "pool": [
+        "test:lamp"
+      ],
+      "palette": "test:palette",
+      "inset": 3,
+      "requiredTags": [
+        "test:style"
+      ],
+      "spacing": 8
+    }
+  },
+  "materialRules": {
+    "passable": [
+      "minecraft:air",
+      "minecraft:ladder[facing=west]"
+    ],
+    "supportive": [
+      "floor",
+      "wall"
+    ],
+    "climbable": [
+      "minecraft:ladder[facing=west]"
+    ]
+  },
+  "surfaceTemplates": {
+    "ROAD_SURFACE": {
+      "size": [
+        2,
+        2,
+        2
+      ],
+      "alignToRoad": true,
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            1,
+            0,
+            1
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            1,
+            1,
+            1
+          ],
+          "material": "minecraft:deepslate_tiles"
+        }
+      ],
+      "cells": [
+        {
+          "at": [
+            0,
+            1,
+            0
+          ],
+          "material": "minecraft:polished_deepslate"
+        }
+      ]
+    },
+    "PARCEL_YARD": {
+      "size": [
+        2,
+        1,
+        2
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            1,
+            0,
+            1
+          ],
+          "material": "minecraft:grass_block"
+        }
+      ],
+      "cells": [
+        {
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "material": "minecraft:moss_block"
+        }
+      ]
+    }
+  }
+}

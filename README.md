@@ -10,6 +10,27 @@ The long-term goal is to create suburbs, villages, towns, city fragments, indust
 - NeoForge version: 21.1.227
 - Current implementation: core planner with debug tools and config-gated Structure API worldgen placement
 - Generation gameplay: disabled by default; the built-in suburb includes three procedural vanilla house variants
+- Content: reloadable datapack catalogs, connected modules, variants/damage, surface overrides, and bounded props
+
+## Datapack Content Composition
+
+Building assets and palettes now come from data. The built-in catalog preserves the
+vanilla houses, while the module provider assembles author-defined floors using
+directional joints, tag filters, optional-joint caps, authored variants, and opt-in
+procedural damage. The same module definitions can supply parcel and roadside
+props. Material selection and assembly happen before chunk placement and are saved
+in structure snapshots; snapshot format v1 remains readable.
+
+The [minimal fixture pack and format guide](examples/datapacks/composition_fixture/README.md)
+demonstrate two connected floors, road materials, and lamps without new Java asset
+ids. Install the example separately to try it; it is excluded from the distributed
+mod JAR. Modules can contain nested room/furniture reservations and declare clearance,
+walking/ladder routes and support points, checked after variants and damage. Roads
+and parcels accept repeating JSON/NBT surface volumes and saved foundation/fill
+material policies. Snapshot v3 reads older v1/v2 starts. Validation is bounded and
+checks author-declared voxel requirements; general Minecraft movement simulation,
+structural load physics and block-entity content remain outside this delivery.
+
 
 ## How It Will Work
 

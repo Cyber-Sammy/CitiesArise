@@ -1,38 +1,17 @@
 package com.cybersammy.citiesarise.core.building;
 
 import com.cybersammy.citiesarise.core.geometry.GridSize;
+import java.util.*;
 
-/** Procedural assets stretch within these declared bounds; they never clip a fixed template. */
-public enum BuildingAsset {
-    PLACEHOLDER("cities_arise:placeholder", 1, Integer.MAX_VALUE, 5),
-    COTTAGE("cities_arise:cottage", 5, 32, 7),
-    BUNGALOW("cities_arise:bungalow", 5, 32, 7),
-    STUDIO("cities_arise:studio", 5, 32, 5);
-
-    private final String id;
-    private final int minimumSize;
-    private final int maximumSize;
-    private final int height;
-
-    BuildingAsset(String id, int minimumSize, int maximumSize, int height) {
-        this.id = id;
-        this.minimumSize = minimumSize;
-        this.maximumSize = maximumSize;
-        this.height = height;
+/** Validated catalog entry; provider and parameter names are interpreted outside core. */
+public record BuildingAsset(String id, String provider, int minimumSize, int maximumSize, int height, Map<String,String> parameters) {
+    public BuildingAsset {
+        if(id==null || id.isBlank() || provider==null || provider.isBlank()) throw new IllegalArgumentException("Missing asset/provider id");
+        if(minimumSize<1 || maximumSize<minimumSize || height<1 || height>128) throw new IllegalArgumentException("Invalid asset dimensions");
+        parameters=Map.copyOf(parameters);
     }
-
-    public String id() { return id; }
-    public int height() { return height; }
-
     public boolean fits(GridSize size) {
-        return size.width() >= minimumSize && size.depth() >= minimumSize
-                && size.width() <= maximumSize && size.depth() <= maximumSize;
+        return size.width()>=minimumSize && size.depth()>=minimumSize && size.width()<=maximumSize && size.depth()<=maximumSize;
     }
-
-    public static BuildingAsset fromId(String id) {
-        for (BuildingAsset asset : values()) {
-            if (asset.id.equals(id)) return asset;
-        }
-        throw new IllegalArgumentException("Unknown building asset: " + id);
-    }
+    public static BuildingAsset placeholder() { return new BuildingAsset("placeholder","placeholder",1,Integer.MAX_VALUE,5,Map.of()); }
 }

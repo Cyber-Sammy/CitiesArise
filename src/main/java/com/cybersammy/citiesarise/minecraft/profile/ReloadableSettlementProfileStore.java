@@ -50,26 +50,28 @@ public final class ReloadableSettlementProfileStore extends SimpleJsonResourceRe
             ProfilerFiller profiler
     ) {
         Objects.requireNonNull(resources, "resources");
-        replace(resources);
+        replace(resources, ContentResources.of(resourceManager));
     }
 
-    void replace(Map<ResourceLocation, JsonElement> resources) {
+    void replace(Map<ResourceLocation, JsonElement> resources) { replace(resources, ContentResources.classpath()); }
+
+    private void replace(Map<ResourceLocation, JsonElement> resources, ContentResources contentResources) {
         Map<SettlementProfileId, SettlementProfile> loadedProfiles = new LinkedHashMap<>();
         for (Map.Entry<ResourceLocation, JsonElement> entry : resources.entrySet()) {
-            loadProfile(entry.getKey(), entry.getValue()).ifPresent(profile -> loadedProfiles.put(profile.id(), profile));
+            loadProfile(entry.getKey(), entry.getValue(), contentResources).ifPresent(profile -> loadedProfiles.put(profile.id(), profile));
         }
         profiles = Map.copyOf(loadedProfiles);
         logger.info("Loaded {} Cities Arise settlement profiles.", profiles.size());
     }
 
-    private Optional<SettlementProfile> loadProfile(ResourceLocation location, JsonElement json) {
+    private Optional<SettlementProfile> loadProfile(ResourceLocation location, JsonElement json, ContentResources contentResources) {
         SettlementProfileId id = new SettlementProfileId(location.toString());
         try {
             if (!json.isJsonObject()) {
                 throw new IllegalArgumentException("profile root must be a JSON object");
             }
             JsonObject object = json.getAsJsonObject();
-            return Optional.of(parser.parse(id, object));
+            return Optional.of(parser.parse(id, object, contentResources));
         } catch (RuntimeException exception) {
             logger.warn("Failed to load settlement profile {}.", id.value(), exception);
             return Optional.empty();

@@ -35,7 +35,8 @@ public enum DebugPlacementRole {
     DOOR_WEST_LOWER(31),
     DOOR_WEST_UPPER(32),
     DOOR_EAST_LOWER(33),
-    DOOR_EAST_UPPER(34);
+    DOOR_EAST_UPPER(34),
+    CONTENT_BLOCK(35);
 
     private final int serializedId;
 
@@ -58,6 +59,7 @@ public enum DebugPlacementRole {
 
     int priority() {
         return switch (this) {
+            case CONTENT_BLOCK -> 50;
             case OAK_HOUSE_WALL, STONE_HOUSE_WALL -> 40;
             case RED_HOUSE_ROOF, SLATE_HOUSE_ROOF, BUILDING_WINDOW, BUILDING_WORKBENCH,
                     BUILDING_BOOKSHELF, BUILDING_CEILING_LIGHT -> 50;

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "assets": {
+    "cities_arise:placeholder": {
+      "provider": "placeholder",
+      "height": 5,
+      "maximumSize": 64
+    },
+    "cities_arise:cottage": {
+      "provider": "procedural_house",
+      "minimumSize": 5,
+      "maximumSize": 32,
+      "height": 7,
+      "parameters": {
+        "roof": "gable"
+      }
+    },
+    "cities_arise:bungalow": {
+      "provider": "procedural_house",
+      "minimumSize": 5,
+      "maximumSize": 32,
+      "height": 7,
+      "parameters": {
+        "roof": "hip"
+      }
+    },
+    "cities_arise:studio": {
+      "provider": "procedural_house",
+      "minimumSize": 5,
+      "maximumSize": 32,
+      "height": 5,
+      "parameters": {
+        "roof": "flat"
+      }
+    }
+  },
+  "palettes": {
+    "oak": {
+      "floor": "minecraft:spruce_planks",
+      "window": "minecraft:glass",
+      "workbench": "minecraft:crafting_table",
+      "bookshelf": "minecraft:bookshelf",
+      "light": "minecraft:glowstone",
+      "door": "minecraft:oak_door",
+      "damaged_roof": "minecraft:brown_terracotta",
+      "wall": "minecraft:oak_planks",
+      "roof": "minecraft:red_terracotta"
+    },
+    "stone": {
+      "floor": "minecraft:spruce_planks",
+      "window": "minecraft:glass",
+      "workbench": "minecraft:crafting_table",
+      "bookshelf": "minecraft:bookshelf",
+      "light": "minecraft:glowstone",
+      "door": "minecraft:oak_door",
+      "damaged_roof": "minecraft:brown_terracotta",
+      "wall": "minecraft:stone_bricks",
+      "roof": "minecraft:deepslate_tiles"
+    }
+  }
+}

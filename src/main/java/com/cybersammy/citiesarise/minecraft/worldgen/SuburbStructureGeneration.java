@@ -87,6 +87,11 @@ final class SuburbStructureGeneration {
                 .map(preparationPlan -> planConverter.convert(result.plan(), preparationPlan))
                 .orElseGet(() -> planConverter.convert(result.plan()));
         SuburbStructurePlacementSnapshot snapshot = SuburbStructurePlacementSnapshot.from(placementPlan);
+        if (placementPlan.operations().stream().anyMatch(op -> op.platformY().isPresent()
+                && (op.platformY().getAsInt() + op.verticalOffset() < context.heightAccessor().getMinBuildHeight()
+                || op.platformY().getAsInt() + op.verticalOffset() >= context.heightAccessor().getMaxBuildHeight()))) {
+            return Optional.empty();
+        }
         BoundingBox boundingBox = boundingBox(
                 snapshot,
                 profile,
@@ -133,7 +138,7 @@ final class SuburbStructureGeneration {
             Structure.GenerationContext context
     ) {
         int fillDepth = profile.suburbPlanningSettings().maxFillDepth();
-        int minimumY = snapshot.minimumPlatformY() - fillDepth - 1;
+        int minimumY = snapshot.minimumPlatformY() + Math.min(-fillDepth - 1, snapshot.minimumVerticalOffset());
         return Math.max(context.heightAccessor().getMinBuildHeight(), minimumY);
     }
 

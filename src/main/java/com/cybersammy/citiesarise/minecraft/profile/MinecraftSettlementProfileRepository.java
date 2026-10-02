@@ -38,13 +38,13 @@ public final class MinecraftSettlementProfileRepository implements SettlementPro
 
         return resourceManager
                 .getResource(resourceLocation)
-                .map(resource -> loadProfile(profileId, resource));
+                .map(resource -> loadProfile(profileId, resource, resourceManager));
     }
 
-    private SettlementProfile loadProfile(SettlementProfileId profileId, Resource resource) {
+    private SettlementProfile loadProfile(SettlementProfileId profileId, Resource resource, ResourceManager resourceManager) {
         try (Reader reader = resource.openAsReader()) {
             JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-            return parser.parse(profileId, json);
+            return parser.parse(profileId, json, ContentResources.of(resourceManager));
         } catch (IOException exception) {
             throw new IllegalStateException("failed to read settlement profile: " + profileId.value(), exception);
         } catch (IllegalStateException exception) {

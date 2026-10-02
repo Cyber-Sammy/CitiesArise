@@ -59,15 +59,18 @@ public final class PlayableSuburbGameTests {
             }
         }
         Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations = new LinkedHashMap<>();
-        BuildingAsset[] assets = {BuildingAsset.COTTAGE, BuildingAsset.BUNGALOW, BuildingAsset.STUDIO};
+        var catalog=new com.cybersammy.citiesarise.minecraft.profile.ContentCatalogParser(
+                com.cybersammy.citiesarise.minecraft.profile.ContentResources.classpath()).load("cities_arise:vanilla");
+        BuildingAsset[] assets = {catalog.assets().get("cities_arise:cottage"),catalog.assets().get("cities_arise:bungalow"),catalog.assets().get("cities_arise:studio")};
         for (int index = 0; index < assets.length; index++) {
             GridPoint minimum = new GridPoint(origin.getX() + index * 14, origin.getZ());
             BuildingSlot slot = new BuildingSlot(new PlanElementId("test:house_" + index), new PlanElementId("test:parcel_" + index),
                     new GridBounds(minimum, new GridSize(10, 12)), Set.of(),
                     PlanProperties.of(PlanPropertyKeys.BUILDING_ASSET, assets[index].id())
-                            .with(PlanPropertyKeys.BUILDING_PALETTE, index == 1 ? "stone" : "oak"));
+                            .with(PlanPropertyKeys.BUILDING_PALETTE, index == 1 ? "stone" : "oak"),
+                    Optional.of(new com.cybersammy.citiesarise.core.building.BuildingContent(assets[index],catalog.palettes().get(index==1?"stone":"oak"),Optional.empty(),Optional.empty())));
             for (var op : new VanillaBuildingPlacementProvider().create(slot, new GridPoint(minimum.x() + 5, minimum.z()))) {
-                operations.put(op.position(), new DebugBlockPlacementOperation(op.point(), op.verticalOffset(), op.role(), op.sourceElementId(), OptionalInt.of(floor)));
+                operations.put(op.position(), new DebugBlockPlacementOperation(op.point(), op.verticalOffset(), op.role(), op.sourceElementId(), OptionalInt.of(floor),op.material(),op.rotation()));
             }
         }
         DebugPlacementPlan plan = new DebugPlacementPlan(List.copyOf(operations.values()));
@@ -96,20 +99,20 @@ public final class PlayableSuburbGameTests {
             var materials = new VanillaDebugBlockMaterialProvider();
             for (var operation : plan.operations()) {
                 BlockPos position = new BlockPos(operation.point().x(), floor + operation.verticalOffset(), operation.point().z());
-                helper.assertTrue(level.getBlockState(position).equals(materials.blockState(operation.role())),
+                helper.assertTrue(level.getBlockState(position).equals(materials.blockState(operation)),
                         "Placed state changed at " + position + " for " + operation.role());
             }
             DebugPlacementApplier debug = new DebugPlacementApplier();
             debug.apply(level, plan, true);
             for (var operation : plan.operations()) {
                 BlockPos position = new BlockPos(operation.point().x(), floor + operation.verticalOffset(), operation.point().z());
-                helper.assertTrue(level.getBlockState(position).equals(materials.blockState(operation.role())),
+                helper.assertTrue(level.getBlockState(position).equals(materials.blockState(operation)),
                         "Debug placement drifted from prepared elevation at " + position);
             }
             helper.assertTrue(debug.undoLast(level) > 0, "Debug undo did not restore captured states");
             for (var operation : plan.operations()) {
                 BlockPos position = new BlockPos(operation.point().x(), floor + operation.verticalOffset(), operation.point().z());
-                helper.assertTrue(level.getBlockState(position).equals(materials.blockState(operation.role())),
+                helper.assertTrue(level.getBlockState(position).equals(materials.blockState(operation)),
                         "Debug undo changed an existing building at " + position);
             }
             helper.succeed();

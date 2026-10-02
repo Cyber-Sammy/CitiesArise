@@ -10,6 +10,7 @@ public final class VanillaDebugBlockMaterialProvider implements DebugBlockMateri
     @Override
     public BlockState blockState(DebugPlacementRole role) {
         return switch (role) {
+            case CONTENT_BLOCK -> Blocks.AIR.defaultBlockState();
             case OAK_HOUSE_WALL -> Blocks.OAK_PLANKS.defaultBlockState();
             case STONE_HOUSE_WALL -> Blocks.STONE_BRICKS.defaultBlockState();
             case RED_HOUSE_ROOF -> Blocks.RED_TERRACOTTA.defaultBlockState();

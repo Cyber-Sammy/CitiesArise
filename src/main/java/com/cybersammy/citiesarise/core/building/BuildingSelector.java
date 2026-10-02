@@ -23,9 +23,12 @@ public final class BuildingSelector {
         if (!selected.fits(slot.bounds().size())) {
             throw new IllegalArgumentException("No building asset or fallback fits slot " + slot.id().value());
         }
-        if (selected == BuildingAsset.PLACEHOLDER) return slot;
+        if (selected.provider().equals("placeholder")) return slot;
+        String palette=settings.palettes().get(random.nextInt(settings.palettes().size()));
+        BuildingContent content=new BuildingContent(selected,settings.paletteDefinitions().get(palette),
+                java.util.Optional.ofNullable(selected.parameters().get("composition")).map(settings.compositions()::get),java.util.Optional.empty());
         return new BuildingSlot(slot.id(), slot.parcelId(), slot.bounds(), slot.tags(), slot.properties()
                 .with(PlanPropertyKeys.BUILDING_ASSET, selected.id())
-                .with(PlanPropertyKeys.BUILDING_PALETTE, settings.palettes().get(random.nextInt(settings.palettes().size()))));
+                .with(PlanPropertyKeys.BUILDING_PALETTE, palette), java.util.Optional.of(content));
     }
 }

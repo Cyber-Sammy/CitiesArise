@@ -40,11 +40,19 @@ public final class DebugPlacementApplier {
         int placedBlocks = 0;
         DebugPlacementSnapshotBuilder snapshotBuilder = new DebugPlacementSnapshotBuilder();
 
+        Map<GridPoint,DebugBlockPlacementOperation> fillPolicies=new LinkedHashMap<>();
+        for(var operation:placementPlan.operations()) if(!operation.fillMaterial().isEmpty() && operation.platformY().isPresent()) {
+            if(operation.role()==DebugPlacementRole.TERRAIN_SURFACE) fillPolicies.put(operation.point(),operation);
+            else fillPolicies.putIfAbsent(operation.point(),operation);
+        }
+
         Map<GridPoint, Integer> baseElevations = new LinkedHashMap<>();
         for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
             baseElevations.computeIfAbsent(operation.point(), point -> {
                 int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, point.x(), point.z());
                 int base = operation.platformY().orElseGet(() -> placementY(level, point.x(), point.z(), top));
+                var policy=fillPolicies.get(point);
+                if(policy!=null) prepareCustomColumn(level,policy,top,snapshotBuilder);
                 clearVegetationAbove(level, point.x(), base, point.z(), top, snapshotBuilder);
                 return base;
             });
@@ -56,6 +64,18 @@ public final class DebugPlacementApplier {
 
         saveUndoSnapshot(level, snapshotBuilder, undoEnabled);
         return placedBlocks;
+    }
+
+    private void prepareCustomColumn(ServerLevel level,DebugBlockPlacementOperation policy,int top,DebugPlacementSnapshotBuilder snapshot) {
+        int x=policy.point().x(),z=policy.point().z(),target=policy.platformY().orElseThrow();
+        int ground=placementY(level,x,z,top);
+        BlockState fill=MinecraftContentMaterials.resolve(policy.fillMaterial(),0);
+        for(int y=Math.max(level.getMinBuildHeight(),ground+1);y<Math.min(target,level.getMaxBuildHeight());y++) {
+            BlockPos p=new BlockPos(x,y,z); snapshot.capture(p,level.getBlockState(p)); level.setBlock(p,fill,UPDATE_FLAGS);
+        }
+        for(int y=Math.max(target+1,level.getMinBuildHeight());y<Math.min(top,level.getMaxBuildHeight());y++) {
+            BlockPos p=new BlockPos(x,y,z); snapshot.capture(p,level.getBlockState(p)); level.setBlock(p,Blocks.AIR.defaultBlockState(),UPDATE_FLAGS);
+        }
     }
 
     public int undoLast(ServerLevel level) {
@@ -89,7 +109,7 @@ public final class DebugPlacementApplier {
         int z = operation.point().z();
         int baseY = operation.platformY().orElse(sampledBaseY);
         int targetY = targetY(level, baseY, operation.verticalOffset());
-        BlockState state = materialProvider.blockState(operation.role());
+        BlockState state = materialProvider.blockState(operation);
         BlockPos position = new BlockPos(x, targetY, z);
 
         snapshotBuilder.capture(position, level.getBlockState(position));
@@ -159,7 +179,7 @@ public final class DebugPlacementApplier {
         BlockState state = level.getBlockState(new BlockPos(x, y, z));
 
         return new SurfaceBlock(
-                state.isAir(),
+                state.isAir() || (!state.getFluidState().isEmpty() && state.getCollisionShape(level,new BlockPos(x,y,z)).isEmpty()),
                 isLeavesOrReplaceableVegetation(state),
                 state.is(BlockTags.LOGS)
         );

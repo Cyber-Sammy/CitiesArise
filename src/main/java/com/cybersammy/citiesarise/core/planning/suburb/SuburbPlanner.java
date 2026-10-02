@@ -111,6 +111,14 @@ public final class SuburbPlanner {
         }
 
         TerrainPreparationPlan preparationPlan = preparation.plan().orElseThrow();
+        try {
+            plan = com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
+                    plan, preparationPlan, request.seed(), request.settings().buildings());
+        } catch (IllegalArgumentException exception) {
+            return SuburbPlanningResult.invalid(List.of(PlanValidationError.forElement(
+                    com.cybersammy.citiesarise.core.validation.PlanValidationErrorCode.CONTENT_COMPOSITION_FAILED,
+                    plan.id(), exception.getMessage())));
+        }
         EarthworkSiteAssessment siteAssessment = EarthworkSiteAssessment.evaluate(
                 preparationPlan,
                 request.settings().preferredMaxCutDepth(),

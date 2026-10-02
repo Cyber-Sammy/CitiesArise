@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.core.validation;
 
 public enum PlanValidationErrorCode {
+    CONTENT_COMPOSITION_FAILED,
     DUPLICATE_ELEMENT_ID,
     MISSING_ROAD_NODE,
     MISSING_PARCEL,

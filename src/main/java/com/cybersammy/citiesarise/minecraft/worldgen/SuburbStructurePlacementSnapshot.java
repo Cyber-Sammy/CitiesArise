@@ -15,7 +15,7 @@ import net.minecraft.nbt.CompoundTag;
 public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
     private static final String OPERATIONS_TAG = "Operations";
     private static final String VERSION_TAG = "SnapshotVersion";
-    private static final int CURRENT_VERSION = 1;
+    private static final int CURRENT_VERSION = 3;
     private static final int VALUES_PER_OPERATION = 5;
     private static final int NO_PLATFORM = Integer.MIN_VALUE;
     private static final PlanElementId STRUCTURE_SOURCE_ID = new PlanElementId(
@@ -38,7 +38,30 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
     public static SuburbStructurePlacementSnapshot load(CompoundTag tag) {
         Objects.requireNonNull(tag, "tag");
         requireSupportedVersion(tag.getInt(VERSION_TAG));
-        return fromIntArray(tag.getIntArray(OPERATIONS_TAG));
+        var base=fromIntArray(tag.getIntArray(OPERATIONS_TAG));
+        if(tag.getInt(VERSION_TAG)==1) return base;
+        int parts=tag.getInt("MaterialParts");
+        if(parts<0 || parts>base.operations.size()) throw new IllegalArgumentException("Invalid snapshot material parts");
+        var table=new StringBuilder();
+        for(int i=0;i<parts;i++) table.append(tag.getString("Materials"+i));
+        String[] materials=table.toString().split("\n",-1);
+        int[] materialIndices=tag.getIntArray("MaterialIndices");
+        int[] rotations=tag.getIntArray("Rotations");
+        int[] fills=tag.getIntArray("FillMaterialIndices");
+        if(tag.getInt(VERSION_TAG)>=3 && fills.length!=base.operations.size()) throw new IllegalArgumentException("Invalid fill material table");
+        if(materialIndices.length!=base.operations.size() || rotations.length!=base.operations.size()) throw new IllegalArgumentException("Invalid snapshot material table");
+        List<Operation> restored=new ArrayList<>();
+        for(int i=0;i<base.operations.size();i++) {
+            Operation op=base.operations.get(i);
+            if(materialIndices[i]<0 || materialIndices[i]>=materials.length) throw new IllegalArgumentException("Invalid snapshot material index");
+            String fill="";
+            if(tag.getInt(VERSION_TAG)>=3) {
+                if(fills[i]<0 || fills[i]>=materials.length) throw new IllegalArgumentException("Invalid fill material index");
+                fill=materials[fills[i]];
+            }
+            restored.add(new Operation(op.point,op.verticalOffset,op.role,op.platformY,materials[materialIndices[i]],rotations[i],fill));
+        }
+        return new SuburbStructurePlacementSnapshot(restored);
     }
 
     static SuburbStructurePlacementSnapshot fromIntArray(int[] values) {
@@ -65,6 +88,17 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
         Objects.requireNonNull(tag, "tag");
         tag.putInt(VERSION_TAG, CURRENT_VERSION);
         tag.putIntArray(OPERATIONS_TAG, toIntArray());
+        var materials=new java.util.LinkedHashMap<String,Integer>();
+        int[] materialIndices=operations.stream().mapToInt(op -> materials.computeIfAbsent(op.material(),key -> materials.size())).toArray();
+        int[] fillIndices=operations.stream().mapToInt(op -> materials.computeIfAbsent(op.fillMaterial(),key -> materials.size())).toArray();
+        String table=String.join("\n",materials.keySet());
+        // NBT strings use a two-byte UTF length. Store bounded chunks, not one string per operation.
+        int count=(table.length()+15999)/16000;
+        tag.putInt("MaterialParts",count);
+        for(int i=0;i<count;i++) tag.putString("Materials"+i,table.substring(i*16000,Math.min(table.length(),(i+1)*16000)));
+        tag.putIntArray("MaterialIndices",materialIndices);
+        tag.putIntArray("FillMaterialIndices",fillIndices);
+        tag.putIntArray("Rotations",operations.stream().mapToInt(Operation::rotation).toArray());
     }
 
     static int currentVersion() {
@@ -72,7 +106,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
     }
 
     static void requireSupportedVersion(int version) {
-        if (version == CURRENT_VERSION) {
+        if (version == CURRENT_VERSION || version == 2 || version == 1) {
             return;
         }
         throw new IllegalArgumentException("unsupported structure placement snapshot version: " + version);
@@ -117,6 +151,9 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
                 .max()
                 .orElseThrow();
     }
+    int minimumVerticalOffset() {
+        return operations.stream().mapToInt(Operation::verticalOffset).min().orElseThrow();
+    }
 
     int minimumX() {
         return operations.stream().mapToInt(operation -> operation.point().x()).min().orElseThrow();
@@ -142,9 +179,21 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
             GridPoint point,
             int verticalOffset,
             DebugPlacementRole role,
-            OptionalInt platformY
+            OptionalInt platformY,
+            String material,
+            int rotation,
+            String fillMaterial
     ) {
+        public Operation(GridPoint point,int verticalOffset,DebugPlacementRole role,OptionalInt platformY,String material,int rotation) {
+            this(point,verticalOffset,role,platformY,material,rotation,"");
+        }
+        public Operation(GridPoint point,int verticalOffset,DebugPlacementRole role,OptionalInt platformY) {
+            this(point,verticalOffset,role,platformY,"",0);
+        }
         public Operation {
+            Objects.requireNonNull(material); Objects.requireNonNull(fillMaterial);
+            if(fillMaterial.length()>512 || fillMaterial.contains("\n") || fillMaterial.contains("\r")) throw new IllegalArgumentException("Invalid fill material");
+            if(material.length()>512 || material.contains("\n") || material.contains("\r") || rotation<0 || rotation>3) throw new IllegalArgumentException("Invalid snapshot material");
             Objects.requireNonNull(point, "point");
             Objects.requireNonNull(role, "role");
             Objects.requireNonNull(platformY, "platformY");
@@ -155,7 +204,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
                     operation.point(),
                     operation.verticalOffset(),
                     operation.role(),
-                    operation.platformY()
+                    operation.platformY(), operation.material(), operation.rotation(), operation.fillMaterial()
             );
         }
 
@@ -165,7 +214,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
                     verticalOffset,
                     role,
                     STRUCTURE_SOURCE_ID,
-                    platformY
+                    platformY, material, rotation, fillMaterial
             );
         }
     }

@@ -10,8 +10,15 @@ public record DebugBlockPlacementOperation(
         int verticalOffset,
         DebugPlacementRole role,
         PlanElementId sourceElementId,
-        OptionalInt platformY
+        OptionalInt platformY,
+        String material,
+        int rotation,
+        String fillMaterial
 ) {
+    public DebugBlockPlacementOperation(GridPoint point,int verticalOffset,DebugPlacementRole role,
+            PlanElementId sourceElementId,OptionalInt platformY,String material,int rotation) {
+        this(point,verticalOffset,role,sourceElementId,platformY,material,rotation,"");
+    }
     public DebugBlockPlacementOperation(
             GridPoint point,
             int verticalOffset,
@@ -21,7 +28,15 @@ public record DebugBlockPlacementOperation(
         this(point, verticalOffset, role, sourceElementId, OptionalInt.empty());
     }
 
+    public DebugBlockPlacementOperation(GridPoint point, int verticalOffset, DebugPlacementRole role,
+            PlanElementId sourceElementId, OptionalInt platformY) {
+        this(point,verticalOffset,role,sourceElementId,platformY,"",0);
+    }
     public DebugBlockPlacementOperation {
+        Objects.requireNonNull(material,"material");
+        Objects.requireNonNull(fillMaterial,"fillMaterial");
+        if(fillMaterial.length()>512 || fillMaterial.contains("\n") || fillMaterial.contains("\r")) throw new IllegalArgumentException("Invalid fill material");
+        if(rotation<0 || rotation>3 || material.length()>512) throw new IllegalArgumentException("Invalid material/rotation");
         Objects.requireNonNull(point, "point");
         Objects.requireNonNull(role, "role");
         Objects.requireNonNull(sourceElementId, "sourceElementId");

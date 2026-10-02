@@ -1,5 +1,6 @@
 package com.cybersammy.citiesarise.core.building;
 
+import com.cybersammy.citiesarise.fixtures.VanillaCatalogFixture;
 import com.cybersammy.citiesarise.core.geometry.*;
 import com.cybersammy.citiesarise.core.model.*;
 import com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings;
@@ -9,9 +10,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BuildingSelectorTest {
     static BuildingContentSettings content() {
-        return new BuildingContentSettings(List.of(new BuildingContentSettings.Entry(BuildingAsset.COTTAGE, 3),
-                new BuildingContentSettings.Entry(BuildingAsset.BUNGALOW, 2),
-                new BuildingContentSettings.Entry(BuildingAsset.STUDIO, 1)), List.of("oak", "stone"), BuildingAsset.PLACEHOLDER);
+        return VanillaCatalogFixture.settings(List.of(new BuildingContentSettings.Entry(VanillaCatalogFixture.COTTAGE, 3),
+                new BuildingContentSettings.Entry(VanillaCatalogFixture.BUNGALOW, 2),
+                new BuildingContentSettings.Entry(VanillaCatalogFixture.STUDIO, 1)), List.of("oak", "stone"), VanillaCatalogFixture.PLACEHOLDER);
     }
 
     static BuildingSlot slot(int size) {
@@ -39,10 +40,10 @@ class BuildingSelectorTest {
     }
 
     @Test void rejectsInvalidPoolsAndIncompatibleFallback() {
-        assertThrows(IllegalArgumentException.class, () -> new BuildingContentSettings.Entry(BuildingAsset.COTTAGE, 0));
-        assertThrows(IllegalArgumentException.class, () -> new BuildingContentSettings(List.of(), List.of("oak"), BuildingAsset.PLACEHOLDER));
-        var incompatible = new BuildingContentSettings(List.of(new BuildingContentSettings.Entry(BuildingAsset.COTTAGE, 1)),
-                List.of("oak"), BuildingAsset.COTTAGE);
+        assertThrows(IllegalArgumentException.class, () -> new BuildingContentSettings.Entry(VanillaCatalogFixture.COTTAGE, 0));
+        assertThrows(IllegalArgumentException.class, () -> VanillaCatalogFixture.settings(List.of(), List.of("oak"), VanillaCatalogFixture.PLACEHOLDER));
+        var incompatible = VanillaCatalogFixture.settings(List.of(new BuildingContentSettings.Entry(VanillaCatalogFixture.COTTAGE, 1)),
+                List.of("oak"), VanillaCatalogFixture.COTTAGE);
         assertThrows(IllegalArgumentException.class, () -> SuburbPlanningSettings.defaults().withBuildings(incompatible));
     }
 

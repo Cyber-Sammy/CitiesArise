@@ -1,0 +1,61 @@
+{
+  "survey": {
+    "width": 120,
+    "depth": 72
+  },
+  "planning": {
+    "roadWidth": 5,
+    "maxBuildableSlope": 0.75,
+    "minimumParcelCount": 6,
+    "targetParcelCount": 8,
+    "maximumParcelCount": 10,
+    "parcelWidth": 18,
+    "parcelDepth": 20,
+    "buildingMargin": 4,
+    "maxElevationRange": 10,
+    "preferredMaxCutDepth": 3,
+    "preferredMaxFillDepth": 3,
+    "maxCutDepth": 6,
+    "maxFillDepth": 8,
+    "maxBuildingFoundationDepth": 6,
+    "maxEarthworkVolume": 20000,
+    "buildings": {
+      "catalog": "test:fixture",
+      "pool": [
+        {
+          "asset": "test:house",
+          "weight": 1
+        }
+      ],
+      "palettes": [
+        "test:palette"
+      ],
+      "fallback": "test:empty"
+    },
+    "terrainTransitions": {
+      "buildingAccessRunPerRise": 2,
+      "roadShoulderRadius": 2,
+      "roadShoulderMaxFillDepth": 2,
+      "parcelShoulderRadius": 3,
+      "parcelShoulderMaxFillDepth": 3,
+      "buildingShoulderRadius": 3,
+      "buildingShoulderMaxFillDepth": 3,
+      "retainingWalls": true,
+      "retainingWallMinimumHeight": 2
+    }
+  },
+  "terrainPolicy": {
+    "responses": {
+      "water": "build_around",
+      "blockedTerrain": "avoid",
+      "steepSlope": "build_around"
+    },
+    "capabilities": [],
+    "adaptation": {
+      "sensitivity": 0.5,
+      "maxTerraformArea": 32,
+      "maxTerraformRelief": 4,
+      "maxTerraformVolume": 160
+    }
+  }
+}

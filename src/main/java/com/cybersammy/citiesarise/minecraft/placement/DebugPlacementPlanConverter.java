@@ -27,7 +27,11 @@ import java.util.Objects;
 import java.util.OptionalInt;
 
 public final class DebugPlacementPlanConverter {
-    private static final BuildingPlacementProvider BUILDING_PROVIDER = new VanillaBuildingPlacementProvider();
+    private final Map<String,BuildingPlacementProvider> buildingProviders;
+    public DebugPlacementPlanConverter() {
+        this(Map.of("procedural_house",new VanillaBuildingPlacementProvider(),"modules",new ModuleBuildingPlacementProvider()));
+    }
+    public DebugPlacementPlanConverter(Map<String,BuildingPlacementProvider> providers) { buildingProviders=Map.copyOf(providers); }
     private static final int SURFACE_OFFSET = 0;
     private static final int FOUNDATION_OFFSET = -1;
     private static final int FIRST_WALL_OFFSET = 1;
@@ -38,10 +42,10 @@ public final class DebugPlacementPlanConverter {
 
     public DebugPlacementPlan convert(SettlementPlan plan) {
         Objects.requireNonNull(plan, "plan");
-        return convert(plan, Map.of());
+        return withSurfaceTemplates(convert(plan, Map.of()),plan);
     }
 
-    private static DebugPlacementPlan convert(
+    private DebugPlacementPlan convert(
             SettlementPlan plan,
             Map<PlanElementId, GridPoint> buildingAccessAnchors
     ) {
@@ -50,11 +54,18 @@ public final class DebugPlacementPlanConverter {
         addRoadOperations(plan.roadGraph(), operationsByPosition);
         addParcelOperations(plan, operationsByPosition);
         addBuildingSlotOperations(plan, buildingAccessAnchors, operationsByPosition);
+        for(var prop:plan.props()) for(var cell:prop.composition().cells()) {
+            var point=prop.origin().add(cell.position());
+            String material=cell.material().contains(":") ? cell.material() : prop.materials().get(cell.material());
+            if(material==null) throw new IllegalArgumentException("Unknown prop material: "+cell.material());
+            addOperation(new DebugBlockPlacementOperation(new GridPoint(point.x(),point.z()),point.y(),
+                    DebugPlacementRole.CONTENT_BLOCK,prop.source(),OptionalInt.of(prop.platformY()),material,cell.rotation()),operationsByPosition);
+        }
 
         Map<PlanElementId, Integer> platformElevations = platformElevations(plan);
         return new DebugPlacementPlan(operationsByPosition.values()
                 .stream()
-                .map(operation -> withPlatformElevation(operation, platformElevations))
+                .map(operation -> withPlatformElevation(withMaterial(operation, plan.placementMaterials()), platformElevations))
                 .toList());
     }
 
@@ -71,7 +82,40 @@ public final class DebugPlacementPlanConverter {
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
-        return withTerrainPreparationOperations(preparationPlan, preparedPlan);
+        return withSurfaceTemplates(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
+                .map(operation -> withMaterial(operation,plan.placementMaterials())).toList()),plan);
+    }
+
+    private static DebugBlockPlacementOperation withMaterial(DebugBlockPlacementOperation op, Map<String,String> materials) {
+        String material=op.material().isEmpty()?materials.getOrDefault(op.role().name(),""):op.material();
+        String fill=op.fillMaterial().isEmpty()?materials.getOrDefault(op.role()==DebugPlacementRole.TERRAIN_SURFACE?"TERRAIN_FILL":"FOUNDATION",""):op.fillMaterial();
+        return new DebugBlockPlacementOperation(op.point(),op.verticalOffset(),op.role(),op.sourceElementId(),op.platformY(),material,op.rotation(),fill);
+    }
+
+    private static DebugPlacementPlan withSurfaceTemplates(DebugPlacementPlan placement,SettlementPlan plan) {
+        if(plan.surfaceTemplates().isEmpty()) return placement;
+        Map<PlanElementId,Integer> turns=new java.util.HashMap<>(); Map<PlanElementId,RoadNode> nodes=new java.util.HashMap<>();
+        plan.roadGraph().nodes().forEach(n -> nodes.put(n.id(),n));
+        for(var road:plan.roadGraph().segments()) {
+            var a=nodes.get(road.startNodeId()).point(); var b=nodes.get(road.endNodeId()).point();
+            turns.put(road.id(),b.x()>a.x()?3:b.x()<a.x()?1:b.z()<a.z()?2:0);
+        }
+        Map<DebugPlacementPosition,DebugBlockPlacementOperation> result=new LinkedHashMap<>();
+        for(var op:placement.operations()) addOperation(op,result);
+        for(var op:placement.operations()) {
+            var template=plan.surfaceTemplates().get(op.role().name()); if(template==null) continue;
+            int turn=template.alignToRoad()?turns.getOrDefault(op.sourceElementId(),0):0;
+            int x=op.point().x(),z=op.point().z();
+            int u=Math.floorMod(switch(turn) { case 1 -> z; case 2 -> -x; case 3 -> -z; default -> x; },template.size().x());
+            int v=Math.floorMod(switch(turn) { case 1 -> -x; case 2 -> -z; case 3 -> x; default -> z; },template.size().z());
+            for(var cell:template.cells()) if(cell.position().x()==u && cell.position().z()==v) {
+                int offset=cell.position().y()-template.size().y()+1;
+                var layer=new DebugBlockPlacementOperation(op.point(),op.verticalOffset()+offset,
+                        offset==0?op.role():DebugPlacementRole.CONTENT_BLOCK,op.sourceElementId(),op.platformY(),cell.material(),turn,op.fillMaterial());
+                if(offset==0) result.put(layer.position(),layer); else addOperation(layer,result);
+            }
+        }
+        return new DebugPlacementPlan(List.copyOf(result.values()));
     }
 
     private static Map<PlanElementId, GridPoint> buildingAccessAnchors(TerrainPreparationPlan preparationPlan) {
@@ -166,7 +210,7 @@ public final class DebugPlacementPlanConverter {
                 operation.verticalOffset(),
                 operation.role(),
                 operation.sourceElementId(),
-                OptionalInt.of(elevation)
+                OptionalInt.of(elevation), operation.material(), operation.rotation(), operation.fillMaterial()
         );
     }
 
@@ -203,6 +247,7 @@ public final class DebugPlacementPlanConverter {
             DebugBlockPlacementOperation operation,
             Map<PlanElementId, Integer> elevations
     ) {
+        if (operation.platformY().isPresent()) return operation;
         Integer platformY = elevations.get(operation.sourceElementId());
         if (platformY == null) {
             return operation;
@@ -212,7 +257,7 @@ public final class DebugPlacementPlanConverter {
                 operation.verticalOffset(),
                 operation.role(),
                 operation.sourceElementId(),
-                OptionalInt.of(platformY)
+                OptionalInt.of(platformY), operation.material(), operation.rotation(), operation.fillMaterial()
         );
     }
 
@@ -359,15 +404,18 @@ public final class DebugPlacementPlanConverter {
         }
     }
 
-    private static void addBuildingSlotOperations(
+    private void addBuildingSlotOperations(
             SettlementPlan plan,
             Map<PlanElementId, GridPoint> buildingAccessAnchors,
             Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (BuildingSlot buildingSlot : plan.buildingSlots()) {
-            if (buildingSlot.properties().find(PlanPropertyKeys.BUILDING_ASSET).isPresent()) {
+            if (buildingSlot.content().isPresent()) {
                 GridPoint entrance = doorwayPoint(buildingSlot.bounds(), buildingAccessAnchors.get(buildingSlot.id()));
-                for (var operation : BUILDING_PROVIDER.create(buildingSlot, entrance)) {
+                String providerId=buildingSlot.content().orElseThrow().asset().provider();
+                BuildingPlacementProvider provider=buildingProviders.get(providerId);
+                if(provider==null) throw new IllegalArgumentException("Unregistered building provider: "+providerId);
+                for (var operation : provider.create(buildingSlot, entrance)) {
                     addOperation(operation, operationsByPosition);
                 }
                 continue;

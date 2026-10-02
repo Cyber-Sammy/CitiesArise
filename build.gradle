@@ -66,6 +66,12 @@ sourceSets.main.resources {
     srcDir 'src/generated/resources'
 }
 
+tasks.named('processGameTestResources') {
+    from('examples/datapacks/composition_fixture') {
+        include 'data/test/**'
+    }
+}
+
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
     testImplementation 'com.google.code.gson:gson:2.10.1'

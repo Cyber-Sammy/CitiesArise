@@ -26,6 +26,15 @@ final class MinecraftWorldgenBlockAccess implements WorldgenBlockAccess {
     }
 
     @Override
+    public boolean needsVegetationProtection(com.cybersammy.citiesarise.minecraft.placement.DebugBlockPlacementOperation operation) {
+        return materialProvider.needsVegetationProtection(operation);
+    }
+    @Override
+    public boolean placeOperation(WorldgenBlockPosition position, com.cybersammy.citiesarise.minecraft.placement.DebugBlockPlacementOperation operation) {
+        return level.setBlock(toBlockPos(position),materialProvider.blockState(operation),UPDATE_FLAGS);
+    }
+
+    @Override
     public int minBuildHeight() {
         return level.getMinBuildHeight();
     }
@@ -76,6 +85,11 @@ final class MinecraftWorldgenBlockAccess implements WorldgenBlockAccess {
     @Override
     public boolean placeBlock(WorldgenBlockPosition position, DebugPlacementRole role) {
         return level.setBlock(toBlockPos(position), materialProvider.blockState(role), UPDATE_FLAGS);
+    }
+    @Override
+    public boolean placeFill(WorldgenBlockPosition position,DebugPlacementRole role,String material) {
+        return material.isEmpty()?placeBlock(position,role):level.setBlock(toBlockPos(position),
+                com.cybersammy.citiesarise.minecraft.placement.MinecraftContentMaterials.resolve(material,0),UPDATE_FLAGS);
     }
 
     private static BlockPos toBlockPos(WorldgenBlockPosition position) {

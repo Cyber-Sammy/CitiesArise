@@ -76,7 +76,7 @@ final class RegionalElevationPlanner {
                     TerrainPlatform.withElevation(
                             slot.properties(),
                             requiredParcelElevation(elevationByParcel, slot.parcelId())
-                    )
+                    ), slot.content()
             ));
         }
         return new ParcelElevationResult(

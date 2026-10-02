@@ -37,6 +37,10 @@ public final class MinecraftSettlementProfileJsonParser {
     }
 
     public SettlementProfile parse(SettlementProfileId id, JsonObject json) {
+        return parse(id,json,ContentResources.classpath());
+    }
+
+    public SettlementProfile parse(SettlementProfileId id, JsonObject json, ContentResources resources) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(json, "json");
 
@@ -46,26 +50,28 @@ public final class MinecraftSettlementProfileJsonParser {
         SettlementProfile profile = new SettlementProfile(
                 id,
                 parseSurveySize(survey),
-                parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning)),
+                parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning, resources)),
                 parseTerrainResponsePolicy(json)
         );
         limits.validate(profile);
         return profile;
     }
 
-    private static BuildingContentSettings parseBuildings(JsonObject planning) {
+    private static BuildingContentSettings parseBuildings(JsonObject planning, ContentResources resources) {
         if (!planning.has("buildings")) return BuildingContentSettings.legacy();
         JsonObject content = requiredObject(planning, "buildings");
         if (!content.has("pool") || !content.get("pool").isJsonArray()
                 || !content.has("palettes") || !content.get("palettes").isJsonArray()) {
             throw new IllegalArgumentException("buildings.pool and buildings.palettes must be arrays");
         }
+        String catalogId=content.has("catalog") ? contentString(content,"catalog") : "cities_arise:vanilla";
+        var catalog=new ContentCatalogParser(resources).load(catalogId);
         var pool = new java.util.ArrayList<BuildingContentSettings.Entry>();
         for (JsonElement value : content.getAsJsonArray("pool")) {
             if (!value.isJsonObject()) throw new IllegalArgumentException("Building pool entries must be objects");
             JsonObject entry = value.getAsJsonObject();
             pool.add(new BuildingContentSettings.Entry(
-                    BuildingAsset.fromId(contentString(entry, "asset")),
+                    requiredAsset(catalog, contentString(entry, "asset")),
                     requiredInt(entry, "weight")));
         }
         var palettes = new java.util.ArrayList<String>();
@@ -75,8 +81,28 @@ public final class MinecraftSettlementProfileJsonParser {
             }
             palettes.add(value.getAsString());
         }
-        return new BuildingContentSettings(pool, palettes,
-                BuildingAsset.fromId(contentString(content, "fallback")));
+        var settings=new BuildingContentSettings(pool, palettes,
+                requiredAsset(catalog, contentString(content, "fallback")), catalog.palettes(), catalog.compositions(), catalog.surfaces(), catalog.props(), catalog.surfaceTemplates());
+        var assets=new java.util.ArrayList<BuildingAsset>(pool.stream().map(BuildingContentSettings.Entry::asset).toList());
+        assets.add(settings.fallback());
+        for(var asset:assets) for(String paletteId:palettes) {
+            var palette=catalog.palettes().get(paletteId);
+            if(asset.provider().equals("modules")) {
+                var recipe=catalog.compositions().get(asset.parameters().get("composition"));
+                var moduleIds=new java.util.HashSet<>(recipe.roots()); moduleIds.addAll(recipe.attachments());
+                for(String moduleId:moduleIds) ContentCatalogParser.validatePaletteTree(recipe.modules().get(moduleId),recipe.modules(),palette);
+            }
+            if(asset.provider().equals("procedural_house") && !palette.keySet().containsAll(Set.of(
+                    "floor","wall","roof","window","workbench","bookshelf","light","door","damaged_roof")))
+                throw new IllegalArgumentException("Incomplete procedural_house palette: "+paletteId);
+        }
+        return settings;
+    }
+
+    private static BuildingAsset requiredAsset(ContentCatalogParser.Catalog catalog, String id) {
+        BuildingAsset asset=catalog.assets().get(id);
+        if(asset==null) throw new IllegalArgumentException("Unknown building asset: "+id);
+        return asset;
     }
 
     private static String contentString(JsonObject object, String key) {

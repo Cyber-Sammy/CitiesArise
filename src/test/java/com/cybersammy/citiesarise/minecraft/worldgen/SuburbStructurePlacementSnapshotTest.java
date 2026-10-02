@@ -80,7 +80,7 @@ class SuburbStructurePlacementSnapshotTest {
         );
         assertThrows(
                 IllegalArgumentException.class,
-                () -> SuburbStructurePlacementSnapshot.requireSupportedVersion(2)
+                () -> SuburbStructurePlacementSnapshot.requireSupportedVersion(SuburbStructurePlacementSnapshot.currentVersion()+1)
         );
     }
 
@@ -88,7 +88,7 @@ class SuburbStructurePlacementSnapshotTest {
     void reportsPersistedVerticalRange() {
         SuburbStructurePlacementSnapshot snapshot = SuburbStructurePlacementSnapshot.from(
                 new DebugPlacementPlan(List.of(
-                        operation(-3, 8, -1, DebugPlacementRole.FOUNDATION, OptionalInt.of(63)),
+                        operation(-3, 8, -7, DebugPlacementRole.FOUNDATION, OptionalInt.of(63)),
                         operation(17, -4, 5, DebugPlacementRole.BUILDING_ROOF, OptionalInt.of(70))
                 ))
         );
@@ -96,6 +96,7 @@ class SuburbStructurePlacementSnapshotTest {
         assertEquals(63, snapshot.minimumPlatformY());
         assertEquals(70, snapshot.maximumPlatformY());
         assertEquals(5, snapshot.maximumVerticalOffset());
+        assertEquals(-7, snapshot.minimumVerticalOffset());
         assertEquals(-3, snapshot.minimumX());
         assertEquals(17, snapshot.maximumX());
         assertEquals(-4, snapshot.minimumZ());

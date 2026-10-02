@@ -12,21 +12,17 @@ import java.util.List;
 public final class VanillaBuildingPlacementProvider implements BuildingPlacementProvider {
     @Override
     public List<DebugBlockPlacementOperation> create(BuildingSlot slot, GridPoint entrance) {
-        BuildingAsset asset = BuildingAsset.fromId(slot.properties().find(PlanPropertyKeys.BUILDING_ASSET).orElseThrow());
-        if (asset == BuildingAsset.PLACEHOLDER || !asset.fits(slot.bounds().size())) {
+        BuildingAsset asset = slot.content().orElseThrow().asset();
+        if (!asset.provider().equals("procedural_house") || !asset.fits(slot.bounds().size())) {
             throw new IllegalArgumentException("Unsupported building asset or footprint: " + asset.id());
         }
         GridBounds b = slot.bounds();
         if (!b.contains(entrance) || !edge(b, entrance.x(), entrance.z())) {
             throw new IllegalArgumentException("Building entrance must be on the footprint perimeter");
         }
-        String palette = slot.properties().find(PlanPropertyKeys.BUILDING_PALETTE).orElseThrow();
-        if (!palette.equals("oak") && !palette.equals("stone")) throw new IllegalArgumentException("Unknown building palette");
-        boolean stone = palette.equals("stone");
         boolean decayed = slot.tags().contains(PlanTags.DECAYED);
-        DebugPlacementRole wall = stone ? DebugPlacementRole.STONE_HOUSE_WALL : DebugPlacementRole.OAK_HOUSE_WALL;
-        DebugPlacementRole roof = decayed ? DebugPlacementRole.DECAYED_BUILDING_ROOF
-                : stone ? DebugPlacementRole.SLATE_HOUSE_ROOF : DebugPlacementRole.RED_HOUSE_ROOF;
+        DebugPlacementRole wall = DebugPlacementRole.OAK_HOUSE_WALL;
+        DebugPlacementRole roof = decayed ? DebugPlacementRole.DECAYED_BUILDING_ROOF : DebugPlacementRole.RED_HOUSE_ROOF;
         List<DebugBlockPlacementOperation> result = new ArrayList<>();
         for (int z = b.minZ(); z < b.maxZExclusive(); z++) {
             for (int x = b.minX(); x < b.maxXExclusive(); x++) {
@@ -57,10 +53,10 @@ public final class VanillaBuildingPlacementProvider implements BuildingPlacement
                 }
                 int insetX = Math.min(x - b.minX(), b.maxXExclusive() - 1 - x);
                 int insetZ = Math.min(z - b.minZ(), b.maxZExclusive() - 1 - z);
-                int rise = switch (asset) {
-                    case COTTAGE -> Math.min(3, insetX);
-                    case BUNGALOW -> Math.min(3, Math.min(insetX, insetZ));
-                    case STUDIO -> edge(b, x, z) ? 1 : 0;
+                int rise = switch (asset.parameters().get("roof")) {
+                    case "gable" -> Math.min(3, insetX);
+                    case "hip" -> Math.min(3, Math.min(insetX, insetZ));
+                    case "flat" -> edge(b, x, z) ? 1 : 0;
                     default -> throw new IllegalArgumentException("Unsupported asset");
                 };
                 for (int y = 4; y <= 4 + rise; y++) {
@@ -96,6 +92,18 @@ public final class VanillaBuildingPlacementProvider implements BuildingPlacement
 
     private static void add(List<DebugBlockPlacementOperation> operations, BuildingSlot slot,
             GridPoint point, int y, DebugPlacementRole role) {
-        operations.add(new DebugBlockPlacementOperation(point, y, role, slot.id()));
+        var palette=slot.content().orElseThrow().materials();
+        String key=switch(role) {
+            case OAK_HOUSE_WALL -> "wall"; case RED_HOUSE_ROOF -> "roof"; case DECAYED_BUILDING_ROOF -> "damaged_roof";
+            case BUILDING_FLOOR -> "floor"; case BUILDING_WINDOW -> "window"; case BUILDING_WORKBENCH -> "workbench";
+            case BUILDING_BOOKSHELF -> "bookshelf"; case BUILDING_CEILING_LIGHT -> "light"; default -> "";
+        };
+        String material=palette.getOrDefault(key,"");
+        if(role.name().startsWith("DOOR_")) {
+            String[] parts=role.name().split("_");
+            material=palette.getOrDefault("door","minecraft:oak_door")+"[facing="+parts[1].toLowerCase(java.util.Locale.ROOT)
+                    +",half="+parts[2].toLowerCase(java.util.Locale.ROOT)+"]";
+        }
+        operations.add(new DebugBlockPlacementOperation(point, y, role, slot.id(),java.util.OptionalInt.empty(),material,0));
     }
 }

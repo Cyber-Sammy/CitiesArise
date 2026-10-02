@@ -23,7 +23,7 @@ final class WorldgenChunkPlacement {
         Objects.requireNonNull(placementPlan, "placementPlan");
 
         Map<GridPoint, SurfaceColumn> surfaceColumns = surfaceColumns(level, placementPlan);
-        stabilizeLateFluids(level, surfaceColumns);
+        stabilizeLateFluids(level, surfaceColumns, placementPlan);
         reinforceFoundations(level, placementPlan);
         preparePlatforms(level, placementPlan, surfaceColumns);
         clearVegetationColumns(level, vegetationColumns(level, placementPlan, surfaceColumns));
@@ -38,7 +38,7 @@ final class WorldgenChunkPlacement {
             if (!level.canWrite(position)) {
                 continue;
             }
-            if (level.placeBlock(position, operation.role())) {
+            if (level.placeOperation(position, operation)) {
                 placedBlocks++;
             }
         }
@@ -54,8 +54,10 @@ final class WorldgenChunkPlacement {
 
     private static void stabilizeLateFluids(
             WorldgenBlockAccess level,
-            Map<GridPoint, SurfaceColumn> columns
+            Map<GridPoint, SurfaceColumn> columns,
+            DebugChunkPlacementPlan plan
     ) {
+        Map<GridPoint,PlatformPreparation> policies=platformPreparations(plan);
         for (SurfaceColumn column : columns.values()) {
             if (column.fluidTopY().isEmpty()) {
                 continue;
@@ -67,7 +69,7 @@ final class WorldgenChunkPlacement {
                     continue;
                 }
                 if (level.material(position) == WorldgenSurfaceMaterial.FLUID) {
-                    level.placeBlock(position, DebugPlacementRole.FOUNDATION);
+                    level.placeFill(position, DebugPlacementRole.FOUNDATION, policies.containsKey(column.point())?policies.get(column.point()).fillMaterial():"");
                 }
             }
         }
@@ -96,6 +98,7 @@ final class WorldgenChunkPlacement {
             if (existing == null) {
                 continue;
             }
+            if (preparation.terrainSurface()) preparations.put(operation.point(),preparation);
             if (existing.targetElevation() != platformY) {
                 throw new IllegalStateException("conflicting platform elevations at " + operation.point());
             }
@@ -105,9 +108,9 @@ final class WorldgenChunkPlacement {
 
     private static PlatformPreparation preparation(DebugBlockPlacementOperation operation, int platformY) {
         if (operation.role() == DebugPlacementRole.TERRAIN_SURFACE) {
-            return new PlatformPreparation(platformY, DebugPlacementRole.TERRAIN_FILL, true);
+            return new PlatformPreparation(platformY, DebugPlacementRole.TERRAIN_FILL, true, operation.fillMaterial());
         }
-        return new PlatformPreparation(platformY, DebugPlacementRole.FOUNDATION, false);
+        return new PlatformPreparation(platformY, DebugPlacementRole.FOUNDATION, false, operation.fillMaterial());
     }
 
     private static void preparePlatformColumn(
@@ -119,7 +122,7 @@ final class WorldgenChunkPlacement {
             return;
         }
         clearAbovePlatform(level, column, preparation.targetElevation());
-        fillBelowPlatform(level, column, preparation.targetElevation(), preparation.fillRole());
+        fillBelowPlatform(level, column, preparation.targetElevation(), preparation.fillRole(), preparation.fillMaterial());
     }
 
     private static void clearAbovePlatform(WorldgenBlockAccess level, SurfaceColumn column, int platformY) {
@@ -135,12 +138,12 @@ final class WorldgenChunkPlacement {
             WorldgenBlockAccess level,
             SurfaceColumn column,
             int platformY,
-            DebugPlacementRole fillRole
+            DebugPlacementRole fillRole, String fillMaterial
     ) {
         for (int y = column.placementY() + 1; y < platformY; y++) {
             WorldgenBlockPosition position = new WorldgenBlockPosition(column.point().x(), y, column.point().z());
             if (level.canWrite(position)) {
-                level.placeBlock(position, fillRole);
+                level.placeFill(position, fillRole, fillMaterial);
             }
         }
     }
@@ -228,7 +231,7 @@ final class WorldgenChunkPlacement {
                     continue;
                 }
                 if (isUnsupportedFoundationMaterial(level.material(position))) {
-                    level.placeBlock(position, DebugPlacementRole.FOUNDATION);
+                    level.placeFill(position, DebugPlacementRole.FOUNDATION, operation.fillMaterial());
                 }
             }
         }
@@ -328,7 +331,7 @@ final class WorldgenChunkPlacement {
     }
 
     private static OptionalInt protectedVegetationY(WorldgenBlockAccess level, DebugBlockPlacementOperation operation, int plannedBaseY) {
-        if (!level.needsVegetationProtection(operation.role())) {
+        if (!level.needsVegetationProtection(operation)) {
             return OptionalInt.empty();
         }
         return OptionalInt.of(plannedBaseY + operation.verticalOffset());
@@ -490,7 +493,7 @@ final class WorldgenChunkPlacement {
     private record PlatformPreparation(
             int targetElevation,
             DebugPlacementRole fillRole,
-            boolean terrainSurface
+            boolean terrainSurface, String fillMaterial
     ) {
     }
 }

@@ -40,7 +40,7 @@ public record LightDecayTransform(double buildingDecayChance, double roadWearCha
                 plan.parcels(),
                 transformBuildingSlots(plan.buildingSlots(), context),
                 plan.tags(),
-                plan.properties()
+                plan.properties(), plan.placementMaterials(), plan.props(), plan.surfaceTemplates()
         );
     }
 
@@ -89,7 +89,7 @@ public record LightDecayTransform(double buildingDecayChance, double roadWearCha
                 buildingSlot.parcelId(),
                 buildingSlot.bounds(),
                 tagsWith(buildingSlot.tags(), PlanTags.DECAYED),
-                decayProperties(buildingSlot.properties())
+                decayProperties(buildingSlot.properties()), buildingSlot.content()
         );
     }
 

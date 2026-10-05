@@ -4,6 +4,7 @@
     "depth": 72
   },
   "planning": {
+    "districts": { "maxCount": 4, "targetParcels": 4, "maxConnectionAttempts": 8 },
     "roadWidth": 5,
     "maxBuildableSlope": 0.75,
     "minimumParcelCount": 6,

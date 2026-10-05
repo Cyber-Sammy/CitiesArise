@@ -76,5 +76,11 @@ try {
     $report = $reportText | ConvertFrom-Json
     if ($report.status -notin @('RESULT_LIMIT','EXHAUSTED','TIME_LIMIT','CANCELLED')) { throw "Search did not complete: $($report.status). See $reportPath." }
     Write-Host "Search status: $($report.status). Results: $(@($report.results).Count). Report: $reportPath"
+    Write-Host "Checked candidates: $($report.checkedCandidates). Slowest candidate: $($report.maxCandidateSeconds) seconds."
+    if (@($report.results).Count -eq 0) {
+        Write-Host 'No match in the checked subset. TIME_LIMIT is a completed search budget, not a crash.'
+        foreach ($reason in $report.rejections.PSObject.Properties) { Write-Host "  $($reason.Name): $($reason.Value)" }
+        Write-Host "Last seed: $($report.currentSeed). Increase the budget or change StartSeed/search center to check other locations."
+    }
     foreach ($hit in $report.results) { Write-Host "Seed $($hit.seed) at X=$($hit.x), Z=$($hit.z). $($hit.teleport)" }
 } finally { Pop-Location }

@@ -15,6 +15,7 @@ final class AdaptiveSuburbLayoutSelector {
     private static final int MIN_FINALIZATION_ATTEMPTS_PER_CAPACITY = 6;
     static final int MAX_FINALIZATION_ATTEMPTS_PER_CAPACITY = 6;
     private static final int MAX_FINALIZATION_ATTEMPTS_PER_SIZE = 2;
+    static final int MAX_LAYOUT_CANDIDATES_PER_SIZE = 32;
     private static final List<Integer> DISTRICT_GROWTH_STEPS = List.of(0, 4, 8, 16);
 
     Optional<SuburbLayoutSelection> select(
@@ -196,9 +197,35 @@ final class AdaptiveSuburbLayoutSelector {
         List<UnroutedLayoutCandidate> candidates = new ArrayList<>();
         int maxX = surveyBounds.maxXExclusive() - layoutSize.width();
         int maxZ = surveyBounds.maxZExclusive() - layoutSize.depth();
+        // Rank cheap terrain counts before allocating parcels for a bounded, spatially diverse shortlist.
+        int width = surveyBounds.size().width();
+        int depth = surveyBounds.size().depth();
+        int[][] developed = new int[depth + 1][width + 1];
+        for (int z = 0; z < depth; z++) for (int x = 0; x < width; x++) {
+            int value = regionMap.regionIdAt(surveyBounds.minX() + x, surveyBounds.minZ() + z) >= 0 ? 1 : 0;
+            developed[z + 1][x + 1] = value + developed[z][x + 1] + developed[z + 1][x] - developed[z][x];
+        }
+        List<GridBounds> ranked = new ArrayList<>();
         for (int z = surveyBounds.minZ(); z <= maxZ; z++) {
             for (int x = surveyBounds.minX(); x <= maxX; x++) {
-                GridBounds bounds = new GridBounds(new GridPoint(x, z), layoutSize);
+                ranked.add(new GridBounds(new GridPoint(x, z), layoutSize));
+            }
+        }
+        java.util.function.ToIntFunction<GridBounds> area = bounds -> {
+            int x = bounds.minX() - surveyBounds.minX(), z = bounds.minZ() - surveyBounds.minZ();
+            int endX = x + layoutSize.width(), endZ = z + layoutSize.depth();
+            return developed[endZ][endX] - developed[z][endX] - developed[endZ][x] + developed[z][x];
+        };
+        ranked.removeIf(bounds -> area.applyAsInt(bounds) == 0);
+        ranked.sort(Comparator.comparingInt(area).reversed()
+                .thenComparingLong(bounds -> centerDistance(bounds, surveyBounds))
+                .thenComparingInt(GridBounds::minZ).thenComparingInt(GridBounds::minX));
+        List<GridBounds> shortlist = new ArrayList<>(ranked.subList(0, Math.min(ranked.size(), MAX_LAYOUT_CANDIDATES_PER_SIZE / 2)));
+        int remaining = ranked.size() - shortlist.size();
+        int representatives = Math.min(remaining, MAX_LAYOUT_CANDIDATES_PER_SIZE - shortlist.size());
+        int offset = shortlist.size();
+        for (int i = 0; i < representatives; i++) shortlist.add(ranked.get(offset + representativeOffset(i, representatives, remaining)));
+        for (GridBounds bounds : shortlist) {
                 SuburbLayout layout = layoutFactory.create(bounds, targetParcelCount);
                 Optional<UnroutedLayoutCandidate> candidate = unroutedCandidate(
                         layout,
@@ -208,7 +235,6 @@ final class AdaptiveSuburbLayoutSelector {
                         surveyBounds
                 );
                 candidate.ifPresent(candidates::add);
-            }
         }
         candidates.sort(UnroutedLayoutCandidate.ORDER);
         return List.copyOf(candidates);

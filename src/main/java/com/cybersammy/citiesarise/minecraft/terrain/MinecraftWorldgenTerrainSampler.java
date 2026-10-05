@@ -202,6 +202,24 @@ public final class MinecraftWorldgenTerrainSampler {
     private record BiomeSampleKey(int x, int y, int z) {
     }
 
+    static TerrainSource cachedSource(ChunkGenerator generator, RandomState random, LevelHeightAccessor height) {
+        return new CachedTerrainSource(new ChunkGeneratorTerrainSource(generator, random, height));
+    }
+
+    /** Immutable generator inputs belong to one provider/seed; only exact samples are shared between refinements. */
+    static final class CachedTerrainSource implements TerrainSource {
+        private final TerrainSource delegate;
+        private final com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache<GridPoint, Integer> heights =
+                new com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache<>(32768);
+        private final com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache<GridPoint, Integer> supports =
+                new com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache<>(32768);
+        CachedTerrainSource(TerrainSource delegate) { this.delegate = Objects.requireNonNull(delegate); }
+        public int height(GridPoint point) { return heights.getOrCreate(point, () -> delegate.height(point)); }
+        public int supportHeight(GridPoint point) { return supports.getOrCreate(point, () -> delegate.supportHeight(point)); }
+        public ColumnSample column(GridPoint point, int height, String biomePath) { return delegate.column(point, height, biomePath); }
+        public String biomePath(GridPoint point, int height) { return delegate.biomePath(point, height); }
+    }
+
     private static final class ChunkGeneratorTerrainSource implements TerrainSource {
         private final ChunkGenerator chunkGenerator;
         private final RandomState randomState;

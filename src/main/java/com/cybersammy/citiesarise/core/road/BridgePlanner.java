@@ -16,11 +16,20 @@ public final class BridgePlanner {
         List<BridgePlan> selected = new ArrayList<>();
         Map<GridPoint, Integer> prepared = new HashMap<>();
         preparation.columns().forEach(column -> prepared.put(column.point(), column.targetElevation()));
-        for (BridgePlan candidate : candidates(request, plan)) {
+        var candidates = candidates(request, plan);
+        var components = new HashMap<PlanElementId, PlanElementId>();
+        plan.roadGraph().nodes().forEach(node -> components.put(node.id(), node.id()));
+        plan.roadGraph().segments().forEach(segment -> join(components, segment.startNodeId(), segment.endNodeId()));
+        // Connect isolated districts before spending the bridge budget on shortcuts.
+        for (int pass = 0; pass < 2; pass++) for (BridgePlan candidate : candidates) {
             if (selected.size() >= request.terrainResponsePolicy().bridges().maxCount()) break;
+            if (pass == 0 && components.get(candidate.startNodeId()).equals(components.get(candidate.endNodeId()))) continue;
             if (selected.stream().anyMatch(other -> other.bounds().intersects(candidate.bounds()))) continue;
             var fitted = fitBanks(request, candidate, prepared);
-            if (fitted.isPresent()) selected.add(fitted.orElseThrow());
+            if (fitted.isPresent()) {
+                selected.add(fitted.orElseThrow());
+                join(components, candidate.startNodeId(), candidate.endNodeId());
+            }
         }
         return new SettlementPlan(plan.id(), new RoadGraph(plan.roadGraph().nodes(), plan.roadGraph().segments(), selected),
                 plan.parcels(), plan.buildingSlots(), plan.tags(), plan.properties(), plan.placementMaterials(),
@@ -28,7 +37,12 @@ public final class BridgePlanner {
                     var world = prop.origin().add(cell.position());
                     var point = new GridPoint(world.x(), world.z());
                     return selected.stream().anyMatch(bridge -> bridge.bounds().contains(point));
-                })).toList(), plan.surfaceTemplates());
+                })).toList(), plan.surfaceTemplates(), plan.districts());
+    }
+
+    private static void join(Map<PlanElementId, PlanElementId> components, PlanElementId first, PlanElementId second) {
+        var from = components.get(second); var to = components.get(first);
+        if (!from.equals(to)) components.replaceAll((id, component) -> component.equals(from) ? to : component);
     }
 
     /** Probe potential crossings too: coarse dry interpolation must not hide small bodies of water. */

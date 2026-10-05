@@ -61,6 +61,10 @@ public final class SuburbPlanner {
     public SuburbPlanningResult plan(SuburbPlanningRequest request) {
         Objects.requireNonNull(request, "request");
 
+        if (request.settings().districts().maxCount() > 1) {
+            return DistrictCityPlanner.plan(this, request);
+        }
+
         if (!hasEnoughSpace(request)) {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.SURVEY_TOO_SMALL);
         }

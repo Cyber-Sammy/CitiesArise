@@ -23,8 +23,46 @@ public final class PlanValidator {
         addDuplicateIdErrors(plan, errors);
         addMissingRoadNodeErrors(plan, errors);
         addBuildingSlotErrors(plan, errors);
+        validateDistricts(plan, errors);
 
         return List.copyOf(errors);
+    }
+
+    private static void validateDistricts(SettlementPlan plan, List<PlanValidationError> errors) {
+        if (plan.districts().isEmpty()) return;
+        var ids = new HashSet<PlanElementId>();
+        var members = new HashSet<PlanElementId>();
+        var parcels = new HashMap<PlanElementId, Parcel>();
+        plan.parcels().forEach(parcel -> parcels.put(parcel.id(), parcel));
+        for (var district : plan.districts()) {
+            if (!ids.add(district.id())) errors.add(PlanValidationError.forElement(PlanValidationErrorCode.INVALID_DISTRICT,
+                    district.id(), "duplicate district id"));
+            for (var id : district.parcels()) {
+                var parcel = parcels.get(id);
+                if (!members.add(id) || parcel == null || !district.bounds().contains(parcel.bounds()))
+                    errors.add(PlanValidationError.forElement(PlanValidationErrorCode.INVALID_DISTRICT,
+                            district.id(), "district parcel is duplicated, missing or outside local bounds"));
+            }
+        }
+        if (!members.equals(parcels.keySet())) errors.add(PlanValidationError.forElement(PlanValidationErrorCode.INVALID_DISTRICT,
+                plan.id(), "every city parcel must belong to exactly one district"));
+        var reachable = new HashSet<PlanElementId>();
+        if (!plan.roadGraph().nodes().isEmpty()) reachable.add(plan.roadGraph().nodes().getFirst().id());
+        boolean changed;
+        do {
+            int size = reachable.size();
+            for (var edge : plan.roadGraph().segments()) {
+                if (reachable.contains(edge.startNodeId())) reachable.add(edge.endNodeId());
+                if (reachable.contains(edge.endNodeId())) reachable.add(edge.startNodeId());
+            }
+            for (var edge : plan.roadGraph().bridges()) {
+                if (reachable.contains(edge.startNodeId())) reachable.add(edge.endNodeId());
+                if (reachable.contains(edge.endNodeId())) reachable.add(edge.startNodeId());
+            }
+            changed = reachable.size() != size;
+        } while (changed);
+        if (reachable.size() != plan.roadGraph().nodes().size()) errors.add(PlanValidationError.forElement(
+                PlanValidationErrorCode.INVALID_DISTRICT, plan.id(), "district roads must form one connected graph"));
     }
 
     private static void addDuplicateIdErrors(SettlementPlan plan, List<PlanValidationError> errors) {

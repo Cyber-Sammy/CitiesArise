@@ -103,3 +103,18 @@ vertical bounds. The tool does **not** generate/place all terrain chunks for eac
 seed; a hit is not a screenshot-verified settlement. Create a fresh normal world
 with matching settings and use the returned teleport coordinates in creative or
 spectator mode for visual acceptance. Changing a pack can change which seeds match.
+
+## Search diagnostics and bounded work
+
+Each `CHECKED` line now includes candidate duration and the accepted/rejected plan
+summary. Reports include `lastCandidateSeconds` and `maxCandidateSeconds`; the final
+console summary lists rejection counts when nothing matched. `TIME_LIMIT` is a
+normal budget outcome, not a crash, and does not mean the seed lacks bridges.
+Runtime logs include survey/planning/refinement/support timings.
+
+Layout search now cheaply ranks developable area before fully evaluating at most
+32 positions per size, mixing high-ranked positions with representatives of the
+rest. Exact generator heights are cached within one seed/provider across terrain
+refinements, with bounded caches and unchanged exact water/support checks. This
+reduces repeated work; search remains expensive and is not exhaustive. Resume is
+still manual; there is no automatic continuation or guaranteed bridge seed.

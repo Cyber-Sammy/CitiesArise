@@ -21,6 +21,20 @@ import org.junit.jupiter.api.Test;
 
 final class AdaptiveSuburbLayoutSelectorTest {
     @Test
+    void boundsExpensiveLayoutConstructionOnLargeSurveys() {
+        var surveyBounds = bounds(0, 0, 120, 72);
+        var topology = topologyWithBarrier(surveyBounds, -1);
+        var creations = new AtomicInteger();
+        new AdaptiveSuburbLayoutSelector().select(surveyBounds, DevelopmentCapacity.fixed(1),
+                new GridSize(8, 8), topology, layout(surveyBounds, 1), (bounds, count) -> {
+                    creations.incrementAndGet();
+                    return layout(bounds, count);
+                }, candidate -> Optional.empty());
+        assertTrue(creations.get() > 0);
+        assertTrue(creations.get() <= 1 + 5 * AdaptiveSuburbLayoutSelector.MAX_LAYOUT_CANDIDATES_PER_SIZE,
+                "Expensive layout calls: " + creations.get());
+    }
+    @Test
     void finalizesPreferredLayoutOnlyOnce() {
         GridBounds surveyBounds = bounds(0, 0, 20, 20);
         TerrainTopology topology = new TerrainTopologyAnalyzer().analyze(

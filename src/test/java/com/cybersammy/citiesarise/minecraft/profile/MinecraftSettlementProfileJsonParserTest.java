@@ -22,6 +22,19 @@ import org.junit.jupiter.api.Test;
 final class MinecraftSettlementProfileJsonParserTest {
     private final MinecraftSettlementProfileJsonParser parser = new MinecraftSettlementProfileJsonParser();
 
+    @Test void parsesDistrictLimitsWithoutLosingThemDuringContentResolution() {
+        var data = validJson();
+        assertEquals(1, parser.parse(id(), data).suburbPlanningSettings().districts().maxCount());
+        data.getAsJsonObject("planning").add("districts", JsonParser.parseString(
+                "{\"maxCount\":3,\"targetParcels\":2,\"maxConnectionAttempts\":5}"));
+        var settings = parser.parse(id(), data).suburbPlanningSettings();
+        assertEquals(3, settings.districts().maxCount());
+        assertEquals(settings.districts(), settings.withBuildings(settings.buildings()).districts());
+        assertEquals(settings.districts(), settings.withTerrainTransitions(settings.terrainTransitions()).districts());
+        data.getAsJsonObject("planning").getAsJsonObject("districts").addProperty("maxCount", 100);
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), data));
+    }
+
     @Test
     void parsesBoundedBridgeSettingsAndRejectsUnsafeDepth() {
         var data=validJson();

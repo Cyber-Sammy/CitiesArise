@@ -13,8 +13,15 @@ public record SettlementPlan(
         PlanProperties properties,
         java.util.Map<String,String> placementMaterials,
         List<com.cybersammy.citiesarise.core.content.ResolvedProp> props,
-        java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> surfaceTemplates
+        java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> surfaceTemplates,
+        List<DistrictPlan> districts
 ) implements PlanElement {
+    public SettlementPlan(PlanElementId id,RoadGraph roadGraph,List<Parcel> parcels,List<BuildingSlot> buildingSlots,
+            Set<PlanTag> tags,PlanProperties properties,java.util.Map<String,String> placementMaterials,
+            List<com.cybersammy.citiesarise.core.content.ResolvedProp> props,
+            java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> surfaceTemplates) {
+        this(id,roadGraph,parcels,buildingSlots,tags,properties,placementMaterials,props,surfaceTemplates,List.of());
+    }
     public SettlementPlan(PlanElementId id,RoadGraph roadGraph,List<Parcel> parcels,List<BuildingSlot> buildingSlots,
             Set<PlanTag> tags,PlanProperties properties,java.util.Map<String,String> placementMaterials,
             List<com.cybersammy.citiesarise.core.content.ResolvedProp> props) {
@@ -29,6 +36,7 @@ public record SettlementPlan(
         this(id,roadGraph,parcels,buildingSlots,tags,properties,placementMaterials,List.of());
     }
     public SettlementPlan {
+        districts=List.copyOf(districts);
         surfaceTemplates=java.util.Map.copyOf(surfaceTemplates);
         props=List.copyOf(props);
         placementMaterials=java.util.Map.copyOf(placementMaterials);

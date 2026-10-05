@@ -126,7 +126,7 @@ public final class SeedSearchTool {
             var random=RandomState.create(noise.value(),registries.lookupOrThrow(Registries.NOISE),seed);
             var state=ChunkGeneratorStructureState.createForNormal(random,seed,biomes,registries.lookupOrThrow(Registries.STRUCTURE_SET));
             var context=new WorldgenPlanningContext("minecraft:overworld",seed,profile.id(),profile.surveySize(),profile.suburbPlanningSettings(),
-                    profile.terrainResponsePolicy(),new MinecraftWorldgenTerrainProvider(generator,random,height.getMinBuildHeight(),height.getHeight()),false,false);
+                    profile.terrainResponsePolicy(),new MinecraftWorldgenTerrainProvider(generator,random,height.getMinBuildHeight(),height.getHeight()),false,true);
             int planned=0;
             for(var region:regions) {
                 if(stopped(o,output,report,started,seconds)) return;
@@ -142,7 +142,14 @@ public final class SeedSearchTool {
                 report.addProperty("phase","PLANNING");
                 checkpoint(output,report,started);
                 System.out.println("CHECKING seed="+seed+" region="+region+" candidate="+checked);
+                long candidateStarted = System.nanoTime();
                 var result=planner.planForWorldgen(context,center);
+                double candidateSeconds = (System.nanoTime() - candidateStarted) / 1_000_000_000.0;
+                report.addProperty("lastCandidateSeconds", candidateSeconds);
+                report.addProperty("maxCandidateSeconds", Math.max(candidateSeconds,
+                        report.has("maxCandidateSeconds") ? report.get("maxCandidateSeconds").getAsDouble() : 0));
+                System.out.println("CHECKED seconds=" + String.format(java.util.Locale.ROOT, "%.2f", candidateSeconds)
+                        + " " + result.summary());
                 if(stopped(o,output,report,started,seconds)) return;
                 if(!result.successful()) {
                     reject(report,result.optionalTerrainDiagnostic().flatMap(d -> d.primaryRejectionReason()).map(Enum::name)

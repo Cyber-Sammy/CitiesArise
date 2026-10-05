@@ -424,3 +424,41 @@ mean a geometric/contract failure or exhaustion of the bounded search.
 The existing example is exercised by unit and real-server tests. Changes to your
 own models still need geometry and gameplay checks; a syntactically valid pack
 does not guarantee a valid composition at every reserved building size.
+
+## Multi-district city planning
+
+Add `districts` inside `planning`:
+
+```json
+"districts": {
+  "maxCount": 4,
+  "targetParcels": 4,
+  "maxConnectionAttempts": 8
+}
+```
+
+- `maxCount`: 1..8, maximum local partitions; 1 preserves single-district planning.
+- `targetParcels`: 1..32, desired parcels per local district, bounded by the remaining city target.
+- `maxConnectionAttempts`: 1..32, candidate road endpoint pairs per attempted connection.
+
+Absent `districts` uses single-district compatibility mode. The built-in and fixture
+profiles enable four partitions with four parcels per district. Actual partition
+count depends on survey size and room for parcels/roads; a 120x72 survey typically
+fits two. Global minimum/target/maximum parcel capacity remains authoritative.
+Local districts can reduce their capacity or fail independently, but the final
+accepted city must meet the global minimum and have connected roads.
+
+Each district keeps independently chosen road and parcel elevations. Required
+terraforming uses the existing depth/foundation/total-volume limits; increasing
+district count does not increase the city's earthwork budget. Content, style,
+modules, joints and compatibility rules remain owned by this pack. Exported
+`districts` list semantic IDs, bounds and parcel membership. Placement continues
+through the same replaceable content providers and chunk snapshots.
+
+Current spatial subdivision is bounded rectangular partitioning with cuts biased
+towards water/steep strips, followed by local terrain-aware placement. It does not
+promise contour-following borders or successful generation on arbitrary mountains.
+Land connectors pin endpoint heights and reject insufficient runs. Bridges connect
+aligned equal-height banks under the existing bridge limits; no sloped bridge deck
+or intermediate supports are added. Unsupported terrain discovered by final exact
+validation can still reject the city. No limits are silently relaxed.

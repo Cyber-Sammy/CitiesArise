@@ -20,8 +20,30 @@ public record SuburbPlanningSettings(
         int maxBuildingFoundationDepth,
         long maxEarthworkVolume,
         TerrainTransitionSettings terrainTransitions,
-        BuildingContentSettings buildings
+        BuildingContentSettings buildings,
+        DistrictPlanningSettings districts
 ) {
+    public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, DevelopmentCapacity parcelCapacity,
+            int parcelWidth, int parcelDepth, int buildingMargin, int maxElevationRange,
+            int preferredMaxCutDepth, int preferredMaxFillDepth, int maxCutDepth, int maxFillDepth,
+            int maxBuildingFoundationDepth, long maxEarthworkVolume, TerrainTransitionSettings terrainTransitions,
+            BuildingContentSettings buildings) {
+        this(roadWidth, maxBuildableSlope, parcelCapacity, parcelWidth, parcelDepth, buildingMargin,
+                maxElevationRange, preferredMaxCutDepth, preferredMaxFillDepth, maxCutDepth, maxFillDepth,
+                maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, buildings, DistrictPlanningSettings.single());
+    }
+
+    public SuburbPlanningSettings withDistricts(DistrictPlanningSettings value) {
+        return new SuburbPlanningSettings(roadWidth, maxBuildableSlope, parcelCapacity, parcelWidth, parcelDepth,
+                buildingMargin, maxElevationRange, preferredMaxCutDepth, preferredMaxFillDepth, maxCutDepth,
+                maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, buildings, value);
+    }
+
+    public SuburbPlanningSettings forDistrict(int target) {
+        return new SuburbPlanningSettings(roadWidth, maxBuildableSlope, new DevelopmentCapacity(1, target, target),
+                parcelWidth, parcelDepth, buildingMargin, maxElevationRange, preferredMaxCutDepth, preferredMaxFillDepth,
+                maxCutDepth, maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, buildings);
+    }
     public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, DevelopmentCapacity parcelCapacity,
             int parcelWidth, int parcelDepth, int buildingMargin, int maxElevationRange,
             int preferredMaxCutDepth, int preferredMaxFillDepth, int maxCutDepth, int maxFillDepth,
@@ -34,7 +56,7 @@ public record SuburbPlanningSettings(
     public SuburbPlanningSettings withBuildings(BuildingContentSettings content) {
         return new SuburbPlanningSettings(roadWidth, maxBuildableSlope, parcelCapacity, parcelWidth, parcelDepth,
                 buildingMargin, maxElevationRange, preferredMaxCutDepth, preferredMaxFillDepth, maxCutDepth,
-                maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, content);
+                maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, content, districts);
     }
 
     public static final int DEFAULT_ROAD_WIDTH = 3;
@@ -289,6 +311,7 @@ public record SuburbPlanningSettings(
         requireNonNegative(maxEarthworkVolume, "maxEarthworkVolume");
         terrainTransitions = Objects.requireNonNull(terrainTransitions, "terrainTransitions");
         buildings = Objects.requireNonNull(buildings, "buildings");
+        districts = Objects.requireNonNull(districts, "districts");
         if (!buildings.fallback().fits(new GridSize(
                 buildingSize(parcelWidth, buildingMargin), buildingSize(parcelDepth, buildingMargin)))) {
             throw new IllegalArgumentException("Building fallback must fit the profile slot size");
@@ -349,7 +372,8 @@ public record SuburbPlanningSettings(
                 maxBuildingFoundationDepth,
                 maxEarthworkVolume,
                 transitions,
-                buildings
+                buildings,
+                districts
         );
     }
 

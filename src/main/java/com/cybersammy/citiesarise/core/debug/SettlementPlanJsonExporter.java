@@ -49,6 +49,13 @@ public final class SettlementPlanJsonExporter {
         json.objectField("roadGraph", () -> writeRoadGraph(json, plan));
         json.arrayField("parcels", () -> writeParcels(json, plan.parcels()));
         json.arrayField("buildingSlots", () -> writeBuildingSlots(json, plan.buildingSlots()));
+        if (!plan.districts().isEmpty()) json.arrayField("districts", () -> plan.districts().forEach(district -> json.arrayValue(() -> {
+            json.beginObject();
+            json.stringField("id", district.id().value());
+            json.objectField("bounds", () -> writeBounds(json, district.bounds()));
+            json.arrayField("parcels", () -> district.parcels().forEach(id -> json.arrayStringValue(id.value())));
+            json.endObject();
+        })));
         if(!plan.props().isEmpty()) json.arrayField("props", () -> plan.props().forEach(prop -> json.arrayValue(() -> {
             json.beginObject(); json.stringField("rule",prop.ruleId()); json.stringField("source",prop.source().value());
             json.numberField("x",prop.origin().x()); json.numberField("y",prop.platformY()+prop.origin().y()); json.numberField("z",prop.origin().z());

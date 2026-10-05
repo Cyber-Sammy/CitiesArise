@@ -23,6 +23,6 @@ public final class SettlementContentComposer {
                             assembler.failure()+": "+slot.id().value()+" asset="+content.asset().id()));
             slots.add(new BuildingSlot(slot.id(),slot.parcelId(),slot.bounds(),slot.tags(),slot.properties(),Optional.of(content.resolved(resolved))));
         }
-        return new SettlementPlan(plan.id(),plan.roadGraph(),plan.parcels(),slots,plan.tags(),plan.properties(),settings.surfaces(), SurfacePropPlanner.plan(plan,preparation,settings.props(),seed),settings.surfaceTemplates());
+        return new SettlementPlan(plan.id(),plan.roadGraph(),plan.parcels(),slots,plan.tags(),plan.properties(),settings.surfaces(), SurfacePropPlanner.plan(plan,preparation,settings.props(),seed),settings.surfaceTemplates(),plan.districts());
     }
 }

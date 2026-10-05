@@ -21,6 +21,7 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
     private final ChunkGenerator chunkGenerator;
     private final RandomState randomState;
     private final LevelHeightAccessor levelHeight;
+    private final MinecraftWorldgenTerrainSampler.TerrainSource cachedSource;
 
     public MinecraftWorldgenTerrainProvider(
             ChunkGenerator chunkGenerator,
@@ -31,6 +32,7 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
         this.chunkGenerator = Objects.requireNonNull(chunkGenerator, "chunkGenerator");
         this.randomState = Objects.requireNonNull(randomState, "randomState");
         this.levelHeight = LevelHeightAccessor.create(minBuildHeight, worldHeight);
+        this.cachedSource = MinecraftWorldgenTerrainSampler.cachedSource(chunkGenerator, randomState, levelHeight);
     }
 
     @Override
@@ -50,12 +52,7 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
     }
 
     private MinecraftWorldgenTerrainSampler sampler() {
-        MinecraftWorldgenTerrainSampler sampler = new MinecraftWorldgenTerrainSampler(
-                chunkGenerator,
-                randomState,
-                levelHeight
-        );
-        return sampler;
+        return new MinecraftWorldgenTerrainSampler(cachedSource);
     }
 
     @Override

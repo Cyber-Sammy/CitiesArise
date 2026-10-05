@@ -188,6 +188,22 @@ final class MinecraftWorldgenTerrainSamplerTest {
         assertTrue(requiredCell(refined, point(2, 1)).slope() > 0.25);
     }
 
+    @Test void reusesExactSamplesAcrossRefinementsButNotAcrossSources() {
+        var source = new FakeTerrainSource();
+        var point = point(2,2);
+        source.height(point, 65); source.supportHeight(point, 61);
+        var cache = new MinecraftWorldgenTerrainSampler.CachedTerrainSource(source);
+        var bounds = new GridBounds(point(0,0),new GridSize(5,5));
+        var first = new MinecraftWorldgenTerrainSampler(cache).sample(bounds,Set.of(point));
+        var second = new MinecraftWorldgenTerrainSampler(cache).sample(bounds,Set.of(point));
+        assertEquals(first,second);
+        assertEquals(1,source.heightCalls.get(point));
+        assertEquals(1,source.supportHeightCalls.get(point));
+        assertTrue(requiredCell(second,point).water());
+        var differentSeed = new FakeTerrainSource(); differentSeed.height(point, 90);
+        assertEquals(90,new MinecraftWorldgenTerrainSampler.CachedTerrainSource(differentSeed).height(point));
+    }
+
     private static TerrainCell requiredCell(TerrainSurvey survey, GridPoint point) {
         return survey.findCell(point).orElseThrow();
     }

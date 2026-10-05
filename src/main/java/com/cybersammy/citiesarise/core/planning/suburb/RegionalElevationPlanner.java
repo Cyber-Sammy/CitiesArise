@@ -38,7 +38,8 @@ final class RegionalElevationPlanner {
                 parcelElevations.parcels(),
                 parcelElevations.buildingSlots(),
                 settlementPlan.tags(),
-                settlementPlan.properties()
+                settlementPlan.properties(), settlementPlan.placementMaterials(), settlementPlan.props(),
+                settlementPlan.surfaceTemplates(), settlementPlan.districts()
         );
         List<ElevationZone> zones = elevationZones(elevatedPlan);
         RegionalElevationPlan elevationPlan = new RegionalElevationPlan(
@@ -175,7 +176,7 @@ final class RegionalElevationPlanner {
         return List.copyOf(transitions);
     }
 
-    private static void addRoadTransitions(
+    static void addRoadTransitions(
             RoadGraph graph,
             Map<PlanElementId, RoadNode> nodesById,
             List<ElevationTransition> transitions

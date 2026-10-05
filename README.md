@@ -366,3 +366,31 @@ With planning logging enabled, uncached planning reports terrain sampling, base 
 ## Seed search CLI
 
 Find seeds containing bridges, road/access steps, retaining walls or other supported plan elements without starting the game client. Run scripts/Find-CitySeeds.ps1 from PowerShell; see [the seed-search guide](scripts/SEED_SEARCH.md) for filters, datapacks, limits and result verification.
+
+## Terrain-adaptive districts
+
+The bundled profile enables `planning.districts`:
+
+```json
+"districts": { "maxCount": 4, "targetParcels": 4, "maxConnectionAttempts": 8 }
+```
+
+Districts select local terrain and prepared heights independently. A failed local
+area can be omitted while usable districts remain, provided the city still meets
+`minimumParcelCount` and all included roads are connected. Ordinary connectors
+retain endpoint heights, with bounded cut/fill and spaced elevation steps. Bridges
+joining disconnected banks take priority over shortcuts. Content and style still
+come from the selected datapack; district metadata contains bounds and parcel IDs.
+
+Limits: at most eight districts and 32 connection attempts per connection; district
+search currently partitions the survey into terrain-informed rectangles and then
+uses the existing terrain-aware local layout. It is not arbitrary contour-based
+city growth. Bridges still require straight, equal-height supported banks; sloped
+decks, piers and tunnels are not included. Exact support validation can still
+reject a final city, and an unreachable district is not placed. Omitting
+`planning.districts` preserves the previous single-district behavior.
+
+Candidate placement uses a bounded shortlist (32 detailed layouts per size), so
+failure means no acceptable plan among the checked candidates, not proof that no
+possible city fits. The seed-search console reports candidate times and rejection
+reasons; a `TIME_LIMIT` report is a completed budget with preserved results.

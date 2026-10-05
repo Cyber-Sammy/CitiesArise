@@ -50,7 +50,7 @@ public final class MinecraftSettlementProfileJsonParser {
         SettlementProfile profile = new SettlementProfile(
                 id,
                 parseSurveySize(survey),
-                parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning, resources)),
+                parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning, resources)).withDistricts(parseDistricts(planning)),
                 parseTerrainResponsePolicy(json)
         );
         limits.validate(profile);
@@ -97,6 +97,13 @@ public final class MinecraftSettlementProfileJsonParser {
                 throw new IllegalArgumentException("Incomplete procedural_house palette: "+paletteId);
         }
         return settings;
+    }
+
+    private static com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings parseDistricts(JsonObject planning) {
+        if (!planning.has("districts")) return com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings.single();
+        var value = requiredObject(planning, "districts");
+        return new com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings(
+                optionalInt(value, "maxCount", 4), optionalInt(value, "targetParcels", 4), optionalInt(value, "maxConnectionAttempts", 8));
     }
 
     private static BuildingAsset requiredAsset(ContentCatalogParser.Catalog catalog, String id) {

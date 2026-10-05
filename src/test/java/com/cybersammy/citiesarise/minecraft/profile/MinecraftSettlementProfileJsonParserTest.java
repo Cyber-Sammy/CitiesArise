@@ -23,6 +23,18 @@ final class MinecraftSettlementProfileJsonParserTest {
     private final MinecraftSettlementProfileJsonParser parser = new MinecraftSettlementProfileJsonParser();
 
     @Test
+    void parsesBoundedBridgeSettingsAndRejectsUnsafeDepth() {
+        var data=validJson();
+        data.add("terrainPolicy", JsonParser.parseString("""
+                {"responses":{"water":"cross_if_supported"},"capabilities":["bridge"],
+                 "bridges":{"maxLength":32,"maxCount":1,"deckDepth":2,"minimumClearance":3}}
+                """));
+        assertEquals(new com.cybersammy.citiesarise.core.road.BridgeSettings(32,1,2,3), parser.parse(id(),data).terrainResponsePolicy().bridges());
+        data.getAsJsonObject("terrainPolicy").getAsJsonObject("bridges").addProperty("deckDepth",5);
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(),data));
+    }
+
+    @Test
     void parsesValidProfile() {
         SettlementProfile profile = parser.parse(id(), json("""
                 {

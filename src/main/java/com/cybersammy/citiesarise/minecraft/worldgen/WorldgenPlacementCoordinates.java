@@ -1,6 +1,11 @@
 package com.cybersammy.citiesarise.minecraft.worldgen;
 
 final class WorldgenPlacementCoordinates {
+    static com.cybersammy.citiesarise.core.geometry.GridPoint diagnosticCenter(
+            com.cybersammy.citiesarise.minecraft.planning.SettlementRegion region) {
+        return new com.cybersammy.citiesarise.core.geometry.GridPoint(
+                WorldgenRegionSearch.centerCoordinate(region.x()), WorldgenRegionSearch.centerCoordinate(region.z()));
+    }
     private WorldgenPlacementCoordinates() {
     }
 

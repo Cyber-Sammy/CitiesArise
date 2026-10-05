@@ -173,6 +173,21 @@ final class MinecraftWorldgenTerrainSamplerTest {
         assertThrows(NullPointerException.class, () -> sampler.sample(null));
     }
 
+    @Test
+    void exactRefinementPreservesDryRavineBetweenSparseSamples() {
+        FakeTerrainSource source = new FakeTerrainSource();
+        GridPoint ravine = point(2, 2);
+        source.height(ravine, 40);
+        var sampler = new MinecraftWorldgenTerrainSampler(source);
+        var bounds = new GridBounds(point(0, 0), new GridSize(5, 5));
+        assertEquals(64, requiredCell(sampler.sample(bounds), ravine).height());
+        var refined = sampler.sample(bounds, Set.of(ravine));
+        assertEquals(40, requiredCell(refined, ravine).height());
+        assertFalse(requiredCell(refined, ravine).water());
+        assertTrue(requiredCell(refined, ravine).slope() > 0.25);
+        assertTrue(requiredCell(refined, point(2, 1)).slope() > 0.25);
+    }
+
     private static TerrainCell requiredCell(TerrainSurvey survey, GridPoint point) {
         return survey.findCell(point).orElseThrow();
     }

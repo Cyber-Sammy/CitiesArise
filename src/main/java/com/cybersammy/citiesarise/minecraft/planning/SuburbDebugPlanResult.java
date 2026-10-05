@@ -175,6 +175,7 @@ public record SuburbDebugPlanResult(
 
         return baseSummary()
                 + ", roads=" + settlementPlan.roadGraph().segments().size()
+                + ", bridges=" + settlementPlan.roadGraph().bridges().size()
                 + ", parcels=" + settlementPlan.parcels().size()
                 + ", buildingSlots=" + settlementPlan.buildingSlots().size()
                 + ", wornRoads=" + wornRoadCount()

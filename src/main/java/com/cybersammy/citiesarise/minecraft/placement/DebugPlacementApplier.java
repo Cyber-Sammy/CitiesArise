@@ -41,7 +41,7 @@ public final class DebugPlacementApplier {
         DebugPlacementSnapshotBuilder snapshotBuilder = new DebugPlacementSnapshotBuilder();
 
         Map<GridPoint,DebugBlockPlacementOperation> fillPolicies=new LinkedHashMap<>();
-        for(var operation:placementPlan.operations()) if(!operation.fillMaterial().isEmpty() && operation.platformY().isPresent()) {
+        for(var operation:placementPlan.operations()) if(!operation.role().bridge() && !operation.fillMaterial().isEmpty() && operation.platformY().isPresent()) {
             if(operation.role()==DebugPlacementRole.TERRAIN_SURFACE) fillPolicies.put(operation.point(),operation);
             else fillPolicies.putIfAbsent(operation.point(),operation);
         }

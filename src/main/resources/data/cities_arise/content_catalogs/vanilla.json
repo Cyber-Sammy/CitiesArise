@@ -57,5 +57,10 @@
       "wall": "minecraft:stone_bricks",
       "roof": "minecraft:deepslate_tiles"
     }
+  },
+  "surfaces": {
+    "BRIDGE_DECK": "minecraft:stone_bricks",
+    "BRIDGE_RAIL": "minecraft:stone_brick_wall",
+    "BRIDGE_ABUTMENT": "minecraft:stone_bricks"
   }
 }

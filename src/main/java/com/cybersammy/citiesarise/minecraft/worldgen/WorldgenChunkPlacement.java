@@ -58,7 +58,15 @@ final class WorldgenChunkPlacement {
             DebugChunkPlacementPlan plan
     ) {
         Map<GridPoint,PlatformPreparation> policies=platformPreparations(plan);
+        Set<GridPoint> suspended = new HashSet<>();
+        Set<GridPoint> ordinary = new HashSet<>();
+        for (var operation : plan.operations()) {
+            if (operation.role().bridge()) suspended.add(operation.point());
+            else for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++)
+                ordinary.add(new GridPoint(operation.point().x() + dx, operation.point().z() + dz));
+        }
         for (SurfaceColumn column : columns.values()) {
+            if (suspended.contains(column.point()) || !ordinary.contains(column.point())) continue;
             if (column.fluidTopY().isEmpty()) {
                 continue;
             }
@@ -89,7 +97,7 @@ final class WorldgenChunkPlacement {
     private static Map<GridPoint, PlatformPreparation> platformPreparations(DebugChunkPlacementPlan plan) {
         Map<GridPoint, PlatformPreparation> preparations = new LinkedHashMap<>();
         for (DebugBlockPlacementOperation operation : plan.operations()) {
-            if (operation.platformY().isEmpty()) {
+            if (operation.platformY().isEmpty() || operation.role().bridge()) {
                 continue;
             }
             int platformY = operation.platformY().getAsInt();

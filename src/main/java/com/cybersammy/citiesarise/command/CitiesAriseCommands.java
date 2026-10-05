@@ -11,6 +11,7 @@ import com.cybersammy.citiesarise.minecraft.planning.MinecraftSuburbPlanningServ
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanDumpWriter;
 import com.cybersammy.citiesarise.minecraft.planning.SuburbDebugPlanResult;
 import com.cybersammy.citiesarise.minecraft.worldgen.WorldgenSettlementLocator;
+import com.cybersammy.citiesarise.minecraft.worldgen.SettlementRegistry;
 import com.mojang.brigadier.CommandDispatcher;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -59,7 +60,11 @@ public final class CitiesAriseCommands {
         dispatcher.register(Commands.literal("citiesarise")
                 .requires(source -> source.hasPermission(DEBUG_PERMISSION_LEVEL))
                 .then(Commands.literal("locate")
-                        .executes(context -> runLocate(context.getSource())))
+                        .executes(context -> runGeneratedLocate(context.getSource()))
+                        .then(Commands.literal("generated").executes(context -> runGeneratedLocate(context.getSource())))
+                        .then(Commands.literal("potential").executes(context -> runPotentialLocate(context.getSource())))
+                        .then(Commands.literal("diagnostic").executes(context -> runLocate(context.getSource())))
+                        .then(Commands.literal("cancel").executes(context -> cancelLocate(context.getSource()))))
                 .then(Commands.literal("debug")
                         .then(Commands.literal("plan")
                                 .executes(context -> runDebugPlan(context.getSource())))
@@ -87,15 +92,73 @@ public final class CitiesAriseCommands {
         }
 
         BlockPos origin = BlockPos.containing(source.getPosition());
-        String startedSummary = "Cities Arise settlement search started in the background.";
+        String startedSummary = "Diagnostic planning started. Results are candidates, not proof of generated settlements.";
         source.sendSuccess(() -> Component.literal(startedSummary), false);
         logCommandResult(startedSummary);
         MinecraftServer server = source.getServer();
-        settlementLocator.findBestAsync(source.getLevel(), origin)
-                .whenComplete((result, exception) -> server.execute(
-                        () -> completeLocate(source, result, exception)
-                ));
+        long started = System.nanoTime();
+        try {
+            settlementLocator.findBestAsync(source.getLevel(), origin)
+                    .whenComplete((result, exception) -> server.execute(() -> {
+                        completeLocate(source, result, exception);
+                        source.sendSuccess(() -> Component.literal("Diagnostic elapsedMs=" + elapsedMs(started)), false);
+                    }));
+        } catch (RuntimeException exception) {
+            completeLocate(source, null, exception);
+            return 0;
+        }
         return 1;
+    }
+
+    private int runGeneratedLocate(CommandSourceStack source) {
+        long started = System.nanoTime();
+        BlockPos origin = BlockPos.containing(source.getPosition());
+        var registry = SettlementRegistry.get(source.getLevel());
+        var nearest = registry.nearest(origin.getX(), origin.getZ());
+        if (nearest.isEmpty()) {
+            source.sendFailure(Component.literal("No recorded settlement in this dimension. Use /citiesarise locate diagnostic to check terrain candidates. Potential anchors may never generate a settlement. lookupMs=" + elapsedMs(started)));
+            return 0;
+        }
+        var entry = nearest.orElseThrow();
+        var data = entry.metadata();
+        String summary = "Recorded settlement " + data.id() + " at [" + data.centerX() + ", ~, " + data.centerZ()
+                + "], profile=" + data.profile() + ", state=" + entry.state()
+                + ", placedChunks=" + entry.placedChunks().size() + "/" + data.placementChunks().size()
+                + ", lookupMs=" + elapsedMs(started) + ", recordedPlacementMs=" + entry.placementNanos() / 1_000_000.0;
+        source.sendSuccess(() -> Component.literal(summary), false);
+        logCommandResult(summary);
+        return 1;
+    }
+
+    private int runPotentialLocate(CommandSourceStack source) {
+        if (!CitiesAriseWorldgenConfig.enabled()) {
+            source.sendFailure(Component.literal("Cities Arise worldgen is disabled."));
+            return 0;
+        }
+        long started = System.nanoTime();
+        var position = settlementLocator.findPotential(source.getLevel(), BlockPos.containing(source.getPosition()));
+        if (position.isEmpty()) {
+            source.sendFailure(Component.literal("No potential anchor in the configured search radius. lookupMs=" + elapsedMs(started)));
+            return 0;
+        }
+        var pos = position.orElseThrow();
+        source.sendSuccess(() -> Component.literal("UNVERIFIED potential anchor [" + pos.getX() + ", ~, " + pos.getZ()
+                + "]. This is not a confirmed settlement. Terrain, biome and content acceptance were not checked. Use /citiesarise locate diagnostic for terrain validation. lookupMs=" + elapsedMs(started)), false);
+        return 1;
+    }
+
+    private int cancelLocate(CommandSourceStack source) {
+        if (!locateInProgress.get()) {
+            source.sendFailure(Component.literal("No diagnostic search is running."));
+            return 0;
+        }
+        settlementLocator.cancel();
+        source.sendSuccess(() -> Component.literal("Cancellation requested; the current bounded candidate may finish first."), false);
+        return 1;
+    }
+
+    private static double elapsedMs(long started) {
+        return (System.nanoTime() - started) / 1_000_000.0;
     }
 
     private void completeLocate(
@@ -105,6 +168,12 @@ public final class CitiesAriseCommands {
     ) {
         locateInProgress.set(false);
         if (exception != null) {
+            Throwable cause = exception;
+            while (cause.getCause() != null) cause = cause.getCause();
+            if (cause instanceof java.util.concurrent.CancellationException) {
+                source.sendSuccess(() -> Component.literal("Diagnostic search cancelled."), false);
+                return;
+            }
             String summary = "Cities Arise settlement search failed: " + rootMessage(exception);
             source.sendFailure(Component.literal(summary));
             logger.error("Cities Arise settlement search failed.", exception);
@@ -124,7 +193,7 @@ public final class CitiesAriseCommands {
         }
 
         var located = result.settlement().orElseThrow();
-        String summary = "Best checked Cities Arise settlement: ["
+        String summary = "Terrain-accepted candidate center (not a generated settlement): ["
                 + located.blockX()
                 + ", ~, "
                 + located.blockZ()

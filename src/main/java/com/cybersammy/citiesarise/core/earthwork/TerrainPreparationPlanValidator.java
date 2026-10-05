@@ -586,8 +586,12 @@ public final class TerrainPreparationPlanValidator {
         }
         for (ElevationTransitionPolicy.TransitionPoint point
                 : ElevationTransitionPolicy.materialize(transition, source, target)) {
-            if (!containsTransitionColumn(transition.type(), point, columns)) {
-                errors.add(error(transition.targetZoneId(), "elevation transition preparation is incomplete"));
+            if (!containsTransitionColumn(transition.type(), source, point, columns)) {
+                errors.add(error(transition.targetZoneId(), "elevation transition preparation is incomplete at "
+                        + point.point() + "; expected elevation=" + point.targetElevation()
+                        + ", type=" + expectedTransitionColumnType(transition.type(), point.step())
+                        + "; actual=" + columns.stream().filter(column -> column.point().equals(point.point()))
+                                .findFirst().map(Object::toString).orElse("missing")));
                 return;
             }
         }
@@ -595,6 +599,7 @@ public final class TerrainPreparationPlanValidator {
 
     private static boolean containsTransitionColumn(
             ElevationTransitionType transitionType,
+            ElevationZone source,
             ElevationTransitionPolicy.TransitionPoint point,
             List<TerrainPreparationColumn> columns
     ) {
@@ -607,6 +612,12 @@ public final class TerrainPreparationPlanValidator {
                 continue;
             }
             if (column.type() == expected) {
+                return true;
+            }
+            // The road's step also serves an access beginning at the same elevation.
+            if (transitionType == ElevationTransitionType.BUILDING_ACCESS
+                    && source.bounds().contains(point.point())
+                    && column.type() == TerrainPreparationColumnType.ROAD_TRANSITION_STEP) {
                 return true;
             }
             if (point.step() && isStepColumn(column.type())) {

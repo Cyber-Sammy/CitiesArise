@@ -36,7 +36,11 @@ public enum DebugPlacementRole {
     DOOR_WEST_UPPER(32),
     DOOR_EAST_LOWER(33),
     DOOR_EAST_UPPER(34),
-    CONTENT_BLOCK(35);
+    CONTENT_BLOCK(35),
+    BRIDGE_DECK(36),
+    BRIDGE_RAIL(37),
+    BRIDGE_ABUTMENT(38),
+    BRIDGE_CLEARANCE(39);
 
     private final int serializedId;
 
@@ -46,6 +50,10 @@ public enum DebugPlacementRole {
 
     public int serializedId() {
         return serializedId;
+    }
+
+    public boolean bridge() {
+        return this == BRIDGE_DECK || this == BRIDGE_RAIL || this == BRIDGE_ABUTMENT || this == BRIDGE_CLEARANCE;
     }
 
     public static DebugPlacementRole fromSerializedId(int serializedId) {
@@ -59,6 +67,7 @@ public enum DebugPlacementRole {
 
     int priority() {
         return switch (this) {
+            case BRIDGE_DECK, BRIDGE_RAIL, BRIDGE_ABUTMENT, BRIDGE_CLEARANCE -> 80;
             case CONTENT_BLOCK -> 50;
             case OAK_HOUSE_WALL, STONE_HOUSE_WALL -> 40;
             case RED_HOUSE_ROOF, SLATE_HOUSE_ROOF, BUILDING_WINDOW, BUILDING_WORKBENCH,

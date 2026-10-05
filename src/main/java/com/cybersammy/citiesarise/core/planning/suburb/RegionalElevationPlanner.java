@@ -31,7 +31,7 @@ final class RegionalElevationPlanner {
             SettlementPlan settlementPlan
     ) {
         RoadGraph elevatedRoadGraph = RoadElevationPlanner.apply(request, settlementPlan.roadGraph());
-        ParcelElevationResult parcelElevations = elevateParcelsAndBuildings(request, settlementPlan);
+        ParcelElevationResult parcelElevations = elevateParcelsAndBuildings(request, settlementPlan, elevatedRoadGraph);
         SettlementPlan elevatedPlan = new SettlementPlan(
                 settlementPlan.id(),
                 elevatedRoadGraph,
@@ -50,9 +50,10 @@ final class RegionalElevationPlanner {
 
     private static ParcelElevationResult elevateParcelsAndBuildings(
             SuburbPlanningRequest request,
-            SettlementPlan plan
+            SettlementPlan plan,
+            RoadGraph elevatedRoadGraph
     ) {
-        Map<PlanElementId, Integer> elevationByParcel = parcelElevations(request, plan);
+        Map<PlanElementId, Integer> elevationByParcel = parcelElevations(request, plan, elevatedRoadGraph);
         List<Parcel> elevatedParcels = new ArrayList<>();
         for (Parcel parcel : plan.parcels()) {
             elevatedParcels.add(new Parcel(
@@ -87,18 +88,30 @@ final class RegionalElevationPlanner {
 
     private static Map<PlanElementId, Integer> parcelElevations(
             SuburbPlanningRequest request,
-            SettlementPlan plan
+            SettlementPlan plan,
+            RoadGraph elevatedRoadGraph
     ) {
         Map<PlanElementId, Integer> elevations = new HashMap<>();
-        for (BuildingSlot slot : plan.buildingSlots()) {
-            int elevation = TerrainPlatform.highestElevation(request, slot.bounds());
-            elevations.merge(slot.parcelId(), elevation, Math::max);
-        }
+        Map<PlanElementId, RoadNode> nodes = nodesById(elevatedRoadGraph);
+        List<ElevationZone> roads = sortedSegments(elevatedRoadGraph.segments()).stream().map(road ->
+                new ElevationZone(road.id(), ElevationZoneType.ROAD_SEGMENT,
+                        AxisAlignedGridCorridor.bounds(nodes.get(road.startNodeId()).point(),
+                                nodes.get(road.endNodeId()).point(), road.width()),
+                        TerrainPlatform.requiredElevation(road.properties()))).toList();
         for (Parcel parcel : plan.parcels()) {
-            elevations.computeIfAbsent(
-                    parcel.id(),
-                    ignored -> TerrainPlatform.highestElevation(request, parcel.bounds())
-            );
+            int minimum = Integer.MIN_VALUE;
+            int maximum = Integer.MAX_VALUE;
+            for (BuildingSlot slot : plan.buildingSlots()) {
+                if (!slot.parcelId().equals(parcel.id())) continue;
+                var access = BuildingAccessResolver.resolve(roads,
+                        new ElevationZone(slot.id(), ElevationZoneType.BUILDING_PAD, slot.bounds(), 0));
+                int rise = access.distance() / request.settings().terrainTransitions().buildingAccessRunPerRise();
+                minimum = Math.max(minimum, access.roadZone().targetElevation() - rise);
+                maximum = Math.min(maximum, access.roadZone().targetElevation() + rise);
+            }
+            elevations.put(parcel.id(), ParcelPlatformElevation.choose(parcel.bounds(),
+                    point -> TerrainPlatform.requiredTerrainCell(request, point).height() - 1,
+                    request.settings(), minimum, maximum));
         }
         return Map.copyOf(elevations);
     }

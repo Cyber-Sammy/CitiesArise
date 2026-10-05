@@ -46,6 +46,10 @@ public final class PlanValidator {
         for (BuildingSlot buildingSlot : plan.buildingSlots()) {
             addDuplicateIdError(buildingSlot, seenIds, errors);
         }
+        for (var bridge : plan.roadGraph().bridges()) {
+            if (!seenIds.add(bridge.id())) errors.add(PlanValidationError.forElement(
+                    PlanValidationErrorCode.DUPLICATE_ELEMENT_ID, bridge.id(), "Duplicate bridge id: " + bridge.id().value()));
+        }
     }
 
     private static void addDuplicateIdError(

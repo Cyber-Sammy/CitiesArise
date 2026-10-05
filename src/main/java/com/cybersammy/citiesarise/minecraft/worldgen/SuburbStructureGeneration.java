@@ -78,7 +78,10 @@ final class SuburbStructureGeneration {
                 CitiesAriseConfig.terrainLoggingEnabled(),
                 CitiesAriseConfig.planningLoggingEnabled()
         );
+        long planningStarted = System.nanoTime();
         SuburbDebugPlanResult result = planningService.planForStructureStart(planningContext, center);
+        if (CitiesAriseConfig.planningLoggingEnabled()) logger.info("Structure planning at {}: success={}, elapsedMs={}",
+                center, result.successful(), (System.nanoTime() - planningStarted) / 1_000_000.0);
         if (!result.successful()) {
             return Optional.empty();
         }
@@ -97,7 +100,8 @@ final class SuburbStructureGeneration {
                 profile,
                 context
         );
-        return Optional.of(new Generation(center, new CitiesAriseSuburbPiece(boundingBox, snapshot)));
+        return Optional.of(new Generation(center, new CitiesAriseSuburbPiece(boundingBox, snapshot,
+                profile.id().value(), result.plan().id().value(), center.getX(), center.getZ())));
     }
 
     private static BlockPos regionCenter(Structure.GenerationContext context) {

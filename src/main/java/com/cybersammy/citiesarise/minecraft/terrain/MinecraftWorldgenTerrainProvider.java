@@ -3,6 +3,9 @@ package com.cybersammy.citiesarise.minecraft.terrain;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.earthwork.OrdinaryGroundSupport;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.minecraft.planning.WorldgenTerrainSurveyProvider;
 import java.util.Objects;
 import java.util.Optional;
@@ -53,5 +56,18 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
                 levelHeight
         );
         return sampler;
+    }
+
+    @Override
+    public Optional<TerrainPreparationColumn> unsupportedColumn(TerrainPreparationPlan plan) {
+        for (var column : plan.columns()) {
+            var terrain = chunkGenerator.getBaseColumn(column.point().x(), column.point().z(), levelHeight, randomState);
+            if (!OrdinaryGroundSupport.supported(column,
+                    y -> y >= levelHeight.getMinBuildHeight() && y < levelHeight.getMaxBuildHeight()
+                            && terrain.getBlock(y).blocksMotion() && terrain.getBlock(y).getFluidState().isEmpty())) {
+                return Optional.of(column);
+            }
+        }
+        return Optional.empty();
     }
 }

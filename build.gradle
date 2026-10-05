@@ -44,6 +44,13 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
         }
 
+        seedSearch {
+            type = 'gameTestServer'
+            gameDirectory = file(providers.gradleProperty('seedSearchWorkDir').getOrElse('build/seed-search/runtime'))
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'cities_arise_seed_search'
+            systemProperty 'citiesarise.seedSearchOptions', providers.gradleProperty('seedSearchOptions').getOrElse('')
+        }
+
         data {
             data()
             programArguments.addAll '--mod', mod_id, '--all', '--output', file('src/generated/resources/').absolutePath, '--existing', file('src/main/resources/').absolutePath
@@ -67,6 +74,9 @@ sourceSets.main.resources {
 }
 
 tasks.named('processGameTestResources') {
+    from('src/gameTest/resources/data/cities_arise/structure') {
+        into 'data/cities_arise_seed_search/structure'
+    }
     from('examples/datapacks/composition_fixture') {
         include 'data/test/**'
     }

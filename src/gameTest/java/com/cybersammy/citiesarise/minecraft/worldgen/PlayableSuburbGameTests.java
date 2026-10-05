@@ -76,10 +76,13 @@ public final class PlayableSuburbGameTests {
         DebugPlacementPlan plan = new DebugPlacementPlan(List.copyOf(operations.values()));
         var snapshot = SuburbStructurePlacementSnapshot.from(plan);
         var box = new BoundingBox(origin.getX(), floor - 2, origin.getZ(), origin.getX() + 43, floor + 9, origin.getZ() + 17);
-        var piece = new CitiesAriseSuburbPiece(box, snapshot);
+        var piece = new CitiesAriseSuburbPiece(box, snapshot, "test:suburb", "test:semantic_city", origin.getX(), origin.getZ());
         var context = StructurePieceSerializationContext.fromLevel(level);
         CompoundTag saved = piece.createTag(context);
         var reloaded = new CitiesAriseSuburbPiece(saved);
+        var metadata = piece.registryMetadata(level.dimension().location().toString());
+        helper.assertTrue(metadata.equals(reloaded.registryMetadata(level.dimension().location().toString())),
+                "Semantic identity changed through piece reload");
         helper.assertTrue(snapshot.equals(SuburbStructurePlacementSnapshot.load(saved)), "Snapshot changed through structure NBT serialization");
         var chunks = operations.values().stream().map(o -> PlacementChunk.containing(o.point().x(), o.point().z()))
                 .distinct().sorted(Comparator.comparingInt(PlacementChunk::x).thenComparingInt(PlacementChunk::z).reversed()).toList();
@@ -96,6 +99,10 @@ public final class PlayableSuburbGameTests {
         var cleanup = new WorldgenVegetationCleanupIndex(plan);
         for (var chunk : chunks) new WorldgenPlacementApplier().clearVegetation(level, cleanup.slice(chunk));
         helper.runAfterDelay(5, () -> {
+            var recorded = SettlementRegistry.get(level).nearest(origin.getX(), origin.getZ()).orElseThrow();
+            helper.assertTrue(recorded.metadata().equals(metadata), "Piece lifecycle did not register semantic metadata");
+            helper.assertTrue(recorded.state().equals("PLACEMENT_COMPLETE"), "Not all placement chunks were registered");
+            helper.assertTrue(recorded.placedChunks().size() == chunks.size(), "Registry counted duplicate or missing chunks");
             var materials = new VanillaDebugBlockMaterialProvider();
             for (var operation : plan.operations()) {
                 BlockPos position = new BlockPos(operation.point().x(), floor + operation.verticalOffset(), operation.point().z());

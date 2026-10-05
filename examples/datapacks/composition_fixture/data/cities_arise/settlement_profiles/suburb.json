@@ -46,16 +46,24 @@
   },
   "terrainPolicy": {
     "responses": {
-      "water": "build_around",
+      "water": "cross_if_supported",
       "blockedTerrain": "avoid",
       "steepSlope": "build_around"
     },
-    "capabilities": [],
+    "capabilities": [
+      "bridge"
+    ],
     "adaptation": {
       "sensitivity": 0.5,
       "maxTerraformArea": 32,
       "maxTerraformRelief": 4,
       "maxTerraformVolume": 160
+    },
+    "bridges": {
+      "maxLength": 48,
+      "maxCount": 2,
+      "deckDepth": 1,
+      "minimumClearance": 0
     }
   }
 }

@@ -29,13 +29,13 @@ public final class CitiesAriseWorldgenConfig {
                 .worldRestart()
                 .defineInRange("candidateRegionModulo", 16, 1, 1024);
         LOCATE_SEARCH_RADIUS_REGIONS = builder
-                .comment("Maximum settlement-region radius searched by /citiesarise locate.")
+                .comment("Maximum settlement-region radius searched by potential and diagnostic locate modes.")
                 .defineInRange("locateSearchRadiusRegions", 64, 1, 512);
         LOCATE_MAX_CANDIDATE_ATTEMPTS = builder
-                .comment("Maximum deterministic candidates fully planned by /citiesarise locate.")
+                .comment("Maximum deterministic candidates fully planned by /citiesarise locate diagnostic.")
                 .defineInRange("locateMaxCandidateAttempts", 256, 1, 4096);
         LOCATE_IMPROVEMENT_CANDIDATE_ATTEMPTS = builder
-                .comment("Additional candidates checked after /citiesarise locate finds its first accepted site.")
+                .comment("Additional candidates checked after /citiesarise locate diagnostic finds its first accepted site.")
                 .defineInRange("locateImprovementCandidateAttempts", 16, 0, 4096);
         builder.pop();
 

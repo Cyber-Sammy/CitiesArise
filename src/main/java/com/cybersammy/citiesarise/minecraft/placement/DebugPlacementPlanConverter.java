@@ -28,10 +28,16 @@ import java.util.OptionalInt;
 
 public final class DebugPlacementPlanConverter {
     private final Map<String,BuildingPlacementProvider> buildingProviders;
+    private final BridgePlacementProvider bridgeProvider;
     public DebugPlacementPlanConverter() {
         this(Map.of("procedural_house",new VanillaBuildingPlacementProvider(),"modules",new ModuleBuildingPlacementProvider()));
     }
-    public DebugPlacementPlanConverter(Map<String,BuildingPlacementProvider> providers) { buildingProviders=Map.copyOf(providers); }
+    public DebugPlacementPlanConverter(Map<String,BuildingPlacementProvider> providers) {
+        this(providers, new ProceduralBridgePlacementProvider());
+    }
+    public DebugPlacementPlanConverter(Map<String,BuildingPlacementProvider> providers, BridgePlacementProvider bridges) {
+        buildingProviders=Map.copyOf(providers); bridgeProvider=Objects.requireNonNull(bridges);
+    }
     private static final int SURFACE_OFFSET = 0;
     private static final int FOUNDATION_OFFSET = -1;
     private static final int FIRST_WALL_OFFSET = 1;
@@ -42,7 +48,7 @@ public final class DebugPlacementPlanConverter {
 
     public DebugPlacementPlan convert(SettlementPlan plan) {
         Objects.requireNonNull(plan, "plan");
-        return withSurfaceTemplates(convert(plan, Map.of()),plan);
+        return withSurfaceTemplates(withBridges(convert(plan, Map.of()), plan),plan);
     }
 
     private DebugPlacementPlan convert(
@@ -82,12 +88,29 @@ public final class DebugPlacementPlanConverter {
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
-        return withSurfaceTemplates(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
-                .map(operation -> withMaterial(operation,plan.placementMaterials())).toList()),plan);
+        return withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
+                .map(operation -> withMaterial(operation,plan.placementMaterials())).toList()), plan),plan);
+    }
+
+    private DebugPlacementPlan withBridges(DebugPlacementPlan placement, SettlementPlan plan) {
+        var template = plan.surfaceTemplates().get("BRIDGE_DECK");
+        if (template != null && plan.roadGraph().bridges().stream().anyMatch(b -> template.size().y() > b.deckDepth())) {
+            throw new IllegalArgumentException("Bridge deck template exceeds reserved deckDepth");
+        }
+        Map<DebugPlacementPosition, DebugBlockPlacementOperation> operations = new LinkedHashMap<>();
+        for (var operation : placement.operations()) {
+            boolean replaced = (operation.verticalOffset() <= 0 || operation.role() == DebugPlacementRole.ROAD_END_CURB)
+                    && plan.roadGraph().bridges().stream().anyMatch(bridge -> bridge.bounds().contains(operation.point()));
+            if (!replaced) operations.put(operation.position(), operation);
+        }
+        for (var bridge : plan.roadGraph().bridges()) for (var operation : bridgeProvider.create(bridge)) {
+            operations.put(operation.position(), withMaterial(operation, plan.placementMaterials()));
+        }
+        return new DebugPlacementPlan(List.copyOf(operations.values()));
     }
 
     private static DebugBlockPlacementOperation withMaterial(DebugBlockPlacementOperation op, Map<String,String> materials) {
-        String material=op.material().isEmpty()?materials.getOrDefault(op.role().name(),""):op.material();
+        String material=op.role()==DebugPlacementRole.BRIDGE_CLEARANCE?"minecraft:air":op.material().isEmpty()?materials.getOrDefault(op.role().name(),""):op.material();
         String fill=op.fillMaterial().isEmpty()?materials.getOrDefault(op.role()==DebugPlacementRole.TERRAIN_SURFACE?"TERRAIN_FILL":"FOUNDATION",""):op.fillMaterial();
         return new DebugBlockPlacementOperation(op.point(),op.verticalOffset(),op.role(),op.sourceElementId(),op.platformY(),material,op.rotation(),fill);
     }
@@ -100,9 +123,12 @@ public final class DebugPlacementPlanConverter {
             var a=nodes.get(road.startNodeId()).point(); var b=nodes.get(road.endNodeId()).point();
             turns.put(road.id(),b.x()>a.x()?3:b.x()<a.x()?1:b.z()<a.z()?2:0);
         }
+        for (var bridge : plan.roadGraph().bridges()) turns.put(bridge.id(),
+                bridge.end().x()>bridge.start().x()?3:bridge.end().x()<bridge.start().x()?1:bridge.end().z()<bridge.start().z()?2:0);
         Map<DebugPlacementPosition,DebugBlockPlacementOperation> result=new LinkedHashMap<>();
         for(var op:placement.operations()) addOperation(op,result);
         for(var op:placement.operations()) {
+            if (op.role() == DebugPlacementRole.BRIDGE_DECK && op.verticalOffset() != 0) continue;
             var template=plan.surfaceTemplates().get(op.role().name()); if(template==null) continue;
             int turn=template.alignToRoad()?turns.getOrDefault(op.sourceElementId(),0):0;
             int x=op.point().x(),z=op.point().z();
@@ -111,8 +137,8 @@ public final class DebugPlacementPlanConverter {
             for(var cell:template.cells()) if(cell.position().x()==u && cell.position().z()==v) {
                 int offset=cell.position().y()-template.size().y()+1;
                 var layer=new DebugBlockPlacementOperation(op.point(),op.verticalOffset()+offset,
-                        offset==0?op.role():DebugPlacementRole.CONTENT_BLOCK,op.sourceElementId(),op.platformY(),cell.material(),turn,op.fillMaterial());
-                if(offset==0) result.put(layer.position(),layer); else addOperation(layer,result);
+                        offset==0 || op.role().bridge()?op.role():DebugPlacementRole.CONTENT_BLOCK,op.sourceElementId(),op.platformY(),cell.material(),turn,op.fillMaterial());
+                if(offset==0 || op.role().bridge()) result.put(layer.position(),layer); else addOperation(layer,result);
             }
         }
         return new DebugPlacementPlan(List.copyOf(result.values()));

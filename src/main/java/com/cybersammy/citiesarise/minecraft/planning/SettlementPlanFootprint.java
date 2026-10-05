@@ -24,6 +24,7 @@ final class SettlementPlanFootprint {
         Objects.requireNonNull(plan, "plan");
         Set<GridPoint> points = new LinkedHashSet<>();
         addRoads(points, plan.roadGraph());
+        plan.roadGraph().bridges().forEach(bridge -> addBounds(points, bridge.bounds()));
 
         for (Parcel parcel : plan.parcels()) {
             addBounds(points, parcel.bounds());

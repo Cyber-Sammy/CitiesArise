@@ -18,6 +18,39 @@ import net.neoforged.neoforge.gametest.*;
 @PrefixGameTestTemplate(false)
 public final class DistrictCityGameTests {
     @GameTest(template="empty",timeoutTicks=200)
+    public static void hillsideDistrictLinksSurviveSnapshotPlacement(GameTestHelper helper) {
+        var origin=helper.absolutePos(new BlockPos(1280,12,1024));
+        var bounds=new GridBounds(new GridPoint(origin.getX(),origin.getZ()),new GridSize(120,48));
+        var survey=TerrainSurvey.sample(bounds,p -> Optional.of(new TerrainCell(p,
+                origin.getY()+1+(p.x()-origin.getX())/20,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var result=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(new PlanElementId("test:hill-city"),survey,42,
+                SuburbPlanningSettings.defaults().withDistricts(new DistrictPlanningSettings(2,3,8))));
+        helper.assertTrue(result.successful(),"Hill city rejected: "+result.failureReason());
+        var plan=result.plan().orElseThrow();
+        helper.assertTrue(plan.districts().size()==2,"Missing hillside districts");
+        var links=plan.roadGraph().segments().stream().filter(s -> s.id().value().contains("district-link-")).toList();
+        helper.assertTrue(!links.isEmpty(),"Missing hillside connection");
+        var level=helper.getLevel();
+        for(int x=0;x<120;x++) for(int z=0;z<48;z++) for(int y=-4;y<=x/20;y++)
+            level.setBlock(origin.offset(x,y,z),Blocks.STONE.defaultBlockState(),2);
+        var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow());
+        var snapshot=SuburbStructurePlacementSnapshot.from(placement);
+        var tag=new CompoundTag(); snapshot.save(tag);
+        var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
+        var partition=new DebugPlacementChunkProjector().partition(restored);
+        var chunks=restored.operations().stream().map(op -> PlacementChunk.containing(op.point())).distinct()
+                .sorted(Comparator.comparingInt(PlacementChunk::x).thenComparingInt(PlacementChunk::z).reversed()).toList();
+        for(var chunk:chunks) new WorldgenPlacementApplier().apply(level,partition.slice(chunk));
+        var nodes=new HashMap<PlanElementId,GridPoint>(); plan.roadGraph().nodes().forEach(n -> nodes.put(n.id(),n.point()));
+        for(var link:links) {
+            var a=nodes.get(link.startNodeId()); var b=nodes.get(link.endNodeId());
+            int y=Integer.parseInt(link.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow());
+            helper.assertTrue(!level.getBlockState(new BlockPos((a.x()+b.x())/2,y,(a.z()+b.z())/2)).isAir(),"Missing graded road surface");
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template="empty",timeoutTicks=200)
     public static void generatedDistrictBridgeSurvivesReverseChunkPlacement(GameTestHelper helper) {
         var origin=helper.absolutePos(new BlockPos(1024,12,1024));
         var bounds=new GridBounds(new GridPoint(origin.getX(),origin.getZ()),new GridSize(120,48));

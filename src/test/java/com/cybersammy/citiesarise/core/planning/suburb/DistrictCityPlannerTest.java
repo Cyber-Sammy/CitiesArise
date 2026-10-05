@@ -10,15 +10,47 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DistrictCityPlannerTest {
-    @Test void shortTurnsDoNotCompressElevationSteps() {
-        var points = List.of(new GridPoint(0,0),new GridPoint(1,0),new GridPoint(1,1),new GridPoint(2,1));
-        var nodes = new ArrayList<RoadNode>(); var segments = new ArrayList<RoadSegment>();
-        for (int i=0;i<points.size();i++) nodes.add(new RoadNode(new PlanElementId("test:n"+i),points.get(i),Set.of(),PlanProperties.empty()));
-        for (int i=1;i<nodes.size();i++) segments.add(new RoadSegment(new PlanElementId("test:s"+i),nodes.get(i-1).id(),nodes.get(i).id(),3,Set.of(),PlanProperties.empty()));
-        var graph = new RoadGraph(nodes,segments);
-        assertTrue(DistrictCityPlanner.gradeConnector(graph,64,66).isEmpty());
-        assertTrue(DistrictCityPlanner.gradeConnector(graph,64,64).isPresent());
+    @Test void allocatesRemainderToLastDistrict() {
+        var base=request(false,false);
+        var settings=base.settings().withDistricts(new DistrictPlanningSettings(2,4,8));
+        var result=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(base.settlementId(),base.survey(),42,settings,base.terrainResponsePolicy()));
+        assertTrue(result.successful(),result.toString());
+        var plan=result.plan().orElseThrow();
+        assertEquals(6,plan.parcels().size());
+        assertEquals(List.of(2,4),plan.districts().stream().map(d -> d.parcels().size()).sorted().toList());
     }
+
+    @Test void replansUnsupportedLocalFootprintWithoutDiscardingCity() {
+        var original=request(false,false);
+        var s=original.settings();
+        var settings=new SuburbPlanningSettings(s.roadWidth(),s.maxBuildableSlope(),new DevelopmentCapacity(3,6,6),
+                s.parcelWidth(),s.parcelDepth(),s.buildingMargin(),12,s.preferredMaxCutDepth(),s.preferredMaxFillDepth(),
+                s.maxCutDepth(),s.maxFillDepth(),s.maxBuildingFoundationDepth(),s.maxEarthworkVolume(),s.terrainTransitions(),s.buildings(),s.districts());
+        var base=new SuburbPlanningRequest(original.settlementId(),original.survey(),42,settings,original.terrainResponsePolicy());
+        var initial=SuburbPlanner.defaults().plan(base);
+        var bad=initial.plan().orElseThrow().parcels().getFirst().bounds().origin();
+        var rejections=new java.util.concurrent.atomic.AtomicInteger();
+        PlanningAcceptance acceptance=(r,result) -> {
+            if(result.terrainPreparationPlan().orElseThrow().columns().stream().noneMatch(c -> c.point().equals(bad))) return result;
+            rejections.incrementAndGet();
+            return SuburbPlanningResult.rejectedTerrain(new SuburbTerrainDiagnostic(r.survey().findCell(bad).orElseThrow(),
+                    new com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability(0,
+                            Set.of(com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason.UNSUPPORTED_TERRAIN),List.of())));
+        };
+        var result=SuburbPlanner.defaults().plan(base,acceptance);
+        assertTrue(result.successful(),result.toString());
+        assertFalse(result.plan().orElseThrow().districts().isEmpty());
+        assertTrue(result.plan().orElseThrow().districts().stream().anyMatch(d -> d.id().value().endsWith("district-0")));
+        assertTrue(rejections.get()>0);
+        assertTrue(result.terrainPreparationPlan().orElseThrow().columns().stream().noneMatch(c -> c.point().equals(bad)));
+    }
+
+    @Test void exactAcceptanceCannotBeBypassedByFallback() {
+        var result=SuburbPlanner.defaults().plan(request(false,false),(r,candidate) ->
+                SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_PARCEL_SPACE));
+        assertFalse(result.successful());
+    }
+
     @Test void createsConnectedDistrictsAndIsDeterministic() {
         var request = request(false, false);
         var result = SuburbPlanner.defaults().plan(request);

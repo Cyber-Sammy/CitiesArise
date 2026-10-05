@@ -41,7 +41,7 @@ final class WorldgenWaterMaskRefiner {
             footprint.addAll(com.cybersammy.citiesarise.core.road.BridgePlanner.probePoints(
                     initialRequest, currentResult.plan().orElseThrow()));
             if (checkedPoints.containsAll(footprint)) {
-                return currentResult;
+                return repairSupport(planner, terrainProvider, initialRequest, currentResult);
             }
             checkedPoints.addAll(footprint);
             Optional<TerrainSurvey> refinedSurvey = terrainProvider.sampleWithExactWaterMask(
@@ -49,9 +49,9 @@ final class WorldgenWaterMaskRefiner {
                     Set.copyOf(checkedPoints)
             );
             if (refinedSurvey.isEmpty()) {
-                return currentResult;
+                return repairSupport(planner, terrainProvider, initialRequest, currentResult);
             }
-            currentResult = replan(planner, initialRequest, refinedSurvey.orElseThrow());
+            currentResult = planner.plan(withSurvey(initialRequest, refinedSurvey.orElseThrow()));
         }
 
         if (!currentResult.successful()) {
@@ -72,24 +72,31 @@ final class WorldgenWaterMaskRefiner {
                 surveyPoints
         );
         if (refinedSurvey.isEmpty()) {
-            return currentResult;
+            return repairSupport(planner, terrainProvider, initialRequest, currentResult);
         }
-        return replan(planner, initialRequest, refinedSurvey.orElseThrow());
+        var request = withSurvey(initialRequest, refinedSurvey.orElseThrow());
+        return planner.plan(request, (candidateRequest, candidate) ->
+                TerrainSupportAcceptance.validate(terrainProvider, candidateRequest.survey(), candidate));
     }
 
-    private static SuburbPlanningResult replan(
-            SuburbPlanner planner,
-            SuburbPlanningRequest initialRequest,
-            TerrainSurvey refinedSurvey
-    ) {
-        SuburbPlanningRequest refinedRequest = new SuburbPlanningRequest(
+    private static SuburbPlanningResult repairSupport(SuburbPlanner planner, WorldgenTerrainSurveyProvider terrain,
+            SuburbPlanningRequest request, SuburbPlanningResult result) {
+        var checked = TerrainSupportAcceptance.validate(terrain, request.survey(), result);
+        if (checked.successful() || request.settings().districts().maxCount() == 1) return checked;
+        // Repair can move a district outside the refined footprint. Resolve the whole bounded survey first.
+        var exact = terrain.sampleWithExactWaterMask(request.survey().bounds(), points(request.survey())).orElse(request.survey());
+        return planner.plan(withSurvey(request, exact), (candidateRequest, candidate) ->
+                TerrainSupportAcceptance.validate(terrain, candidateRequest.survey(), candidate));
+    }
+
+    private static SuburbPlanningRequest withSurvey(SuburbPlanningRequest initialRequest, TerrainSurvey refinedSurvey) {
+        return new SuburbPlanningRequest(
                 initialRequest.settlementId(),
                 refinedSurvey,
                 initialRequest.seed(),
                 initialRequest.settings(),
                 initialRequest.terrainResponsePolicy()
         );
-        return planner.plan(refinedRequest);
     }
 
     private static Set<GridPoint> points(TerrainSurvey survey) {

@@ -39,7 +39,7 @@ public final class PlanValidator {
                     district.id(), "duplicate district id"));
             for (var id : district.parcels()) {
                 var parcel = parcels.get(id);
-                if (!members.add(id) || parcel == null || !district.bounds().contains(parcel.bounds()))
+                if (!members.add(id) || parcel == null || !district.contains(parcel.bounds()))
                     errors.add(PlanValidationError.forElement(PlanValidationErrorCode.INVALID_DISTRICT,
                             district.id(), "district parcel is duplicated, missing or outside local bounds"));
             }

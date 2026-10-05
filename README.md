@@ -275,7 +275,7 @@ Terrain adaptation is opt-in for datapacks. A `terrainPolicy` without an `adapta
 
 `terrainPolicy.capabilities` accepts `bridge`, `tunnel`, `canal`, and `major_terraforming`. `cross_if_supported` requires a matching capability: water requires `bridge`, while blocked terrain and steep slopes require `tunnel`. Invalid combinations are rejected when the profile loads. Water crossings can create bounded straight bridges between existing equal-height streets. Tunnel and canal materialization is still unavailable. Bridges do not make water buildable for parcels or ordinary roads.
 
-`terrainPolicy.bridges` configures `maxLength` (3�48, default 48, including dry approaches), `maxCount` (0�8, default 2), `deckDepth` (1�4, default 1), and `minimumClearance` (0�8, default 0, air blocks below the deck above the surveyed surface). Both built-in and example suburb profiles enable water bridges. Set `maxCount: 0` to disable them. Candidates require dry banks at the same approved street elevation, clear span, supported footings and no parcel/ordinary-earthwork overlap. Bridges add connections to an existing connected street network; this release does not build separate districts across a river, sloped spans, intermediate piers, or arbitrary bridge modules/joints.
+`terrainPolicy.bridges` configures `maxLength` (3�48, default 48, including dry approaches), `maxCount` (0�8, default 2), `deckDepth` (1�4, default 1), and `minimumClearance` (0�8, default 0, air blocks below the deck above the surveyed surface). Both built-in and example suburb profiles enable water bridges. Set `maxCount: 0` to disable them. Candidates require dry banks at the same approved street elevation, clear span, supported footings and no parcel/ordinary-earthwork overlap. Bridges can join separate districts across a river when multi-district planning is enabled; sloped spans, intermediate piers and arbitrary bridge modules/joints are not included.
 
 Bridge metadata records endpoints, dimensions, deck elevation and bank reservations without block materials. The placement provider is replaceable in Java; datapacks replace `BRIDGE_DECK`, `BRIDGE_RAIL`, and `BRIDGE_ABUTMENT` materials and may supply a repeating `surfaceTemplates.BRIDGE_DECK` whose height fits `deckDepth`. `BRIDGE_CLEARANCE` is reserved air. Suspended layers bypass ordinary cut/fill and fluid stabilization. The carving mask protects banks only. Snapshot v4 preserves bridge roles and reads old v1�v3 snapshots; existing saved settlements are not redrawn. Debug summaries report `bridges=N`. See the [authoring guide](examples/datapacks/composition_fixture/AUTHORING_GUIDE.md) for a complete example.
 
@@ -375,22 +375,37 @@ The bundled profile enables `planning.districts`:
 "districts": { "maxCount": 4, "targetParcels": 4, "maxConnectionAttempts": 8 }
 ```
 
-Districts select local terrain and prepared heights independently. A failed local
-area can be omitted while usable districts remain, provided the city still meets
-`minimumParcelCount` and all included roads are connected. Ordinary connectors
-retain endpoint heights, with bounded cut/fill and spaced elevation steps. Bridges
-joining disconnected banks take priority over shortcuts. Content and style still
-come from the selected datapack; district metadata contains bounds and parcel IDs.
+Districts select local terrain and prepared heights independently. Failed locals
+can be omitted while the city still meets `minimumParcelCount` and has connected
+roads. Content and style remain owned by the datapack. District metadata contains
+bounds, parcel IDs and an exact `footprint` encoded as horizontal strips. Bounds
+alone do not reserve land in the gaps between strips.
 
-Limits: at most eight districts and 32 connection attempts per connection; district
-search currently partitions the survey into terrain-informed rectangles and then
-uses the existing terrain-aware local layout. It is not arbitrary contour-based
-city growth. Bridges still require straight, equal-height supported banks; sloped
-decks, piers and tunnels are not included. Exact support validation can still
-reject a final city, and an unreachable district is not placed. Omitting
-`planning.districts` preserves the previous single-district behavior.
+Rectangular areas distribute seeds; connected growth favours smaller height changes
+and produces terrain-following borders. Water and blocked cells remain outside
+these footprints. Local surveys include surrounding terrain so shoulder checks
+cannot disappear at a cropped bank. Local placement still uses bounded candidate
+windows; successful generation on arbitrary mountains is not promised.
+
+After height/water refinement, exact support failures trigger a fully refined
+survey and support-aware local replanning. Each local candidate gets at most three
+attempts, excluding an unsupported point and its shoulder before retrying. Up to
+three starting groups are tried; a smaller final district can consume the remaining
+parcel target. Connecting roads choose elevations against the terrain while pinning
+both ends and spacing steps by at least six blocks. Candidate connections also
+pass exact support checks during repair. Global capacity, cut/fill and total
+terraformation limits are never relaxed.
+
+Limits: at most eight districts and 32 endpoint attempts per connection. Bridges
+joining disconnected banks take priority over shortcuts, and still require straight,
+equal-height supported banks. Sloped decks, piers and tunnels are not included.
+Exhausted local searches, unsuitable connections or final validation can still reject
+a city. Existing saved settlements are not regenerated. Omitting `planning.districts`
+preserves single-district compatibility mode.
 
 Candidate placement uses a bounded shortlist (32 detailed layouts per size), so
 failure means no acceptable plan among the checked candidates, not proof that no
-possible city fits. The seed-search console reports candidate times and rejection
-reasons; a `TIME_LIMIT` report is a completed budget with preserved results.
+possible city fits. Seed-search reports candidate times and rejection reasons;
+a `TIME_LIMIT` report is a completed budget with preserved results. Full-survey
+refinement during support repair adds work; this stage does not promise faster
+seed searches.

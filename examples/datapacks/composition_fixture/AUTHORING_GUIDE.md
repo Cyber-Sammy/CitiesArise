@@ -452,13 +452,22 @@ Each district keeps independently chosen road and parcel elevations. Required
 terraforming uses the existing depth/foundation/total-volume limits; increasing
 district count does not increase the city's earthwork budget. Content, style,
 modules, joints and compatibility rules remain owned by this pack. Exported
-`districts` list semantic IDs, bounds and parcel membership. Placement continues
+`districts` list semantic IDs, bounds, parcel membership and a `footprint` list of horizontal strips. Bounds only enclose this exact area; gaps are not reserved. Placement continues
 through the same replaceable content providers and chunk snapshots.
 
-Current spatial subdivision is bounded rectangular partitioning with cuts biased
-towards water/steep strips, followed by local terrain-aware placement. It does not
-promise contour-following borders or successful generation on arbitrary mountains.
-Land connectors pin endpoint heights and reject insufficient runs. Bridges connect
-aligned equal-height banks under the existing bridge limits; no sloped bridge deck
-or intermediate supports are added. Unsupported terrain discovered by final exact
-validation can still reject the city. No limits are silently relaxed.
+Rectangular areas distribute district seeds, then connected growth favours terrain
+with smaller height changes. Water and blocked cells are excluded; the resulting
+borders can be irregular. Local placement remains a bounded search inside these
+regions. Region ownership remains mandatory even with permissive terrain responses.
+No new compatibility or style rules are hardcoded by district growth.
+
+Land connectors fit intermediate elevations to the ground while pinning endpoint
+heights and keeping at least six blocks between steps. Exact support failures are
+handled after water/height refinement: the survey is fully refined before repair
+can move districts. A local layout can be retried up to three times with the bad
+point and shoulder excluded. Failed locals can be omitted, up to three initial
+groups are tried, and a smaller final district can fill the remaining target.
+Minimum capacity and total earthwork limits are never relaxed. Bounded retries may
+still reject the city. Bridges retain aligned, equal-height bank constraints;
+sloped decks, intermediate supports and arbitrary mountain coverage are not added.
+This stage needs no new pack fields or model/compatibility changes.

@@ -33,6 +33,39 @@ final class WorldgenWaterMaskRefinerTest {
     private static final GridBounds BOUNDS = new GridBounds(new GridPoint(0, 0), new GridSize(40, 30));
 
     @Test
+    void repairsSupportOnlyAfterExactRefinementAndCoversRelocatedDistricts() {
+        var bounds=new GridBounds(new GridPoint(0,0),new GridSize(120,48));
+        var survey=flatSurvey(bounds);
+        var s=SuburbPlanningSettings.defaults();
+        var settings=new SuburbPlanningSettings(s.roadWidth(),s.maxBuildableSlope(),
+                new com.cybersammy.citiesarise.core.planning.suburb.DevelopmentCapacity(3,6,6),
+                s.parcelWidth(),s.parcelDepth(),s.buildingMargin(),12,s.preferredMaxCutDepth(),s.preferredMaxFillDepth(),
+                s.maxCutDepth(),s.maxFillDepth(),s.maxBuildingFoundationDepth(),s.maxEarthworkVolume(),s.terrainTransitions(),s.buildings(),
+                new com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings(2,3,8));
+        var request=new SuburbPlanningRequest(new PlanElementId("test:repair"),survey,42,settings);
+        var planner=SuburbPlanner.defaults(); var initial=planner.plan(request);
+        var bad=initial.plan().orElseThrow().parcels().getFirst().bounds().origin();
+        var checkedPoints=new LinkedHashSet<GridPoint>();
+        WorldgenTerrainSurveyProvider provider=new WorldgenTerrainSurveyProvider() {
+            public TerrainSurvey sample(GridBounds ignored) { return survey; }
+            public Optional<TerrainSurvey> sampleWithExactWaterMask(GridBounds ignored,Set<GridPoint> points) {
+                checkedPoints.addAll(points); return Optional.of(survey);
+            }
+            public Optional<com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn> unsupportedColumn(
+                    com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan plan) {
+                assertFalse(checkedPoints.isEmpty(),"support validation ran before refinement");
+                return plan.columns().stream().filter(c -> c.point().equals(bad)).findFirst();
+            }
+        };
+        var result=WorldgenWaterMaskRefiner.refine(planner,provider,request,initial);
+        assertTrue(result.successful(),result.toString());
+        assertFalse(result.plan().orElseThrow().districts().isEmpty());
+        assertFalse(containsPreparationPoint(result,bad));
+        assertEquals(bounds.size().width()*bounds.size().depth(),checkedPoints.size());
+        assertTrue(checkedPoints.containsAll(refinementFootprint(result)));
+    }
+
+    @Test
     void relocatesAfterExactWaterAppearsInsideParcelPad() {
         SuburbPlanner planner = SuburbPlanner.defaults();
         SuburbPlanningResult template = planner.plan(request(flatSurvey()));

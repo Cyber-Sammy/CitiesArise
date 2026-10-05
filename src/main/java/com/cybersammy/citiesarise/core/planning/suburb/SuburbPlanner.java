@@ -59,11 +59,21 @@ public final class SuburbPlanner {
     }
 
     public SuburbPlanningResult plan(SuburbPlanningRequest request) {
+        return plan(request, PlanningAcceptance.ACCEPT);
+    }
+
+    public SuburbPlanningResult plan(SuburbPlanningRequest request, PlanningAcceptance acceptance) {
         Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(acceptance, "acceptance");
 
         if (request.settings().districts().maxCount() > 1) {
-            return DistrictCityPlanner.plan(this, request);
+            return DistrictCityPlanner.plan(this, request, acceptance);
         }
+        var result = planSingle(request);
+        return result.successful() ? acceptance.validate(request, result) : result;
+    }
+
+    private SuburbPlanningResult planSingle(SuburbPlanningRequest request) {
 
         if (!hasEnoughSpace(request)) {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.SURVEY_TOO_SMALL);

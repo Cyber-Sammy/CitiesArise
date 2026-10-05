@@ -53,6 +53,9 @@ public final class SettlementPlanJsonExporter {
             json.beginObject();
             json.stringField("id", district.id().value());
             json.objectField("bounds", () -> writeBounds(json, district.bounds()));
+            json.arrayField("footprint", () -> district.footprint().forEach(part -> json.arrayValue(() -> {
+                json.beginObject(); writeBounds(json, part); json.endObject();
+            })));
             json.arrayField("parcels", () -> district.parcels().forEach(id -> json.arrayStringValue(id.value())));
             json.endObject();
         })));

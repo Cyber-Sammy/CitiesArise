@@ -400,7 +400,7 @@ final class SuburbPlannerTest {
     }
 
     @Test
-    void placesEachBuildingPlatformAtHighestTerrainPointInItsFootprint() {
+    void balancesPlatformsOnSlopesWhileKeepingBuildingsAndParcelsAligned() {
         SuburbPlanningSettings settings = new SuburbPlanningSettings(3, 0.75, 6, 6, 7, 1, 100, 3, 3);
         TerrainSurvey slopedSurvey = elevationSurvey(40, 30, 3);
 
@@ -409,8 +409,10 @@ final class SuburbPlannerTest {
         assertTrue(result.successful(), result.toString());
         SettlementPlan plan = result.plan().orElseThrow();
         for (BuildingSlot slot : plan.buildingSlots()) {
-            assertEquals(highestElevation(slopedSurvey, slot.bounds()), platformY(slot));
+            assertTrue(platformY(slot) <= highestElevation(slopedSurvey, slot.bounds()));
         }
+        assertTrue(plan.buildingSlots().stream().anyMatch(slot ->
+                platformY(slot) < highestElevation(slopedSurvey, slot.bounds())));
         BuildingSlot elevatedSlot = plan.buildingSlots().getFirst();
         PlanElementId parcelId = elevatedSlot.parcelId();
         Parcel elevatedParcel = plan.parcels().stream()

@@ -172,6 +172,15 @@ final class TerrainPreparationPlanner {
                         rejection.orElseThrow()
                 ));
             }
+            TerrainPreparationColumn existing = columns.get(point.point());
+            // An access starts on the road: keep its shared step and road ownership.
+            if (transition.type() == ElevationTransitionType.BUILDING_ACCESS
+                    && source.bounds().contains(point.point())
+                    && existing != null
+                    && existing.type() == TerrainPreparationColumnType.ROAD_TRANSITION_STEP
+                    && existing.targetElevation() == point.targetElevation()) {
+                continue;
+            }
             columns.put(point.point(), new TerrainPreparationColumn(
                     point.point(),
                     owner,

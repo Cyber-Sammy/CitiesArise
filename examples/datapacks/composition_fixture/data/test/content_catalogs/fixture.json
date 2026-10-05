@@ -372,7 +372,7 @@
             2,
             0
           ],
-          "material": "minecraft:air"
+          "material": "glass"
         },
         {
           "from": [
@@ -541,7 +541,7 @@
                 2,
                 0
               ],
-              "material": "minecraft:air"
+              "material": "glass"
             },
             {
               "from": [
@@ -776,7 +776,10 @@
     "ROAD_SURFACE": "minecraft:deepslate_tiles",
     "PARCEL_BOUNDARY": "minecraft:stone_bricks",
     "FOUNDATION": "minecraft:andesite",
-    "TERRAIN_FILL": "minecraft:stone"
+    "TERRAIN_FILL": "minecraft:stone",
+    "BRIDGE_DECK": "minecraft:polished_deepslate",
+    "BRIDGE_RAIL": "minecraft:polished_blackstone_brick_wall",
+    "BRIDGE_ABUTMENT": "minecraft:stone_bricks"
   },
   "props": {
     "test:yard_lamp": {
@@ -892,6 +895,39 @@
             0
           ],
           "material": "minecraft:moss_block"
+        }
+      ]
+    },
+    "BRIDGE_DECK": {
+      "size": [
+        2,
+        1,
+        2
+      ],
+      "alignToRoad": true,
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            1,
+            0,
+            1
+          ],
+          "material": "minecraft:polished_deepslate"
+        }
+      ],
+      "cells": [
+        {
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "material": "minecraft:deepslate_tiles"
         }
       ]
     }

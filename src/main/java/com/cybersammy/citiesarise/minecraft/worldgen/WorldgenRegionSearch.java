@@ -57,6 +57,7 @@ final class WorldgenRegionSearch {
         Objects.requireNonNull(evaluator, "evaluator");
         Objects.requireNonNull(comparator, "comparator");
 
+        rejectInterruptedSearch();
         List<SettlementRegion> regions = orderedRegions(originX, originZ, searchRadius);
         Optional<Candidate<T>> bestCandidate = Optional.empty();
         int attempts = 0;
@@ -68,6 +69,7 @@ final class WorldgenRegionSearch {
             }
             attempts++;
             Optional<T> evaluation = Objects.requireNonNull(evaluator.apply(region), "evaluation");
+            rejectInterruptedSearch();
             if (evaluation.isPresent()) {
                 Candidate<T> candidate = new Candidate<>(region, evaluation.orElseThrow());
                 bestCandidate = selectBetter(bestCandidate, candidate, comparator);
@@ -112,6 +114,7 @@ final class WorldgenRegionSearch {
         SettlementRegion originRegion = SettlementRegion.fromBlockPosition(originX, originZ);
         List<SettlementRegion> regions = new ArrayList<>();
         for (int zOffset = -radius; zOffset <= radius; zOffset++) {
+            rejectInterruptedSearch();
             for (int xOffset = -radius; xOffset <= radius; xOffset++) {
                 regions.add(new SettlementRegion(originRegion.x() + xOffset, originRegion.z() + zOffset));
             }

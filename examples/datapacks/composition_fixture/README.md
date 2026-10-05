@@ -1,5 +1,9 @@
 # Content composition acceptance pack
 
+For installation, a step-by-step authoring workflow, and the distinction between
+module joints, interior mounts and road surface templates, see the
+[datapack authoring guide](AUTHORING_GUIDE.md).
+
 This is a small engine fixture, not a finished city style pack. It replaces the
 `cities_arise:suburb` profile with two connected floors with nested furniture, parcel lamps, roadside
 lamps, and layered road/parcel templates with custom foundation fill. The normal mod JAR keeps the
@@ -151,9 +155,9 @@ target the prepared parcel frontage instead (as in this fixture).
 
 Catalogs load into immutable profile settings during datapack reload. Full content
 definitions participate in planning cache identity; global reload also clears the
-cache. Chunk placement executes already-resolved cells. Snapshot v3 stores final
+cache. Chunk placement executes already-resolved cells. Snapshot v4 stores final
 material strings, rotations and fill policies with a chunked material dictionary;
-v1 and v2 snapshots remain readable. Changing a pack cannot redraw half of an already-created start.
+v1, v2 and v3 snapshots remain readable. Changing a pack cannot redraw half of an already-created start.
 
 Structural modules use rectangular, non-overlapping volumes. Nested modules occupy
 explicit reservations inside parent volumes and may replace only declared passable
@@ -165,7 +169,7 @@ slabs, swimming, jumping gaps and every modded movement mechanic are not inferre
 Block-entity/entity content remains unsupported. Road topology, cut/fill budgets,
 and approved terrain elevations still come from the planner; surface templates and
 fill policies replace construction content without bypassing these constraints.
-Arbitrary terrain algorithms, bridges/tunnels and general external provider APIs
+Arbitrary terrain algorithms, tunnels, arbitrary bridge module assembly and general external provider APIs
 remain distinct extensions. Polished content-pack authoring remains separate.
 
 ## Automated acceptance
@@ -246,3 +250,7 @@ layers are applied after platform preparation and are included in chunk snapshot
 The fill policy is saved in snapshot v3, so changing the active pack cannot change
 material under an existing saved start. These controls do not authorize changing
 terrain outside the approved footprint or bypassing the profile's earthwork limits.
+
+## Short water bridges
+
+The profile enables straight bank-supported bridges between equal-height streets (up to 48 blocks including approaches). The catalog replaces deck, rail and bank materials and demonstrates a repeating `BRIDGE_DECK` template. Bridges appear only at compatible surveyed crossings; enabling the capability does not force one into every settlement. See `AUTHORING_GUIDE.md`, section 10.1. Existing saved structures do not change when this ZIP is replaced.

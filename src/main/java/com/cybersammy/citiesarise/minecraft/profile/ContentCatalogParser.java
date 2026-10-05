@@ -103,7 +103,7 @@ public final class ContentCatalogParser {
         if(props.size()>16) throw new IllegalArgumentException("Too many prop rules");
         Map<String,SurfaceTemplate> templates=new LinkedHashMap<>();
         Set<String> roles=Set.of("ROAD_SURFACE","WORN_ROAD_SURFACE","PARCEL_YARD","PARCEL_BOUNDARY","TERRAIN_SURFACE",
-                "ROAD_END_CURB","BUILDING_ACCESS_SURFACE","BUILDING_ACCESS_STEP","ROAD_TRANSITION_STEP");
+                "ROAD_END_CURB","BUILDING_ACCESS_SURFACE","BUILDING_ACCESS_STEP","ROAD_TRANSITION_STEP","BRIDGE_DECK");
         for(var entry:object(json,"surfaceTemplates").entrySet()) {
             if(!roles.contains(entry.getKey())) throw new IllegalArgumentException("Unsupported surface template role: "+entry.getKey());
             var t=entry.getValue().getAsJsonObject(); Vec size=vec(t.getAsJsonArray("size"));
@@ -114,7 +114,9 @@ public final class ContentCatalogParser {
             }
             templates.put(entry.getKey(),new SurfaceTemplate(size,cells,bool(t,"alignToRoad",false)));
         }
-        for(String role:List.of("FOUNDATION","TERRAIN_FILL")) if(surfaces.containsKey(role)) resources.validateTraits(surfaces.get(role),false,true,false);
+        for(String role:List.of("FOUNDATION","TERRAIN_FILL","BRIDGE_ABUTMENT")) if(surfaces.containsKey(role)) resources.validateTraits(surfaces.get(role),false,true,false);
+        if(surfaces.containsKey("BRIDGE_DECK")) resources.validateWalkingSurface(surfaces.get("BRIDGE_DECK"));
+        if(surfaces.containsKey("BRIDGE_CLEARANCE")) throw new IllegalArgumentException("Bridge clearance is reserved air, not a surface material");
         return new Catalog(Map.copyOf(assets),Map.copyOf(palettes),Map.copyOf(compositions),Map.copyOf(surfaces),List.copyOf(props),materialRules,Map.copyOf(modules),Map.copyOf(templates));
     }
     private void validateTraits(MaterialRules rules,Map<String,Map<String,String>> palettes) {

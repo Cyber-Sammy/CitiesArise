@@ -20,6 +20,28 @@ import java.util.OptionalInt;
 import org.junit.jupiter.api.Test;
 
 class WorldgenPlacementApplierTest {
+    @Test
+    void suspendedDeckDoesNotFillWaterOrCaveAcrossChunkBoundary() {
+        var bridge = new com.cybersammy.citiesarise.core.model.BridgePlan(
+                new PlanElementId("test:bridge"), new PlanElementId("test:a"), new PlanElementId("test:b"),
+                new GridPoint(10, 4), new GridPoint(22, 4), 3, 68, 2, 2, 2);
+        var plan = new DebugPlacementPlan(new com.cybersammy.citiesarise.minecraft.placement.ProceduralBridgePlacementProvider().create(bridge));
+        var index = new DebugPlacementChunkProjector().partition(plan);
+        var level = new FakeWorldgenBlockAccess();
+        for (int x = 12; x <= 20; x++) for (int z = 3; z <= 5; z++) {
+            level.surfaceHeight(x, z, 60);
+            level.put(x, 62, z, WorldgenSurfaceMaterial.FLUID);
+        }
+        var placement = new WorldgenChunkPlacement();
+        placement.apply(level, index.slice(new PlacementChunk(0, 0)));
+        placement.apply(level, index.slice(new PlacementChunk(1, 0)));
+        for (int x = 12; x <= 20; x++) {
+            assertEquals(WorldgenSurfaceMaterial.FLUID, level.materialAt(x, 62, 4));
+            assertFalse(level.writes().stream().anyMatch(p -> p.x() >= 12 && p.x() <= 20 && p.y() < 67));
+            assertTrue(level.hasPlacement(x, 68, 4, DebugPlacementRole.BRIDGE_DECK));
+            assertTrue(level.hasPlacement(x, 67, 4, DebugPlacementRole.BRIDGE_DECK));
+        }
+    }
     private static final PlacementChunk TARGET_CHUNK = new PlacementChunk(0, 0);
 
     @Test

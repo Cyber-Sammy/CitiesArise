@@ -7,11 +7,17 @@ import java.util.concurrent.Executors;
 
 final class LocateSearchExecutor implements Executor {
     private ExecutorService executor;
+    private SearchTask activeTask;
 
     @Override
     public synchronized void execute(Runnable command) {
         Objects.requireNonNull(command, "command");
-        activeExecutor().execute(command);
+        activeTask = new SearchTask(command);
+        activeExecutor().execute(activeTask);
+    }
+
+    synchronized void cancel() {
+        if (activeTask != null) activeTask.cancel();
     }
 
     synchronized void stop() {
@@ -19,7 +25,9 @@ final class LocateSearchExecutor implements Executor {
             return;
         }
 
-        executor.shutdownNow();
+        cancel();
+        // Let even a not-yet-started CompletableFuture finish with cancellation.
+        executor.shutdown();
         executor = null;
     }
 
@@ -32,5 +40,32 @@ final class LocateSearchExecutor implements Executor {
             });
         }
         return executor;
+    }
+
+    private static final class SearchTask implements Runnable {
+        private final Runnable command;
+        private Thread thread;
+        private boolean cancelled;
+
+        private SearchTask(Runnable command) { this.command = command; }
+
+        synchronized void cancel() {
+            cancelled = true;
+            if (thread != null) thread.interrupt();
+        }
+
+        @Override
+        public void run() {
+            synchronized (this) {
+                thread = Thread.currentThread();
+                if (cancelled) thread.interrupt();
+            }
+            try {
+                command.run();
+            } finally {
+                synchronized (this) { thread = null; }
+                Thread.interrupted();
+            }
+        }
     }
 }

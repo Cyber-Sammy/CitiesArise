@@ -14,6 +14,7 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import org.slf4j.Logger;
 
 public final class ReloadableSettlementProfileStore extends SimpleJsonResourceReloadListener {
@@ -22,6 +23,8 @@ public final class ReloadableSettlementProfileStore extends SimpleJsonResourceRe
     private final MinecraftSettlementProfileJsonParser parser;
     private final Logger logger;
     private volatile Map<SettlementProfileId, SettlementProfile> profiles = Map.of();
+    private Map<ResourceLocation, JsonElement> pendingProfiles;
+    private ContentResources pendingResources;
 
     public ReloadableSettlementProfileStore(Logger logger) {
         this(new MinecraftSettlementProfileJsonParser(), logger);
@@ -50,7 +53,22 @@ public final class ReloadableSettlementProfileStore extends SimpleJsonResourceRe
             ProfilerFiller profiler
     ) {
         Objects.requireNonNull(resources, "resources");
-        replace(resources, ContentResources.of(resourceManager));
+        // Reload listeners finish before registry tags are bound. Tag-dependent
+        // material validation must use this reload's tags, never stale/empty ones.
+        stage(resources, ContentResources.of(resourceManager));
+    }
+
+    void stage(Map<ResourceLocation, JsonElement> resources, ContentResources contentResources) {
+        pendingProfiles = Map.copyOf(resources);
+        pendingResources = contentResources;
+        profiles = Map.of();
+    }
+
+    public void onTagsUpdated(TagsUpdatedEvent event) {
+        if (event.getUpdateCause() != TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD || pendingProfiles == null) return;
+        replace(pendingProfiles, pendingResources);
+        pendingProfiles = null;
+        pendingResources = null;
     }
 
     void replace(Map<ResourceLocation, JsonElement> resources) { replace(resources, ContentResources.classpath()); }

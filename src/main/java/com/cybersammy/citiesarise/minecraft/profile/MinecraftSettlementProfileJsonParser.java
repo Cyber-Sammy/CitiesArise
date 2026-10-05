@@ -234,8 +234,18 @@ public final class MinecraftSettlementProfileJsonParser {
         return new TerrainResponsePolicy(
                 responses,
                 capabilities,
-                parseTerrainAdaptationSettings(policy)
+                parseTerrainAdaptationSettings(policy),
+                parseBridgeSettings(policy)
         );
+    }
+
+    private static com.cybersammy.citiesarise.core.road.BridgeSettings parseBridgeSettings(JsonObject policy) {
+        var defaults = com.cybersammy.citiesarise.core.road.BridgeSettings.defaults();
+        if (!policy.has("bridges")) return defaults;
+        var bridges = requiredObject(policy, "bridges");
+        return new com.cybersammy.citiesarise.core.road.BridgeSettings(
+                optionalInt(bridges, "maxLength", defaults.maxLength()), optionalInt(bridges, "maxCount", defaults.maxCount()),
+                optionalInt(bridges, "deckDepth", defaults.deckDepth()), optionalInt(bridges, "minimumClearance", defaults.minimumClearance()));
     }
 
     private static TerrainAdaptationSettings parseTerrainAdaptationSettings(JsonObject policy) {

@@ -48,6 +48,34 @@ final class RegionalElevationPlannerTest {
     }
 
     @Test
+    void smallMoundUnderBuildingDoesNotRaiseTheWholeYard() {
+        var survey = TerrainSurvey.sample(bounds(0, 0, 14, 10), point -> Optional.of(new TerrainCell(
+                point, point.equals(new GridPoint(9, 6)) ? 70 : 64,
+                false, 0.0, BiomeCategory.PLAINS, TerrainCategory.BUILDABLE)));
+        var request = new SuburbPlanningRequest(id("settlement"), survey, 42L, SuburbPlanningSettings.defaults());
+        var result = RegionalElevationPlanner.plan(request, settlementPlan());
+        assertEquals(63, result.elevationPlan().requiredZone(id("parcel")).targetElevation());
+        assertEquals(63, result.elevationPlan().requiredZone(id("building")).targetElevation());
+        assertTrue(TerrainPreparationPlanner.plan(request, result.elevationPlan()).plan().isPresent());
+    }
+
+    @Test
+    void lowersHighYardEnoughForTheAvailableRoadAccessRun() {
+        var parcelBounds = settlementPlan().parcels().getFirst().bounds();
+        var survey = TerrainSurvey.sample(bounds(0, 0, 14, 10), point -> Optional.of(new TerrainCell(
+                point, parcelBounds.contains(point) ? 68 : 64,
+                false, 0.0, BiomeCategory.PLAINS, TerrainCategory.BUILDABLE)));
+        var request = new SuburbPlanningRequest(id("settlement"), survey, 42L, SuburbPlanningSettings.defaults());
+        var result = RegionalElevationPlanner.plan(request, settlementPlan());
+        var access = result.elevationPlan().transitions().stream()
+                .filter(t -> t.type() == ElevationTransitionType.BUILDING_ACCESS).findFirst().orElseThrow();
+        assertTrue(result.elevationPlan().requiredZone(id("parcel")).targetElevation() < 67);
+        assertTrue(com.cybersammy.citiesarise.core.earthwork.ElevationTransitionPolicy.canMaterialize(access,
+                result.elevationPlan().requiredZone(access.sourceZoneId()),
+                result.elevationPlan().requiredZone(access.targetZoneId())));
+    }
+
+    @Test
     void describesBuildingAccessWithoutFlatteningTheWholeSettlement() {
         RegionalElevationPlanningResult result = RegionalElevationPlanner.plan(request(), settlementPlan());
         ElevationTransition access = result.elevationPlan().transitions().stream()

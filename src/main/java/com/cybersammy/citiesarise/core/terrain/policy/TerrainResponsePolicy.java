@@ -10,8 +10,13 @@ import java.util.Set;
 public record TerrainResponsePolicy(
         Map<TerrainFeatureType, TerrainResponse> responses,
         Set<InfrastructureCapability> capabilities,
-        TerrainAdaptationSettings adaptationSettings
+        TerrainAdaptationSettings adaptationSettings,
+        com.cybersammy.citiesarise.core.road.BridgeSettings bridges
 ) {
+    public TerrainResponsePolicy(Map<TerrainFeatureType, TerrainResponse> responses,
+            Set<InfrastructureCapability> capabilities, TerrainAdaptationSettings adaptationSettings) {
+        this(responses, capabilities, adaptationSettings, com.cybersammy.citiesarise.core.road.BridgeSettings.defaults());
+    }
     public TerrainResponsePolicy(
             Map<TerrainFeatureType, TerrainResponse> responses,
             Set<InfrastructureCapability> capabilities
@@ -23,6 +28,7 @@ public record TerrainResponsePolicy(
         Objects.requireNonNull(responses, "responses");
         Objects.requireNonNull(capabilities, "capabilities");
         Objects.requireNonNull(adaptationSettings, "adaptationSettings");
+        Objects.requireNonNull(bridges, "bridges");
         EnumMap<TerrainFeatureType, TerrainResponse> responseCopy = new EnumMap<>(TerrainFeatureType.class);
         responseCopy.putAll(responses);
         for (TerrainFeatureType featureType : TerrainFeatureType.values()) {

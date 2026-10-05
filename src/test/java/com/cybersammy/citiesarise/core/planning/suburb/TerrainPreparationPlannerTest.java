@@ -24,12 +24,71 @@ import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason;
+import com.cybersammy.citiesarise.core.earthwork.ElevationTransition;
+import com.cybersammy.citiesarise.core.earthwork.ElevationTransitionType;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator;
+import com.cybersammy.citiesarise.core.model.BuildingSlot;
+import com.cybersammy.citiesarise.core.model.Parcel;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class TerrainPreparationPlannerTest {
+    @Test
+    void buildingAccessPreservesSharedRoadStepAndValidationStillRejectsDamage() {
+        var west = node("west", 2, 5);
+        var joint = node("joint", 5, 5);
+        var east = node("east", 9, 5);
+        var high = segment("a-high", west, joint);
+        var low = new RoadSegment(id("b-low"), joint.id(), east.id(), 1, Set.of(),
+                PlanProperties.of(PlanPropertyKeys.PLATFORM_Y, "63"));
+        var bounds = new GridBounds(new GridPoint(5, 2), new GridSize(1, 1));
+        var properties = PlanProperties.of(PlanPropertyKeys.PLATFORM_Y, "64");
+        var parcel = new Parcel(id("parcel"), bounds, Set.of(), properties);
+        var building = new BuildingSlot(
+                id("building"), parcel.id(), bounds, Set.of(), properties);
+        var plan = new SettlementPlan(id("settlement"), new RoadGraph(List.of(west, joint, east), List.of(high, low)),
+                List.of(parcel), List.of(building), Set.of(), PlanProperties.empty());
+        var zones = List.of(
+                new ElevationZone(high.id(), ElevationZoneType.ROAD_SEGMENT,
+                        new GridBounds(new GridPoint(2, 5), new GridSize(4, 1)), 64),
+                new ElevationZone(low.id(), ElevationZoneType.ROAD_SEGMENT,
+                        new GridBounds(new GridPoint(5, 5), new GridSize(5, 1)), 63),
+                new ElevationZone(parcel.id(), ElevationZoneType.PARCEL_PAD, bounds, 64),
+                new ElevationZone(building.id(), ElevationZoneType.BUILDING_PAD, bounds, 64));
+        var roadTransition = new ElevationTransition(
+                ElevationTransitionType.ROAD_CONNECTION,
+                high.id(), low.id(), joint.point(), 64, 63);
+        var access = new ElevationTransition(
+                ElevationTransitionType.BUILDING_ACCESS,
+                high.id(), building.id(), bounds.origin(), 64, 64);
+        var request = new SuburbPlanningRequest(id("settlement"), flatSurvey(), 42L,
+                settings(1, 3).withTerrainTransitions(new TerrainTransitionSettings(1, 0, 0, 0, 0, 0, 0, false, 2)));
+        var validator = new TerrainPreparationPlanValidator();
+        // Both orders must preserve the shared road step, its elevation and its owner.
+        for (var transitions : List.of(List.of(roadTransition, access), List.of(access, roadTransition))) {
+            var preparation = TerrainPreparationPlanner.plan(request, new RegionalElevationPlan(zones, transitions))
+                    .plan().orElseThrow();
+            var shared = preparation.columns().stream().filter(c -> c.point().equals(joint.point())).findFirst().orElseThrow();
+            assertEquals(TerrainPreparationColumnType.ROAD_TRANSITION_STEP, shared.type());
+            assertEquals(high.id(), shared.sourceElementId());
+            assertEquals(64, shared.targetElevation());
+            assertTrue(validator.validate(plan, preparation).isEmpty(), () -> validator.validate(plan, preparation).toString());
+            for (int damagedElevation : List.of(63, 64)) {
+                var damaged = preparation.columns().stream().map(c -> c == shared
+                        ? new TerrainPreparationColumn(c.point(), building.id(),
+                                damagedElevation, c.cutDepth(), c.fillDepth(), TerrainPreparationColumnType.BUILDING_ACCESS) : c).toList();
+                var invalid = TerrainPreparationPlan.of(
+                        preparation.elevationPlan(), preparation.areas(), damaged, preparation.transitionSettings());
+                assertTrue(validator.validate(plan, invalid).stream()
+                        .anyMatch(error -> error.message().contains("elevation transition preparation is incomplete")));
+            }
+        }
+    }
+
     @Test
     void countsIntersectingRoadColumnsOnce() {
         SuburbPlanningRequest request = new SuburbPlanningRequest(

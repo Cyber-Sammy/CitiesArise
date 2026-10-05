@@ -71,7 +71,19 @@ public final class WorldgenSettlementLocator {
                 region -> evaluate(context, seaLevel, region, rejectionCounts),
                 EarthworkSiteAssessment::compareTo,
                 executor
-        ).thenApply(outcome -> searchResult(outcome, rejectionCounts, placement));
+        ).thenApply(outcome -> searchResult(outcome, rejectionCounts));
+    }
+
+    /** Seed/placement arithmetic only: never samples terrain or constructs a settlement plan. */
+    public Optional<BlockPos> findPotential(ServerLevel level, BlockPos origin) {
+        var placement = placementContext(level, level.getSeed());
+        if (placement.isEmpty()) return Optional.empty();
+        var context = placement.orElseThrow();
+        return PotentialRegionSearch.find(SettlementRegion.fromBlockPosition(origin.getX(), origin.getZ()),
+                CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
+                region -> candidateSelector.isCandidate(level.getSeed(), region,
+                        CitiesAriseWorldgenConfig.candidateRegionModulo()) && context.isStructureRegion(region))
+                .map(context::locatePosition);
     }
 
     private Optional<EarthworkSiteAssessment> evaluate(
@@ -94,10 +106,9 @@ public final class WorldgenSettlementLocator {
 
     private SearchResult searchResult(
             WorldgenRegionSearch.Outcome<EarthworkSiteAssessment> outcome,
-            Map<String, Integer> rejectionCounts,
-            PlacementContext placement
+            Map<String, Integer> rejectionCounts
     ) {
-        Optional<LocatedSettlement> settlement = outcome.result().map(result -> locatedSettlement(result, placement));
+        Optional<LocatedSettlement> settlement = outcome.result().map(this::locatedSettlement);
         return new SearchResult(settlement, outcome.attemptedCandidates(), rejectionCounts);
     }
 
@@ -121,15 +132,14 @@ public final class WorldgenSettlementLocator {
     }
 
     private LocatedSettlement locatedSettlement(
-            WorldgenRegionSearch.Result<EarthworkSiteAssessment> result,
-            PlacementContext placement
+            WorldgenRegionSearch.Result<EarthworkSiteAssessment> result
     ) {
         SettlementRegion region = result.region();
-        BlockPos locatePosition = placement.locatePosition(region);
+        var center = WorldgenPlacementCoordinates.diagnosticCenter(region);
         return new LocatedSettlement(
                 region,
-                locatePosition.getX(),
-                locatePosition.getZ(),
+                center.x(),
+                center.z(),
                 result.attemptedCandidates(),
                 result.evaluation()
         );
@@ -161,6 +171,10 @@ public final class WorldgenSettlementLocator {
 
     public void stop() {
         executor.stop();
+    }
+
+    public void cancel() {
+        executor.cancel();
     }
 
     private record PlacementContext(

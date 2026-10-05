@@ -114,6 +114,7 @@ public final class SuburbPlanner {
         try {
             plan = com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
                     plan, preparationPlan, request.seed(), request.settings().buildings());
+            plan = com.cybersammy.citiesarise.core.road.BridgePlanner.attach(request, plan, preparationPlan);
         } catch (IllegalArgumentException exception) {
             return SuburbPlanningResult.invalid(List.of(PlanValidationError.forElement(
                     com.cybersammy.citiesarise.core.validation.PlanValidationErrorCode.CONTENT_COMPOSITION_FAILED,

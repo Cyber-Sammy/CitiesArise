@@ -6,6 +6,10 @@ import com.cybersammy.citiesarise.core.terrain.BiomeCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCategory;
 import com.cybersammy.citiesarise.core.terrain.TerrainCell;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.earthwork.OrdinaryGroundSupport;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
+import com.cybersammy.citiesarise.minecraft.planning.WorldgenTerrainSurveyProvider;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceBlock;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftSurfaceScanner.SurfaceSample;
 import java.util.Objects;
@@ -18,7 +22,7 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
-public final class MinecraftTerrainSampler {
+public final class MinecraftTerrainSampler implements WorldgenTerrainSurveyProvider {
     private final LevelAccessor level;
 
     public MinecraftTerrainSampler(LevelAccessor level) {
@@ -27,6 +31,19 @@ public final class MinecraftTerrainSampler {
 
     public TerrainSurvey sample(GridBounds bounds) {
         return TerrainSurvey.sample(bounds, this::sampleCell);
+    }
+
+    @Override
+    public Optional<TerrainPreparationColumn> unsupportedColumn(TerrainPreparationPlan plan) {
+        for (var column : plan.columns()) {
+            if (!OrdinaryGroundSupport.supported(column, y -> {
+                if (y < level.getMinBuildHeight() || y >= level.getMaxBuildHeight()) return false;
+                BlockState state = level.getBlockState(new BlockPos(column.point().x(), y, column.point().z()));
+                return state.blocksMotion() && state.getFluidState().isEmpty()
+                        && !state.is(BlockTags.LEAVES) && !state.is(BlockTags.LOGS);
+            })) return Optional.of(column);
+        }
+        return Optional.empty();
     }
 
     private Optional<TerrainCell> sampleCell(GridPoint point) {

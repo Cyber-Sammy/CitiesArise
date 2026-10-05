@@ -43,8 +43,8 @@ final class ParcelTerrainEvaluationCache {
     }
 
     private ParcelTerrainEvaluation evaluateUncached(GridBounds parcelBounds) {
-        GridBounds buildingBounds = SuburbParcelGeometry.buildingBounds(settings, parcelBounds);
-        int targetHeight = maximumHeight(buildingBounds);
+        int targetHeight = ParcelPlatformElevation.choose(parcelBounds,
+                point -> heightAt(point.x(), point.z()), settings, Integer.MIN_VALUE, Integer.MAX_VALUE);
         int maximumCorrection = 0;
         long totalCorrection = 0L;
         for (int z = parcelBounds.minZ(); z < parcelBounds.maxZExclusive(); z++) {
@@ -55,16 +55,6 @@ final class ParcelTerrainEvaluationCache {
             }
         }
         return new ParcelTerrainEvaluation(maximumCorrection, totalCorrection);
-    }
-
-    private int maximumHeight(GridBounds bounds) {
-        int maximum = Integer.MIN_VALUE;
-        for (int z = bounds.minZ(); z < bounds.maxZExclusive(); z++) {
-            for (int x = bounds.minX(); x < bounds.maxXExclusive(); x++) {
-                maximum = Math.max(maximum, heightAt(x, z));
-            }
-        }
-        return maximum;
     }
 
     private int heightAt(int x, int z) {

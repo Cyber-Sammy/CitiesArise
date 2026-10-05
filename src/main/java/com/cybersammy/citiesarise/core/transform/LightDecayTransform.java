@@ -51,7 +51,7 @@ public record LightDecayTransform(double buildingDecayChance, double roadWearCha
             transformedSegments.add(transformRoadSegment(segment, context));
         }
 
-        return new RoadGraph(roadGraph.nodes(), transformedSegments);
+        return new RoadGraph(roadGraph.nodes(), transformedSegments, roadGraph.bridges());
     }
 
     private RoadSegment transformRoadSegment(RoadSegment segment, TransformContext context) {

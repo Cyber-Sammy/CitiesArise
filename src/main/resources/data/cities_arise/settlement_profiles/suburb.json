@@ -21,11 +21,23 @@
     "maxEarthworkVolume": 20000,
     "buildings": {
       "pool": [
-        {"asset": "cities_arise:cottage", "weight": 3},
-        {"asset": "cities_arise:bungalow", "weight": 2},
-        {"asset": "cities_arise:studio", "weight": 1}
+        {
+          "asset": "cities_arise:cottage",
+          "weight": 3
+        },
+        {
+          "asset": "cities_arise:bungalow",
+          "weight": 2
+        },
+        {
+          "asset": "cities_arise:studio",
+          "weight": 1
+        }
       ],
-      "palettes": ["oak", "stone"],
+      "palettes": [
+        "oak",
+        "stone"
+      ],
       "fallback": "cities_arise:placeholder"
     },
     "terrainTransitions": {
@@ -42,16 +54,24 @@
   },
   "terrainPolicy": {
     "responses": {
-      "water": "build_around",
+      "water": "cross_if_supported",
       "blockedTerrain": "avoid",
       "steepSlope": "build_around"
     },
-    "capabilities": [],
+    "capabilities": [
+      "bridge"
+    ],
     "adaptation": {
       "sensitivity": 0.5,
       "maxTerraformArea": 32,
       "maxTerraformRelief": 4,
       "maxTerraformVolume": 160
+    },
+    "bridges": {
+      "maxLength": 48,
+      "maxCount": 2,
+      "deckDepth": 1,
+      "minimumClearance": 0
     }
   }
 }

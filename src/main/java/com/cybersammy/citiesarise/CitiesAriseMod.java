@@ -48,8 +48,10 @@ public final class CitiesAriseMod {
         NeoForge.EVENT_BUS.addListener(cacheLifecycle::onDatapackSync);
         NeoForge.EVENT_BUS.addListener(cacheLifecycle::onServerStopped);
         NeoForge.EVENT_BUS.addListener(profileStore::register);
+        NeoForge.EVENT_BUS.addListener(profileStore::onTagsUpdated);
         NeoForge.EVENT_BUS.addListener(WorldgenVegetationCleanup::onServerTick);
         NeoForge.EVENT_BUS.addListener(WorldgenVegetationCleanup::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(com.cybersammy.citiesarise.minecraft.worldgen.SettlementRegistryLifecycle::onChunkLoad);
     }
 
     private static void registerClientOnlyFeatures() {

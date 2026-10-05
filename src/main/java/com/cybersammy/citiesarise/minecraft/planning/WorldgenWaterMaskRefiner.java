@@ -37,6 +37,9 @@ final class WorldgenWaterMaskRefiner {
                 return currentResult;
             }
             Set<GridPoint> footprint = refinementFootprint(currentResult);
+            footprint = new LinkedHashSet<>(footprint);
+            footprint.addAll(com.cybersammy.citiesarise.core.road.BridgePlanner.probePoints(
+                    initialRequest, currentResult.plan().orElseThrow()));
             if (checkedPoints.containsAll(footprint)) {
                 return currentResult;
             }

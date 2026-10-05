@@ -62,6 +62,20 @@ public final class SettlementPlanJsonExporter {
     private static void writeRoadGraph(JsonBuilder json, SettlementPlan plan) {
         json.arrayField("nodes", () -> writeRoadNodes(json, plan.roadGraph().nodes()));
         json.arrayField("segments", () -> writeRoadSegments(json, plan.roadGraph().segments()));
+        json.arrayField("bridges", () -> plan.roadGraph().bridges().forEach(bridge -> json.arrayValue(() -> {
+            json.beginObject();
+            json.stringField("id", bridge.id().value());
+            json.stringField("startNodeId", bridge.startNodeId().value());
+            json.stringField("endNodeId", bridge.endNodeId().value());
+            json.objectField("start", () -> writePoint(json, bridge.start()));
+            json.objectField("end", () -> writePoint(json, bridge.end()));
+            json.numberField("width", bridge.width());
+            json.numberField("deckY", bridge.deckY());
+            json.numberField("deckDepth", bridge.deckDepth());
+            json.numberField("startBankLength", bridge.startBankLength());
+            json.numberField("endBankLength", bridge.endBankLength());
+            json.endObject();
+        })));
     }
 
     private static void writeRoadNodes(JsonBuilder json, List<RoadNode> nodes) {

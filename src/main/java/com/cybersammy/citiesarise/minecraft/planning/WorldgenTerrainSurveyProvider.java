@@ -3,6 +3,8 @@ package com.cybersammy.citiesarise.minecraft.planning;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
+import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import java.util.Optional;
 import java.util.Set;
 
@@ -13,8 +15,13 @@ import java.util.Set;
 public interface WorldgenTerrainSurveyProvider {
     TerrainSurvey sample(GridBounds bounds);
 
+    /** Checks the final cut/fill contact, before accepting any placement or structure start. */
+    default Optional<TerrainPreparationColumn> unsupportedColumn(TerrainPreparationPlan plan) {
+        return Optional.empty();
+    }
+
     /**
-     * Returns a survey with exact binary water data for selected columns when the provider supports refinement.
+     * Refines selected columns when supported. The Minecraft provider returns exact heights as well as water data.
      */
     default Optional<TerrainSurvey> sampleWithExactWaterMask(
             GridBounds bounds,

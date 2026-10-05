@@ -109,7 +109,7 @@ public final class MinecraftSuburbPlanningService {
                 blockCoordinate(position.z()),
                 profileId,
                 TerrainSurveySource.LOADED_WORLD,
-                bounds -> new MinecraftTerrainSampler(level).sample(bounds)
+                new MinecraftTerrainSampler(level)
         );
     }
 
@@ -331,6 +331,7 @@ public final class MinecraftSuburbPlanningService {
         );
         long refined = System.nanoTime();
         SuburbPlanningResult transformedResult = transformService.apply(refinedResult, seed);
+        transformedResult = TerrainSupportAcceptance.validate(terrainProvider, survey, transformedResult);
         long transformed = System.nanoTime();
         if (planningLoggingEnabled) {
             logger.info("Planning timings region=({}, {}): surveyMs={}, planMs={}, refinementMs={}, transformMs={}, totalMs={}",

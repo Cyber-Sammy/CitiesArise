@@ -43,6 +43,21 @@ final class LocateSearchExecutorTest {
         return threadName.orTimeout(2, TimeUnit.SECONDS).join();
     }
 
+    @Test
+    void cancellationCompletesAndNextSearchIsNotInterrupted() throws Exception {
+        LocateSearchExecutor executor = new LocateSearchExecutor();
+        try {
+            CountDownLatch started = new CountDownLatch(1);
+            CompletableFuture<Boolean> interrupted = new CompletableFuture<>();
+            executor.execute(() -> waitForStop(started, interrupted));
+            assertTrue(started.await(2, TimeUnit.SECONDS));
+            executor.cancel();
+            assertTrue(interrupted.get(2, TimeUnit.SECONDS));
+            var next = CompletableFuture.supplyAsync(() -> Thread.currentThread().isInterrupted(), executor);
+            assertEquals(false, next.get(2, TimeUnit.SECONDS));
+        } finally { executor.stop(); }
+    }
+
     private static void waitForStop(
             CountDownLatch started,
             CompletableFuture<Boolean> interrupted

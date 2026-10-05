@@ -49,6 +49,11 @@ public final class MinecraftWorldgenTerrainSampler {
         sampledHeights.clear();
         sampledSupportHeights.clear();
         biomePaths.clear();
+        // Freeze exact heights before interpolation/slope queries populate the cache.
+        // Water-only refinement used to leave narrow dry ravines hidden between samples.
+        for (GridPoint point : exactWaterCheckPoints) {
+            heights.put(point, exactHeight(point, sampledHeights, terrainSource::height));
+        }
         return TerrainSurvey.sample(bounds, point -> sampleCell(point, exactWaterCheckPoints));
     }
 

@@ -16,6 +16,19 @@ final class WorldgenRegionSearchTest {
     private final WorldgenRegionSearch search = new WorldgenRegionSearch();
 
     @Test
+    void cancellationDuringLastCandidateDoesNotPublishSuccess() {
+        try {
+            assertThrows(CancellationException.class, () -> search.findBest(0, 0, 1, 1, 0,
+                    region -> true, region -> {
+                        Thread.currentThread().interrupt();
+                        return Optional.of(1);
+                    }, Integer::compare));
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
     void returnsBestAcceptedCandidateWithinAttemptLimit() {
         SettlementRegion nearest = new SettlementRegion(0, 0);
         SettlementRegion farther = new SettlementRegion(2, 0);

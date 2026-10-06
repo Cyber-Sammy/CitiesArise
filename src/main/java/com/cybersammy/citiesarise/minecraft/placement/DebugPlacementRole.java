@@ -40,7 +40,8 @@ public enum DebugPlacementRole {
     BRIDGE_DECK(36),
     BRIDGE_RAIL(37),
     BRIDGE_ABUTMENT(38),
-    BRIDGE_CLEARANCE(39);
+    BRIDGE_CLEARANCE(39),
+    SUPPORT_LINING(40);
 
     private final int serializedId;
 
@@ -67,6 +68,7 @@ public enum DebugPlacementRole {
 
     int priority() {
         return switch (this) {
+            case SUPPORT_LINING -> 1;
             case BRIDGE_DECK, BRIDGE_RAIL, BRIDGE_ABUTMENT, BRIDGE_CLEARANCE -> 80;
             case CONTENT_BLOCK -> 50;
             case OAK_HOUSE_WALL, STONE_HOUSE_WALL -> 40;

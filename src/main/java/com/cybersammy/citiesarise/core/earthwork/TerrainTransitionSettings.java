@@ -12,14 +12,20 @@ public record TerrainTransitionSettings(
         int buildingShoulderRadius,
         int buildingShoulderMaxFillDepth,
         boolean retainingWalls,
-        int retainingWallMinimumHeight
+        int retainingWallMinimumHeight,
+        int supportLiningDepth
 ) {
+    public TerrainTransitionSettings(int accessRun, int roadRadius, int roadFill, int parcelRadius, int parcelFill,
+            int buildingRadius, int buildingFill, boolean walls, int wallHeight) {
+        this(accessRun, roadRadius, roadFill, parcelRadius, parcelFill, buildingRadius, buildingFill, walls, wallHeight, 0);
+    }
     public static final int MAX_SUPPORT_RADIUS = 8;
     // Worldgen's late support guard currently permits at most three blocks of shoulder fill.
     public static final int MAX_SUPPORT_FILL_DEPTH = 3;
     public static final int MAX_ACCESS_RUN_PER_RISE = 8;
 
     public TerrainTransitionSettings {
+        requireRange(supportLiningDepth, 0, OrdinaryGroundSupport.REQUIRED_SOLID_DEPTH, "supportLiningDepth");
         requireRange(buildingAccessRunPerRise, 1, MAX_ACCESS_RUN_PER_RISE, "buildingAccessRunPerRise");
         requireRange(roadShoulderRadius, 0, MAX_SUPPORT_RADIUS, "roadShoulderRadius");
         requireRange(roadShoulderMaxFillDepth, 0, MAX_SUPPORT_FILL_DEPTH, "roadShoulderMaxFillDepth");

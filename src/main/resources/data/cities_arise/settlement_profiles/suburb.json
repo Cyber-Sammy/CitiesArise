@@ -50,7 +50,8 @@
       "buildingShoulderRadius": 3,
       "buildingShoulderMaxFillDepth": 3,
       "retainingWalls": true,
-      "retainingWallMinimumHeight": 2
+      "retainingWallMinimumHeight": 2,
+      "supportLiningDepth": 4
     }
   },
   "terrainPolicy": {

@@ -21,6 +21,38 @@ import org.junit.jupiter.api.Test;
 
 class WorldgenPlacementApplierTest {
     @Test
+    void supportLiningOutsideWorldIsSkippedInsteadOfClamped() {
+        var operation = new DebugBlockPlacementOperation(new GridPoint(8,8),-5,DebugPlacementRole.SUPPORT_LINING,
+                new PlanElementId("test:deep"),OptionalInt.of(1));
+        var slice = new DebugPlacementChunkProjector().partition(new DebugPlacementPlan(List.of(operation)))
+                .slice(new PlacementChunk(0,0));
+        var level = new FakeWorldgenBlockAccess();
+        new WorldgenChunkPlacement().apply(level,slice);
+        assertTrue(level.placements.isEmpty());
+    }
+    @Test
+    void supportLiningLeavesCaveAirAndFluidUntouchedAcrossChunkBoundary() {
+        var operations = new ArrayList<DebugBlockPlacementOperation>();
+        var level = new FakeWorldgenBlockAccess();
+        for (int x : List.of(15, 16)) {
+            level.surfaceHeight(x, 4, 66);
+            for (int y = 49; y <= 59; y++) level.put(x, y, 4, WorldgenSurfaceMaterial.AIR);
+            level.put(x, 58, 4, WorldgenSurfaceMaterial.FLUID);
+            for (int y = 58; y <= 64; y++) operations.add(new DebugBlockPlacementOperation(new GridPoint(x, 4), y-65,
+                    DebugPlacementRole.SUPPORT_LINING, new PlanElementId("test:road"), OptionalInt.of(65)));
+        }
+        var index = new DebugPlacementChunkProjector().partition(new DebugPlacementPlan(operations));
+        var placement = new WorldgenChunkPlacement();
+        placement.apply(level, index.slice(new PlacementChunk(1, 0)));
+        placement.apply(level, index.slice(new PlacementChunk(0, 0)));
+        for (int x : List.of(15, 16)) {
+            for (int y = 60; y <= 64; y++) assertTrue(level.hasPlacement(x, y, 4, DebugPlacementRole.SUPPORT_LINING));
+            assertEquals(WorldgenSurfaceMaterial.AIR, level.materialAt(x, 59, 4));
+            assertEquals(WorldgenSurfaceMaterial.FLUID, level.materialAt(x, 58, 4));
+        }
+        assertFalse(level.writes().stream().anyMatch(p -> p.y() < 60));
+    }
+    @Test
     void suspendedDeckDoesNotFillWaterOrCaveAcrossChunkBoundary() {
         var bridge = new com.cybersammy.citiesarise.core.model.BridgePlan(
                 new PlanElementId("test:bridge"), new PlanElementId("test:a"), new PlanElementId("test:b"),

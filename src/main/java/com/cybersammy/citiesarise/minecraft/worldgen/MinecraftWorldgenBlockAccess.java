@@ -30,6 +30,13 @@ final class MinecraftWorldgenBlockAccess implements WorldgenBlockAccess {
         return materialProvider.needsVegetationProtection(operation);
     }
     @Override
+    public boolean canLineSupport(WorldgenBlockPosition position) {
+        var state = level.getBlockState(toBlockPos(position));
+        return material(position) == WorldgenSurfaceMaterial.OTHER && state.blocksMotion()
+                && state.getFluidState().isEmpty() && !state.hasBlockEntity();
+    }
+
+    @Override
     public boolean placeOperation(WorldgenBlockPosition position, com.cybersammy.citiesarise.minecraft.placement.DebugBlockPlacementOperation operation) {
         return level.setBlock(toBlockPos(position),materialProvider.blockState(operation),UPDATE_FLAGS);
     }

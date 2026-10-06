@@ -1,6 +1,9 @@
 package com.cybersammy.citiesarise.minecraft.worldgen;
 
 interface WorldgenBlockAccess {
+    default boolean canLineSupport(WorldgenBlockPosition position) {
+        return material(position) == WorldgenSurfaceMaterial.OTHER;
+    }
     boolean needsVegetationProtection(com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole role);
 
     default boolean needsVegetationProtection(com.cybersammy.citiesarise.minecraft.placement.DebugBlockPlacementOperation operation) {

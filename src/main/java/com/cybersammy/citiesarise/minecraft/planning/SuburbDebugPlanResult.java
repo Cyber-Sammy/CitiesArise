@@ -188,6 +188,7 @@ public record SuburbDebugPlanResult(
                 .map(plan -> ", terrain=" + plan.status()
                         + ", cutVolume=" + plan.cutVolume()
                         + ", fillVolume=" + plan.fillVolume()
+                        + ", supportLiningVolume=" + plan.supportLining().volume()
                         + siteAssessmentSummary())
                 .orElse("");
     }

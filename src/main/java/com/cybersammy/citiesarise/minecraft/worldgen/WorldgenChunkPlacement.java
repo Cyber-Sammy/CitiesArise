@@ -34,10 +34,15 @@ final class WorldgenChunkPlacement {
             if (!shouldPlaceOperation(operation, column)) {
                 continue;
             }
+            if (operation.role() == DebugPlacementRole.SUPPORT_LINING) {
+                long y = (long) operation.platformY().orElse(column.placementY()) + operation.verticalOffset();
+                if (y < level.minBuildHeight() || y >= level.maxBuildHeight()) continue;
+            }
             WorldgenBlockPosition position = targetPosition(level, operation, column.placementY());
             if (!level.canWrite(position)) {
                 continue;
             }
+            if (operation.role() == DebugPlacementRole.SUPPORT_LINING && !level.canLineSupport(position)) continue;
             if (level.placeOperation(position, operation)) {
                 placedBlocks++;
             }
@@ -61,6 +66,7 @@ final class WorldgenChunkPlacement {
         Set<GridPoint> suspended = new HashSet<>();
         Set<GridPoint> ordinary = new HashSet<>();
         for (var operation : plan.operations()) {
+            if (operation.role() == DebugPlacementRole.SUPPORT_LINING) continue;
             if (operation.role().bridge()) suspended.add(operation.point());
             else for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++)
                 ordinary.add(new GridPoint(operation.point().x() + dx, operation.point().z() + dz));
@@ -97,7 +103,7 @@ final class WorldgenChunkPlacement {
     private static Map<GridPoint, PlatformPreparation> platformPreparations(DebugChunkPlacementPlan plan) {
         Map<GridPoint, PlatformPreparation> preparations = new LinkedHashMap<>();
         for (DebugBlockPlacementOperation operation : plan.operations()) {
-            if (operation.platformY().isEmpty() || operation.role().bridge()) {
+            if (operation.platformY().isEmpty() || operation.role().bridge() || operation.role() == DebugPlacementRole.SUPPORT_LINING) {
                 continue;
             }
             int platformY = operation.platformY().getAsInt();

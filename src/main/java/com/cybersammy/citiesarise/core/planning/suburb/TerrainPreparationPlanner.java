@@ -90,11 +90,11 @@ final class TerrainPreparationPlanner {
                 List.copyOf(columns.values()),
                 request.settings().terrainTransitions()
         );
-        if (preparationPlan.totalVolume() > request.settings().maxEarthworkVolume()) {
+        if (preparationPlan.constructionVolume() > request.settings().maxEarthworkVolume()) {
             return TerrainPreparationAssessment.rejected(totalVolumeDiagnostic(
                     request,
                     columns.values(),
-                    preparationPlan.totalVolume()
+                    preparationPlan.constructionVolume()
             ));
         }
         return TerrainPreparationAssessment.accepted(preparationPlan);

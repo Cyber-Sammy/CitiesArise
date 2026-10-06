@@ -100,14 +100,15 @@ final class MinecraftSettlementProfileJsonParserTest {
                   "buildingShoulderRadius": 4,
                   "buildingShoulderMaxFillDepth": 3,
                   "retainingWalls": true,
-                  "retainingWallMinimumHeight": 2
+                  "retainingWallMinimumHeight": 2,
+                  "supportLiningDepth": 4
                 }
                 """));
 
         SettlementProfile profile = parser.parse(id(), json);
 
         assertEquals(
-                new TerrainTransitionSettings(2, 3, 3, 2, 3, 4, 3, true, 2),
+                new TerrainTransitionSettings(2, 3, 3, 2, 3, 4, 3, true, 2, 4),
                 profile.suburbPlanningSettings().terrainTransitions()
         );
     }

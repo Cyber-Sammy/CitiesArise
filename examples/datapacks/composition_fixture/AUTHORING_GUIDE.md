@@ -370,8 +370,8 @@ bridge placement semantics and never request a foundation down to the riverbed.
 `BRIDGE_CLEARANCE` is engine-reserved air and cannot be overridden. The engine
 checks geometry and support; styles and material choices belong to the pack.
 
-Current bridges are straight connections between already connected streets at the
-same height, with dry bank approaches and three embedded abutment layers. The
+Current bridges are straight connections between streets, including separate
+districts and opt-in bounded height differences, with dry bank approaches and three embedded abutment layers. The
 span stays open, and water below it is not stabilized into terrain fill. Exact
 survey refinement checks candidate corridors as well as selected bridges. Shallow
 cavities under bank footings still reject the settlement as `UNSUPPORTED_TERRAIN`.
@@ -380,9 +380,8 @@ summaries include `bridges=N` and dumps include the semantic bridge records.
 
 This is not yet arbitrary NBT/module/joint bridge assembly. The Java bridge
 placement provider is replaceable, while JSON currently controls limits,
-materials and repeating deck volumes. Intermediate piers, sloped bridges, dry
-ravine crossings and connecting separate districts across rivers remain future
-work. A pack capability does not guarantee a bridge in every settlement. Test
+materials and repeating deck volumes. Intermediate piers and arbitrary approach
+terraforming remain future work. A pack capability does not guarantee a bridge in every settlement. Test
 new chunks with the new JAR and ZIP; reload cannot replace saved old structures.
 
 ## 11. Validate a pack
@@ -468,8 +467,8 @@ can move districts. A local layout can be retried up to three times with the bad
 point and shoulder excluded. Failed locals can be omitted, up to three initial
 groups are tried, and a smaller final district can fill the remaining target.
 Minimum capacity and total earthwork limits are never relaxed. Bounded retries may
-still reject the city. Bridges retain aligned, equal-height bank constraints;
-sloped decks, intermediate supports and arbitrary mountain coverage are not added.
+still reject the city. Bridges retain aligned, supported bank constraints; bounded height differences
+are opt-in below. Intermediate supports and arbitrary mountain coverage are not added.
 This stage needs no new pack fields or model/compatibility changes.
 
 ## Support lining (optional)
@@ -493,3 +492,74 @@ support, without changing the cave-carving mask. Supported bridge banks can keep
 road lining, while open spans cannot. Known unsupported sites still require a
 valid local replan. Lining is not an automatic bridge, pier or structural span.
 Use newly generated starts to test it: stored starts keep their old snapshots.
+### Dry ravine crossings
+
+Profiles may enable `terrainPolicy.bridges.allowDryCrossings` (default false) and
+set `minimumDryClearance` (1..16, default 2). Builtin and example profiles enable
+this option. A dry crossing uses the same semantic BridgePlan, replaceable deck,
+rails, abutments and snapshot placement as a water crossing. Dry permission never
+overrides a water-avoidance rule; capability `bridge` is still required.
+
+Every column of an entirely dry open span must leave the configured clearance
+below the deck. Each bank must remain naturally level at its own street elevation; prepared road/parcel
+columns cannot be crossed by the span. Bridges joining disconnected districts
+retain priority over shortcuts, and existing length/count limits apply. For dry district links, the planner first tries existing terrain-aware road
+routing, grading and bounded cut/fill/retaining policies. If those bounded attempts
+fail, it adds bridges only between disconnected components while preserving
+accepted crossings. A shallow valley can therefore use ground treatment while
+a deeper ravine uses an open span. This is not yet a cost
+optimizer comparing every infrastructure strategy. Intermediate piers and caves
+hidden beneath intact surface roofs remain outside this crossing implementation.
+### Crossing budgets and failed supports
+
+`terrainPolicy.bridges.maxConstructionVolume` limits the sum of reserved structural
+cells for all selected bridges (0..65536, legacy default 65536; builtin/example
+4096). A bridge reserves `(length+1)*width*deckDepth` deck cells,
+`(startBankLength+endBankLength)*width*3` abutment cells and two rails per open-span
+row, plus interior half-step cells on graded spans. Clearance air is excluded. This is a semantic structural allowance, separate
+from the ground cut/fill/lining budget; it does not price materials or count
+arbitrary custom-provider writes. Exported bridges include `constructionVolume`;
+planning summaries include the aggregate `bridgeVolume`.
+
+`maxCandidateChecks` (1..256, default 32) caps candidate acceptance callbacks per
+selection call. Geometrically valid, affordable candidates are checked before
+being selected; a rejected candidate consumes a check but no construction budget
+and is not retried during the shortcut pass. This bounds expensive support checks,
+not every preliminary geometric probe or every planning retry for the whole city.
+
+District bridge selection spends its shared budget on disconnected components;
+optional local shortcuts are discarded when assembling the district city.
+Accepted links survive subsequent selection. Single-district plans may retain
+optional shortcuts, but an unsafe optional bridge can now be dropped or replaced
+without discarding otherwise valid parcels. Minecraft exact-support repair fully
+refines the bounded survey before trying alternatives, including for a single
+district with bridges. Final whole-plan validation still applies.
+### Bridges between different bank elevations
+
+`terrainPolicy.bridges.maxElevationDifference` is 0..8, omitted = 0 (legacy
+flat-only crossings). Builtin and example profiles enable 2. Each bank must still
+be naturally level at its own approved street height and pass exact footing
+support checks. The open span needs at least six rows for each full block of
+rise; bank fitting can therefore reject an otherwise long enough candidate.
+No extra approach terraforming or intermediate piers are introduced.
+
+BridgePlan records `deckY` at the start and `endDeckY` at the far bank. Row levels
+are deterministic: flat banks, centered six-row grading runs, and a half-step on
+the lower row of each transition. Clearance is checked against each row's local
+deck bottom. Budget volume also includes `abs(endDeckY-deckY)*(width-2)` half-step
+cells. The clear walking corridor excludes the two edge-rail columns.
+
+Set catalog `surfaces.BRIDGE_STEP` to a dry bottom slab (default stone-brick slab),
+for example `minecraft:andesite_slab[type=bottom]`. This role has no surface
+template. When graded bridges are enabled, `BRIDGE_DECK` and every top-layer cell
+of its surface template must have a full-block collision shape. Steps must have
+a full-footprint bottom-half collision shape. Runtime profile loading rejects
+waterlogged, block-entity or incompatible collision states. These are physical
+placement contracts, not style or block-ID compatibility lists. Flat-only packs
+retain their previous deck contract.
+
+Snapshot v6 stores local row heights, steps and chosen materials and reads v1-v5.
+Debug undo, chunk placement and carving protection use the same operations;
+open spans remain unfilled. Existing saved structures are not regenerated. Test
+new starts with the updated JAR and profile/pack. The setting permits suitable
+crossings; it does not guarantee that a particular seed contains one.

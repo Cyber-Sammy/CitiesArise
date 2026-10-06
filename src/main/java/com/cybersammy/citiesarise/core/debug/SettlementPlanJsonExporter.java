@@ -81,9 +81,11 @@ public final class SettlementPlanJsonExporter {
             json.objectField("end", () -> writePoint(json, bridge.end()));
             json.numberField("width", bridge.width());
             json.numberField("deckY", bridge.deckY());
+            json.numberField("endDeckY", bridge.endDeckY());
             json.numberField("deckDepth", bridge.deckDepth());
             json.numberField("startBankLength", bridge.startBankLength());
             json.numberField("endBankLength", bridge.endBankLength());
+            json.numberField("constructionVolume", bridge.constructionVolume());
             json.endObject();
         })));
     }

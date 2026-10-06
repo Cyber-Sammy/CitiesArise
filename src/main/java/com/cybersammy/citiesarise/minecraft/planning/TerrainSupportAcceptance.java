@@ -26,7 +26,7 @@ final class TerrainSupportAcceptance {
                 for (int lateral = 0; lateral < bridge.width(); lateral++) {
                     var point = bridge.point(distance, lateral - bridge.width() / 2);
                     if (known.add(point)) supportColumns.add(new TerrainPreparationColumn(point, bridge.id(),
-                            bridge.deckY() - bridge.deckDepth() + 1, 0, 0));
+                            bridge.deckElevation(distance) - bridge.deckDepth() + 1, 0, 0));
                 }
             }
         }

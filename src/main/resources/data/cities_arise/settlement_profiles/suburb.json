@@ -73,7 +73,12 @@
       "maxLength": 48,
       "maxCount": 2,
       "deckDepth": 1,
-      "minimumClearance": 0
+      "minimumClearance": 0,
+      "allowDryCrossings": true,
+      "minimumDryClearance": 2,
+      "maxConstructionVolume": 4096,
+      "maxCandidateChecks": 32,
+      "maxElevationDifference": 2
     }
   }
 }

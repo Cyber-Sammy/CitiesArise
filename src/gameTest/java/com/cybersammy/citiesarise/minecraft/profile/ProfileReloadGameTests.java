@@ -16,6 +16,23 @@ import net.neoforged.neoforge.gametest.*;
 @PrefixGameTestTemplate(false)
 public final class ProfileReloadGameTests {
     @GameTest(template="empty", timeoutTicks=100)
+    public static void gradedBridgeMaterialsValidateCollisionInsteadOfStyle(GameTestHelper helper) {
+        var resources=ContentResources.of(helper.getLevel().getServer().getResourceManager());
+        resources.validateBridgeSurface("minecraft:andesite_slab[type=bottom]",true);
+        resources.validateBridgeSurface("minecraft:oak_planks",false);
+        for(var invalid:java.util.List.of("minecraft:stone","minecraft:andesite_slab[type=top]",
+                "minecraft:andesite_slab[type=double]","minecraft:andesite_slab[waterlogged=true]","minecraft:air")) {
+            boolean rejected=false;
+            try {resources.validateBridgeSurface(invalid,true);} catch(IllegalArgumentException expected) {rejected=true;}
+            helper.assertTrue(rejected,"Accepted invalid bridge step: "+invalid);
+        }
+        boolean rejected=false;
+        try {resources.validateBridgeSurface("minecraft:stone_slab",false);} catch(IllegalArgumentException expected) {rejected=true;}
+        helper.assertTrue(rejected,"Half-height graded deck would break the rise contract");
+        helper.succeed();
+    }
+
+    @GameTest(template="empty", timeoutTicks=100)
     public static void tagDependentProfilesPublishOnlyAfterServerTagsBind(GameTestHelper helper) throws Exception {
         var actual = ContentResources.of(helper.getLevel().getServer().getResourceManager());
         JsonObject profile;
@@ -38,6 +55,7 @@ public final class ProfileReloadGameTests {
                 if (!bound.get()) throw new IllegalArgumentException("Tags are not bound yet");
                 actual.validateTraits(material,passable,supportive,climbable);
             }
+            public void validateBridgeSurface(String material,boolean halfStep) { actual.validateBridgeSurface(material,halfStep); }
             public void validateWalkingSurface(String material) { actual.validateWalkingSurface(material); }
         };
         var store = new ReloadableSettlementProfileStore(LogUtils.getLogger());

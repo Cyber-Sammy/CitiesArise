@@ -82,7 +82,8 @@ final class WorldgenWaterMaskRefiner {
     private static SuburbPlanningResult repairSupport(SuburbPlanner planner, WorldgenTerrainSurveyProvider terrain,
             SuburbPlanningRequest request, SuburbPlanningResult result) {
         var checked = TerrainSupportAcceptance.validate(terrain, request.survey(), result);
-        if (checked.successful() || request.settings().districts().maxCount() == 1) return checked;
+        if (checked.successful() || (request.settings().districts().maxCount() == 1
+                && result.plan().orElseThrow().roadGraph().bridges().isEmpty())) return checked;
         // Repair can move a district outside the refined footprint. Resolve the whole bounded survey first.
         var exact = terrain.sampleWithExactWaterMask(request.survey().bounds(), points(request.survey())).orElse(request.survey());
         return planner.plan(withSurvey(request, exact), (candidateRequest, candidate) ->

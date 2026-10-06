@@ -14,6 +14,7 @@ public interface ContentResources {
     }
     default void validateTraits(String material,boolean passable,boolean supportive,boolean climbable) { validateMaterial(material); }
     default void validateWalkingSurface(String material) { validateMaterial(material); }
+    default void validateBridgeSurface(String material, boolean halfStep) { validateMaterial(material); }
     static ContentResources classpath() {
         return (id,directory,extension) -> {
             String[] parts=id.split(":",2);
@@ -43,6 +44,16 @@ public interface ContentResources {
                     throw new IllegalArgumentException("Material does not support the upper face: "+material);
                 if(climbable && !state.is(net.minecraft.tags.BlockTags.CLIMBABLE))
                     throw new IllegalArgumentException("Material is not climbable: "+material);
+            }
+            @Override public void validateBridgeSurface(String material, boolean halfStep) {
+                validateMaterial(material);
+                var state=com.cybersammy.citiesarise.minecraft.placement.MinecraftContentMaterials.resolve(material,0);
+                var shape=state.getCollisionShape(net.minecraft.world.level.EmptyBlockGetter.INSTANCE,net.minecraft.core.BlockPos.ZERO);
+                var expected=net.minecraft.world.phys.shapes.Shapes.box(0,0,0,1,halfStep?0.5:1,1);
+                if(state.hasBlockEntity() || !state.getFluidState().isEmpty()
+                        || net.minecraft.world.phys.shapes.Shapes.joinIsNotEmpty(shape,expected,net.minecraft.world.phys.shapes.BooleanOp.NOT_SAME))
+                    throw new IllegalArgumentException("Graded bridge requires a dry full-footprint "
+                            +(halfStep?"bottom half-step: ":"full-height deck: ")+material);
             }
             @Override public void validateWalkingSurface(String material) {
                 validateMaterial(material);

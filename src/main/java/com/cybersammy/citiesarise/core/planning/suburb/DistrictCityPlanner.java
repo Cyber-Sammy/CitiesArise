@@ -150,7 +150,9 @@ final class DistrictCityPlanner {
                 Set.of(), PlanProperties.empty(), Map.of(), List.of(), request.settings().buildings().surfaceTemplates(), districts);
         var preparation = TerrainPreparationPlanner.plan(request, new RegionalElevationPlan(zones, transitions));
         if (preparation.plan().isEmpty()) return Optional.empty();
-        var bridged = BridgePlanner.attach(request, bare, preparation.plan().orElseThrow());
+        var initialPreparation = preparation.plan().orElseThrow();
+        var bridged = BridgePlanner.attachWaterCrossings(request, bare, initialPreparation,
+                candidate -> acceptance.validate(request,SuburbPlanningResult.success(candidate,initialPreparation)).successful());
         var components = components(bridged.roadGraph());
         int connectionIndex = 0;
         while (new HashSet<>(components.values()).size() > 1) {
@@ -189,7 +191,17 @@ final class DistrictCityPlanner {
                 bridged = proposedPlan; preparation = candidatePreparation; connected = true; connectionIndex++;
                 break;
             }
-            if (!connected) return Optional.empty();
+            if (!connected) {
+                // Prefer a validated graded ground route (including bounded fill/retaining treatment).
+                // Only then consider a dry span; keep all already accepted connections intact.
+                var crossingPreparation = preparation.plan().orElseThrow();
+                var crossing = BridgePlanner.connectRemaining(request, bridged, crossingPreparation,
+                        candidate -> acceptance.validate(request,SuburbPlanningResult.success(candidate,crossingPreparation)).successful());
+                if (crossing.roadGraph().bridges().size() == bridged.roadGraph().bridges().size()) return Optional.empty();
+                if (!acceptance.validate(request,SuburbPlanningResult.success(crossing,preparation.plan().orElseThrow())).successful())
+                    return Optional.empty();
+                bridged = crossing;
+            }
             components = components(bridged.roadGraph());
         }
         var prep = preparation.plan().orElseThrow();

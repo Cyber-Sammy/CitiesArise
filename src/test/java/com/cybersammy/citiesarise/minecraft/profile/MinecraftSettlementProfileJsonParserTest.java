@@ -43,6 +43,29 @@ final class MinecraftSettlementProfileJsonParserTest {
                  "bridges":{"maxLength":32,"maxCount":1,"deckDepth":2,"minimumClearance":3}}
                 """));
         assertEquals(new com.cybersammy.citiesarise.core.road.BridgeSettings(32,1,2,3), parser.parse(id(),data).terrainResponsePolicy().bridges());
+        var bridges=data.getAsJsonObject("terrainPolicy").getAsJsonObject("bridges");
+        bridges.addProperty("allowDryCrossings",true);
+        bridges.addProperty("minimumDryClearance",4);
+        assertEquals(new com.cybersammy.citiesarise.core.road.BridgeSettings(32,1,2,3,true,4), parser.parse(id(),data).terrainResponsePolicy().bridges());
+        bridges.addProperty("maxConstructionVolume",500);
+        bridges.addProperty("maxCandidateChecks",3);
+        assertEquals(new com.cybersammy.citiesarise.core.road.BridgeSettings(32,1,2,3,true,4,500,3), parser.parse(id(),data).terrainResponsePolicy().bridges());
+        bridges.addProperty("maxElevationDifference",2);
+        assertEquals(2,parser.parse(id(),data).terrainResponsePolicy().bridges().maxElevationDifference());
+        bridges.addProperty("maxElevationDifference",9);
+        assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+        bridges.addProperty("maxElevationDifference",-1);
+        assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+        bridges.addProperty("maxElevationDifference",0);
+        bridges.addProperty("maxCandidateChecks",0);
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(),data));
+        bridges.addProperty("maxCandidateChecks",3);
+        bridges.addProperty("maxConstructionVolume",-1);
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(),data));
+        bridges.addProperty("maxConstructionVolume",500);
+        bridges.addProperty("minimumDryClearance",0);
+        assertThrows(IllegalArgumentException.class, () -> parser.parse(id(),data));
+        bridges.addProperty("minimumDryClearance",4);
         data.getAsJsonObject("terrainPolicy").getAsJsonObject("bridges").addProperty("deckDepth",5);
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(),data));
     }

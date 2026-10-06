@@ -69,11 +69,11 @@ public final class SuburbPlanner {
         if (request.settings().districts().maxCount() > 1) {
             return DistrictCityPlanner.plan(this, request, acceptance);
         }
-        var result = planSingle(request);
+        var result = planSingle(request, acceptance);
         return result.successful() ? acceptance.validate(request, result) : result;
     }
 
-    private SuburbPlanningResult planSingle(SuburbPlanningRequest request) {
+    private SuburbPlanningResult planSingle(SuburbPlanningRequest request, PlanningAcceptance acceptance) {
 
         if (!hasEnoughSpace(request)) {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.SURVEY_TOO_SMALL);
@@ -128,7 +128,8 @@ public final class SuburbPlanner {
         try {
             plan = com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
                     plan, preparationPlan, request.seed(), request.settings().buildings());
-            plan = com.cybersammy.citiesarise.core.road.BridgePlanner.attach(request, plan, preparationPlan);
+            plan = com.cybersammy.citiesarise.core.road.BridgePlanner.attach(request, plan, preparationPlan,
+                    candidate -> acceptance.validate(request,SuburbPlanningResult.success(candidate,preparationPlan)).successful());
         } catch (IllegalArgumentException exception) {
             return SuburbPlanningResult.invalid(List.of(PlanValidationError.forElement(
                     com.cybersammy.citiesarise.core.validation.PlanValidationErrorCode.CONTENT_COMPOSITION_FAILED,

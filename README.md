@@ -273,11 +273,11 @@ Use `/citiesarise debug dump` to inspect the generated plan and confirm that the
 
 Terrain adaptation is opt-in for datapacks. A `terrainPolicy` without an `adaptation` object preserves the pre-adaptation behavior, so existing `build_around` responses continue to route around every matching feature. The bundled suburb profile enables adaptation explicitly.
 
-`terrainPolicy.capabilities` accepts `bridge`, `tunnel`, `canal`, and `major_terraforming`. `cross_if_supported` requires a matching capability: water requires `bridge`, while blocked terrain and steep slopes require `tunnel`. Invalid combinations are rejected when the profile loads. Water crossings can create bounded straight bridges between existing equal-height streets. Tunnel and canal materialization is still unavailable. Bridges do not make water buildable for parcels or ordinary roads.
+`terrainPolicy.capabilities` accepts `bridge`, `tunnel`, `canal`, and `major_terraforming`. `cross_if_supported` requires a matching capability: water requires `bridge`, while blocked terrain and steep slopes require `tunnel`. Invalid combinations are rejected when the profile loads. Water crossings can create bounded straight bridges between existing streets with supported bank heights. Tunnel and canal materialization is still unavailable. Bridges do not make water buildable for parcels or ordinary roads.
 
-`terrainPolicy.bridges` configures `maxLength` (3�48, default 48, including dry approaches), `maxCount` (0�8, default 2), `deckDepth` (1�4, default 1), and `minimumClearance` (0�8, default 0, air blocks below the deck above the surveyed surface). Both built-in and example suburb profiles enable water bridges. Set `maxCount: 0` to disable them. Candidates require dry banks at the same approved street elevation, clear span, supported footings and no parcel/ordinary-earthwork overlap. Bridges can join separate districts across a river when multi-district planning is enabled; sloped spans, intermediate piers and arbitrary bridge modules/joints are not included.
+`terrainPolicy.bridges` configures `maxLength` (3�48, default 48, including dry approaches), `maxCount` (0�8, default 2), `deckDepth` (1�4, default 1), and `minimumClearance` (0�8, default 0, air blocks below the deck above the surveyed surface). Both built-in and example suburb profiles enable water bridges. Set `maxCount: 0` to disable them. Candidates require dry banks at their approved street elevations, clear span, supported footings and no parcel/ordinary-earthwork overlap. Bridges can join separate districts across a river when multi-district planning is enabled; graded spans require the opt-in setting below; intermediate piers and arbitrary bridge modules/joints are not included.
 
-Bridge metadata records endpoints, dimensions, deck elevation and bank reservations without block materials. The placement provider is replaceable in Java; datapacks replace `BRIDGE_DECK`, `BRIDGE_RAIL`, and `BRIDGE_ABUTMENT` materials and may supply a repeating `surfaceTemplates.BRIDGE_DECK` whose height fits `deckDepth`. `BRIDGE_CLEARANCE` is reserved air. Suspended layers bypass ordinary cut/fill and fluid stabilization. The carving mask protects banks only. Snapshot v4 preserves bridge roles and reads old v1�v3 snapshots; existing saved settlements are not redrawn. Debug summaries report `bridges=N`. See the [authoring guide](examples/datapacks/composition_fixture/AUTHORING_GUIDE.md) for a complete example.
+Bridge metadata records endpoints, dimensions, both bank elevations and bank reservations without block materials. The placement provider is replaceable in Java; datapacks replace `BRIDGE_DECK`, `BRIDGE_STEP`, `BRIDGE_RAIL`, and `BRIDGE_ABUTMENT` materials and may supply a repeating `surfaceTemplates.BRIDGE_DECK` whose height fits `deckDepth`. `BRIDGE_CLEARANCE` is reserved air. Suspended layers bypass ordinary cut/fill and fluid stabilization. The carving mask protects banks only. Snapshot v4 preserves bridge roles and reads old v1�v3 snapshots; existing saved settlements are not redrawn. Debug summaries report `bridges=N`. See the [authoring guide](examples/datapacks/composition_fixture/AUTHORING_GUIDE.md) for a complete example.
 
 `preferredMaxCutDepth` and `preferredMaxFillDepth` describe the normal grading range for a settlement profile. `maxCutDepth` and `maxFillDepth` are separate absolute safety limits. `maxBuildingFoundationDepth` applies the stricter visible-support limit used by building and parcel pads, so relaxed road grading cannot produce houses on tall exposed foundation columns. The built-in suburb permits up to six blocks of bounded foundation support while retaining an eight-block general fill limit and the aggregate earthwork budget. Dry terrain between the preferred and absolute limits is accepted with bounded earthworks instead of being discarded, while columns beyond the applicable absolute limit are still rejected. `maxEarthworkVolume` limits the summed cut and fill volume across semantic road and building preparation areas. This keeps moderate correctable terrain usable without allowing the basic suburb profile to bridge ravines with unbounded foundations or bury buildings into cliffs. Connected road segments are constrained to at most one block of elevation difference.
 
@@ -398,7 +398,8 @@ terraformation limits are never relaxed.
 
 Limits: at most eight districts and 32 endpoint attempts per connection. Bridges
 joining disconnected banks take priority over shortcuts, and still require straight,
-equal-height supported banks. Sloped decks, piers and tunnels are not included.
+supported banks; bounded elevation differences are opt-in as described below.
+Piers and tunnels are not included.
 Exhausted local searches, unsuitable connections or final validation can still reject
 a city. Existing saved settlements are not regenerated. Omitting `planning.districts`
 preserves single-district compatibility mode.
@@ -433,3 +434,74 @@ meaning; `supportLiningVolume` is the conservative replacement allowance, and
 ranking also includes lining cost. Overlapping foundations and skipped air can
 make actual writes smaller than this allowance. Snapshot v5 preserves the role
 and palette and reads v1-v4; existing saved starts are not retrofitted.
+### Dry ravine crossings
+
+Profiles may enable `terrainPolicy.bridges.allowDryCrossings` (default false) and
+set `minimumDryClearance` (1..16, default 2). Builtin and example profiles enable
+this option. A dry crossing uses the same semantic BridgePlan, replaceable deck,
+rails, abutments and snapshot placement as a water crossing. Dry permission never
+overrides a water-avoidance rule; capability `bridge` is still required.
+
+Every column of an entirely dry open span must leave the configured clearance
+below the deck. Each bank must remain naturally level at its own street elevation; prepared road/parcel
+columns cannot be crossed by the span. Bridges joining disconnected districts
+retain priority over shortcuts, and existing length/count limits apply. For dry district links, the planner first tries existing terrain-aware road
+routing, grading and bounded cut/fill/retaining policies. If those bounded attempts
+fail, it adds bridges only between disconnected components while preserving
+accepted crossings. A shallow valley can therefore use ground treatment while
+a deeper ravine uses an open span. This is not yet a cost
+optimizer comparing every infrastructure strategy. Intermediate piers and caves
+hidden beneath intact surface roofs remain outside this crossing implementation.
+### Crossing budgets and failed supports
+
+`terrainPolicy.bridges.maxConstructionVolume` limits the sum of reserved structural
+cells for all selected bridges (0..65536, legacy default 65536; builtin/example
+4096). A bridge reserves `(length+1)*width*deckDepth` deck cells,
+`(startBankLength+endBankLength)*width*3` abutment cells and two rails per open-span
+row, plus interior half-step cells on graded spans. Clearance air is excluded. This is a semantic structural allowance, separate
+from the ground cut/fill/lining budget; it does not price materials or count
+arbitrary custom-provider writes. Exported bridges include `constructionVolume`;
+planning summaries include the aggregate `bridgeVolume`.
+
+`maxCandidateChecks` (1..256, default 32) caps candidate acceptance callbacks per
+selection call. Geometrically valid, affordable candidates are checked before
+being selected; a rejected candidate consumes a check but no construction budget
+and is not retried during the shortcut pass. This bounds expensive support checks,
+not every preliminary geometric probe or every planning retry for the whole city.
+
+District bridge selection spends its shared budget on disconnected components;
+optional local shortcuts are discarded when assembling the district city.
+Accepted links survive subsequent selection. Single-district plans may retain
+optional shortcuts, but an unsafe optional bridge can now be dropped or replaced
+without discarding otherwise valid parcels. Minecraft exact-support repair fully
+refines the bounded survey before trying alternatives, including for a single
+district with bridges. Final whole-plan validation still applies.
+### Bridges between different bank elevations
+
+`terrainPolicy.bridges.maxElevationDifference` is 0..8, omitted = 0 (legacy
+flat-only crossings). Builtin and example profiles enable 2. Each bank must still
+be naturally level at its own approved street height and pass exact footing
+support checks. The open span needs at least six rows for each full block of
+rise; bank fitting can therefore reject an otherwise long enough candidate.
+No extra approach terraforming or intermediate piers are introduced.
+
+BridgePlan records `deckY` at the start and `endDeckY` at the far bank. Row levels
+are deterministic: flat banks, centered six-row grading runs, and a half-step on
+the lower row of each transition. Clearance is checked against each row's local
+deck bottom. Budget volume also includes `abs(endDeckY-deckY)*(width-2)` half-step
+cells. The clear walking corridor excludes the two edge-rail columns.
+
+Set catalog `surfaces.BRIDGE_STEP` to a dry bottom slab (default stone-brick slab),
+for example `minecraft:andesite_slab[type=bottom]`. This role has no surface
+template. When graded bridges are enabled, `BRIDGE_DECK` and every top-layer cell
+of its surface template must have a full-block collision shape. Steps must have
+a full-footprint bottom-half collision shape. Runtime profile loading rejects
+waterlogged, block-entity or incompatible collision states. These are physical
+placement contracts, not style or block-ID compatibility lists. Flat-only packs
+retain their previous deck contract.
+
+Snapshot v6 stores local row heights, steps and chosen materials and reads v1-v5.
+Debug undo, chunk placement and carving protection use the same operations;
+open spans remain unfilled. Existing saved structures are not regenerated. Test
+new starts with the updated JAR and profile/pack. The setting permits suitable
+crossings; it does not guarantee that a particular seed contains one.

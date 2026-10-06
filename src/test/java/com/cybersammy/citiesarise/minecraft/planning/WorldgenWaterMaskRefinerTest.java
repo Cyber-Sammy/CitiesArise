@@ -30,6 +30,38 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class WorldgenWaterMaskRefinerTest {
+    @Test void singleDistrictDropsUnsafeOptionalBridgeAfterExactBankCheck() {
+        var ponds=java.util.List.of(new GridPoint(23,25),new GridPoint(28,10),new GridPoint(6,19),new GridPoint(24,29),new GridPoint(4,15))
+                .stream().map(p -> new GridBounds(p,new GridSize(5,5))).toList();
+        var survey=TerrainSurvey.sample(new GridBounds(new GridPoint(0,0),new GridSize(64,48)),p -> {
+            boolean water=ponds.stream().anyMatch(b -> b.contains(p));
+            return Optional.of(new TerrainCell(p,water?62:65,water,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE));
+        });
+        var policy=new com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy(java.util.Map.of(
+                com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType.WATER,com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse.CROSS_IF_SUPPORTED,
+                com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType.STEEP_SLOPE,com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse.BUILD_AROUND,
+                com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType.BLOCKED_TERRAIN,com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse.AVOID),
+                Set.of(com.cybersammy.citiesarise.core.terrain.policy.InfrastructureCapability.BRIDGE));
+        var request=new SuburbPlanningRequest(new PlanElementId("test:bridge-town"),survey,100,SuburbPlanningSettings.defaults(),policy);
+        var planner=SuburbPlanner.defaults(); var initial=planner.plan(request);
+        assertFalse(initial.plan().orElseThrow().roadGraph().bridges().isEmpty());
+        var checked=new LinkedHashSet<GridPoint>();
+        WorldgenTerrainSurveyProvider provider=new WorldgenTerrainSurveyProvider() {
+            public TerrainSurvey sample(GridBounds b) {return survey;}
+            public Optional<TerrainSurvey> sampleWithExactWaterMask(GridBounds b,Set<GridPoint> points) {
+                checked.addAll(points); return Optional.of(survey);
+            }
+            public Optional<com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn> unsupportedColumn(
+                    com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan plan) {
+                return plan.columns().stream().filter(c -> c.sourceElementId().value().contains("bridge-to-")).findFirst();
+            }
+        };
+        var result=WorldgenWaterMaskRefiner.refine(planner,provider,request,initial);
+        assertTrue(result.successful(),result.toString());
+        assertTrue(result.plan().orElseThrow().roadGraph().bridges().isEmpty());
+        assertEquals(initial.plan().orElseThrow().parcels(),result.plan().orElseThrow().parcels());
+        assertEquals(64*48,checked.size());
+    }
     private static final GridBounds BOUNDS = new GridBounds(new GridPoint(0, 0), new GridSize(40, 30));
 
     @Test

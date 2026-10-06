@@ -53,6 +53,15 @@ public final class MinecraftSettlementProfileJsonParser {
                 parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning, resources)).withDistricts(parseDistricts(planning)),
                 parseTerrainResponsePolicy(json)
         );
+        if (profile.terrainResponsePolicy().bridges().maxElevationDifference() > 0) {
+            var buildings = profile.suburbPlanningSettings().buildings();
+            resources.validateBridgeSurface(buildings.surfaces().getOrDefault("BRIDGE_DECK","minecraft:stone_bricks"),false);
+            resources.validateBridgeSurface(buildings.surfaces().getOrDefault("BRIDGE_STEP","minecraft:stone_brick_slab"),true);
+            var template = buildings.surfaceTemplates().get("BRIDGE_DECK");
+            if (template != null) for (var cell : template.cells()) {
+                if (cell.position().y() == template.size().y()-1) resources.validateBridgeSurface(cell.material(),false);
+            }
+        }
         limits.validate(profile);
         return profile;
     }
@@ -253,7 +262,12 @@ public final class MinecraftSettlementProfileJsonParser {
         var bridges = requiredObject(policy, "bridges");
         return new com.cybersammy.citiesarise.core.road.BridgeSettings(
                 optionalInt(bridges, "maxLength", defaults.maxLength()), optionalInt(bridges, "maxCount", defaults.maxCount()),
-                optionalInt(bridges, "deckDepth", defaults.deckDepth()), optionalInt(bridges, "minimumClearance", defaults.minimumClearance()));
+                optionalInt(bridges, "deckDepth", defaults.deckDepth()), optionalInt(bridges, "minimumClearance", defaults.minimumClearance()),
+                optionalBoolean(bridges, "allowDryCrossings", defaults.allowDryCrossings()),
+                optionalInt(bridges, "minimumDryClearance", defaults.minimumDryClearance()),
+                optionalLong(bridges, "maxConstructionVolume", defaults.maxConstructionVolume()),
+                optionalInt(bridges, "maxCandidateChecks", defaults.maxCandidateChecks()),
+                optionalInt(bridges, "maxElevationDifference", defaults.maxElevationDifference()));
     }
 
     private static TerrainAdaptationSettings parseTerrainAdaptationSettings(JsonObject policy) {

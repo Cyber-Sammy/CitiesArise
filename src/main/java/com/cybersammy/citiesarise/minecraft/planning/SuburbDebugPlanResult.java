@@ -176,6 +176,8 @@ public record SuburbDebugPlanResult(
         return baseSummary()
                 + ", roads=" + settlementPlan.roadGraph().segments().size()
                 + ", bridges=" + settlementPlan.roadGraph().bridges().size()
+                + ", bridgeVolume=" + settlementPlan.roadGraph().bridges().stream()
+                        .mapToLong(com.cybersammy.citiesarise.core.model.BridgePlan::constructionVolume).sum()
                 + ", parcels=" + settlementPlan.parcels().size()
                 + ", buildingSlots=" + settlementPlan.buildingSlots().size()
                 + ", wornRoads=" + wornRoadCount()

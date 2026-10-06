@@ -115,6 +115,7 @@ public final class ContentCatalogParser {
             templates.put(entry.getKey(),new SurfaceTemplate(size,cells,bool(t,"alignToRoad",false)));
         }
         for(String role:List.of("FOUNDATION","TERRAIN_FILL","BRIDGE_ABUTMENT","SUPPORT_LINING")) if(surfaces.containsKey(role)) resources.validateTraits(surfaces.get(role),false,true,false);
+        if(surfaces.containsKey("BRIDGE_STEP")) resources.validateBridgeSurface(surfaces.get("BRIDGE_STEP"),true);
         if(surfaces.containsKey("BRIDGE_DECK")) resources.validateWalkingSurface(surfaces.get("BRIDGE_DECK"));
         if(surfaces.containsKey("BRIDGE_CLEARANCE")) throw new IllegalArgumentException("Bridge clearance is reserved air, not a surface material");
         return new Catalog(Map.copyOf(assets),Map.copyOf(palettes),Map.copyOf(compositions),Map.copyOf(surfaces),List.copyOf(props),materialRules,Map.copyOf(modules),Map.copyOf(templates));

@@ -10,6 +10,22 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DistrictCityPlannerTest {
+    @Test void prefersGroundTreatmentForShallowValleyAndBridgeForDeepRavine() {
+        var base=request(false,false);
+        var policy=new TerrainResponsePolicy(base.terrainResponsePolicy().responses(),Set.of(InfrastructureCapability.BRIDGE),
+                base.terrainResponsePolicy().adaptationSettings(),new BridgeSettings(48,2,1,0,true,2));
+        for(int depth:List.of(3,10)) {
+            var survey=TerrainSurvey.sample(base.survey().bounds(),p -> Optional.of(new TerrainCell(p,
+                    p.x()>=57 && p.x()<=62?65-depth:65,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+            var req=new SuburbPlanningRequest(base.settlementId(),survey,42,base.settings(),policy);
+            var result=SuburbPlanner.defaults().plan(req);
+            assertTrue(result.successful(),result.toString());
+            var plan=result.plan().orElseThrow();
+            assertEquals(2,plan.districts().size());
+            assertEquals(depth==10,!plan.roadGraph().bridges().isEmpty());
+            assertEquals(1,new HashSet<>(DistrictCityPlanner.components(plan.roadGraph()).values()).size());
+        }
+    }
     @Test void allocatesRemainderToLastDistrict() {
         var base=request(false,false);
         var settings=base.settings().withDistricts(new DistrictPlanningSettings(2,4,8));

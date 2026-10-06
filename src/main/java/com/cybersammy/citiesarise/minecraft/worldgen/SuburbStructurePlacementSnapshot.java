@@ -15,7 +15,7 @@ import net.minecraft.nbt.CompoundTag;
 public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
     private static final String OPERATIONS_TAG = "Operations";
     private static final String VERSION_TAG = "SnapshotVersion";
-    private static final int CURRENT_VERSION = 5;
+    private static final int CURRENT_VERSION = 6;
     private static final int VALUES_PER_OPERATION = 5;
     private static final int NO_PLATFORM = Integer.MIN_VALUE;
     private static final PlanElementId STRUCTURE_SOURCE_ID = new PlanElementId(
@@ -106,7 +106,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
     }
 
     static void requireSupportedVersion(int version) {
-        if (version == CURRENT_VERSION || version == 4 || version == 3 || version == 2 || version == 1) {
+        if (version == CURRENT_VERSION || version == 5 || version == 4 || version == 3 || version == 2 || version == 1) {
             return;
         }
         throw new IllegalArgumentException("unsupported structure placement snapshot version: " + version);

@@ -11,6 +11,131 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class BridgePlannerTest {
+    @Test void unequalNaturalBanksAreOptInAndRespectFittedRunAndLocalClearance() {
+        for (int rise : List.of(-1,1)) for (boolean water : List.of(false,true)) {
+            var settings = new BridgeSettings(48,1,1,0,true,2,65536,32,1);
+            var original = request(water,61,settings);
+            var survey = TerrainSurvey.sample(original.survey().bounds(), p -> {
+                var c = original.survey().findCell(p).orElseThrow();
+                return Optional.of(new TerrainCell(p,p.x()>=14?65+rise:c.height(),c.water(),0,c.biomeCategory(),c.terrainCategory()));
+            });
+            var req = new SuburbPlanningRequest(ID,survey,1,original.settings(),original.terrainResponsePolicy());
+            var result = BridgePlanner.attach(req,roads(64+rise),EMPTY);
+            assertEquals(1,result.roadGraph().bridges().size());
+            var b = result.roadGraph().bridges().getFirst();
+            assertEquals(64+rise,b.endDeckY());
+            assertEquals(result,BridgePlanner.attach(req,roads(64+rise),EMPTY));
+            assertTrue(BridgePlanner.attach(new SuburbPlanningRequest(ID,survey,1,original.settings(),
+                    request(water,61,new BridgeSettings(48,1,1,0,true,2)).terrainResponsePolicy()),roads(64+rise),EMPTY)
+                    .roadGraph().bridges().isEmpty());
+            // Extending the real bank leaves only five open rows: no room for the rise.
+            var shortSurvey=TerrainSurvey.sample(survey.bounds(),p -> p.x()>=7 && p.x()<=8
+                    ? Optional.of(new TerrainCell(p,65,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)):survey.findCell(p));
+            assertTrue(BridgePlanner.attach(new SuburbPlanningRequest(ID,shortSurvey,1,req.settings(),req.terrainResponsePolicy()),
+                    roads(64+rise),EMPTY).roadGraph().bridges().isEmpty());
+            var lowPoint=b.point(rise>0?b.startBankLength():b.length()-b.endBankLength(),1);
+            var blocked=TerrainSurvey.sample(survey.bounds(),p -> p.equals(lowPoint)
+                    ? Optional.of(new TerrainCell(p,65,water,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)):survey.findCell(p));
+            assertTrue(BridgePlanner.attach(new SuburbPlanningRequest(ID,blocked,1,req.settings(),req.terrainResponsePolicy()),
+                    roads(64+rise),EMPTY).roadGraph().bridges().isEmpty());
+        }
+    }
+
+    @Test void gradedDeckHasHalfBlockWalkAndExactStructuralBudgetInAllDirections() {
+        for (var end : List.of(new GridPoint(30,0),new GridPoint(-30,0),new GridPoint(0,30),new GridPoint(0,-30))) {
+            for (int rise : List.of(-3,-2,-1,0,1,2,3)) {
+                var b=new BridgePlan(ID,ID.child("a"),ID.child("b"),new GridPoint(0,0),end,5,64,2,3,3,64+rise);
+                double previous=65;
+                int steps=0;
+                for(int d=0;d<=b.length();d++) {
+                    double walking=b.deckElevation(d)+1+(b.transitionStep(d)?0.5:0);
+                    assertTrue(Math.abs(walking-previous)<=0.5,"Unwalkable transition at "+d);
+                    if(b.bank(d)) assertFalse(b.transitionStep(d));
+                    if(b.transitionStep(d)) steps++;
+                    previous=walking;
+                }
+                assertEquals(65+rise,previous);
+                assertEquals(Math.abs(rise),steps);
+                var operations=new com.cybersammy.citiesarise.minecraft.placement.ProceduralBridgePlacementProvider().create(b);
+                assertEquals(b.constructionVolume(),operations.stream().filter(op -> op.role()!=
+                        com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.BRIDGE_CLEARANCE).count());
+                assertEquals(operations.size(),operations.stream().map(op->op.position()).distinct().count());
+            }
+        }
+        assertThrows(IllegalArgumentException.class,()->new BridgePlan(ID,ID.child("a"),ID.child("b"),
+                new GridPoint(0,0),new GridPoint(10,0),3,64,1,3,3,65));
+    }
+
+    @Test void rejectedFootingTriesAnotherCandidateWithoutLosingDistricts() {
+        var checks=new ArrayList<GridPoint>();
+        var request=request(true,62,new BridgeSettings(48,1,1,0,false,2,65536,4));
+        var result=BridgePlanner.attachWaterCrossings(request,parallelRoads(),EMPTY, candidate -> {
+            var bridge=candidate.roadGraph().bridges().getLast(); checks.add(bridge.start());
+            return bridge.start().z()==12;
+        });
+        assertEquals(2,checks.size());
+        assertEquals(1,result.roadGraph().bridges().size());
+        assertEquals(12,result.roadGraph().bridges().getFirst().start().z());
+        assertEquals(parallelRoads().roadGraph().segments(),result.roadGraph().segments());
+    }
+
+    @Test void failedChecksAreBoundedAndNotRetriedAsShortcuts() {
+        var checks=new java.util.concurrent.atomic.AtomicInteger();
+        var request=request(true,62,new BridgeSettings(48,2,1,0,false,2,65536,1));
+        var result=BridgePlanner.attach(request,parallelRoads(),EMPTY,candidate -> {checks.incrementAndGet();return false;});
+        assertEquals(1,checks.get());
+        assertTrue(result.roadGraph().bridges().isEmpty());
+    }
+
+    @Test void structuralVolumeIncludesDeckAbutmentsAndRailsAndBudgetIsShared() {
+        var geometry=BridgePlanner.attach(request(true,62,BridgeSettings.defaults()),parallelRoads(),EMPTY).roadGraph().bridges();
+        assertEquals(2,geometry.size());
+        long volume=geometry.getFirst().constructionVolume();
+        var provider=new com.cybersammy.citiesarise.minecraft.placement.ProceduralBridgePlacementProvider();
+        assertEquals(volume,provider.create(geometry.getFirst()).stream()
+                .filter(op -> op.role()!=com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.BRIDGE_CLEARANCE).count());
+        assertEquals(1,BridgePlanner.attach(request(true,62,new BridgeSettings(48,2,1,0,false,2,volume,32)),
+                parallelRoads(),EMPTY).roadGraph().bridges().size());
+        assertTrue(BridgePlanner.attach(request(true,62,new BridgeSettings(48,2,1,0,false,2,volume-1,32)),
+                parallelRoads(),EMPTY).roadGraph().bridges().isEmpty());
+    }
+
+    @Test void districtPhaseDoesNotSpendSharedBudgetOnOptionalShortcut() {
+        assertTrue(BridgePlanner.attachWaterCrossings(request(true,62,BridgeSettings.defaults()),roads(64),EMPTY)
+                .roadGraph().bridges().isEmpty());
+    }
+
+    private static SettlementPlan parallelRoads() {
+        var nodes=List.of(node("a",4,8),node("b",4,12),node("c",16,8),node("d",16,12));
+        return new SettlementPlan(ID,new RoadGraph(nodes,List.of(segment("left",nodes.get(0),nodes.get(1),64),
+                segment("right",nodes.get(2),nodes.get(3),64))),List.of(),List.of(),Set.of(),PlanProperties.empty());
+    }
+    @Test void dryCrossingsRequireOptInAndClearanceAcrossEntireSpan() {
+        var settings = new BridgeSettings(48,2,1,0,true,2);
+        var request = request(false,62,settings);
+        var result = BridgePlanner.attach(request,roads(64),EMPTY);
+        assertEquals(1,result.roadGraph().bridges().size());
+        assertEquals(result,BridgePlanner.attach(request,roads(64),EMPTY));
+        assertTrue(BridgePlanner.attach(request(false,63,settings),roads(64),EMPTY).roadGraph().bridges().isEmpty());
+        assertTrue(BridgePlanner.attach(request(false,65,settings),roads(64),EMPTY).roadGraph().bridges().isEmpty());
+        var interrupted = TerrainSurvey.sample(request.survey().bounds(),p -> p.equals(new GridPoint(10,9))
+                ? Optional.of(new TerrainCell(p,64,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)) : request.survey().findCell(p));
+        var obstructed = new SuburbPlanningRequest(ID,interrupted,1,request.settings(),request.terrainResponsePolicy());
+        assertTrue(BridgePlanner.attach(obstructed,roads(64),EMPTY).roadGraph().bridges().isEmpty());
+    }
+
+    @Test void dryPermissionDoesNotOverrideWaterAvoidance() {
+        var settings = new BridgeSettings(48,2,1,0,true,2);
+        for(boolean water:List.of(false,true)) {
+            var original=request(water,62,settings);
+            var policy=new TerrainResponsePolicy(Map.of(TerrainFeatureType.WATER,TerrainResponse.AVOID,
+                    TerrainFeatureType.STEEP_SLOPE,TerrainResponse.BUILD_AROUND,TerrainFeatureType.BLOCKED_TERRAIN,TerrainResponse.AVOID),
+                    Set.of(InfrastructureCapability.BRIDGE),TerrainAdaptationSettings.disabled(),settings);
+            var req=new SuburbPlanningRequest(ID,original.survey(),1,original.settings(),policy);
+            assertEquals(water?0:1,BridgePlanner.attach(req,roads(64),EMPTY).roadGraph().bridges().size());
+        }
+        assertThrows(IllegalArgumentException.class,()->new BridgeSettings(48,2,1,0,true,0));
+    }
     static final PlanElementId ID = new PlanElementId("test:bridge-town");
     static final TerrainPreparationPlan EMPTY = TerrainPreparationPlan.of(new RegionalElevationPlan(List.of(), List.of()), List.of(), List.of());
 
@@ -33,6 +158,12 @@ class BridgePlannerTest {
         var placement = new com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlanConverter()
                 .convert(transformed,result.terrainPreparationPlan().orElseThrow());
         assertTrue(placement.operations().stream().anyMatch(op -> op.role().bridge()));
+        var withoutUnsafeShortcuts=SuburbPlanner.defaults().plan(
+                new SuburbPlanningRequest(ID,survey,100,SuburbPlanningSettings.defaults(),policy),
+                (r,candidate) -> candidate.plan().orElseThrow().roadGraph().bridges().isEmpty()?candidate
+                        : SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_PARCEL_SPACE));
+        assertTrue(withoutUnsafeShortcuts.successful(),withoutUnsafeShortcuts.toString());
+        assertTrue(withoutUnsafeShortcuts.plan().orElseThrow().roadGraph().bridges().isEmpty());
     }
 
     @Test void connectsExistingRoadsWithAnOpenSpanAndDeterministicBanks() {

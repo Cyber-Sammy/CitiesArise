@@ -67,7 +67,7 @@ final class SuburbDebugPlanResultTest {
         assertEquals(1, result.decayedBuildingSlotCount());
         assertEquals(
                 "region=(1, -2), bounds=(10, 20, 40x30), seed=123"
-                        + ", roads=1, bridges=0, parcels=1, buildingSlots=1, wornRoads=1, decayedBuildingSlots=1",
+                        + ", roads=1, bridges=0, bridgeVolume=0, parcels=1, buildingSlots=1, wornRoads=1, decayedBuildingSlots=1",
                 result.summary()
         );
     }

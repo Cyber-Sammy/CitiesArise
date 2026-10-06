@@ -101,6 +101,12 @@ public final class DebugPlacementPlanConverter {
         for (var operation : placement.operations()) {
             boolean replaced = (operation.verticalOffset() <= 0 || operation.role() == DebugPlacementRole.ROAD_END_CURB)
                     && plan.roadGraph().bridges().stream().anyMatch(bridge -> bridge.bounds().contains(operation.point()));
+            // Keep conditional support treatment at the road/bridge bank, never beneath the open span.
+            if (operation.role() == DebugPlacementRole.SUPPORT_LINING) {
+                replaced = plan.roadGraph().bridges().stream().anyMatch(bridge -> bridge.bounds().contains(operation.point())
+                        && !bridge.bank(bridge.alongX() ? Math.abs(operation.point().x()-bridge.start().x())
+                        : Math.abs(operation.point().z()-bridge.start().z())));
+            }
             if (!replaced) operations.put(operation.position(), operation);
         }
         for (var bridge : plan.roadGraph().bridges()) for (var operation : bridgeProvider.create(bridge)) {
@@ -128,6 +134,7 @@ public final class DebugPlacementPlanConverter {
         Map<DebugPlacementPosition,DebugBlockPlacementOperation> result=new LinkedHashMap<>();
         for(var op:placement.operations()) addOperation(op,result);
         for(var op:placement.operations()) {
+            if (op.role() == DebugPlacementRole.SUPPORT_LINING) continue;
             if (op.role() == DebugPlacementRole.BRIDGE_DECK && op.verticalOffset() != 0) continue;
             var template=plan.surfaceTemplates().get(op.role().name()); if(template==null) continue;
             int turn=template.alignToRoad()?turns.getOrDefault(op.sourceElementId(),0):0;
@@ -162,6 +169,15 @@ public final class DebugPlacementPlanConverter {
         }
         for (TerrainPreparationColumn column : preparationPlan.columns()) {
             addTerrainPreparationOperation(column, operations);
+        }
+        // Existing foundations and retaining faces retain their placement and carving semantics.
+        // Lining only occupies the remaining positions inside the bounded support envelope.
+        for (var column : preparationPlan.supportLining().columns()) {
+            for (int y = column.bottomY(); y <= column.topY(); y++) {
+                var operation = new DebugBlockPlacementOperation(column.point(), y - column.platformY(),
+                        DebugPlacementRole.SUPPORT_LINING, column.source(), OptionalInt.of(column.platformY()));
+                operations.putIfAbsent(operation.position(), operation);
+            }
         }
         return new DebugPlacementPlan(List.copyOf(operations.values()));
     }

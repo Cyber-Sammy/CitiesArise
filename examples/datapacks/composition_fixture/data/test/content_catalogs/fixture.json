@@ -776,6 +776,7 @@
     "ROAD_SURFACE": "minecraft:deepslate_tiles",
     "PARCEL_BOUNDARY": "minecraft:stone_bricks",
     "FOUNDATION": "minecraft:andesite",
+    "SUPPORT_LINING": "minecraft:andesite",
     "TERRAIN_FILL": "minecraft:stone",
     "BRIDGE_DECK": "minecraft:polished_deepslate",
     "BRIDGE_RAIL": "minecraft:polished_blackstone_brick_wall",

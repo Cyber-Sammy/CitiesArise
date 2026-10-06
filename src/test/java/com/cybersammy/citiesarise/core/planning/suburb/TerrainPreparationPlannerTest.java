@@ -38,6 +38,18 @@ import org.junit.jupiter.api.Test;
 
 final class TerrainPreparationPlannerTest {
     @Test
+    void supportLiningCannotBypassConstructionBudgetOnFlatGround() {
+        var base = new SuburbPlanningSettings(1, 1.0, 1, 3, 3, 0, 20, 1, 1, 3, 3, 0L);
+        var disabled = base.withTerrainTransitions(new TerrainTransitionSettings(1,0,0,0,0,0,0,false,2));
+        var enabled = base.withTerrainTransitions(new TerrainTransitionSettings(1,0,0,0,0,0,0,false,2,4));
+        var survey = TerrainSurvey.sample(new GridBounds(new GridPoint(0,0),new GridSize(12,12)),
+                p -> Optional.of(new TerrainCell(p,65,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var request = new SuburbPlanningRequest(id("settlement"), survey, 42L, disabled);
+        assertTrue(TerrainPreparationPlanner.plan(request, buildingElevationPlan()).plan().isPresent());
+        var treated = new SuburbPlanningRequest(id("settlement"), survey, 42L, enabled);
+        assertTrue(TerrainPreparationPlanner.plan(treated, buildingElevationPlan()).plan().isEmpty());
+    }
+    @Test
     void buildingAccessPreservesSharedRoadStepAndValidationStillRejectsDamage() {
         var west = node("west", 2, 5);
         var joint = node("joint", 5, 5);

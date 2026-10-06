@@ -11,9 +11,15 @@ public record EarthworkSiteAssessment(
         int footprintColumnCount,
         int earthworkColumnCount,
         int maximumCutDepth,
-        int maximumFillDepth
+        int maximumFillDepth,
+        long supportLiningVolume
 ) implements Comparable<EarthworkSiteAssessment> {
+    public EarthworkSiteAssessment(EarthworkSiteQuality quality, long excess, int above, long volume,
+            int footprint, int worked, int cut, int fill) {
+        this(quality, excess, above, volume, footprint, worked, cut, fill, 0);
+    }
     public EarthworkSiteAssessment {
+        requireNonNegative(supportLiningVolume, "supportLiningVolume");
         Objects.requireNonNull(quality, "quality");
         requireNonNegative(preferredDepthExcess, "preferredDepthExcess");
         requireNonNegative(columnsAbovePreferred, "columnsAbovePreferred");
@@ -26,7 +32,7 @@ public record EarthworkSiteAssessment(
         requireEarthworkColumnCount(earthworkColumnCount, footprintColumnCount, totalVolume);
         requireColumnCount(columnsAbovePreferred, earthworkColumnCount);
         requireMatchingQuality(quality, preferredDepthExcess, totalVolume);
-        Math.addExact(totalVolume, preferredDepthExcess);
+        Math.addExact(Math.addExact(totalVolume, preferredDepthExcess), supportLiningVolume);
     }
 
     public static EarthworkSiteAssessment evaluate(
@@ -64,7 +70,8 @@ public record EarthworkSiteAssessment(
                 plan.columns().size(),
                 earthworkColumnCount,
                 maximumCutDepth,
-                maximumFillDepth
+                maximumFillDepth,
+                plan.supportLining().volume()
         );
     }
 
@@ -111,7 +118,7 @@ public record EarthworkSiteAssessment(
     }
 
     public long rankingCost() {
-        return Math.addExact(totalVolume, preferredDepthExcess);
+        return Math.addExact(Math.addExact(totalVolume, preferredDepthExcess), supportLiningVolume);
     }
 
     public double earthworkDensity() {

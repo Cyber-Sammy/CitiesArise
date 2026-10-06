@@ -61,6 +61,8 @@ public final class SuburbDebugPlanJsonExporter {
             appendInlineNumberField(output, "cutVolume", plan.cutVolume(), false);
             appendInlineNumberField(output, "fillVolume", plan.fillVolume(), false);
             appendInlineNumberField(output, "totalVolume", plan.totalVolume(), false);
+            appendInlineNumberField(output, "supportLiningVolume", plan.supportLining().volume(), false);
+            appendInlineNumberField(output, "constructionVolume", plan.constructionVolume(), false);
             appendSiteAssessment(output, result);
             output.append(" }");
         });

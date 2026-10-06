@@ -471,3 +471,25 @@ Minimum capacity and total earthwork limits are never relaxed. Bounded retries m
 still reject the city. Bridges retain aligned, equal-height bank constraints;
 sloped decks, intermediate supports and arbitrary mountain coverage are not added.
 This stage needs no new pack fields or model/compatibility changes.
+
+## Support lining (optional)
+
+Enable `planning.terrainTransitions.supportLiningDepth: 4` in the settlement
+profile (range 0..4; absent or 0 disables it). This fixture enables it and sets
+`surfaces.SUPPORT_LINING: "minecraft:andesite"` in the content catalog. Use a dry,
+supportive block state; air and unsupported materials are invalid. This role
+accepts a material, not a surface template.
+
+For target elevation T and fill depth F, the candidate lining interval is
+[min(T-1, T-F)-depth, T-1], inclusive. The top may already be occupied by an
+explicit foundation or retaining face, which wins over lining. All candidate
+cells are charged conservatively to the construction budget and site ranking;
+`maxEarthworkVolume` limits cut + fill + candidate lining volume. Increase this
+budget deliberately if a large settlement needs more construction work.
+
+Lining replaces existing dry solid terrain only; it never fills air or water.
+It covers road/access support, wall columns and platform edges, including buried
+support, without changing the cave-carving mask. Supported bridge banks can keep
+road lining, while open spans cannot. Known unsupported sites still require a
+valid local replan. Lining is not an automatic bridge, pier or structural span.
+Use newly generated starts to test it: stored starts keep their old snapshots.

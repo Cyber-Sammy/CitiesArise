@@ -41,7 +41,7 @@ public final class DebugPlacementApplier {
         DebugPlacementSnapshotBuilder snapshotBuilder = new DebugPlacementSnapshotBuilder();
 
         Map<GridPoint,DebugBlockPlacementOperation> fillPolicies=new LinkedHashMap<>();
-        for(var operation:placementPlan.operations()) if(!operation.role().bridge() && !operation.fillMaterial().isEmpty() && operation.platformY().isPresent()) {
+        for(var operation:placementPlan.operations()) if(!operation.role().bridge() && operation.role()!=DebugPlacementRole.SUPPORT_LINING && !operation.fillMaterial().isEmpty() && operation.platformY().isPresent()) {
             if(operation.role()==DebugPlacementRole.TERRAIN_SURFACE) fillPolicies.put(operation.point(),operation);
             else fillPolicies.putIfAbsent(operation.point(),operation);
         }
@@ -58,8 +58,7 @@ public final class DebugPlacementApplier {
             });
         }
         for (DebugBlockPlacementOperation operation : placementPlan.operations()) {
-            applyOperation(level, operation, baseElevations.get(operation.point()), snapshotBuilder);
-            placedBlocks++;
+            if (applyOperation(level, operation, baseElevations.get(operation.point()), snapshotBuilder)) placedBlocks++;
         }
 
         saveUndoSnapshot(level, snapshotBuilder, undoEnabled);
@@ -99,7 +98,7 @@ public final class DebugPlacementApplier {
         undoStore.save(level, snapshotBuilder.build());
     }
 
-    private void applyOperation(
+    private boolean applyOperation(
             ServerLevel level,
             DebugBlockPlacementOperation operation,
             int sampledBaseY,
@@ -108,12 +107,21 @@ public final class DebugPlacementApplier {
         int x = operation.point().x();
         int z = operation.point().z();
         int baseY = operation.platformY().orElse(sampledBaseY);
+        if (operation.role() == DebugPlacementRole.SUPPORT_LINING) {
+            long requestedY = (long) baseY + operation.verticalOffset();
+            if (requestedY < level.getMinBuildHeight() || requestedY >= level.getMaxBuildHeight()) return false;
+        }
         int targetY = targetY(level, baseY, operation.verticalOffset());
         BlockState state = materialProvider.blockState(operation);
         BlockPos position = new BlockPos(x, targetY, z);
-
+        if (operation.role() == DebugPlacementRole.SUPPORT_LINING) {
+            var existing = level.getBlockState(position);
+            if (!existing.blocksMotion() || !existing.getFluidState().isEmpty() || existing.hasBlockEntity()
+                    || existing.is(BlockTags.LEAVES) || existing.is(BlockTags.LOGS)
+                    || MinecraftVegetationClassifier.isClearable(existing)) return false;
+        }
         snapshotBuilder.capture(position, level.getBlockState(position));
-        level.setBlock(position, state, UPDATE_FLAGS);
+        return level.setBlock(position, state, UPDATE_FLAGS);
     }
 
     private int placementY(ServerLevel level, int x, int z, int topHeight) {

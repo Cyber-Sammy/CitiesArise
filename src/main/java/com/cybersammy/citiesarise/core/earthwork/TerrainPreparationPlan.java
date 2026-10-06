@@ -84,6 +84,15 @@ public record TerrainPreparationPlan(
         return Math.addExact(cutVolume, fillVolume);
     }
 
+    public SupportLiningPlan supportLining() {
+        return SupportLiningPlan.create(elevationPlan, columns, transitionSettings.supportLiningDepth());
+    }
+
+    /** Conservative construction budget: cut/fill plus all potential solid replacements. */
+    public long constructionVolume() {
+        return Math.addExact(totalVolume(), supportLining().volume());
+    }
+
     public boolean requiresEarthworks() {
         return status == TerrainPreparationStatus.ACCEPTED_WITH_EARTHWORKS;
     }

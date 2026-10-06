@@ -62,7 +62,9 @@ public final class DistrictCityGameTests {
                 TerrainFeatureType.BLOCKED_TERRAIN,TerrainResponse.AVOID,TerrainFeatureType.STEEP_SLOPE,TerrainResponse.BUILD_AROUND),
                 Set.of(InfrastructureCapability.BRIDGE),TerrainAdaptationSettings.defaults(),new BridgeSettings(48,2,1,0));
         var result=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(new PlanElementId("test:district-city"),survey,42,
-                SuburbPlanningSettings.defaults().withDistricts(new DistrictPlanningSettings(2,3,8)),policy));
+                SuburbPlanningSettings.defaults().withDistricts(new DistrictPlanningSettings(2,3,8))
+                        .withTerrainTransitions(new com.cybersammy.citiesarise.core.earthwork.TerrainTransitionSettings(
+                                1,2,2,3,3,3,3,true,2,4)),policy));
         helper.assertTrue(result.successful(),"District planner rejected fixture: "+result);
         var plan=result.plan().orElseThrow();
         helper.assertTrue(plan.districts().size()==2 && !plan.roadGraph().bridges().isEmpty(),"Missing connected districts");
@@ -78,6 +80,14 @@ public final class DistrictCityGameTests {
         var tag=new CompoundTag(); snapshot.save(tag);
         var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
         helper.assertTrue(snapshot.equals(SuburbStructurePlacementSnapshot.from(restored)),"District snapshot changed");
+        helper.assertTrue(restored.operations().stream().anyMatch(op -> op.role()==DebugPlacementRole.SUPPORT_LINING),"Missing support treatment");
+        helper.assertTrue(restored.operations().stream().anyMatch(op -> op.role()==DebugPlacementRole.SUPPORT_LINING
+                && plan.roadGraph().bridges().stream().anyMatch(b -> b.bounds().contains(op.point()))),"Missing bank approach lining");
+        for(var bridge:plan.roadGraph().bridges()) for(int d=0;d<=bridge.length();d++) if(!bridge.bank(d)) {
+            var center=bridge.point(d,0);
+            helper.assertTrue(restored.operations().stream().noneMatch(op -> op.role()==DebugPlacementRole.SUPPORT_LINING
+                    && op.point().equals(center)),"Support lining entered bridge span");
+        }
         var partition=new DebugPlacementChunkProjector().partition(restored);
         var chunks=restored.operations().stream().map(op -> PlacementChunk.containing(op.point())).distinct()
                 .sorted(Comparator.comparingInt(PlacementChunk::x).thenComparingInt(PlacementChunk::z).reversed()).toList();

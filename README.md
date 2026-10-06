@@ -31,7 +31,7 @@ ids. Install the example separately to try it; it is excluded from the distribut
 mod JAR. Modules can contain nested room/furniture reservations and declare clearance,
 walking/ladder routes and support points, checked after variants and damage. Roads
 and parcels accept repeating JSON/NBT surface volumes and saved foundation/fill
-material policies. Snapshot v4 reads older v1/v2/v3 starts. Validation is bounded and
+material policies. Snapshot v5 reads older v1/v2/v3/v4 starts. Validation is bounded and
 checks author-declared voxel requirements; general Minecraft movement simulation,
 structural load physics and block-entity content remain outside this delivery.
 
@@ -409,3 +409,27 @@ possible city fits. Seed-search reports candidate times and rejection reasons;
 a `TIME_LIMIT` report is a completed budget with preserved results. Full-survey
 refinement during support repair adds work; this stage does not promise faster
 seed searches.
+
+### Bounded support lining
+
+`planning.terrainTransitions.supportLiningDepth` (0..4, omitted = 0) adds a semantic
+solid-replacement envelope beneath roads, accesses, retaining walls and platform
+edges. The builtin suburb and example composition pack enable depth 4. Existing
+foundations and retaining faces keep their original operations. Road approaches
+retain lining at supported bridge banks; open bridge spans exclude it.
+
+At placement time, `SUPPORT_LINING` replaces existing dry solid blocks only. It
+skips air, fluids, vegetation and block entities, and never deepens the carving
+protection mask. This gives exposed natural foundations a deliberate material
+without filling deep caves. The envelope also treats buried support: it does not
+perform a neighbor-dependent exposure scan or infer a new bridge from a late cave.
+Known unsupported terrain still uses the existing bounded local replanning.
+
+The content catalog may set `surfaces.SUPPORT_LINING` to a supportive material
+(default stone bricks; example pack uses andesite). Surface templates are not
+supported for this conditional role. `cutVolume` and `fillVolume` retain their
+meaning; `supportLiningVolume` is the conservative replacement allowance, and
+`constructionVolume` is their sum, checked against `maxEarthworkVolume`. Site
+ranking also includes lining cost. Overlapping foundations and skipped air can
+make actual writes smaller than this allowance. Snapshot v5 preserves the role
+and palette and reads v1-v4; existing saved starts are not retrofitted.

@@ -219,7 +219,8 @@ public final class MinecraftSettlementProfileJsonParser {
                         transitions,
                         "retainingWallMinimumHeight",
                         defaults.retainingWallMinimumHeight()
-                )
+                ),
+                optionalInt(transitions, "supportLiningDepth", defaults.supportLiningDepth())
         );
     }
 

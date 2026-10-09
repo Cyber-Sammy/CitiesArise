@@ -21,6 +21,10 @@ final class TerrainSupportAcceptance {
         var supportColumns = new ArrayList<TerrainPreparationColumn>();
         Set<com.cybersammy.citiesarise.core.geometry.GridPoint> known = new java.util.HashSet<>();
         for (var bridge : result.plan().orElseThrow().roadGraph().bridges()) {
+            for(var footing:bridge.foundations()) {
+                var point=bridge.point(footing.distance(),footing.lateral());
+                if(known.add(point)) supportColumns.add(new TerrainPreparationColumn(point,bridge.id(),footing.bottomY()+1,0,0));
+            }
             for (int distance = 0; distance <= bridge.length(); distance++) {
                 if (!bridge.bank(distance)) continue;
                 for (int lateral = 0; lateral < bridge.width(); lateral++) {

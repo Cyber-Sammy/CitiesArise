@@ -39,6 +39,11 @@ public final class WorldgenSettlementLocator {
     }
 
     public CompletableFuture<SearchResult> findBestAsync(ServerLevel level, BlockPos origin) {
+        return findBestAsync(level,origin,java.util.Set.of());
+    }
+
+    public CompletableFuture<SearchResult> findBestAsync(ServerLevel level, BlockPos origin, java.util.Set<SettlementRegion> excluded) {
+        var skipped=java.util.Set.copyOf(excluded);
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(origin, "origin");
 
@@ -60,29 +65,51 @@ public final class WorldgenSettlementLocator {
         int regionModulo = CitiesAriseWorldgenConfig.candidateRegionModulo();
         int seaLevel = level.getSeaLevel();
         Map<String, Integer> rejectionCounts = new LinkedHashMap<>();
+        var rejectedRegions=new java.util.HashSet<SettlementRegion>();
         return regionSearch.findBestAsync(
                 origin.getX(),
                 origin.getZ(),
                 CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
                 CitiesAriseWorldgenConfig.locateMaxCandidateAttempts(),
                 CitiesAriseWorldgenConfig.locateImprovementCandidateAttempts(),
-                region -> candidateSelector.isCandidate(worldSeed, region, regionModulo)
-                        && placement.isStructureRegion(region),
-                region -> evaluate(context, seaLevel, region, rejectionCounts),
+                region -> !skipped.contains(region) && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,context.surveySize())
+                        && candidateSelector.isCandidate(worldSeed, region, regionModulo)
+                        && placement.isStructureRegion(region)
+                        && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,context.surveySize(),
+                                placement.potentialChunk(region).x,placement.potentialChunk(region).z),
+                region -> {
+                    var evaluation=evaluate(context,seaLevel,region,rejectionCounts);
+                    if(evaluation.isEmpty()) rejectedRegions.add(region);
+                    return evaluation;
+                },
                 EarthworkSiteAssessment::compareTo,
                 executor
-        ).thenApply(outcome -> searchResult(outcome, rejectionCounts));
+        ).thenApply(outcome -> {
+            var raw=searchResult(outcome,rejectionCounts);
+            var located=raw.settlement().map(found->{
+                var center=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.center(found.region(),context.surveySize());
+                return new LocatedSettlement(found.region(),center.x(),center.z(),found.attemptedCandidates(),found.siteAssessment());
+            });
+            var result=new SearchResult(located,raw.attemptedCandidates(),raw.rejectionCounts());
+            return new SearchResult(result.settlement(),result.attemptedCandidates(),result.rejectionCounts(),
+                    context.profileId().value(),rejectedRegions);
+        });
     }
 
     /** Seed/placement arithmetic only: never samples terrain or constructs a settlement plan. */
     public Optional<BlockPos> findPotential(ServerLevel level, BlockPos origin) {
+        var planning=planningService.prepareLocateContext(level,level.getChunkSource().getGenerator());
+        if(planning.isEmpty()) return Optional.empty();
+        var size=planning.orElseThrow().surveySize();
         var placement = placementContext(level, level.getSeed());
         if (placement.isEmpty()) return Optional.empty();
         var context = placement.orElseThrow();
         return PotentialRegionSearch.find(SettlementRegion.fromBlockPosition(origin.getX(), origin.getZ()),
                 CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
-                region -> candidateSelector.isCandidate(level.getSeed(), region,
-                        CitiesAriseWorldgenConfig.candidateRegionModulo()) && context.isStructureRegion(region))
+                region -> com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,size) && candidateSelector.isCandidate(level.getSeed(), region,
+                        CitiesAriseWorldgenConfig.candidateRegionModulo()) && context.isStructureRegion(region)
+                        && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,size,
+                                context.potentialChunk(region).x,context.potentialChunk(region).z))
                 .map(context::locatePosition);
     }
 
@@ -229,9 +256,16 @@ public final class WorldgenSettlementLocator {
     public record SearchResult(
             Optional<LocatedSettlement> settlement,
             int attemptedCandidates,
-            Map<String, Integer> rejectionCounts
+            Map<String, Integer> rejectionCounts,
+            String profile,
+            java.util.Set<SettlementRegion> rejectedRegions
     ) {
+        public SearchResult(Optional<LocatedSettlement> settlement,int attemptedCandidates,Map<String,Integer> rejectionCounts) {
+            this(settlement,attemptedCandidates,rejectionCounts,"",java.util.Set.of());
+        }
         public SearchResult {
+            Objects.requireNonNull(profile);
+            rejectedRegions=java.util.Set.copyOf(rejectedRegions);
             Objects.requireNonNull(settlement, "settlement");
             Objects.requireNonNull(rejectionCounts, "rejectionCounts");
             if (attemptedCandidates < 0) {

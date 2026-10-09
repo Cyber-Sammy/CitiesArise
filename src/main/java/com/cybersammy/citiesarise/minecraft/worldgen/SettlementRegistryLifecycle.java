@@ -15,7 +15,7 @@ public final class SettlementRegistryLifecycle {
                 .map(CitiesAriseSuburbPiece.class::cast)
                 .map(piece -> piece.registryMetadata(level.dimension().location().toString()))
                 .toList();
-        if (!metadata.isEmpty()) level.getServer().execute(() -> {
+        if (!metadata.isEmpty()) ServerThreadPublication.publish(level.getServer(), () -> {
             var registry = SettlementRegistry.get(level);
             metadata.forEach(registry::observe);
         });

@@ -70,7 +70,7 @@ public final class TerrainAdaptationPlanner {
         for (TerrainCell cell : survey.cells()) {
             featureType(cell, maxBuildableSlope).ifPresent(type -> types.put(cell.point(), type));
         }
-        return Map.copyOf(types);
+        return java.util.Collections.unmodifiableMap(types);
     }
 
     private static Optional<TerrainFeatureType> featureType(

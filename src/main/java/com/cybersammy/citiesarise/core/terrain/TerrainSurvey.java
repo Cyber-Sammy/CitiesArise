@@ -21,7 +21,9 @@ public record TerrainSurvey(GridBounds bounds, List<TerrainCell> cells, Map<Grid
         rejectMismatchedCellIndex(cells, cellsByPoint);
         rejectIncompleteCells(bounds, cellsByPoint);
         cells = List.copyOf(cells);
-        cellsByPoint = Map.copyOf(cellsByPoint);
+        // GridPoint's record hash has many collisions on a dense grid. MapN linear
+        // probing turns a city-sized survey into long scans; HashMap keeps bucketed lookup.
+        cellsByPoint = java.util.Collections.unmodifiableMap(new java.util.HashMap<>(cellsByPoint));
     }
 
     public static TerrainSurvey sample(GridBounds bounds, TerrainSampler sampler) {

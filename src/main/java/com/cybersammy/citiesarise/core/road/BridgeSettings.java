@@ -1,7 +1,13 @@
 package com.cybersammy.citiesarise.core.road;
 
 public record BridgeSettings(int maxLength, int maxCount, int deckDepth, int minimumClearance,
-        boolean allowDryCrossings, int minimumDryClearance, long maxConstructionVolume, int maxCandidateChecks, int maxElevationDifference) {
+        boolean allowDryCrossings, int minimumDryClearance, long maxConstructionVolume, int maxCandidateChecks, int maxElevationDifference,
+        BridgeTerrainSettings terrainSupports) {
+    public BridgeSettings(int maxLength, int maxCount, int deckDepth, int minimumClearance,
+            boolean allowDryCrossings, int minimumDryClearance, long maxConstructionVolume, int maxCandidateChecks, int maxElevationDifference) {
+        this(maxLength,maxCount,deckDepth,minimumClearance,allowDryCrossings,minimumDryClearance,
+                maxConstructionVolume,maxCandidateChecks,maxElevationDifference,BridgeTerrainSettings.disabled());
+    }
     public BridgeSettings(int maxLength, int maxCount, int deckDepth, int minimumClearance,
             boolean allowDryCrossings, int minimumDryClearance, long maxConstructionVolume, int maxCandidateChecks) {
         this(maxLength,maxCount,deckDepth,minimumClearance,allowDryCrossings,minimumDryClearance,maxConstructionVolume,maxCandidateChecks,0);
@@ -14,6 +20,7 @@ public record BridgeSettings(int maxLength, int maxCount, int deckDepth, int min
         this(maxLength, maxCount, deckDepth, minimumClearance, false, 2);
     }
     public BridgeSettings {
+        java.util.Objects.requireNonNull(terrainSupports);
         if (maxLength < 3 || maxLength > 48 || maxCount < 0 || maxCount > 8
                 || deckDepth < 1 || deckDepth > 4 || minimumClearance < 0 || minimumClearance > 8
                 || minimumDryClearance < 1 || minimumDryClearance > 16

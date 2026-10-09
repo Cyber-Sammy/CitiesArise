@@ -95,6 +95,6 @@ public final class TerrainAdaptationPlan {
                 }
             }
         }
-        return Map.copyOf(index);
+        return java.util.Collections.unmodifiableMap(index);
     }
 }

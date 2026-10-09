@@ -62,6 +62,9 @@ final class SuburbStructureGeneration {
         }
 
         SettlementProfile profile = optionalProfile.get();
+        if(!com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,profile.surveySize(),context.chunkPos().x,context.chunkPos().z)) return Optional.empty();
+        var cityCenter=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.center(region,profile.surveySize());
+        center=new BlockPos(cityCenter.x(),center.getY(),cityCenter.z());
         MinecraftWorldgenTerrainProvider terrainProvider = new MinecraftWorldgenTerrainProvider(
                 context.chunkGenerator(),
                 context.randomState(),
@@ -100,6 +103,10 @@ final class SuburbStructureGeneration {
                 profile,
                 context
         );
+        // A custom structure-set offset must never leave remote chunks outside vanilla reference discovery.
+        int startX=context.chunkPos().x,startZ=context.chunkPos().z;
+        if(Math.floorDiv(boundingBox.minX(),16)<startX-8 || Math.floorDiv(boundingBox.maxX(),16)>startX+8
+                || Math.floorDiv(boundingBox.minZ(),16)<startZ-8 || Math.floorDiv(boundingBox.maxZ(),16)>startZ+8) return Optional.empty();
         return Optional.of(new Generation(center, new CitiesAriseSuburbPiece(boundingBox, snapshot,
                 profile.id().value(), result.plan().id().value(), center.getX(), center.getZ())));
     }

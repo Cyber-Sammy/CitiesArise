@@ -29,6 +29,7 @@ public final class SettlementRegistry extends SavedData {
     }
 
     public Optional<Entry> nearest(int x, int z) { return index.nearest(x, z); }
+    public java.util.Collection<Entry> entries() { return index.entries(); }
     public int size() { return index.size(); }
 
     @Override

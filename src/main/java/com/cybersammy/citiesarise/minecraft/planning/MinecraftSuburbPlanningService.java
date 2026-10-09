@@ -262,8 +262,8 @@ public final class MinecraftSuburbPlanningService {
             boolean terrainLoggingEnabled,
             boolean planningLoggingEnabled
     ) {
-        SettlementRegion region = SettlementRegion.fromBlockPosition(blockX, blockZ);
-        GridBounds bounds = region.surveyBounds(surveySize);
+        SettlementRegion region = CityPlanningArea.regionAt(blockX, blockZ, surveySize);
+        GridBounds bounds = CityPlanningArea.bounds(region,surveySize);
         PlanElementId settlementId = settlementId(region);
         long seed = SettlementSeed.forRegion(worldSeed, region, settlementId);
         RegionPlanCacheKey cacheKey = new RegionPlanCacheKey(
@@ -309,6 +309,7 @@ public final class MinecraftSuburbPlanningService {
             boolean terrainLoggingEnabled,
             boolean planningLoggingEnabled
     ) {
+        if(CityPlanningArea.expanded(bounds.size())) terrainProvider=new TiledCityTerrainProvider(terrainProvider);
         logTerrainStart(region, bounds, seed, settlementId, terrainLoggingEnabled);
 
         long started = System.nanoTime();

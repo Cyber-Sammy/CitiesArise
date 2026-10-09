@@ -780,6 +780,7 @@
     "TERRAIN_FILL": "minecraft:stone",
     "BRIDGE_DECK": "minecraft:polished_deepslate",
     "BRIDGE_RAIL": "minecraft:polished_blackstone_brick_wall",
+    "BRIDGE_PIER": "minecraft:polished_andesite",
     "BRIDGE_ABUTMENT": "minecraft:stone_bricks"
   },
   "props": {

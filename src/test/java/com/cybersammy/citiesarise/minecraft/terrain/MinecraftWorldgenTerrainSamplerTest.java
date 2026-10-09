@@ -204,6 +204,23 @@ final class MinecraftWorldgenTerrainSamplerTest {
         assertEquals(90,new MinecraftWorldgenTerrainSampler.CachedTerrainSource(differentSeed).height(point));
     }
 
+    @Test void completeExpandedCityRefinementRetainsExactSamplesIncludingWaterAndDryHoles() {
+        var source = new FakeTerrainSource();
+        var bounds = new GridBounds(point(-104,-104),new GridSize(224,224));
+        var points = new java.util.LinkedHashSet<GridPoint>();
+        for(int z=-104;z<120;z++) for(int x=-104;x<120;x++) points.add(point(x,z));
+        source.height(point(2,2),40);
+        source.height(point(8,8),65);source.supportHeight(point(8,8),61);
+        var cache = new MinecraftWorldgenTerrainSampler.CachedTerrainSource(source);
+        var first = new MinecraftWorldgenTerrainSampler(cache).sample(bounds,points);
+        var second = new MinecraftWorldgenTerrainSampler(cache).sample(bounds,points);
+        assertEquals(first,second);
+        assertEquals(40,requiredCell(second,point(2,2)).height());
+        assertTrue(requiredCell(second,point(8,8)).water());
+        assertTrue(source.heightCalls.values().stream().allMatch(n->n==1),"Exact heights evicted within one city");
+        assertTrue(source.supportHeightCalls.values().stream().allMatch(n->n==1),"Exact water checks repeated within one city");
+    }
+
     private static TerrainCell requiredCell(TerrainSurvey survey, GridPoint point) {
         return survey.findCell(point).orElseThrow();
     }

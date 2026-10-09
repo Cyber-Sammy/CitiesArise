@@ -46,6 +46,7 @@ public final class BridgePlanner {
             List<BridgePlan> existing, boolean includeDry, int passes, Predicate<SettlementPlan> acceptance) {
         Objects.requireNonNull(acceptance);
         List<BridgePlan> selected = new ArrayList<>(existing);
+        long terrainVolume = existing.stream().mapToLong(BridgePlan::terrainWorkVolume).sum();
         long volume = existing.stream().mapToLong(BridgePlan::constructionVolume).sum();
         var settings = request.terrainResponsePolicy().bridges();
         Set<PlanElementId> checked = new HashSet<>();
@@ -66,12 +67,14 @@ public final class BridgePlanner {
             var fitted = fitBanks(request, candidate, prepared, includeDry);
             if (fitted.isPresent()) {
                 var bridge = fitted.orElseThrow();
-                if (volume + bridge.constructionVolume() > settings.maxConstructionVolume()) continue;
+                if (volume + bridge.constructionVolume() > settings.maxConstructionVolume()
+                        || terrainVolume + bridge.terrainWorkVolume() > settings.terrainSupports().maxTerrainWorkVolume()) continue;
                 checked.add(candidate.id());
                 var proposed = new ArrayList<>(selected); proposed.add(bridge);
                 if (!acceptance.test(withBridges(plan,proposed))) continue;
                 selected.add(bridge);
                 volume += bridge.constructionVolume();
+                terrainVolume += bridge.terrainWorkVolume();
                 join(components, candidate.startNodeId(), candidate.endNodeId());
             }
         }
@@ -163,7 +166,7 @@ public final class BridgePlanner {
             var cell = request.survey().findCell(point).orElseThrow();
             if (bridge.bank(d)) {
                 if (cell.water() || cell.terrainCategory() == TerrainCategory.BLOCKED
-                        || cell.height() - 1 != bridge.deckElevation(d)) return Optional.empty();
+                        || !bankHeightAllowed(request,cell.height()-1,bridge.deckElevation(d))) return Optional.empty();
             } else {
                 if (prepared.containsKey(point) || (!cell.water() && cell.terrainCategory() == TerrainCategory.BLOCKED)) return Optional.empty();
                 int highestAllowed = bridge.deckElevation(d) - bridge.deckDepth() - request.terrainResponsePolicy().bridges().minimumClearance();
@@ -175,14 +178,39 @@ public final class BridgePlanner {
         var policy = request.terrainResponsePolicy();
         boolean permitted = water ? policy.responseFor(TerrainFeatureType.WATER) == TerrainResponse.CROSS_IF_SUPPORTED
                 : includeDry && policy.bridges().allowDryCrossings() && minimumSpanClearance >= policy.bridges().minimumDryClearance();
-        return permitted ? Optional.of(bridge) : Optional.empty();
+        if (!permitted) return Optional.empty();
+        var supports=request.terrainResponsePolicy().bridges().terrainSupports();
+        var foundations=new ArrayList<BridgeFoundation>();
+        for(int d=0;d<=bridge.length();d++) {
+            boolean pier=!water && supports.pierSpacing()>0 && !bridge.bank(d)
+                    && (d-bridge.startBankLength()+1)%supports.pierSpacing()==0
+                    && d<bridge.length()-bridge.endBankLength();
+            if(!bridge.bank(d) && !pier) continue;
+            for(int w=0;w<bridge.width();w++) {
+                int lateral=w-bridge.width()/2;
+                if(pier && lateral!=0) continue;
+                var cell=request.survey().findCell(bridge.point(d,lateral)).orElseThrow();
+                int ground=cell.height()-1;
+                if(pier && bridge.deckElevation(d)-bridge.deckDepth()-ground>supports.maxPierHeight()) return Optional.empty();
+                // Legacy exact banks retain their existing operations. Fill extends the footing to dry ground.
+                if(pier || ground!=bridge.deckElevation(d)) foundations.add(new BridgeFoundation(d,lateral,ground,
+                        pier?ground-2:Math.min(ground-2,bridge.deckElevation(d)-bridge.deckDepth()-2),pier));
+            }
+        }
+        return Optional.of(new BridgePlan(bridge.id(),bridge.startNodeId(),bridge.endNodeId(),bridge.start(),bridge.end(),
+                bridge.width(),bridge.deckY(),bridge.deckDepth(),bridge.startBankLength(),bridge.endBankLength(),bridge.endDeckY(),foundations));
+    }
+
+    private static boolean bankHeightAllowed(SuburbPlanningRequest request,int ground,int target) {
+        var limits=request.terrainResponsePolicy().bridges().terrainSupports();
+        return (long)ground-target<=limits.maxBankCut() && (long)target-ground<=limits.maxBankFill();
     }
 
     private static boolean bankRow(SuburbPlanningRequest request, BridgePlan bridge, int distance, Map<GridPoint, Integer> prepared, int bankY) {
         for (int w = 0; w < bridge.width(); w++) {
             var point = bridge.point(distance, w - bridge.width() / 2);
             var cell = request.survey().findCell(point).orElseThrow();
-            if (cell.water() || cell.terrainCategory() == TerrainCategory.BLOCKED || cell.height() - 1 != bankY
+            if (cell.water() || cell.terrainCategory() == TerrainCategory.BLOCKED || !bankHeightAllowed(request,cell.height()-1,bankY)
                     || (prepared.containsKey(point) && prepared.get(point) != bankY)) return false;
         }
         return true;

@@ -102,11 +102,13 @@ Operators can use three separate discovery modes:
 /citiesarise locate generated
 /citiesarise locate potential
 /citiesarise locate diagnostic
+/citiesarise locate diagnostic next
+/citiesarise locate list [page]
 /citiesarise locate cancel
 
 ```
 
-Bare `locate` is now an alias for `locate generated`. It finds the nearest recorded settlement in the current dimension using a persistent metadata index, without loading terrain chunks, surveying terrain or planning roads. It works even when future worldgen is disabled. Records contain a stable dimension/center identity, profile and semantic plan id, footprint bounds, required/processed chunk ids and placement timing; block geometry remains solely in the existing structure snapshot. Registry schema v1 is saved in the dimension's `data/cities_arise_settlements.dat`.
+`locate generated` finds the nearest recorded settlement in the current dimension using a persistent metadata index, without loading terrain chunks, surveying terrain or planning roads. It works even when future worldgen is disabled. Records contain a stable dimension/center identity, profile and semantic plan id, footprint bounds, required/processed chunk ids and placement timing; block geometry remains solely in the existing structure snapshot. Registry schema v1 is saved in the dimension's `data/cities_arise_settlements.dat`.
 
 `START_KNOWN` means a saved structure start was encountered during ordinary chunk loading; it does not prove placement. `PARTIALLY_PLACED` means some placement-bearing chunks completed their placement callback. `PLACEMENT_COMPLETE` means all placement-bearing chunks completed it; it does not certify deferred vegetation cleanup, later player edits or crash-atomic saving of registry and chunks. Reports are idempotent across repeated callbacks and survive normal saves/reloads. Old starts are indexed when their start chunk is loaded, with an explicit unknown legacy profile and conservative progress; unexplored/unloaded old starts are not exhaustively scanned or retroactively generated.
 
@@ -275,7 +277,7 @@ Terrain adaptation is opt-in for datapacks. A `terrainPolicy` without an `adapta
 
 `terrainPolicy.capabilities` accepts `bridge`, `tunnel`, `canal`, and `major_terraforming`. `cross_if_supported` requires a matching capability: water requires `bridge`, while blocked terrain and steep slopes require `tunnel`. Invalid combinations are rejected when the profile loads. Water crossings can create bounded straight bridges between existing streets with supported bank heights. Tunnel and canal materialization is still unavailable. Bridges do not make water buildable for parcels or ordinary roads.
 
-`terrainPolicy.bridges` configures `maxLength` (3�48, default 48, including dry approaches), `maxCount` (0�8, default 2), `deckDepth` (1�4, default 1), and `minimumClearance` (0�8, default 0, air blocks below the deck above the surveyed surface). Both built-in and example suburb profiles enable water bridges. Set `maxCount: 0` to disable them. Candidates require dry banks at their approved street elevations, clear span, supported footings and no parcel/ordinary-earthwork overlap. Bridges can join separate districts across a river when multi-district planning is enabled; graded spans require the opt-in setting below; intermediate piers and arbitrary bridge modules/joints are not included.
+`terrainPolicy.bridges` configures `maxLength` (3�48, default 48, including dry approaches), `maxCount` (0�8, default 2), `deckDepth` (1�4, default 1), and `minimumClearance` (0�8, default 0, air blocks below the deck above the surveyed surface). Both built-in and example suburb profiles enable water bridges. Set `maxCount: 0` to disable them. Candidates require dry banks at their approved street elevations, clear span, supported footings and no parcel/ordinary-earthwork overlap. Bridges can join separate districts across a river when multi-district planning is enabled; graded spans and dry-ground piers require the settings below; arbitrary bridge modules/joints are not included.
 
 Bridge metadata records endpoints, dimensions, both bank elevations and bank reservations without block materials. The placement provider is replaceable in Java; datapacks replace `BRIDGE_DECK`, `BRIDGE_STEP`, `BRIDGE_RAIL`, and `BRIDGE_ABUTMENT` materials and may supply a repeating `surfaceTemplates.BRIDGE_DECK` whose height fits `deckDepth`. `BRIDGE_CLEARANCE` is reserved air. Suspended layers bypass ordinary cut/fill and fluid stabilization. The carving mask protects banks only. Snapshot v4 preserves bridge roles and reads old v1�v3 snapshots; existing saved settlements are not redrawn. Debug summaries report `bridges=N`. See the [authoring guide](examples/datapacks/composition_fixture/AUTHORING_GUIDE.md) for a complete example.
 
@@ -285,11 +287,11 @@ Bridge metadata records endpoints, dimensions, both bank elevations and bank res
 
 `maxElevationRange` is deprecated and remains accepted in the current profile schema only for compatibility. It will be removed in a future profile schema version. The suburb planner no longer rejects the total settlement height span globally. Long roads are currently divided into deterministic six-block flat grading segments by maximum distance between their nodes, while concrete cut, fill, road-transition, and total earthwork limits decide whether terrain is usable.
 
-`minimumParcelCount`, `targetParcelCount`, and `maximumParcelCount` define parcel capacity for a development district. The planner aims for the target and may reduce only as far as the minimum when terrain barriers constrain the selected connected area. The maximum is an explicit growth ceiling for later multi-district allocation. Legacy profiles that specify only `targetParcelCount` remain fixed-capacity profiles because minimum and maximum default to the target.
+`minimumParcelCount`, `targetParcelCount`, and `maximumParcelCount` define parcel capacity for the whole settlement. The planner aims for the target and may reduce only as far as the minimum when terrain barriers constrain the selected connected area. The maximum is an explicit growth ceiling for later multi-district allocation. Legacy profiles that specify only `targetParcelCount` remain fixed-capacity profiles because minimum and maximum default to the target.
 
 Successful debug summaries report `terrain=ACCEPTED` when no cut or fill is required and `terrain=ACCEPTED_WITH_EARTHWORKS` with the calculated cut and fill volumes when preparation is required. Accepted plans also report `earthworkQuality`: `DIRECT` requires no cut or fill, `MODERATE` stays inside preferred depths, and `MAJOR` remains valid but exceeds at least one preferred depth. Ranking uses quantitative cost rather than category priority, so a small `MAJOR` correction may beat an extremely expensive `MODERATE` site. Earthwork density uses only columns that actually change; the complete footprint and changed-column counts remain available separately in JSON diagnostics. Rejected cut, fill, or total-volume diagnostics include the responsible plan element, actual value, preferred limit, absolute limit, and excess. `/citiesarise locate diagnostic` treats all successful qualities as valid and ranks them without weakening hard safety limits.
 
-Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `128`, road width `16`, max buildable slope `8.0`, minimum/target/maximum parcel count `128`, parcel width/depth `64`, building margin `8`, cut/fill depth `16`, and total earthwork volume `1000000`.
+Profile values are capped by the Minecraft debug planner limits. The current MVP rejects profiles above these limits: survey width/depth `224`, road width `16`, max buildable slope `8.0`, minimum/target/maximum parcel count `128`, parcel width/depth `64`, building margin `8`, cut/fill depth `16`, and total earthwork volume `1000000`.
 
 The built-in suburb now selects three procedural vanilla assets: `cities_arise:cottage` (gable roof), `cities_arise:bungalow` (hip roof), and `cities_arise:studio` (flat roof with a parapet). Houses have glass windows, an oriented two-block oak door at the prepared entrance, ceiling lighting, and a crafting table/bookshelf where space permits. Palettes are `oak` and `stone`; the existing decay transform changes the roof material. These are a first vanilla content set, not imported structure templates.
 
@@ -372,7 +374,7 @@ Find seeds containing bridges, road/access steps, retaining walls or other suppo
 The bundled profile enables `planning.districts`:
 
 ```json
-"districts": { "maxCount": 4, "targetParcels": 4, "maxConnectionAttempts": 8 }
+"districts": { "maxCount": 8, "targetParcels": 6, "maxConnectionAttempts": 8 }
 ```
 
 Districts select local terrain and prepared heights independently. Failed locals
@@ -399,7 +401,7 @@ terraformation limits are never relaxed.
 Limits: at most eight districts and 32 endpoint attempts per connection. Bridges
 joining disconnected banks take priority over shortcuts, and still require straight,
 supported banks; bounded elevation differences are opt-in as described below.
-Piers and tunnels are not included.
+Underwater piers and tunnels are not included.
 Exhausted local searches, unsuitable connections or final validation can still reject
 a city. Existing saved settlements are not regenerated. Omitting `planning.districts`
 preserves single-district compatibility mode.
@@ -443,15 +445,15 @@ rails, abutments and snapshot placement as a water crossing. Dry permission neve
 overrides a water-avoidance rule; capability `bridge` is still required.
 
 Every column of an entirely dry open span must leave the configured clearance
-below the deck. Each bank must remain naturally level at its own street elevation; prepared road/parcel
+below the deck. Each bank must fit its street elevation, with optional bounded bank treatment below; prepared road/parcel
 columns cannot be crossed by the span. Bridges joining disconnected districts
 retain priority over shortcuts, and existing length/count limits apply. For dry district links, the planner first tries existing terrain-aware road
 routing, grading and bounded cut/fill/retaining policies. If those bounded attempts
 fail, it adds bridges only between disconnected components while preserving
 accepted crossings. A shallow valley can therefore use ground treatment while
 a deeper ravine uses an open span. This is not yet a cost
-optimizer comparing every infrastructure strategy. Intermediate piers and caves
-hidden beneath intact surface roofs remain outside this crossing implementation.
+optimizer comparing every infrastructure strategy. Underwater piers and caves hidden beneath intact surface roofs remain outside
+this crossing implementation.
 ### Crossing budgets and failed supports
 
 `terrainPolicy.bridges.maxConstructionVolume` limits the sum of reserved structural
@@ -479,11 +481,10 @@ district with bridges. Final whole-plan validation still applies.
 ### Bridges between different bank elevations
 
 `terrainPolicy.bridges.maxElevationDifference` is 0..8, omitted = 0 (legacy
-flat-only crossings). Builtin and example profiles enable 2. Each bank must still
-be naturally level at its own approved street height and pass exact footing
-support checks. The open span needs at least six rows for each full block of
+flat-only crossings). Builtin and example profiles enable 2. Each bank must fit its approved street height and pass exact footing support
+checks. Optional bounded bank treatment is described below. The open span needs at least six rows for each full block of
 rise; bank fitting can therefore reject an otherwise long enough candidate.
-No extra approach terraforming or intermediate piers are introduced.
+Optional bank earthworks and dry-ground piers are described below.
 
 BridgePlan records `deckY` at the start and `endDeckY` at the far bank. Row levels
 are deterministic: flat banks, centered six-row grading runs, and a half-step on
@@ -505,3 +506,156 @@ Debug undo, chunk placement and carving protection use the same operations;
 open spans remain unfilled. Existing saved structures are not regenerated. Test
 new starts with the updated JAR and profile/pack. The setting permits suitable
 crossings; it does not guarantee that a particular seed contains one.
+
+### Prepared bridge banks and dry-ground piers
+
+Optional `terrainPolicy.bridges.terrainSupports` settings:
+
+```json
+{
+  "maxBankCut": 1,
+  "maxBankFill": 1,
+  "maxTerrainWorkVolume": 256,
+  "pierSpacing": 12,
+  "maxPierHeight": 16
+}
+```
+
+`maxBankCut` and `maxBankFill` are 0..2 (default 0). They permit bounded changes
+inside bank reservations at the existing street's approved elevation. The engine
+clears the complete bank width, embeds abutments and extends low-bank foundations
+to dry ground. It does not move roads or parcels or reshape an arbitrary approach
+outside the reserved corridor. Water and blocked bank terrain remain prohibited;
+existing prepared columns must agree with the bank's target elevation.
+
+`maxTerrainWorkVolume` (0..4096, default 0) caps the summed absolute cut/fill
+height difference across all selected bridge-bank columns. Rejected candidates
+consume no volume. This infrastructure budget is separate from ordinary road and
+parcel earthworks. Extended abutments and pier cells also count against the shared
+`maxConstructionVolume` structural budget. JSON exports include `terrainWorkVolume`
+and `foundations`; summaries report `bridgeTerrainWork`.
+
+`pierSpacing` is 0 (disabled) or 6..24. Entirely dry crossings place single-column
+centerline piers at this interval inside the open span, starting at the first
+interval from the inner bank edge. Short spans may need no intermediate pier.
+`maxPierHeight` is 1..32 (default 16), measured from surveyed dry ground to the
+underside support cell; two additional footing blocks embed into the ground.
+The last open row is kept free of an intermediate pier. This is a bounded support
+layout, not a structural engineering simulation or an increased bridge-length cap.
+Water-containing spans retain bank-supported placement: the survey does not yet
+provide an exact riverbed, so underwater piers are not inferred from water height.
+
+Every explicit footing must pass the existing four-layer dry-solid check at its
+actual bottom contact. Unsupported bank or pier foundations reject the candidate
+and permit bounded alternative selection. Only footing columns extend cave-carving
+protection; gaps between supports remain open. Hidden later caves do not cause a
+new bridge or an unplanned pier to appear.
+
+Datapacks set `surfaces.BRIDGE_PIER` (default stone bricks, example polished
+andesite) to a supportive material; there is no pier surface template. Geometry,
+ground elevation and inclusive footing bottom remain semantic metadata. Snapshot
+v7 stores the resulting operations, including pier material, and reads v1-v6.
+Debug undo and reverse chunk placement are covered by server tests. Existing
+saved structures retain their original snapshots. Builtin/example profiles use
+the settings above; omission keeps legacy exact-bank/no-pier behavior.
+
+### Continuing diagnostic locate searches
+
+`/citiesarise locate diagnostic` starts a fresh terrain search near your current
+position and saves its selected accepted candidate. `/citiesarise locate diagnostic next`
+searches for another, excluding saved candidates, recorded settlement regions and
+rejected regions checked during this server-session search series. Exclusions do
+not consume the candidate-attempt budget. Other accepted but unselected candidates
+remain available for a later search. No-result batches also retain rejected regions,
+so `next` advances past them; an exhausted radius requires moving farther away.
+Cancellation/failure does not publish partial progress.
+
+Bare `/citiesarise locate` returns the nearest saved candidate or recorded settlement.
+`/citiesarise locate list [page]` lists both, ten per page sorted by distance.
+Recorded entries take precedence in the same region. `locate generated` continues
+to use only the actual structure registry. Saved diagnostics are explicitly marked
+`SAVED_DIAGNOSTIC`: terrain acceptance does not prove generation or place buildings.
+
+Candidates persist per world dimension in `data/cities_arise_diagnostic_locations.dat`
+without overwriting earlier results or promoting them into the generated registry.
+Rejected-region history is session-only and shared by command users in that dimension.
+A plain `diagnostic` resets that rejection history (use it after changing profiles or
+settings); it does not erase saved locations. A restart preserves saved candidates but
+resets rejected-region history. Saved diagnostics are historical checks and may be
+stale after configuration, datapack or terrain changes. Search radius, attempt limits,
+one-active-search restriction and `locate cancel` continue to apply.
+
+
+## Expanded cities (224 by 224)
+
+The built-in suburb and the composition fixture now survey 224 x 224 blocks.
+The city-wide parcel budget is minimum 12, target 32, maximum 40; up to eight districts
+each aim for six parcels. Targets are not guarantees: the flat seed-42 fixture
+currently yields 32 parcels in six connected districts. A city may omit a failed
+district if the remaining connected group still satisfies the city minimum.
+Expanded surveys never silently fall back to one small suburb.
+
+Each district grows within a 112 x 112 local window and chooses its own ground
+levels. Terrain sampling uses tiles with overlapping context at their seams;
+the city retains a shared metadata map for streets, reservations and connections.
+Inter-district roads are routed in bounded corridors, graded and validated with
+the same earthwork/support checks as local roads. Adding a street preserves
+prepared district entrances; a connection is rejected if the datapack modules or
+their access paths cannot fit the combined plan. Building, road, yard and prop content remains defined
+by the selected catalog. No architectural styles are embedded in the planner.
+
+Surveys above 128 on either axis require at least four district slots and use
+256-block city spacing (even legacy region coordinates on both axes). Their
+center is anchor-region origin + (8,8); smaller profiles retain legacy centers.
+The maximum 224 keeps the footprint within vanilla's eight-chunk structure-start
+reference reach. Custom structure-set offsets that cannot cover the reserved
+area plus vegetation clearance are excluded by generation, locate and seed search.
+This is a bounded multi-district city, not arbitrary unbounded metropolitan growth.
+
+Test in a new world or unexplored terrain with the rebuilt mod and updated pack.
+Existing structure snapshots are not regenerated. Changing the profile's scale
+mid-world can put new reservations near old settlements; spacing guarantees apply
+to cities generated with the same profile layout. Restart an ordinary diagnostic
+search after profile changes; historical saved locate entries may be stale.
+
+## Hills and bounded terraforming
+
+The default profiles permit `steepSlope: terraform`: a slope is a reason to
+evaluate local cut/fill, not an automatic city veto. Their plots are 16 x 18,
+with preferred cut/fill 3/3, maximum cut/fill 8/10, building foundation depth 8,
+road shoulder fill at most 3 and total earthwork at most 80000. These are pack
+settings, not hardcoded terrain or architectural compatibility rules. Water,
+blocked land, missing dry-solid support and exceeded construction budgets still
+reject a candidate.
+
+Expanded districts select layouts only after checking their complete earthworks
+and height transitions. Narrow districts reserve street-end shoulders and can use
+a single street instead of short branches that consume their frontage. A failed
+layout advances the bounded candidate search; support/cut/fill failures can reserve
+a local point and its shoulder before retrying. Inter-district grades account for
+the separate shoulder fill limit and prefer exposed street ends with sufficient run.
+
+Building access transitions explicitly select the street used by the entrance.
+Adding another, closer street does not rotate or reattach an already prepared
+building. The entrance must remain on the perimeter facing its declared street,
+and its path, height steps, support and authored content remain validated.
+
+If partial exact-height refinement rejects a previously viable district city,
+the adapter resolves the whole bounded survey once before final rejection. Exact
+support results are cached per generator instance, point and contact elevation;
+different foundation heights are checked again. No noise columns or world levels
+are retained by this cache. Diagnostics distinguish insufficient district capacity
+from failed district connections. These changes improve selection, but do not
+guarantee a city at every anchor or on arbitrary mountains.
+
+Expanded street elevations now use feasible cut/fill intervals including shoulder
+support. Constraints propagate through the connected street graph before choosing
+heights; an infeasible component remains subject to rejection. The minimum of 12
+permits lower density on difficult terrain while the desired city capacity remains
+32. With six parcels per district, reaching that minimum requires multiple districts.
+
+District candidate selection validates both earthwork preparation and adapter ground support before accepting a layout. If all bounded layout alternatives fail, the exact support diagnostic is retained for the existing three local exclusion retries; unsupported ground is not treated as generic parcel-space exhaustion. Default steep slopes are terraformed within configured cut/fill and shared volume limits; hidden voids and water under mandatory supports still require another layout.
+
+### Terrain sampling performance
+
+For the standard vanilla noise generator, city surveys share interpolation across aligned 16x16 grids and cache primitive height, water and full-depth solid-ground answers (up to 256 grids per provider). Exact terrain and four-layer ground-support checks remain enabled. Custom generator subclasses and unsupported height ranges use the original sampling API. This reduces repeated noise calculation while teleportation and world shutdown wait for required chunk generation.

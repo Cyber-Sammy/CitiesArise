@@ -22,6 +22,11 @@ final class TerrainDerivedRoadSkeletonPlanner {
             SuburbPlanningSettings settings,
             long seed
     ) {
+        return plan(settlementId,footprint,settings,seed,false);
+    }
+
+    RoadGraph plan(PlanElementId settlementId,DistrictFootprint footprint,SuburbPlanningSettings settings,
+            long seed,boolean compactDistrict) {
         Objects.requireNonNull(settlementId, "settlementId");
         Objects.requireNonNull(footprint, "footprint");
         Objects.requireNonNull(settings, "settings");
@@ -30,8 +35,16 @@ final class TerrainDerivedRoadSkeletonPlanner {
                 + settings.terrainTransitions().roadShoulderRadius();
         Axis axis = preferredAxis(footprint, supportRadius);
         Line mainLine = bestLine(footprint, axis, supportRadius);
+        if(compactDistrict && mainLine.length()>2*supportRadius+1) {
+            mainLine = new Line(mainLine.crossAxis(),mainLine.minimum()+supportRadius,mainLine.maximum()-supportRadius,
+                    Math.max(0,mainLine.supportedPointCount()-2*supportRadius),Math.max(1,mainLine.pointCount()-2*supportRadius),mainLine.centerDistance());
+        }
         Random random = new Random(seed);
         int requestedBranchCount = 2 + random.nextInt(3);
+        int crossLength = axis.maximumCross(footprint)-axis.minimumCross(footprint)+1;
+        int branchSpace = settings.roadWidth()+2*(settings.parcelDepth()+settings.roadWidth()
+                +settings.terrainTransitions().roadShoulderRadius()+settings.terrainTransitions().parcelShoulderRadius());
+        if(compactDistrict && crossLength<branchSpace) requestedBranchCount=0;
         List<Integer> junctionAxes = junctionAxes(
                 footprint,
                 axis,

@@ -108,11 +108,31 @@ final class TerrainPreparationPlanValidatorTest {
     }
 
     @Test
-    void rejectsBuildingAccessThatReferencesAMoreDistantRoad() {
-        BuildingFixture fixture = buildingFixture(new GridPoint(2, 2), true);
-
-        assertTrue(validator.validate(fixture.plan(), fixture.preparationPlan()).stream()
-                .anyMatch(error -> error.message().contains("nearest road zone")));
+    void preservesExplicitBuildingStreetWhenAnotherRoadIsCloser() {
+        BuildingFixture fixture = buildingFixture(new GridPoint(3, 2), true);
+        var original = fixture.plan();
+        var parcel = original.parcels().getFirst();
+        var plan = new SettlementPlan(original.id(),original.roadGraph(),
+                List.of(new Parcel(parcel.id(),parcel.bounds(),parcel.tags(),properties(64))),
+                original.buildingSlots(),original.tags(),original.properties());
+        var zones = new java.util.ArrayList<>(fixture.preparationPlan().elevationPlan().zones());
+        zones.addFirst(new ElevationZone(parcel.id(),ElevationZoneType.PARCEL_PAD,parcel.bounds(),64));
+        var columns = new java.util.LinkedHashMap<GridPoint,TerrainPreparationColumn>();
+        for(var zone:zones) for(int z=zone.bounds().minZ();z<zone.bounds().maxZExclusive();z++)
+            for(int x=zone.bounds().minX();x<zone.bounds().maxXExclusive();x++) {
+                var point=new GridPoint(x,z);
+                columns.put(point,new TerrainPreparationColumn(point,zone.sourceElementId(),64,0,0));
+            }
+        var transition=fixture.preparationPlan().elevationPlan().transitions().getFirst();
+        var source=zones.stream().filter(z -> z.sourceElementId().equals(transition.sourceZoneId())).findFirst().orElseThrow();
+        var target=zones.stream().filter(z -> z.sourceElementId().equals(transition.targetZoneId())).findFirst().orElseThrow();
+        for(var point:ElevationTransitionPolicy.materialize(transition,source,target))
+            columns.put(point.point(),new TerrainPreparationColumn(
+                    point.point(),target.sourceElementId(),point.targetElevation(),0,0,TerrainPreparationColumnType.BUILDING_ACCESS));
+        var prep=TerrainPreparationPlan.of(new RegionalElevationPlan(zones,List.of(transition)),
+                zones.stream().map(TerrainPreparationPlanValidatorTest::area).toList(),List.copyOf(columns.values()));
+        var errors=validator.validate(plan,prep);
+        assertTrue(errors.isEmpty(),errors.toString());
     }
 
     private static BuildingFixture buildingFixture(GridPoint accessAnchor) {

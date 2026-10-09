@@ -17,8 +17,8 @@ public record MinecraftSettlementProfileLimits(
         long maxEarthworkVolume
 ) {
     private static final MinecraftSettlementProfileLimits DEFAULTS = new MinecraftSettlementProfileLimits(
-            128,
-            128,
+            224,
+            224,
             16,
             8.0,
             128,
@@ -51,6 +51,9 @@ public record MinecraftSettlementProfileLimits(
     public void validate(SettlementProfile profile) {
         Objects.requireNonNull(profile, "profile");
 
+        if(com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.expanded(profile.surveySize())
+                && profile.suburbPlanningSettings().districts().maxCount()<4)
+            throw new IllegalArgumentException("Expanded cities require at least four district slots");
         requireAtMost(profile.surveySize().width(), maxSurveyWidth, "survey.width");
         requireAtMost(profile.surveySize().depth(), maxSurveyDepth, "survey.depth");
         requireAtMost(profile.suburbPlanningSettings().roadWidth(), maxRoadWidth, "planning.roadWidth");

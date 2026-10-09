@@ -30,6 +30,42 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class WorldgenWaterMaskRefinerTest {
+    @Test void resolvesMixedHeightSeamsBeforeRejectingAnExpandedCity() throws Exception {
+        try(var reader=new java.io.InputStreamReader(getClass().getResourceAsStream("/data/cities_arise/settlement_profiles/suburb.json"))) {
+            var profile=new com.cybersammy.citiesarise.minecraft.profile.MinecraftSettlementProfileJsonParser().parse(
+                    new com.cybersammy.citiesarise.core.profile.SettlementProfileId("cities_arise:suburb"),
+                    com.google.gson.JsonParser.parseReader(reader).getAsJsonObject());
+            var bounds=new GridBounds(new GridPoint(-104,-104),profile.surveySize());
+            var coarse=flatSurvey(bounds);
+            var request=new SuburbPlanningRequest(new PlanElementId("test:height-seam"),coarse,42,
+                    profile.suburbPlanningSettings(),profile.terrainResponsePolicy());
+            var planner=SuburbPlanner.defaults(); var initial=planner.plan(request);
+            assertTrue(initial.successful());
+            var sampled=new LinkedHashSet<GridPoint>();
+            var partialFailed=new java.util.concurrent.atomic.AtomicBoolean();
+            var supportChecked=new java.util.concurrent.atomic.AtomicBoolean();
+            WorldgenTerrainSurveyProvider provider=new WorldgenTerrainSurveyProvider() {
+                public TerrainSurvey sample(GridBounds ignored) { return coarse; }
+                public Optional<TerrainSurvey> sampleWithExactWaterMask(GridBounds ignored,Set<GridPoint> points) {
+                    sampled.addAll(points);
+                    var survey=TerrainSurvey.sample(bounds,p -> Optional.of(new TerrainCell(p,points.contains(p)?90:65,
+                            false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+                    if(points.size()<224*224) partialFailed.set(!planner.plan(new SuburbPlanningRequest(request.settlementId(),
+                            survey,42,request.settings(),request.terrainResponsePolicy())).successful());
+                    return Optional.of(survey);
+                }
+                public Optional<com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn> unsupportedColumn(
+                        com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan plan) {
+                    assertEquals(224*224,sampled.size()); supportChecked.set(true); return Optional.empty();
+                }
+            };
+            var result=WorldgenWaterMaskRefiner.refine(planner,provider,request,initial);
+            assertTrue(partialFailed.get(),"fixture must reproduce an intermediate rejection");
+            assertTrue(result.successful(),result.toString());
+            assertTrue(result.plan().orElseThrow().parcels().size()>=16);
+            assertTrue(supportChecked.get()); assertEquals(224*224,sampled.size());
+        }
+    }
     @Test void singleDistrictDropsUnsafeOptionalBridgeAfterExactBankCheck() {
         var ponds=java.util.List.of(new GridPoint(23,25),new GridPoint(28,10),new GridPoint(6,19),new GridPoint(24,29),new GridPoint(4,15))
                 .stream().map(p -> new GridBounds(p,new GridSize(5,5))).toList();

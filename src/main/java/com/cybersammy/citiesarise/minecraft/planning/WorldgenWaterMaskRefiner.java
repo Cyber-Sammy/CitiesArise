@@ -34,7 +34,10 @@ final class WorldgenWaterMaskRefiner {
         SuburbPlanningResult currentResult = initialResult;
         for (int iteration = 0; iteration < MAX_INCREMENTAL_REFINEMENTS; iteration++) {
             if (!currentResult.successful()) {
-                return currentResult;
+                // Mixed interpolated/exact heights can temporarily disconnect districts. Before
+                // rejecting a previously viable city, resolve its bounded area consistently once.
+                return initialRequest.settings().districts().maxCount()>1
+                        ? refineCompleteSurvey(planner,terrainProvider,initialRequest,currentResult) : currentResult;
             }
             Set<GridPoint> footprint = refinementFootprint(currentResult);
             footprint = new LinkedHashSet<>(footprint);
@@ -46,7 +49,7 @@ final class WorldgenWaterMaskRefiner {
             checkedPoints.addAll(footprint);
             Optional<TerrainSurvey> refinedSurvey = terrainProvider.sampleWithExactWaterMask(
                     initialRequest.survey().bounds(),
-                    Set.copyOf(checkedPoints)
+                    java.util.Collections.unmodifiableSet(new LinkedHashSet<>(checkedPoints))
             );
             if (refinedSurvey.isEmpty()) {
                 return repairSupport(planner, terrainProvider, initialRequest, currentResult);
@@ -55,7 +58,8 @@ final class WorldgenWaterMaskRefiner {
         }
 
         if (!currentResult.successful()) {
-            return currentResult;
+            return initialRequest.settings().districts().maxCount()>1
+                    ? refineCompleteSurvey(planner,terrainProvider,initialRequest,currentResult) : currentResult;
         }
         return refineCompleteSurvey(planner, terrainProvider, initialRequest, currentResult);
     }
@@ -72,7 +76,7 @@ final class WorldgenWaterMaskRefiner {
                 surveyPoints
         );
         if (refinedSurvey.isEmpty()) {
-            return repairSupport(planner, terrainProvider, initialRequest, currentResult);
+            return currentResult.successful() ? repairSupport(planner, terrainProvider, initialRequest, currentResult) : currentResult;
         }
         var request = withSurvey(initialRequest, refinedSurvey.orElseThrow());
         return planner.plan(request, (candidateRequest, candidate) ->
@@ -107,12 +111,12 @@ final class WorldgenWaterMaskRefiner {
                 points.add(new GridPoint(x, z));
             }
         }
-        return Set.copyOf(points);
+        return java.util.Collections.unmodifiableSet(points);
     }
 
     private static Set<GridPoint> refinementFootprint(SuburbPlanningResult result) {
         Set<GridPoint> points = new LinkedHashSet<>(SettlementPlanFootprint.points(result.plan().orElseThrow()));
         result.terrainPreparationPlan().orElseThrow().columns().forEach(column -> points.add(column.point()));
-        return Set.copyOf(points);
+        return java.util.Collections.unmodifiableSet(points);
     }
 }

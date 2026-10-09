@@ -21,9 +21,15 @@ public final class ProceduralBridgePlacementProvider implements BridgePlacementP
             }
             if (!bridge.bank(d) && (w == 0 || w == bridge.width() - 1)) {
                 add(result, bridge, d, point, 1, DebugPlacementRole.BRIDGE_RAIL);
-            } else if (w > 0 && w < bridge.width() - 1) {
+            } else if (bridge.bank(d) || (w > 0 && w < bridge.width() - 1)) {
                 for (int y = 1 + step; y <= 3 + step; y++) add(result, bridge, d, point, y, DebugPlacementRole.BRIDGE_CLEARANCE);
             }
+        }
+        for(var footing:bridge.foundations()) {
+            int d=footing.distance();
+            int top=bridge.deckElevation(d)-bridge.deckDepth()-(footing.pier()?0:3);
+            for(int y=footing.bottomY();y<=top;y++) add(result,bridge,d,bridge.point(d,footing.lateral()),
+                    y-bridge.deckElevation(d),footing.pier()?DebugPlacementRole.BRIDGE_PIER:DebugPlacementRole.BRIDGE_ABUTMENT);
         }
         return List.copyOf(result);
     }

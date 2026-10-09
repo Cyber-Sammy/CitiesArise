@@ -1,25 +1,25 @@
 {
   "survey": {
-    "width": 120,
-    "depth": 72
+    "width": 224,
+    "depth": 224
   },
   "planning": {
-    "districts": { "maxCount": 4, "targetParcels": 4, "maxConnectionAttempts": 8 },
+    "districts": { "maxCount": 8, "targetParcels": 6, "maxConnectionAttempts": 8 },
     "roadWidth": 5,
     "maxBuildableSlope": 0.75,
-    "minimumParcelCount": 6,
-    "targetParcelCount": 8,
-    "maximumParcelCount": 10,
-    "parcelWidth": 18,
-    "parcelDepth": 20,
+    "minimumParcelCount": 12,
+    "targetParcelCount": 32,
+    "maximumParcelCount": 40,
+    "parcelWidth": 16,
+    "parcelDepth": 18,
     "buildingMargin": 4,
     "maxElevationRange": 10,
     "preferredMaxCutDepth": 3,
     "preferredMaxFillDepth": 3,
-    "maxCutDepth": 6,
-    "maxFillDepth": 8,
-    "maxBuildingFoundationDepth": 6,
-    "maxEarthworkVolume": 20000,
+    "maxCutDepth": 8,
+    "maxFillDepth": 10,
+    "maxBuildingFoundationDepth": 8,
+    "maxEarthworkVolume": 80000,
     "buildings": {
       "catalog": "test:fixture",
       "pool": [
@@ -36,7 +36,7 @@
     "terrainTransitions": {
       "buildingAccessRunPerRise": 2,
       "roadShoulderRadius": 2,
-      "roadShoulderMaxFillDepth": 2,
+      "roadShoulderMaxFillDepth": 3,
       "parcelShoulderRadius": 3,
       "parcelShoulderMaxFillDepth": 3,
       "buildingShoulderRadius": 3,
@@ -50,7 +50,7 @@
     "responses": {
       "water": "cross_if_supported",
       "blockedTerrain": "avoid",
-      "steepSlope": "build_around"
+      "steepSlope": "terraform"
     },
     "capabilities": [
       "bridge"
@@ -70,7 +70,14 @@
       "minimumDryClearance": 2,
       "maxConstructionVolume": 4096,
       "maxCandidateChecks": 32,
-      "maxElevationDifference": 2
+      "maxElevationDifference": 2,
+      "terrainSupports": {
+        "maxBankCut": 1,
+        "maxBankFill": 1,
+        "maxTerrainWorkVolume": 256,
+        "pierSpacing": 12,
+        "maxPierHeight": 16
+      }
     }
   }
 }

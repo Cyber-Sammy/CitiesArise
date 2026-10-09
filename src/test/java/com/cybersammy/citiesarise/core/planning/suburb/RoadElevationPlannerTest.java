@@ -26,6 +26,24 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 final class RoadElevationPlannerTest {
+    @Test void lowersStreetWithinCutBudgetInsteadOfRejectingItsDownhillShoulders() {
+        var bounds=new GridBounds(new GridPoint(0,0),new GridSize(24,22));
+        var survey=TerrainSurvey.sample(bounds,p -> Optional.of(new TerrainCell(p,p.z()==10?65:60,
+                false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var request=new SuburbPlanningRequest(id("shoulder-street"),survey,42,SuburbPlanningSettings.defaults());
+        var nodes=List.of(node("a",2,10),node("b",8,10),node("c",14,10),node("d",20,10));
+        var graph=new RoadGraph(nodes,List.of(segment("ab",nodes.get(0),nodes.get(1)),
+                segment("bc",nodes.get(1),nodes.get(2)),segment("cd",nodes.get(2),nodes.get(3))));
+        assertTrue(RoadElevationPlanner.apply(request,graph).segments().stream().allMatch(s -> elevation(s)==64));
+        var plan=new com.cybersammy.citiesarise.core.model.SettlementPlan(request.settlementId(),graph,
+                List.of(),List.of(),Set.of(),PlanProperties.empty());
+        var elevation=RegionalElevationPlanner.plan(request,plan,true);
+        assertTrue(elevation.settlementPlan().roadGraph().segments().stream().allMatch(s -> elevation(s)==62));
+        var preparation=TerrainPreparationPlanner.plan(request,elevation.elevationPlan()).plan().orElseThrow();
+        var errors=new com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator()
+                .validate(elevation.settlementPlan(),preparation);
+        assertTrue(errors.isEmpty(),errors.toString());
+    }
     @Test
     void producesSameElevationsWhenSegmentOrderChanges() {
         RoadGraph graph = cyclicGraph();

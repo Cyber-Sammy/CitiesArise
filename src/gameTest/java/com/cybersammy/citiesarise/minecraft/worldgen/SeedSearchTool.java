@@ -130,10 +130,13 @@ public final class SeedSearchTool {
             int planned=0;
             for(var region:regions) {
                 if(stopped(o,output,report,started,seconds)) return;
+                if(!com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,profile.surveySize())) continue;
                 if(!selector.isCandidate(seed,region,CitiesAriseWorldgenConfig.candidateRegionModulo())) continue;
                 var chunk=placement.getPotentialStructureChunk(seed,region.x()*8,region.z()*8);
+                if(!com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,profile.surveySize(),chunk.x,chunk.z)) continue;
                 if(!placement.isStructureChunk(state,chunk.x,chunk.z)) { reject(report,"STRUCTURE_PLACEMENT"); continue; }
-                var center=new BlockPos(region.x()*128+64,generator.getSeaLevel(),region.z()*128+64);
+                var cityCenter=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.center(region,profile.surveySize());
+                var center=new BlockPos(cityCenter.x(),generator.getSeaLevel(),cityCenter.z());
                 var biome=biomes.getNoiseBiome(QuartPos.fromBlock(center.getX()),QuartPos.fromBlock(center.getY()),QuartPos.fromBlock(center.getZ()),random.sampler());
                 if(!structure.biomes().contains(biome)) { reject(report,"BIOME"); continue; }
                 if(planned++>=attempts) break;

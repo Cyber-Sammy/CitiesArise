@@ -45,9 +45,14 @@ final class DistrictCityPlanner {
                 if (merged.isPresent()) { accepted = proposed; group = merged.orElseThrow(); }
             }
             if (group != null && (city == null || group.plan().orElseThrow().parcels().size() > city.plan().orElseThrow().parcels().size())) city = group;
-            if (city != null && city.plan().orElseThrow().parcels().size() >= settings.targetParcelCount()) return city;
+            if (city != null && city.plan().orElseThrow().parcels().size() >= settings.minimumParcelCount()
+                    && (accepted.size() == locals.size() || city.plan().orElseThrow().parcels().size() >= settings.targetParcelCount())) return city;
         }
         if (city != null && city.plan().orElseThrow().parcels().size() >= settings.minimumParcelCount()) return city;
+        if(request.survey().bounds().size().width()>128 || request.survey().bounds().size().depth()>128)
+            return SuburbPlanningResult.rejected(locals.stream().mapToInt(l -> l.result().plan().orElseThrow().parcels().size()).sum()
+                    < settings.minimumParcelCount() ? SuburbPlanningFailureReason.NOT_ENOUGH_DISTRICT_CAPACITY
+                    : SuburbPlanningFailureReason.DISTRICT_CONNECTION_FAILED);
         // A small survey may not fit subdivisions. Preserve the existing single-district option.
         var fallback = new SuburbPlanningRequest(request.settlementId(), request.survey(), request.seed(),
                 settings.withDistricts(DistrictPlanningSettings.single()), request.terrainResponsePolicy());
@@ -77,16 +82,21 @@ final class DistrictCityPlanner {
                             point, cell.height(), cell.water(), cell.slope(), cell.biomeCategory(), com.cybersammy.citiesarise.core.terrain.TerrainCategory.BLOCKED)));
             var localRequest = new SuburbPlanningRequest(request.settlementId().child("district-"+index), survey,
                     request.seed(), settings, localPolicy);
-            var result = planner.plan(localRequest, acceptance);
+            var result = planner.planDistrict(localRequest, acceptance,
+                    outer.size().width()>128 || outer.size().depth()>128);
+
             if (result.successful()) {
                 // Region ownership is a hard reservation, independent of a pack's terrain responses.
                 if (result.terrainPreparationPlan().orElseThrow().columns().stream()
                         .anyMatch(c -> !region.points().contains(c.point()) || excluded.contains(c.point()))) return Optional.empty();
                 return Optional.of(new Local(region, result));
             }
-            // Exact support failures identify a point; reserve its shoulder and search another local layout.
-            if (result.terrainDiagnostic().isEmpty() || !result.terrainDiagnostic().orElseThrow().suitability().rejectionReasons()
-                    .contains(com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason.UNSUPPORTED_TERRAIN)) break;
+            // Local terrain failures identify a point; reserve its shoulder and search another layout.
+            if (result.terrainDiagnostic().isEmpty() || java.util.Collections.disjoint(
+                    result.terrainDiagnostic().orElseThrow().suitability().rejectionReasons(),
+                    Set.of(com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason.UNSUPPORTED_TERRAIN,
+                            com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason.EXCESSIVE_CUT,
+                            com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason.EXCESSIVE_FILL))) break;
             var point = result.terrainDiagnostic().orElseThrow().cell().point();
             int radius = Math.max(settings.terrainTransitions().parcelShoulderRadius(), settings.terrainTransitions().roadShoulderRadius())+1;
             for (int z=point.z()-radius; z<=point.z()+radius; z++) for (int x=point.x()-radius; x<=point.x()+radius; x++) excluded.add(new GridPoint(x,z));
@@ -163,7 +173,11 @@ final class DistrictCityPlanner {
                 var first = ports.get(a); var second = ports.get(b);
                 if (!currentComponents.get(first.node().id()).equals(currentComponents.get(second.node().id()))) pairs.add(new Pair(first, second));
             }
-            pairs.sort(Comparator.comparingInt(Pair::distance).thenComparing(p -> p.a().node().id().value()).thenComparing(p -> p.b().node().id().value()));
+            // Prefer exposed ends with enough run for the height difference. Adjacent interior
+            // grading nodes otherwise consume the entire bounded budget on almost identical links.
+            pairs.sort(Comparator.comparingInt((Pair p) -> p.distance() < 6L*Math.abs((long)p.a().y()-p.b().y())+6 ? 1 : 0)
+                    .thenComparingInt(p -> p.a().degree()+p.b().degree())
+                    .thenComparingInt(Pair::distance).thenComparing(p -> p.a().node().id().value()).thenComparing(p -> p.b().node().id().value()));
             boolean connected = false;
             for (Pair pair : pairs.stream().limit(request.settings().districts().maxConnectionAttempts()).toList()) {
                 var connector = connector(request, bridged, pair, connectionIndex);
@@ -180,12 +194,20 @@ final class DistrictCityPlanner {
                         AxisAlignedGridCorridor.bounds(byId.get(s.startNodeId()).point(), byId.get(s.endNodeId()).point(), s.width()), elevation(s))));
                 var proposedTransitions = new ArrayList<>(transitions);
                 RegionalElevationPlanner.addRoadTransitions(proposedGraph, byId, proposedTransitions);
+                // District entrances remain attached to the streets that were prepared for them.
                 proposedTransitions = new ArrayList<>(new LinkedHashSet<>(proposedTransitions));
                 var candidatePreparation = TerrainPreparationPlanner.plan(request, new RegionalElevationPlan(proposedZones, proposedTransitions));
                 if (candidatePreparation.plan().isEmpty()) continue;
                 var proposedPlan = new SettlementPlan(bare.id(), proposedGraph, parcels, buildings, bare.tags(), bare.properties(),
                         bare.placementMaterials(), bare.props(), bare.surfaceTemplates(), districts);
                 if (!new TerrainPreparationPlanValidator().validate(proposedPlan, candidatePreparation.plan().orElseThrow()).isEmpty()) continue;
+                // Retained district entrances and authored modules must still fit the combined plan.
+                try {
+                    com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(proposedPlan,
+                            candidatePreparation.plan().orElseThrow(), request.seed(), request.settings().buildings());
+                } catch (IllegalArgumentException incompatibleContent) {
+                    continue;
+                }
                 if (!acceptance.validate(request, SuburbPlanningResult.success(proposedPlan, candidatePreparation.plan().orElseThrow())).successful()) continue;
                 nodes = proposedNodes; segments = proposedSegments; zones = proposedZones; transitions = proposedTransitions;
                 bridged = proposedPlan; preparation = candidatePreparation; connected = true; connectionIndex++;
@@ -206,8 +228,13 @@ final class DistrictCityPlanner {
         }
         var prep = preparation.plan().orElseThrow();
         if (!new PlanValidator().validate(bridged).isEmpty() || !new TerrainPreparationPlanValidator().validate(bridged, prep).isEmpty()) return Optional.empty();
-        var composed = com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(bridged, prep,
-                request.seed(), request.settings().buildings());
+        SettlementPlan composed;
+        try {
+            composed = com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(bridged, prep,
+                    request.seed(), request.settings().buildings());
+        } catch (IllegalArgumentException incompatibleContent) {
+            return Optional.empty();
+        }
         // Composition must not introduce props into the bridge reservation.
         final var bridgeReservations = composed.roadGraph().bridges();
         var props = composed.props().stream().filter(prop -> prop.composition().cells().stream().noneMatch(cell -> {
@@ -230,17 +257,29 @@ final class DistrictCityPlanner {
         var nodeMap = new HashMap<PlanElementId, RoadNode>(); plan.roadGraph().nodes().forEach(n -> nodeMap.put(n.id(), n));
         for (var road : plan.roadGraph().segments()) reserved.add(AxisAlignedGridCorridor.bounds(
                 nodeMap.get(road.startNodeId()).point(), nodeMap.get(road.endNodeId()).point(), road.width()));
-        var routed = new TerrainAwareRoadGraphRouter().route(request, request.survey().bounds(), source, reserved);
+        var routingBounds=request.survey().bounds();
+        if(routingBounds.size().width()>128 || routingBounds.size().depth()>128) {
+            var a=pair.a().node().point();var b=pair.b().node().point();
+            int minX=Math.max(routingBounds.minX(),Math.min(a.x(),b.x())-16);
+            int minZ=Math.max(routingBounds.minZ(),Math.min(a.z(),b.z())-16);
+            routingBounds=new GridBounds(new GridPoint(minX,minZ),new GridSize(
+                    Math.min(routingBounds.maxXExclusive(),Math.max(a.x(),b.x())+17)-minX,
+                    Math.min(routingBounds.maxZExclusive(),Math.max(a.z(),b.z())+17)-minZ));
+            if(routingBounds.size().width()>128 || routingBounds.size().depth()>128) return Optional.empty();
+        }
+        var routed = new TerrainAwareRoadGraphRouter().route(request, routingBounds, source, reserved);
         if (routed.isEmpty()) return Optional.empty();
         var split = RoadGraphSegmenter.splitLongSegments(routed.orElseThrow(), 6);
-        return TerrainConnectorGrader.grade(request, split, pair.a().y(), pair.b().y());
+        return TerrainConnectorGrader.grade(request, split, pair.a().y(), pair.b().y(), reserved);
     }
 
     private static List<Port> ports(RoadGraph graph) {
         var heights = new HashMap<PlanElementId, Set<Integer>>();
+        var degrees = new HashMap<PlanElementId, Integer>();
+        graph.segments().forEach(s -> { degrees.merge(s.startNodeId(),1,Integer::sum); degrees.merge(s.endNodeId(),1,Integer::sum); });
         graph.segments().forEach(s -> { for (var id : List.of(s.startNodeId(), s.endNodeId())) heights.computeIfAbsent(id, k -> new HashSet<>()).add(elevation(s)); });
         return graph.nodes().stream().filter(n -> heights.containsKey(n.id()) && heights.get(n.id()).size() == 1)
-                .map(n -> new Port(n, heights.get(n.id()).iterator().next())).toList();
+                .map(n -> new Port(n, heights.get(n.id()).iterator().next(), degrees.get(n.id()))).toList();
     }
     static Map<PlanElementId, Integer> components(RoadGraph graph) {
         var neighbors = new HashMap<PlanElementId, List<PlanElementId>>();
@@ -259,7 +298,7 @@ final class DistrictCityPlanner {
     }
     private static int elevation(RoadSegment segment) { return Integer.parseInt(segment.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow()); }
     private record Local(TerrainDistrictGrowth.Region region, SuburbPlanningResult result) { }
-    private record Port(RoadNode node, int y) { }
+    private record Port(RoadNode node, int y, int degree) { }
     private record Pair(Port a, Port b) {
         int distance() { return Math.abs(a.node().point().x() - b.node().point().x()) + Math.abs(a.node().point().z() - b.node().point().z()); }
     }

@@ -8,6 +8,15 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TerrainConnectorGraderTest {
+    @Test void rejectsRouteWhosePavementFitsButShouldersNeedExcessiveFill() {
+        var bounds=new GridBounds(new GridPoint(0,0),new GridSize(50,30));
+        var survey=TerrainSurvey.sample(bounds,p -> Optional.of(new TerrainCell(p,
+                p.z()>=9 && p.z()<=11 ? 65 : 59,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var request=new SuburbPlanningRequest(new PlanElementId("test:shoulder"),survey,42,SuburbPlanningSettings.defaults());
+        var graph=chain(List.of(new GridPoint(6,10),new GridPoint(12,10),new GridPoint(18,10)));
+        assertTrue(TerrainConnectorGrader.grade(request,graph,64,64).isEmpty());
+        assertTrue(TerrainConnectorGrader.grade(request(false),graph,64,64).isPresent());
+    }
     @Test void followsHillBetweenEqualHeightEndpoints() {
         var request=request(true);
         var graph=chain(List.of(new GridPoint(6,10),new GridPoint(12,10),new GridPoint(18,10),

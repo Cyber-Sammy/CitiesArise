@@ -54,7 +54,9 @@ public final class MinecraftWorldgenTerrainSampler {
         for (GridPoint point : exactWaterCheckPoints) {
             heights.put(point, exactHeight(point, sampledHeights, terrainSource::height));
         }
-        return TerrainSurvey.sample(bounds, point -> sampleCell(point, exactWaterCheckPoints));
+        // GridPoint hashes cluster on dense grids; SetN linear probing is costly at city scale.
+        var exactPoints = new java.util.HashSet<>(exactWaterCheckPoints);
+        return TerrainSurvey.sample(bounds, point -> sampleCell(point, exactPoints));
     }
 
     private Optional<TerrainCell> sampleCell(GridPoint point, Set<GridPoint> exactWaterCheckPoints) {
@@ -206,13 +208,17 @@ public final class MinecraftWorldgenTerrainSampler {
         return new CachedTerrainSource(new ChunkGeneratorTerrainSource(generator, random, height));
     }
 
+    static TerrainSource cachedSource(ChunkGenerator generator, RandomState random, LevelHeightAccessor height,BatchedNoiseTerrain cells) {
+        return new CachedTerrainSource(new ChunkGeneratorTerrainSource(generator, random, height,cells));
+    }
+
     /** Immutable generator inputs belong to one provider/seed; only exact samples are shared between refinements. */
     static final class CachedTerrainSource implements TerrainSource {
         private final TerrainSource delegate;
         private final com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache<GridPoint, Integer> heights =
-                new com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache<>(32768);
+                new com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache<>(65536);
         private final com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache<GridPoint, Integer> supports =
-                new com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache<>(32768);
+                new com.cybersammy.citiesarise.minecraft.cache.BoundedLruCache<>(65536);
         CachedTerrainSource(TerrainSource delegate) { this.delegate = Objects.requireNonNull(delegate); }
         public int height(GridPoint point) { return heights.getOrCreate(point, () -> delegate.height(point)); }
         public int supportHeight(GridPoint point) { return supports.getOrCreate(point, () -> delegate.supportHeight(point)); }
@@ -224,19 +230,27 @@ public final class MinecraftWorldgenTerrainSampler {
         private final ChunkGenerator chunkGenerator;
         private final RandomState randomState;
         private final LevelHeightAccessor levelHeight;
+        private final BatchedNoiseTerrain cells;
 
         private ChunkGeneratorTerrainSource(
                 ChunkGenerator chunkGenerator,
                 RandomState randomState,
                 LevelHeightAccessor levelHeight
         ) {
+            this(chunkGenerator,randomState,levelHeight,null);
+        }
+
+        private ChunkGeneratorTerrainSource(ChunkGenerator chunkGenerator,RandomState randomState,
+                LevelHeightAccessor levelHeight,BatchedNoiseTerrain cells) {
             this.chunkGenerator = Objects.requireNonNull(chunkGenerator, "chunkGenerator");
             this.randomState = Objects.requireNonNull(randomState, "randomState");
             this.levelHeight = Objects.requireNonNull(levelHeight, "levelHeight");
+            this.cells=cells;
         }
 
         @Override
         public int height(GridPoint point) {
+            if(cells!=null) return cells.surface(point);
             return chunkGenerator.getBaseHeight(
                     point.x(),
                     point.z(),
@@ -248,6 +262,7 @@ public final class MinecraftWorldgenTerrainSampler {
 
         @Override
         public int supportHeight(GridPoint point) {
+            if(cells!=null) return cells.support(point);
             return chunkGenerator.getBaseHeight(
                     point.x(),
                     point.z(),

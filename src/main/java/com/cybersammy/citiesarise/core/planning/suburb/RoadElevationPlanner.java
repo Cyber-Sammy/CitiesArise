@@ -21,9 +21,15 @@ final class RoadElevationPlanner {
     }
 
     static RoadGraph apply(SuburbPlanningRequest request, RoadGraph roadGraph) {
+        return apply(request,roadGraph,List.of(),false);
+    }
+
+    static RoadGraph apply(SuburbPlanningRequest request,RoadGraph roadGraph,
+            List<GridBounds> occupiedPads,boolean fitEarthworks) {
         Map<PlanElementId, RoadNode> nodesById = nodesById(roadGraph);
         Map<PlanElementId, Integer> desiredElevations = desiredElevations(request, roadGraph, nodesById);
-        Map<PlanElementId, Integer> componentElevations = componentElevations(roadGraph, desiredElevations);
+        var intervals = fitEarthworks ? feasibleElevations(request,roadGraph,nodesById,occupiedPads) : Map.<PlanElementId,Interval>of();
+        Map<PlanElementId, Integer> componentElevations = componentElevations(roadGraph, desiredElevations,intervals);
         List<RoadSegment> elevatedSegments = new ArrayList<>();
 
         for (RoadSegment segment : roadGraph.segments()) {
@@ -50,7 +56,7 @@ final class RoadElevationPlanner {
 
     private static Map<PlanElementId, Integer> componentElevations(
             RoadGraph graph,
-            Map<PlanElementId, Integer> desiredElevations
+            Map<PlanElementId, Integer> desiredElevations,Map<PlanElementId,Interval> intervals
     ) {
         Map<PlanElementId, RoadSegment> segmentsById = segmentsById(graph);
         Map<PlanElementId, List<PlanElementId>> segmentsByNode = segmentsByNode(graph);
@@ -74,7 +80,7 @@ final class RoadElevationPlanner {
                     component,
                     segmentsById,
                     segmentsByNode,
-                    desiredElevations
+                    desiredElevations,intervals
             ));
         }
         return Map.copyOf(elevations);
@@ -118,7 +124,7 @@ final class RoadElevationPlanner {
             List<PlanElementId> component,
             Map<PlanElementId, RoadSegment> segmentsById,
             Map<PlanElementId, List<PlanElementId>> segmentsByNode,
-            Map<PlanElementId, Integer> desiredElevations
+            Map<PlanElementId, Integer> desiredElevations,Map<PlanElementId,Interval> intervals
     ) {
         Map<PlanElementId, Integer> elevations = new HashMap<>();
         for (PlanElementId segmentId : component) {
@@ -127,7 +133,7 @@ final class RoadElevationPlanner {
                     segmentsById,
                     segmentsByNode
             );
-            elevations.put(segmentId, boundedElevation(component, desiredElevations, distances));
+            elevations.put(segmentId, boundedElevation(component, desiredElevations, distances,intervals));
         }
         return Map.copyOf(elevations);
     }
@@ -135,7 +141,7 @@ final class RoadElevationPlanner {
     private static int boundedElevation(
             List<PlanElementId> component,
             Map<PlanElementId, Integer> desiredElevations,
-            Map<PlanElementId, Integer> distances
+            Map<PlanElementId, Integer> distances,Map<PlanElementId,Interval> intervals
     ) {
         int lowerEnvelope = Integer.MIN_VALUE;
         int upperEnvelope = Integer.MAX_VALUE;
@@ -146,8 +152,49 @@ final class RoadElevationPlanner {
             upperEnvelope = Math.min(upperEnvelope, desired + distance);
         }
         long envelopeSum = (long) lowerEnvelope + upperEnvelope;
-        return Math.toIntExact(Math.floorDiv(envelopeSum, 2L));
+        int preferred = Math.toIntExact(Math.floorDiv(envelopeSum, 2L));
+        if(intervals.isEmpty()) return preferred;
+        long minimum=Long.MIN_VALUE,maximum=Long.MAX_VALUE;
+        for(var id:component) {
+            var interval=intervals.get(id); int distance=distances.get(id);
+            minimum=Math.max(minimum,(long)interval.minimum()-distance);
+            maximum=Math.min(maximum,(long)interval.maximum()+distance);
+        }
+        // Both feasible envelopes are one-Lipschitz on the segment graph. Clamping the
+        // preferred profile preserves <=1 block between neighbours. Infeasible sites
+        // retain the preferred profile so preparation produces the ordinary diagnostic.
+        return minimum<=maximum ? Math.toIntExact(Math.clamp((long)preferred,minimum,maximum)) : preferred;
     }
+
+    private static Map<PlanElementId,Interval> feasibleElevations(SuburbPlanningRequest request,RoadGraph graph,
+            Map<PlanElementId,RoadNode> nodes,List<GridBounds> pads) {
+        var roads=new HashMap<PlanElementId,GridBounds>();
+        graph.segments().forEach(s -> roads.put(s.id(),AxisAlignedGridCorridor.bounds(
+                nodes.get(s.startNodeId()).point(),nodes.get(s.endNodeId()).point(),s.width())));
+        var occupied=new ArrayList<>(pads); occupied.addAll(roads.values());
+        var result=new HashMap<PlanElementId,Interval>();
+        int radius=request.settings().terrainTransitions().roadShoulderRadius();
+        for(var entry:roads.entrySet()) {
+            var bounds=entry.getValue(); int minimum=Integer.MIN_VALUE,maximum=Integer.MAX_VALUE;
+            for(int z=bounds.minZ()-radius;z<bounds.maxZExclusive()+radius;z++)
+                for(int x=bounds.minX()-radius;x<bounds.maxXExclusive()+radius;x++) {
+                    var point=new com.cybersammy.citiesarise.core.geometry.GridPoint(x,z);
+                    var cell=request.survey().findCell(point);
+                    if(cell.isEmpty()) continue;
+                    int ground=cell.orElseThrow().height()-1;
+                    if(bounds.contains(point)) {
+                        minimum=Math.max(minimum,ground-request.settings().maxCutDepth());
+                        maximum=Math.min(maximum,ground+request.settings().maxFillDepth());
+                    } else if(occupied.stream().noneMatch(b -> b.contains(point))) {
+                        int offset=-com.cybersammy.citiesarise.core.earthwork.RoadTerrainShoulderPolicy.targetElevation(bounds,point,0);
+                        maximum=Math.min(maximum,ground+offset+request.settings().terrainTransitions().roadShoulderMaxFillDepth());
+                    }
+                }
+            result.put(entry.getKey(),new Interval(minimum,maximum));
+        }
+        return result;
+    }
+    private record Interval(int minimum,int maximum) { }
 
     private static Map<PlanElementId, Integer> segmentDistances(
             PlanElementId startId,

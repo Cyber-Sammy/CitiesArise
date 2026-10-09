@@ -3,7 +3,6 @@ package com.cybersammy.citiesarise.minecraft.terrain;
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.geometry.GridPoint;
 import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
-import com.cybersammy.citiesarise.core.earthwork.OrdinaryGroundSupport;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.minecraft.planning.WorldgenTerrainSurveyProvider;
@@ -22,6 +21,7 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
     private final RandomState randomState;
     private final LevelHeightAccessor levelHeight;
     private final MinecraftWorldgenTerrainSampler.TerrainSource cachedSource;
+    private final CachedGroundSupport groundSupport;
 
     public MinecraftWorldgenTerrainProvider(
             ChunkGenerator chunkGenerator,
@@ -32,7 +32,14 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
         this.chunkGenerator = Objects.requireNonNull(chunkGenerator, "chunkGenerator");
         this.randomState = Objects.requireNonNull(randomState, "randomState");
         this.levelHeight = LevelHeightAccessor.create(minBuildHeight, worldHeight);
-        this.cachedSource = MinecraftWorldgenTerrainSampler.cachedSource(chunkGenerator, randomState, levelHeight);
+        var cells = BatchedNoiseTerrain.create(chunkGenerator,randomState,levelHeight);
+        this.cachedSource = MinecraftWorldgenTerrainSampler.cachedSource(chunkGenerator, randomState, levelHeight,cells);
+        this.groundSupport = new CachedGroundSupport(point -> {
+            if(cells!=null) return y -> cells.solid(point,y);
+            var terrain = chunkGenerator.getBaseColumn(point.x(),point.z(),levelHeight,randomState);
+            return y -> y>=levelHeight.getMinBuildHeight() && y<levelHeight.getMaxBuildHeight()
+                    && terrain.getBlock(y).blocksMotion() && terrain.getBlock(y).getFluidState().isEmpty();
+        });
     }
 
     @Override
@@ -58,10 +65,7 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
     @Override
     public Optional<TerrainPreparationColumn> unsupportedColumn(TerrainPreparationPlan plan) {
         for (var column : plan.columns()) {
-            var terrain = chunkGenerator.getBaseColumn(column.point().x(), column.point().z(), levelHeight, randomState);
-            if (!OrdinaryGroundSupport.supported(column,
-                    y -> y >= levelHeight.getMinBuildHeight() && y < levelHeight.getMaxBuildHeight()
-                            && terrain.getBlock(y).blocksMotion() && terrain.getBlock(y).getFluidState().isEmpty())) {
+            if (!groundSupport.supported(column)) {
                 return Optional.of(column);
             }
         }

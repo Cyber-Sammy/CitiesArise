@@ -17,6 +17,44 @@ import net.neoforged.neoforge.gametest.*;
 @GameTestHolder("cities_arise")
 @PrefixGameTestTemplate(false)
 public final class DistrictCityGameTests {
+    @GameTest(template="empty",timeoutTicks=400)
+    public static void expandedCityPlacesAllDistrictsAcrossDistantChunks(GameTestHelper helper) throws Exception {
+        var origin=helper.absolutePos(new BlockPos(2304,12,1024));
+        com.cybersammy.citiesarise.core.profile.SettlementProfile profile;
+        try(var reader=new java.io.InputStreamReader(DistrictCityGameTests.class.getResourceAsStream(
+                "/data/cities_arise/settlement_profiles/suburb.json"))) {
+            profile=new com.cybersammy.citiesarise.minecraft.profile.MinecraftSettlementProfileJsonParser().parse(
+                    new com.cybersammy.citiesarise.core.profile.SettlementProfileId("cities_arise:suburb"),
+                    com.google.gson.JsonParser.parseReader(reader).getAsJsonObject());
+        }
+        var bounds=new GridBounds(new GridPoint(origin.getX(),origin.getZ()),profile.surveySize());
+        var survey=TerrainSurvey.sample(bounds,p->Optional.of(new TerrainCell(p,origin.getY()+1,false,0,
+                BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var result=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(new PlanElementId("test:expanded-city"),
+                survey,42,profile.suburbPlanningSettings(),profile.terrainResponsePolicy()));
+        helper.assertTrue(result.successful(),"Expanded city rejected: "+result.failureReason());
+        var plan=result.plan().orElseThrow();
+        helper.assertTrue(plan.districts().size()==6 && plan.parcels().size()>=28,"Expanded city lost districts");
+        var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow());
+        var snapshot=SuburbStructurePlacementSnapshot.from(placement);
+        var tag=new CompoundTag();snapshot.save(tag);
+        var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
+        helper.assertTrue(snapshot.equals(SuburbStructurePlacementSnapshot.from(restored)),"Expanded snapshot changed");
+        var partition=new DebugPlacementChunkProjector().partition(restored);
+        var chunks=restored.operations().stream().map(op->PlacementChunk.containing(op.point())).distinct()
+                .sorted(Comparator.comparingInt(PlacementChunk::x).thenComparingInt(PlacementChunk::z).reversed()).toList();
+        helper.assertTrue(chunks.stream().mapToInt(PlacementChunk::x).max().orElseThrow()
+                -chunks.stream().mapToInt(PlacementChunk::x).min().orElseThrow()>8,"Fixture does not cover distant chunks");
+        for(var chunk:chunks) new WorldgenPlacementApplier().apply(helper.getLevel(),partition.slice(chunk));
+        for(var slot:plan.buildingSlots()) {
+            var zone=result.terrainPreparationPlan().orElseThrow().elevationPlan().zones().stream()
+                    .filter(z->z.sourceElementId().equals(slot.id())).findFirst().orElseThrow();
+            helper.assertTrue(!helper.getLevel().getBlockState(new BlockPos(zone.bounds().minX(),zone.targetElevation(),
+                    zone.bounds().minZ())).isAir(),"Missing building pad in distant district");
+        }
+        helper.succeed();
+    }
+
     @GameTest(template="empty",timeoutTicks=200)
     public static void hillsideDistrictLinksSurviveSnapshotPlacement(GameTestHelper helper) {
         var origin=helper.absolutePos(new BlockPos(1280,12,1024));

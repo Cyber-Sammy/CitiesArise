@@ -33,7 +33,7 @@ final class SettlementPlanFootprint {
             addBounds(points, slot.bounds());
         }
 
-        return Set.copyOf(points);
+        return java.util.Collections.unmodifiableSet(points);
     }
 
     private static void addRoads(Set<GridPoint> points, RoadGraph roadGraph) {

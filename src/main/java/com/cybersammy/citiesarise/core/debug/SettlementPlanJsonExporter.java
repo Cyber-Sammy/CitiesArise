@@ -86,6 +86,16 @@ public final class SettlementPlanJsonExporter {
             json.numberField("startBankLength", bridge.startBankLength());
             json.numberField("endBankLength", bridge.endBankLength());
             json.numberField("constructionVolume", bridge.constructionVolume());
+            json.numberField("terrainWorkVolume", bridge.terrainWorkVolume());
+            json.arrayField("foundations", () -> bridge.foundations().forEach(footing -> json.arrayValue(() -> {
+                json.beginObject();
+                json.numberField("distance",footing.distance());
+                json.numberField("lateral",footing.lateral());
+                json.numberField("groundY",footing.groundY());
+                json.numberField("bottomY",footing.bottomY());
+                json.stringField("kind",footing.pier()?"pier":"bank");
+                json.endObject();
+            })));
             json.endObject();
         })));
     }

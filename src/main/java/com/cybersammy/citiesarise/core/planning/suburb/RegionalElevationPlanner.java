@@ -30,7 +30,12 @@ final class RegionalElevationPlanner {
             SuburbPlanningRequest request,
             SettlementPlan settlementPlan
     ) {
-        RoadGraph elevatedRoadGraph = RoadElevationPlanner.apply(request, settlementPlan.roadGraph());
+        return plan(request,settlementPlan,false);
+    }
+
+    static RegionalElevationPlanningResult plan(SuburbPlanningRequest request,SettlementPlan settlementPlan,boolean fitEarthworks) {
+        RoadGraph elevatedRoadGraph = RoadElevationPlanner.apply(request, settlementPlan.roadGraph(),
+                settlementPlan.parcels().stream().map(Parcel::bounds).toList(),fitEarthworks);
         ParcelElevationResult parcelElevations = elevateParcelsAndBuildings(request, settlementPlan, elevatedRoadGraph);
         SettlementPlan elevatedPlan = new SettlementPlan(
                 settlementPlan.id(),
@@ -202,7 +207,7 @@ final class RegionalElevationPlanner {
         }
     }
 
-    private static void addBuildingAccessTransitions(
+    static void addBuildingAccessTransitions(
             List<ElevationZone> zones,
             int minimumRunPerRise,
             List<ElevationTransition> transitions

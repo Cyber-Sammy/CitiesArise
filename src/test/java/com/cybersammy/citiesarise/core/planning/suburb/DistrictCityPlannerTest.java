@@ -10,6 +10,20 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DistrictCityPlannerTest {
+    @Test void districtExhaustionPreservesExactSupportDiagnosticForLocalRetry() {
+        var base=request(false,false);
+        var result=SuburbPlanner.defaults().planDistrict(base,(r,candidate) -> {
+            var point=candidate.terrainPreparationPlan().orElseThrow().columns().getFirst().point();
+            return SuburbPlanningResult.rejectedTerrain(new SuburbTerrainDiagnostic(r.survey().findCell(point).orElseThrow(),
+                    new com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability(0,
+                            Set.of(com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason.UNSUPPORTED_TERRAIN),List.of())));
+        },false);
+        assertFalse(result.successful());
+        assertTrue(result.terrainDiagnostic().isPresent());
+        assertEquals(Set.of(com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason.UNSUPPORTED_TERRAIN),
+                result.terrainDiagnostic().orElseThrow().suitability().rejectionReasons());
+    }
+
     @Test void prefersGroundTreatmentForShallowValleyAndBridgeForDeepRavine() {
         var base=request(false,false);
         var policy=new TerrainResponsePolicy(base.terrainResponsePolicy().responses(),Set.of(InfrastructureCapability.BRIDGE),

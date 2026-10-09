@@ -45,7 +45,7 @@ public final class TerrainTopologyAnalyzer {
                 points.add(cell.point());
             }
         }
-        return Set.copyOf(points);
+        return java.util.Collections.unmodifiableSet(new java.util.HashSet<>(points));
     }
 
     private static List<TerrainBarrier> barriers(

@@ -66,6 +66,15 @@ public final class MinecraftSettlementProfileJsonParser {
         return profile;
     }
 
+    private static com.cybersammy.citiesarise.core.road.BridgeTerrainSettings parseBridgeTerrain(JsonObject bridges) {
+        if(!bridges.has("terrainSupports")) return com.cybersammy.citiesarise.core.road.BridgeTerrainSettings.disabled();
+        var settings=requiredObject(bridges,"terrainSupports");
+        return new com.cybersammy.citiesarise.core.road.BridgeTerrainSettings(
+                optionalInt(settings,"maxBankCut",0),optionalInt(settings,"maxBankFill",0),
+                optionalInt(settings,"maxTerrainWorkVolume",0),optionalInt(settings,"pierSpacing",0),
+                optionalInt(settings,"maxPierHeight",16));
+    }
+
     private static BuildingContentSettings parseBuildings(JsonObject planning, ContentResources resources) {
         if (!planning.has("buildings")) return BuildingContentSettings.legacy();
         JsonObject content = requiredObject(planning, "buildings");
@@ -267,7 +276,8 @@ public final class MinecraftSettlementProfileJsonParser {
                 optionalInt(bridges, "minimumDryClearance", defaults.minimumDryClearance()),
                 optionalLong(bridges, "maxConstructionVolume", defaults.maxConstructionVolume()),
                 optionalInt(bridges, "maxCandidateChecks", defaults.maxCandidateChecks()),
-                optionalInt(bridges, "maxElevationDifference", defaults.maxElevationDifference()));
+                optionalInt(bridges, "maxElevationDifference", defaults.maxElevationDifference()),
+                parseBridgeTerrain(bridges));
     }
 
     private static TerrainAdaptationSettings parseTerrainAdaptationSettings(JsonObject policy) {

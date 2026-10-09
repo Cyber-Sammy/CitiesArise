@@ -3,6 +3,6 @@
   "minVersion": "0.8",
   "package": "com.cybersammy.citiesarise.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": ["CarvingMaskAccess", "SettlementCarvingMixin"],
+  "mixins": ["CarvingMaskAccess", "SettlementCarvingMixin", "NoiseGeneratorAccess"],
   "injectors": { "defaultRequire": 1 }
 }

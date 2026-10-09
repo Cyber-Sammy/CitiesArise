@@ -50,6 +50,14 @@ final class MinecraftSettlementProfileJsonParserTest {
         bridges.addProperty("maxConstructionVolume",500);
         bridges.addProperty("maxCandidateChecks",3);
         assertEquals(new com.cybersammy.citiesarise.core.road.BridgeSettings(32,1,2,3,true,4,500,3), parser.parse(id(),data).terrainResponsePolicy().bridges());
+        bridges.add("terrainSupports",JsonParser.parseString("{\"maxBankCut\":1,\"maxBankFill\":2,\"maxTerrainWorkVolume\":256,\"pierSpacing\":12,\"maxPierHeight\":16}"));
+        assertEquals(12,parser.parse(id(),data).terrainResponsePolicy().bridges().terrainSupports().pierSpacing());
+        bridges.getAsJsonObject("terrainSupports").addProperty("maxBankFill",3);
+        assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+        bridges.getAsJsonObject("terrainSupports").addProperty("maxBankFill",2);
+        bridges.getAsJsonObject("terrainSupports").addProperty("pierSpacing",1);
+        assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+        bridges.remove("terrainSupports");
         bridges.addProperty("maxElevationDifference",2);
         assertEquals(2,parser.parse(id(),data).terrainResponsePolicy().bridges().maxElevationDifference());
         bridges.addProperty("maxElevationDifference",9);

@@ -50,7 +50,7 @@ final class DistrictFootprint {
             throw new IllegalArgumentException("points must not be empty");
         }
         List<GridPoint> ordered = points.stream().sorted(POINT_ORDER).toList();
-        Set<GridPoint> unique = Set.copyOf(ordered);
+        Set<GridPoint> unique = java.util.Collections.unmodifiableSet(new java.util.HashSet<>(ordered));
         if (unique.size() != ordered.size()) {
             throw new IllegalArgumentException("points must not contain duplicates");
         }

@@ -24,7 +24,7 @@ public final class TerrainTopology {
         this.bounds = Objects.requireNonNull(bounds, "bounds");
         this.regions = List.copyOf(Objects.requireNonNull(regions, "regions"));
         this.barriers = List.copyOf(Objects.requireNonNull(barriers, "barriers"));
-        this.regionIdsByPoint = Map.copyOf(Objects.requireNonNull(regionIdsByPoint, "regionIdsByPoint"));
+        this.regionIdsByPoint = java.util.Collections.unmodifiableMap(new java.util.HashMap<>(Objects.requireNonNull(regionIdsByPoint, "regionIdsByPoint")));
         this.barrierPrefix = createBarrierPrefix(bounds, this.regionIdsByPoint);
     }
 

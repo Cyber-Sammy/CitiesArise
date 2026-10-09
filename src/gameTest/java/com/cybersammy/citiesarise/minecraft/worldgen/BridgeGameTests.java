@@ -90,7 +90,7 @@ public final class BridgeGameTests {
             var placement=new DebugPlacementPlanConverter().convert(plan);
             var snapshot=SuburbStructurePlacementSnapshot.from(placement);
             var tag=new CompoundTag();snapshot.save(tag);
-            helper.assertTrue(tag.getInt("SnapshotVersion")==6,"Missing graded bridge snapshot version");
+            helper.assertTrue(tag.getInt("SnapshotVersion")==7,"Missing graded bridge snapshot version");
             var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
             helper.assertTrue(snapshot.equals(SuburbStructurePlacementSnapshot.from(restored)),"Lost row elevation or material");
             var debug=new DebugPlacementApplier();
@@ -115,6 +115,66 @@ public final class BridgeGameTests {
             verifyGraded(helper,bridge);
         }
         helper.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 100)
+    public static void bankEarthworksAndDryPiersSurviveChunksReloadAndUndo(GameTestHelper helper) {
+        var level=helper.getLevel();
+        var origin=helper.absolutePos(new BlockPos(4,20,4));
+        var start=new GridPoint(origin.getX(),origin.getZ());var end=new GridPoint(start.x()+24,start.z());
+        var a=new RoadNode(new PlanElementId("test:a"),start,Set.of(),PlanProperties.empty());
+        var b=new RoadNode(new PlanElementId("test:b"),end,Set.of(),PlanProperties.empty());
+        var supports=new ArrayList<BridgeFoundation>();
+        for(int d=0;d<=24;d++) if(d<3 || d>21) for(int w=-2;w<=2;w++) {
+            int ground=origin.getY()+(d<3?-2:2);
+            supports.add(new BridgeFoundation(d,w,ground,Math.min(ground-2,origin.getY()-3),false));
+        }
+        supports.add(new BridgeFoundation(12,0,origin.getY()-10,origin.getY()-12,true));
+        var bridge=new BridgePlan(new PlanElementId("test:supported"),a.id(),b.id(),start,end,5,origin.getY(),1,3,3,origin.getY(),supports);
+        for(int d=0;d<=24;d++) for(int w=-2;w<=2;w++) {
+            int ground=d<3?origin.getY()-2:d>21?origin.getY()+2:origin.getY()-10;
+            var point=bridge.point(d,w);
+            for(int y=origin.getY()-17;y<=origin.getY()+5;y++) level.setBlock(new BlockPos(point.x(),y,point.z()),
+                    y<=ground?Blocks.STONE.defaultBlockState():Blocks.AIR.defaultBlockState(),2);
+        }
+        var plan=new SettlementPlan(new PlanElementId("test:city"),new RoadGraph(List.of(a,b),List.of(),List.of(bridge)),
+                List.of(),List.of(),Set.of(),PlanProperties.empty(),Map.of("BRIDGE_PIER","minecraft:polished_andesite"),List.of(),Map.of());
+        var placement=new DebugPlacementPlanConverter().convert(plan);
+        var tag=new CompoundTag();SuburbStructurePlacementSnapshot.from(placement).save(tag);
+        var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
+        var debug=new DebugPlacementApplier();debug.apply(level,restored,true);
+        verifySupportBlocks(helper,bridge);
+        debug.undoLast(level);
+        helper.assertTrue(level.getBlockState(origin.offset(12,-5,0)).isAir(),"Undo left pier in ravine");
+        helper.assertTrue(level.getBlockState(origin.offset(23,2,2)).is(Blocks.STONE),"Undo lost cut bank edge");
+        var chunks=new ArrayList<>(restored.operations().stream().map(op->PlacementChunk.containing(op.point())).distinct().toList());
+        Collections.reverse(chunks);var projector=new DebugPlacementChunkProjector().partition(restored);
+        for(var chunk:chunks) {
+            var slice=projector.slice(chunk);new WorldgenPlacementApplier().apply(level,slice);
+            var mask=new SettlementCarvingProtection.ColumnMask();mask.include(slice);
+            var carving=new net.minecraft.world.level.chunk.CarvingMask(level.getHeight(),level.getMinBuildHeight());
+            SettlementCarvingProtection.applyMask(carving,mask);
+            var pier=bridge.point(12,0);
+            if(PlacementChunk.containing(pier).equals(chunk)) helper.assertTrue(carving.get(Math.floorMod(pier.x(),16),origin.getY()-13,
+                    Math.floorMod(pier.z(),16)),"Pier footing not protected from later carving");
+            var gap=bridge.point(10,0);
+            if(PlacementChunk.containing(gap).equals(chunk)) helper.assertTrue(!carving.get(Math.floorMod(gap.x(),16),origin.getY()-5,
+                    Math.floorMod(gap.z(),16)),"Gap between piers protected as filled ground");
+        }
+        verifySupportBlocks(helper,bridge);helper.succeed();
+    }
+
+    private static void verifySupportBlocks(GameTestHelper helper,BridgePlan bridge) {
+        var level=helper.getLevel();int y=bridge.deckY();
+        var pier=bridge.point(12,0);
+        for(int height=y-12;height<y;height++) helper.assertTrue(level.getBlockState(new BlockPos(pier.x(),height,pier.z()))
+                .is(Blocks.POLISHED_ANDESITE),"Datapack pier missing");
+        var gap=bridge.point(10,0);
+        helper.assertTrue(level.getBlockState(new BlockPos(gap.x(),y-5,gap.z())).isAir(),"Open ravine filled");
+        var filled=bridge.point(1,2);
+        helper.assertTrue(level.getBlockState(new BlockPos(filled.x(),y-1,filled.z())).is(Blocks.COBBLESTONE),"Low bank approach not filled");
+        var cut=bridge.point(23,2);
+        helper.assertTrue(level.getBlockState(new BlockPos(cut.x(),y+2,cut.z())).isAir(),"High bank edge not cut");
     }
 
     private static void verifyGraded(GameTestHelper helper,BridgePlan bridge) {

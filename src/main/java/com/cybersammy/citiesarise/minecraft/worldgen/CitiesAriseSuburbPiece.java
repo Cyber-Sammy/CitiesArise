@@ -87,7 +87,8 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
             var serverLevel = level.getLevel();
             var metadata = registryMetadata(serverLevel.dimension().location().toString());
             // Worldgen workers never access SavedData. Publish only after successful placement.
-            serverLevel.getServer().execute(() -> SettlementRegistry.get(serverLevel).placed(metadata, chunkPos.toLong(), elapsed));
+            ServerThreadPublication.publish(serverLevel.getServer(),
+                    () -> SettlementRegistry.get(serverLevel).placed(metadata, chunkPos.toLong(), elapsed));
         }
         WorldgenVegetationCleanupPlan cleanupPlan = vegetationCleanupIndex.slice(chunk);
         if (!cleanupPlan.influencingOperations().isEmpty()) {

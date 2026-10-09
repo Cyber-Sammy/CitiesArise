@@ -16,6 +16,24 @@ final class WorldgenRegionSearchTest {
     private final WorldgenRegionSearch search = new WorldgenRegionSearch();
 
     @Test
+    void nextSkipsSavedAndRejectedRegionsWithoutSpendingTheAttemptBudget() {
+        var visited=new java.util.HashSet<SettlementRegion>();
+        var accepted=new java.util.ArrayList<SettlementRegion>();
+        for(int pass=0;pass<3;pass++) {
+            var snapshot=java.util.Set.copyOf(visited);
+            var outcome=search.findBest(0,0,2,2,0,region->!snapshot.contains(region),region->{
+                assertTrue(visited.add(region),"Repeated checked region");
+                return visited.size()%2==0?Optional.of(1):Optional.empty();
+            },Integer::compare);
+            assertEquals(2,outcome.attemptedCandidates());
+            accepted.add(outcome.result().orElseThrow().region());
+        }
+        assertEquals(3,accepted.stream().distinct().count());
+        var exhausted=search.findBest(0,0,1,2,0,region->false,region->{throw new AssertionError("Excluded region evaluated");},Integer::compare);
+        assertEquals(0,exhausted.attemptedCandidates());assertTrue(exhausted.result().isEmpty());
+    }
+
+    @Test
     void cancellationDuringLastCandidateDoesNotPublishSuccess() {
         try {
             assertThrows(CancellationException.class, () -> search.findBest(0, 0, 1, 1, 0,

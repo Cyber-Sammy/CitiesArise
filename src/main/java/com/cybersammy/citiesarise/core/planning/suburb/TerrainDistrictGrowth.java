@@ -33,6 +33,11 @@ final class TerrainDistrictGrowth {
             for (int[] d : DIRECTIONS) {
                 var next = new GridPoint(step.point().x()+d[0], step.point().z()+d[1]);
                 var neighbor = survey.findCell(next);
+                if((survey.bounds().size().width()>128 || survey.bounds().size().depth()>128)) {
+                    var seedArea=seedAreas.get(step.owner());
+                    int cx=seedArea.minX()+seedArea.size().width()/2,cz=seedArea.minZ()+seedArea.size().depth()/2;
+                    if(next.x()<cx-56 || next.x()>=cx+56 || next.z()<cz-56 || next.z()>=cz+56) continue;
+                }
                 if (neighbor.isEmpty() || !usable(neighbor.orElseThrow())) continue;
                 double cost = step.cost() + 1 + 4*Math.abs((double)cell.height()-neighbor.orElseThrow().height());
                 var candidate = new Step(next, step.owner(), cost);
@@ -58,7 +63,7 @@ final class TerrainDistrictGrowth {
 
     record Region(GridBounds bounds, Set<GridPoint> points, List<GridBounds> footprint) {
         Region(List<GridPoint> points) {
-            this(boundsOf(points), Set.copyOf(points), rows(points));
+            this(boundsOf(points), java.util.Collections.unmodifiableSet(new HashSet<>(points)), rows(points));
         }
         private static GridBounds boundsOf(List<GridPoint> points) {
             int x = points.stream().mapToInt(GridPoint::x).min().orElseThrow();

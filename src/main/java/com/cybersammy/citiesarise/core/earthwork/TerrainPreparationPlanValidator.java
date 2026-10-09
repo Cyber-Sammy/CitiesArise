@@ -688,10 +688,8 @@ public final class TerrainPreparationPlanValidator {
             errors.add(error(transition.targetZoneId(), "building access anchor must be on the building perimeter"));
         }
 
-        BuildingAccessResolver.BuildingAccess expected = BuildingAccessResolver.resolve(zones, target);
-        if (!transition.sourceZoneId().equals(expected.roadZone().sourceElementId())) {
-            errors.add(error(transition.targetZoneId(), "building access must use the nearest road zone"));
-        }
+        BuildingAccessResolver.BuildingAccess expected = BuildingAccessResolver.resolve(List.of(source), target);
+        // The transition explicitly owns its street; later city links must not rotate an entrance.
         if (!transition.anchor().equals(expected.anchor())) {
             errors.add(error(transition.targetZoneId(), "building access anchor must be the nearest perimeter point"));
         }

@@ -15,11 +15,14 @@ public record DebugPlacementSnapshot(List<BlockChange> changes) {
         return changes.size();
     }
 
-    public record BlockChange(BlockPos position, BlockState previousState) {
+    public record BlockChange(BlockPos position, BlockState previousState, net.minecraft.nbt.CompoundTag previousEntityData) {
+        public BlockChange(BlockPos position, BlockState previousState) { this(position,previousState,null); }
         public BlockChange {
+            previousEntityData=previousEntityData==null?null:previousEntityData.copy();
             Objects.requireNonNull(position, "position");
             Objects.requireNonNull(previousState, "previousState");
             position = position.immutable();
         }
+        @Override public net.minecraft.nbt.CompoundTag previousEntityData() { return previousEntityData==null?null:previousEntityData.copy(); }
     }
 }

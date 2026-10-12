@@ -13,7 +13,7 @@ public final class ModuleBuildingPlacementProvider implements BuildingPlacementP
             String material=cell.material().contains(":")?cell.material():content.materials().get(cell.material());
             if(material==null) throw new IllegalArgumentException("Unknown material token: "+cell.material());
             operations.add(new DebugBlockPlacementOperation(new GridPoint(slot.bounds().minX()+cell.position().x(),slot.bounds().minZ()+cell.position().z()),
-                    cell.position().y(),DebugPlacementRole.CONTENT_BLOCK,slot.id(),OptionalInt.empty(),material,cell.rotation()));
+                    cell.position().y(),DebugPlacementRole.CONTENT_BLOCK,slot.id(),OptionalInt.empty(),material,cell.rotation(),"",cell.providerData()));
         }
         return List.copyOf(operations);
     }

@@ -62,7 +62,7 @@ public final class NestedCompositionResolver {
                         PlacedCell existing=cells.get(point);
                         // Reservations never authorize punching through the parent's solid geometry.
                         if(existing==null || !rules.isPassable(existing.material(),air)) { fits=false; break; }
-                        cells.put(point,new PlacedCell(point,cell.material(),turn));
+                        cells.put(point,new PlacedCell(point,cell.material(),turn,cell.providerData()));
                     }
                     if(!fits) continue;
                     var modules=new ArrayList<>(state.modules());

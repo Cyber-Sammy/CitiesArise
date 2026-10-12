@@ -33,7 +33,7 @@ walking/ladder routes and support points, checked after variants and damage. Roa
 and parcels accept repeating JSON/NBT surface volumes and saved foundation/fill
 material policies. Snapshot v5 reads older v1/v2/v3/v4 starts. Validation is bounded and
 checks author-declared voxel requirements; general Minecraft movement simulation,
-structural load physics and block-entity content remain outside this delivery.
+structural load physics and arbitrary entity spawning remain outside this delivery.
 
 
 ## How It Will Work
@@ -155,7 +155,7 @@ When `debugPlacementUndoEnabled=true`, the mod stores the previous world state f
 ```
 
 Running another debug placement replaces the stored undo state.
-The current undo is a best-effort block-state restore. It does not restore block entity data such as container contents, sign text, or modded block entity NBT. It also restores the saved state unconditionally, so player edits made after debug placement may be overwritten by undo.
+Debug undo restores captured block states and full block-entity data, including container contents and sign text. It remains a one-placement, in-memory, best-effort restore: player edits made after placement may be overwritten, and spawned entities or scheduled world activity are not rolled back.
 
 The current debug config can also be edited in game:
 
@@ -313,7 +313,7 @@ Procedural houses fit reserved slots between 5 and 32 blocks on each side, with 
 
 Asset and palette choices appear in building-slot properties in plan dumps and participate in cache identity through planning settings. Chunk placement snapshots persist the resulting material roles, including both door halves. Old snapshot role ids are unchanged. Late vegetation cleanup asks the resolved material provider which generated positions need protection, rather than assuming only walls can contain logs.
 
-Generic NBT/template loading, external provider registration, block-entity furniture/loot, and more extensive decay remain future work. Debug undo still restores block states only; it does not restore block-entity contents.
+Compressed vanilla structure templates and block-entity furniture/loot are supported. External provider registration and more extensive decay remain future work. Debug undo also restores captured block-entity data.
 
 ## Build
 
@@ -675,3 +675,60 @@ The datapack JSON schema has not changed. Existing saved structure snapshots (ve
 ### Protection from late lake generation
 
 Vanilla water/lava lake features run after structure placement and can otherwise carve through a prepared yard. Cities Arise rejects a complete lake feature before any block writes when its bounded 16x8x16 write envelope (plus a one-block horizontal buffer) intersects saved settlement placement columns or their four-block support. This uses structure references and chunk-local placement slices, including neighboring chunks and loaded legacy pieces. Unrelated terrain, gaps between districts and lakes sufficiently below buildings remain eligible. It does not remove existing lakes, change player-placed fluids or suppress all worldgen features; custom features that bypass vanilla LakeFeature are outside this hook. Already damaged chunks need new generation to see the prevention.
+
+
+## Replaceable planning and terrain stages
+
+Planning, terrain adaptation, earthwork preparation, content assembly and Minecraft placement must retain explicit data boundaries so individual implementations can be replaced without rewriting the project. Terrain-aware initial planning remains supported; a mandatory flat-city intermediate is not required. Semantic city metadata, terrain/elevation preparation and resolved provider content remain separate results. Future extraction of an adaptation stage should accept a city map and terrain and return an adapted map plus preparation, without embedding world access or content assets in the semantic map. Provider-specific payloads are immutable opaque annotations in resolved content; only their owning adapter interprets them. Named style and compatibility rules remain datapack-owned.
+
+
+## Block entity templates and JSON cells
+
+Vanilla structure files may include per-block `nbt` compounds, including container
+inventories, loot-table references, sign text and custom names. Alternatively, a
+JSON `cells` entry may specify a `blockEntity` SNBT string:
+
+```json
+{
+  "at": [1, 0, 0],
+  "material": "minecraft:chest[facing=north,type=single,waterlogged=false]",
+  "blockEntity": "{id:'minecraft:chest',Items:[{Slot:0b,id:'minecraft:bread',count:3}]}"
+}
+```
+
+Use Minecraft 1.21.1 block-entity/item component formats. If `id` is supplied, it
+must match the block's actual registered entity type. Payloads on ordinary blocks,
+malformed SNBT and oversized payloads are rejected by the Minecraft reload adapter.
+Payloads belong to individual cells, not to palette materials or semantic city slots.
+The runtime does not invent style, furniture or joint compatibility rules.
+
+The adapter overrides top-level x/y/z with the final world position. Module
+positions and block states rotate; arbitrary coordinates or direction fields inside
+custom NBT are not transformed, following the vanilla structure block-data behavior.
+A loot table without LootTableSeed receives a deterministic seed from the world seed
+and final block position. Explicit LootTableSeed values are preserved. Loot is filled
+by Minecraft when the container is accessed; the mod does not execute a separate loot
+pipeline. Non-block entities from a structure template are still rejected.
+
+Resolved cells carry immutable provider annotations through structural assembly,
+nested furniture, rotations, authored variants and chunk projection. A removed or
+capped cell loses the replaced cell's data. An authored variant supplies its own
+complete cell payloads. The Minecraft adapter owns all NBT parsing and block-entity
+creation; the semantic city map remains independent of blocks, registries and NBT.
+Custom block entities use their registered vanilla loading API; custom mod-specific
+runtime side effects and arbitrary embedded coordinate transforms are not inferred.
+
+Provider annotations are limited to 16 entries and 16,384 total Java characters per
+cell (keys included); Minecraft SNBT nesting is limited to 64 levels. A catalog and a
+snapshot payload dictionary each have a 4,000,000-character payload budget. Existing
+catalog/template byte limits still apply. Snapshot v8 stores a deduplicated payload
+dictionary and reads v1-v7. Reloading a datapack does not redraw saved structure starts.
+Use the new JAR to load v8 starts; older mod versions cannot read v8 snapshots.
+
+Debug undo captures full original block-entity NBT before replacement, including
+same-block replacements, and restores it together with block states. This captured
+world data is separate from bounded imported template data. Undo remains in memory
+for the last placement; entities, ticks, player edits and broader world simulation
+are not transactional. The fixture's nested `test:desk` now includes a chest with
+three bread items. Install the updated fixture ZIP before creating new chunks to
+inspect it; previously generated structures retain their saved content.

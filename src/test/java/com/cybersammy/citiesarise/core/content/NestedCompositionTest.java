@@ -41,6 +41,16 @@ class NestedCompositionTest {
             assertEquals(plan,assemble(settings,turn).orElseThrow());
         }
     }
+    @Test void nestedOpaquePayloadFollowsParentRotation() {
+        var base=desk(Set.of("style"));
+        var cells=base.cells().stream().map(c -> new Cell(c.position(),c.material(),false,Map.of("fixture:data","nested"))).toList();
+        var furniture=new ModuleDefinition(base.id(),base.size(),cells,base.joints(),base.tags(),base.variants(),base.damage(),base.contract());
+        var contract=new ModuleContract(List.of(),List.of(),List.of(),List.of(mount(false,Set.of(),Set.of())));
+        var plan=assemble(settings(room(contract,Damage.none(),List.of()),furniture,0),1).orElseThrow();
+        var placed=plan.cells().stream().filter(c -> c.material().equals("desk")).toList();
+        assertEquals(2,placed.size());
+        assertTrue(placed.stream().allMatch(c -> c.rotation()==1 && c.providerData().equals(Map.of("fixture:data","nested"))));
+    }
     @Test void optionalFurnitureCannotBlockReservedClearanceAndRequiredFurnitureRejects() {
         var desk=desk(Set.of("style"));
         for(boolean optional:List.of(false,true)) {

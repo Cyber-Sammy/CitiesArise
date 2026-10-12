@@ -12,6 +12,9 @@ public interface ContentResources {
             throw new IllegalArgumentException("Invalid material state: "+material);
         }
     }
+    default void validateProviderData(String material, java.util.Map<String,String> data) {
+        com.cybersammy.citiesarise.core.content.ProviderData.copy(data);
+    }
     default void validateTraits(String material,boolean passable,boolean supportive,boolean climbable) { validateMaterial(material); }
     default void validateWalkingSurface(String material) { validateMaterial(material); }
     default void validateBridgeSurface(String material, boolean halfStep) { validateMaterial(material); }
@@ -32,6 +35,10 @@ public interface ContentResources {
             @Override public void validateMaterial(String material) {
                 ContentResources.super.validateMaterial(material);
                 com.cybersammy.citiesarise.minecraft.placement.MinecraftContentMaterials.resolve(material,0);
+            }
+            @Override public void validateProviderData(String material, java.util.Map<String,String> data) {
+                com.cybersammy.citiesarise.minecraft.placement.TemplateBlockEntities.validate(
+                    com.cybersammy.citiesarise.minecraft.placement.MinecraftContentMaterials.resolve(material,0),data);
             }
             @Override public void validateTraits(String material,boolean passable,boolean supportive,boolean climbable) {
                 validateMaterial(material);

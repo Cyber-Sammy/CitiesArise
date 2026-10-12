@@ -82,7 +82,7 @@ public final class ContentCompositionGameTests {
         for(var cell:composition.cells()) {
             String material=cell.material().contains(":")?cell.material():catalog.palettes().get("test:palette").get(cell.material());
             ops.add(new DebugBlockPlacementOperation(new GridPoint(origin.getX()+cell.position().x(),origin.getZ()+cell.position().z()),cell.position().y(),
-                    DebugPlacementRole.CONTENT_BLOCK,new PlanElementId("test:module"),OptionalInt.of(origin.getY()),material,cell.rotation(),"minecraft:andesite"));
+                    DebugPlacementRole.CONTENT_BLOCK,new PlanElementId("test:module"),OptionalInt.of(origin.getY()),material,cell.rotation(),"minecraft:andesite",cell.providerData()));
         }
         var snapshot=SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(ops));
         CompoundTag saved=new CompoundTag(); snapshot.save(saved);
@@ -98,6 +98,11 @@ public final class ContentCompositionGameTests {
                 .equals(provider.blockState(op)),"Module state or rotated ladder changed: "+op);
         helper.assertTrue(composition.modules().size()==4 && composition.cappedJoints().size()==1,"Floor connection or cap missing");
         // Existing v1 structures continue to load using their original role material mapping.
+        var chestOp=ops.stream().filter(o -> !o.providerData().isEmpty()).findFirst().orElseThrow();
+        var chest=(net.minecraft.world.level.block.entity.ChestBlockEntity)helper.getLevel().getBlockEntity(
+                new BlockPos(chestOp.point().x(),origin.getY()+chestOp.verticalOffset(),chestOp.point().z()));
+        helper.assertTrue(chest!=null && chest.getItem(0).is(net.minecraft.world.item.Items.BREAD) && chest.getItem(0).getCount()==3,
+                "Nested datapack chest inventory did not survive composition/placement");
         var old=new CompoundTag(); old.putInt("SnapshotVersion",1); old.putIntArray("Operations",snapshot.toIntArray());
         helper.assertTrue(SuburbStructurePlacementSnapshot.load(old).operations().stream().allMatch(o -> o.material().isEmpty()),"v1 migration failed");
         helper.succeed();
@@ -121,9 +126,10 @@ public final class ContentCompositionGameTests {
         helper.assertTrue(parsed.props().getFirst().pool().getFirst().cells().getFirst().material().equals("minecraft:gold_block"),"NBT palette not loaded");
         block.put("nbt",new CompoundTag()); bytes.reset(); NbtIo.writeCompressed(template,bytes); byte[] unsupported=bytes.toByteArray();
         boolean rejected=false;
-        try { new ContentCatalogParser((id,dir,ext) -> new ByteArrayInputStream(unsupported)).parse(json); }
+        try { com.cybersammy.citiesarise.minecraft.placement.TemplateBlockEntities.validate(Blocks.GOLD_BLOCK.defaultBlockState(),
+                new ContentCatalogParser((id,dir,ext) -> new ByteArrayInputStream(unsupported)).parse(json).modules().get("test:nbt").cells().getFirst().providerData()); }
         catch(IllegalArgumentException expected) { rejected=true; }
-        helper.assertTrue(rejected,"Block entity NBT must be rejected explicitly");
+        helper.assertTrue(rejected,"Block entity data on an ordinary block must be rejected explicitly");
         boolean badState=false;
         try { ContentResources.of(helper.getLevel().getServer().getResourceManager()).validateMaterial("minecraft:not_a_block"); }
         catch(IllegalArgumentException expected) { badState=true; }

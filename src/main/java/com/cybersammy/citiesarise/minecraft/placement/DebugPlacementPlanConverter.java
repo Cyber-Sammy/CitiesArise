@@ -69,7 +69,7 @@ public final class DebugPlacementPlanConverter {
             String material=cell.material().contains(":") ? cell.material() : prop.materials().get(cell.material());
             if(material==null) throw new IllegalArgumentException("Unknown prop material: "+cell.material());
             addOperation(new DebugBlockPlacementOperation(new GridPoint(point.x(),point.z()),point.y(),
-                    DebugPlacementRole.CONTENT_BLOCK,prop.source(),OptionalInt.of(prop.platformY()),material,cell.rotation()),operationsByPosition);
+                    DebugPlacementRole.CONTENT_BLOCK,prop.source(),OptionalInt.of(prop.platformY()),material,cell.rotation(),"",cell.providerData()),operationsByPosition);
         }
 
         Map<PlanElementId, Integer> platformElevations = platformElevations(plan);
@@ -126,7 +126,7 @@ public final class DebugPlacementPlanConverter {
     private static DebugBlockPlacementOperation withMaterial(DebugBlockPlacementOperation op, Map<String,String> materials) {
         String material=op.role()==DebugPlacementRole.BRIDGE_CLEARANCE?"minecraft:air":op.material().isEmpty()?materials.getOrDefault(op.role().name(),""):op.material();
         String fill=op.fillMaterial().isEmpty()?materials.getOrDefault(op.role()==DebugPlacementRole.TERRAIN_SURFACE?"TERRAIN_FILL":"FOUNDATION",""):op.fillMaterial();
-        return new DebugBlockPlacementOperation(op.point(),op.verticalOffset(),op.role(),op.sourceElementId(),op.platformY(),material,op.rotation(),fill);
+        return new DebugBlockPlacementOperation(op.point(),op.verticalOffset(),op.role(),op.sourceElementId(),op.platformY(),material,op.rotation(),fill,op.providerData());
     }
 
     private static DebugPlacementPlan withSurfaceTemplates(DebugPlacementPlan placement,SettlementPlan plan,ResolvedSettlementContent content) {
@@ -152,7 +152,7 @@ public final class DebugPlacementPlanConverter {
             for(var cell:template.cells()) if(cell.position().x()==u && cell.position().z()==v) {
                 int offset=cell.position().y()-template.size().y()+1;
                 var layer=new DebugBlockPlacementOperation(op.point(),op.verticalOffset()+offset,
-                        offset==0 || op.role().bridge()?op.role():DebugPlacementRole.CONTENT_BLOCK,op.sourceElementId(),op.platformY(),cell.material(),turn,op.fillMaterial());
+                        offset==0 || op.role().bridge()?op.role():DebugPlacementRole.CONTENT_BLOCK,op.sourceElementId(),op.platformY(),cell.material(),turn,op.fillMaterial(),cell.providerData());
                 if(offset==0 || op.role().bridge()) result.put(layer.position(),layer); else addOperation(layer,result);
             }
         }
@@ -260,7 +260,7 @@ public final class DebugPlacementPlanConverter {
                 operation.verticalOffset(),
                 operation.role(),
                 operation.sourceElementId(),
-                OptionalInt.of(elevation), operation.material(), operation.rotation(), operation.fillMaterial()
+                OptionalInt.of(elevation), operation.material(), operation.rotation(), operation.fillMaterial(), operation.providerData()
         );
     }
 
@@ -307,7 +307,7 @@ public final class DebugPlacementPlanConverter {
                 operation.verticalOffset(),
                 operation.role(),
                 operation.sourceElementId(),
-                OptionalInt.of(platformY), operation.material(), operation.rotation(), operation.fillMaterial()
+                OptionalInt.of(platformY), operation.material(), operation.rotation(), operation.fillMaterial(), operation.providerData()
         );
     }
 

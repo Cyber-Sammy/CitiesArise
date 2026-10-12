@@ -414,7 +414,7 @@ pack-authored; these terrain checks do not introduce fixed content combinations.
 6. Check actual entrances, floor transitions, furniture clearance and damage variants.
 
 Common failures: an extra ZIP directory, a catalog id pointing to the wrong path,
-missing palette tokens, a mismatched NBT size, unsupported block entities, joint
+missing palette tokens, a mismatched NBT size, mismatched or oversized block-entity payloads, joint
 planes at size-1 instead of size, one-sided acceptance, a required unpaired joint,
 furniture missing global style tags, a reservation without explicit air, or a
 variant that removed required support/access. `CONTENT_COMPOSITION_FAILED` can
@@ -674,3 +674,55 @@ permits lower density on difficult terrain while the desired city capacity remai
 32. With six parcels per district, reaching that minimum requires multiple districts.
 
 District candidate selection validates both earthwork preparation and adapter ground support before accepting a layout. If all bounded layout alternatives fail, the exact support diagnostic is retained for the existing three local exclusion retries; unsupported ground is not treated as generic parcel-space exhaustion. Default steep slopes are terraformed within configured cut/fill and shared volume limits; hidden voids and water under mandatory supports still require another layout.
+
+
+## Block entity templates and JSON cells
+
+Vanilla structure files may include per-block `nbt` compounds, including container
+inventories, loot-table references, sign text and custom names. Alternatively, a
+JSON `cells` entry may specify a `blockEntity` SNBT string:
+
+```json
+{
+  "at": [1, 0, 0],
+  "material": "minecraft:chest[facing=north,type=single,waterlogged=false]",
+  "blockEntity": "{id:'minecraft:chest',Items:[{Slot:0b,id:'minecraft:bread',count:3}]}"
+}
+```
+
+Use Minecraft 1.21.1 block-entity/item component formats. If `id` is supplied, it
+must match the block's actual registered entity type. Payloads on ordinary blocks,
+malformed SNBT and oversized payloads are rejected by the Minecraft reload adapter.
+Payloads belong to individual cells, not to palette materials or semantic city slots.
+The runtime does not invent style, furniture or joint compatibility rules.
+
+The adapter overrides top-level x/y/z with the final world position. Module
+positions and block states rotate; arbitrary coordinates or direction fields inside
+custom NBT are not transformed, following the vanilla structure block-data behavior.
+A loot table without LootTableSeed receives a deterministic seed from the world seed
+and final block position. Explicit LootTableSeed values are preserved. Loot is filled
+by Minecraft when the container is accessed; the mod does not execute a separate loot
+pipeline. Non-block entities from a structure template are still rejected.
+
+Resolved cells carry immutable provider annotations through structural assembly,
+nested furniture, rotations, authored variants and chunk projection. A removed or
+capped cell loses the replaced cell's data. An authored variant supplies its own
+complete cell payloads. The Minecraft adapter owns all NBT parsing and block-entity
+creation; the semantic city map remains independent of blocks, registries and NBT.
+Custom block entities use their registered vanilla loading API; custom mod-specific
+runtime side effects and arbitrary embedded coordinate transforms are not inferred.
+
+Provider annotations are limited to 16 entries and 16,384 total Java characters per
+cell (keys included); Minecraft SNBT nesting is limited to 64 levels. A catalog and a
+snapshot payload dictionary each have a 4,000,000-character payload budget. Existing
+catalog/template byte limits still apply. Snapshot v8 stores a deduplicated payload
+dictionary and reads v1-v7. Reloading a datapack does not redraw saved structure starts.
+Use the new JAR to load v8 starts; older mod versions cannot read v8 snapshots.
+
+Debug undo captures full original block-entity NBT before replacement, including
+same-block replacements, and restores it together with block states. This captured
+world data is separate from bounded imported template data. Undo remains in memory
+for the last placement; entities, ticks, player edits and broader world simulation
+are not transactional. The fixture's nested `test:desk` now includes a chest with
+three bread items. Install the updated fixture ZIP before creating new chunks to
+inspect it; previously generated structures retain their saved content.

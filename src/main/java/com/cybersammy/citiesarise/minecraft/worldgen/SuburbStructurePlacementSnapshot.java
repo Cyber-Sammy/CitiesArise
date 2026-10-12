@@ -15,7 +15,7 @@ import net.minecraft.nbt.CompoundTag;
 public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
     private static final String OPERATIONS_TAG = "Operations";
     private static final String VERSION_TAG = "SnapshotVersion";
-    private static final int CURRENT_VERSION = 7;
+    private static final int CURRENT_VERSION = 8;
     private static final int VALUES_PER_OPERATION = 5;
     private static final int NO_PLATFORM = Integer.MIN_VALUE;
     private static final PlanElementId STRUCTURE_SOURCE_ID = new PlanElementId(
@@ -61,6 +61,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
             }
             restored.add(new Operation(op.point,op.verticalOffset,op.role,op.platformY,materials[materialIndices[i]],rotations[i],fill));
         }
+        if(tag.getInt(VERSION_TAG)>=8) SnapshotProviderDataCodec.load(tag,restored);
         return new SuburbStructurePlacementSnapshot(restored);
     }
 
@@ -99,6 +100,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
         tag.putIntArray("MaterialIndices",materialIndices);
         tag.putIntArray("FillMaterialIndices",fillIndices);
         tag.putIntArray("Rotations",operations.stream().mapToInt(Operation::rotation).toArray());
+        SnapshotProviderDataCodec.save(tag,operations);
     }
 
     static int currentVersion() {
@@ -106,7 +108,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
     }
 
     static void requireSupportedVersion(int version) {
-        if (version == CURRENT_VERSION || version == 6 || version == 5 || version == 4 || version == 3 || version == 2 || version == 1) {
+        if (version == CURRENT_VERSION || version == 7 || version == 6 || version == 5 || version == 4 || version == 3 || version == 2 || version == 1) {
             return;
         }
         throw new IllegalArgumentException("unsupported structure placement snapshot version: " + version);
@@ -182,8 +184,12 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
             OptionalInt platformY,
             String material,
             int rotation,
-            String fillMaterial
+            String fillMaterial,
+            java.util.Map<String,String> providerData
     ) {
+        public Operation(GridPoint point,int verticalOffset,DebugPlacementRole role,OptionalInt platformY,String material,int rotation,String fillMaterial) {
+            this(point,verticalOffset,role,platformY,material,rotation,fillMaterial,java.util.Map.of());
+        }
         public Operation(GridPoint point,int verticalOffset,DebugPlacementRole role,OptionalInt platformY,String material,int rotation) {
             this(point,verticalOffset,role,platformY,material,rotation,"");
         }
@@ -191,6 +197,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
             this(point,verticalOffset,role,platformY,"",0);
         }
         public Operation {
+            providerData=com.cybersammy.citiesarise.core.content.ProviderData.copy(providerData);
             Objects.requireNonNull(material); Objects.requireNonNull(fillMaterial);
             if(fillMaterial.length()>512 || fillMaterial.contains("\n") || fillMaterial.contains("\r")) throw new IllegalArgumentException("Invalid fill material");
             if(material.length()>512 || material.contains("\n") || material.contains("\r") || rotation<0 || rotation>3) throw new IllegalArgumentException("Invalid snapshot material");
@@ -204,7 +211,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
                     operation.point(),
                     operation.verticalOffset(),
                     operation.role(),
-                    operation.platformY(), operation.material(), operation.rotation(), operation.fillMaterial()
+                    operation.platformY(), operation.material(), operation.rotation(), operation.fillMaterial(), operation.providerData()
             );
         }
 
@@ -214,7 +221,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
                     verticalOffset,
                     role,
                     STRUCTURE_SOURCE_ID,
-                    platformY, material, rotation, fillMaterial
+                    platformY, material, rotation, fillMaterial, providerData
             );
         }
     }

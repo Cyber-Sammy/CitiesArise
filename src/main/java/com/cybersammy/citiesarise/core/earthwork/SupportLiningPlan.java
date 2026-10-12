@@ -14,7 +14,7 @@ public record SupportLiningPlan(List<Column> columns) {
         var zones=new HashMap<PlanElementId,ElevationZone>(); elevations.zones().forEach(z -> zones.put(z.sourceElementId(),z));
         var lining=new ArrayList<Column>();
         for (var c:columns) {
-            if (c.type()==TerrainPreparationColumnType.PARCEL_SHOULDER) continue;
+            if (c.type()==TerrainPreparationColumnType.PARCEL_SHOULDER || c.type()==TerrainPreparationColumnType.CUT_SLOPE) continue;
             var zone=zones.get(c.sourceElementId());
             boolean edge=zone!=null && (c.point().x()==zone.bounds().minX() || c.point().x()==zone.bounds().maxXExclusive()-1
                     || c.point().z()==zone.bounds().minZ() || c.point().z()==zone.bounds().maxZExclusive()-1);

@@ -257,6 +257,17 @@ public final class TerrainPreparationPlanValidator {
                 errors.add(error(column.sourceElementId(), "terrain preparation column references missing area"));
                 continue;
             }
+            if (column.type() == TerrainPreparationColumnType.CUT_SLOPE) {
+                var zone=zonesById.get(column.sourceElementId());
+                if(zone==null) { errors.add(error(column.sourceElementId(),"cut slope references missing zone")); continue; }
+                var b=zone.bounds(); var point=column.point();
+                int distance=Math.max(Math.abs(point.x()-Math.clamp(point.x(),b.minX(),b.maxXExclusive()-1)),
+                        Math.abs(point.z()-Math.clamp(point.z(),b.minZ(),b.maxZExclusive()-1)));
+                if(distance<1 || distance>settings.cutSlopeRadius() || column.targetElevation()!=zone.targetElevation()+distance
+                        || column.fillDepth()!=0 || column.cutDepth()<1 || column.cutDepth()>settings.cutSlopeRadius())
+                    errors.add(error(column.sourceElementId(),"cut slope exceeds bounded rising bank policy"));
+                continue;
+            }
             if (column.type() == TerrainPreparationColumnType.BUILDING_SHOULDER) {
                 validateBuildingShoulderColumn(zonesById, column, settings, errors);
                 continue;
@@ -377,7 +388,7 @@ public final class TerrainPreparationPlanValidator {
     private static boolean isTransitionColumn(TerrainPreparationColumn column) {
         return switch (column.type()) {
             case ROAD_TRANSITION_STEP, BUILDING_ACCESS, BUILDING_ACCESS_STEP -> true;
-            case PLATFORM, BUILDING_SHOULDER, PARCEL_SHOULDER, ROAD_SHOULDER, RETAINING_WALL -> false;
+            case CUT_SLOPE, PLATFORM, BUILDING_SHOULDER, PARCEL_SHOULDER, ROAD_SHOULDER, RETAINING_WALL -> false;
         };
     }
 

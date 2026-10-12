@@ -27,6 +27,46 @@ public final class NaturalCityTerrainGameTests {
         verify(helper,new SettlementRegion(2,0),5141148160945067114L);
     }
 
+    @GameTest(template="empty",timeoutTicks=400)
+    public static void reportedZoningCityReliefIsReproducible(GameTestHelper helper) throws Exception {
+        var registry=helper.getLevel().registryAccess();
+        var noise=registry.registryOrThrow(Registries.NOISE_SETTINGS).getHolderOrThrow(NoiseGeneratorSettings.OVERWORLD);
+        var biomes=MultiNoiseBiomeSource.createFromPreset(registry.registryOrThrow(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST)
+                .getHolderOrThrow(MultiNoiseBiomeSourceParameterLists.OVERWORLD));
+        var generator=new NoiseBasedChunkGenerator(biomes,noise);
+        var random=RandomState.create(noise.value(),registry.lookupOrThrow(Registries.NOISE),7189931796180591508L);
+        Path pack=Path.of("../examples/datapacks/zoning_fixture/data");
+        var profile=new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("cities_arise:suburb"),
+                com.google.gson.JsonParser.parseString(Files.readString(pack.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject(),
+                (id,directory,extension)->{var parts=id.split(":",2);return Files.newInputStream(pack.resolve(parts[0]).resolve(directory).resolve(parts[1]+extension));});
+        var bounds=CityPlanningArea.bounds(new SettlementRegion(12,0),profile.surveySize());
+        var provider=new TiledCityTerrainProvider(new MinecraftWorldgenTerrainProvider(generator,random,generator.getMinY(),generator.getGenDepth()));
+        var survey=provider.sample(bounds);
+        var request=new SuburbPlanningRequest(new PlanElementId("cities_arise:debug_suburb_12_0"),survey,
+                -6480652133494123877L,profile.suburbPlanningSettings(),profile.terrainResponsePolicy());
+        var planner=SuburbPlanner.defaults();
+        var result=WorldgenWaterMaskRefiner.refine(planner,provider,request,planner.plan(request));
+        helper.assertTrue(result.successful(),"Reported zoning city rejected: "+result.failureReason());
+        var plan=result.plan().orElseThrow();var prep=result.terrainPreparationPlan().orElseThrow();
+        helper.assertTrue(result.content().selections().values().stream().filter(d -> d.rule().equals("zoning:homes")).count()==4,
+                "Reported all-workshop city must still demonstrate four wooden homes via parcel rules");
+        var banks=prep.columns().stream().filter(c -> c.type()==com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType.CUT_SLOPE).toList();
+        helper.assertTrue(!banks.isEmpty(),"Reported city lost high-side cut blending");
+        helper.assertTrue(banks.stream().anyMatch(c -> c.point().x()>=1470 && c.point().x()<=1479 && c.point().z()>=75 && c.point().z()<=95),
+                "Reported gap between right-hand parcels lost its cut bank");
+        var placement=new com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlanConverter().convert(plan,prep,result.content());
+        var bank=banks.getFirst();
+        helper.assertTrue(placement.operations().stream().anyMatch(o -> o.point().equals(bank.point())
+                && o.role()==com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.TERRAIN_SURFACE
+                && o.platformY().orElseThrow()==bank.targetElevation()),"Cut bank lost its terrain carving operation");
+        var report=com.google.gson.JsonParser.parseString(new com.cybersammy.citiesarise.core.debug.SettlementPlanJsonExporter().export(plan,result.content())).getAsJsonObject();
+        report.add("preparation",new com.google.gson.Gson().toJsonTree(prep));
+        Files.createDirectories(Path.of("../build/diagnostics"));
+        Files.writeString(Path.of("../build/diagnostics/ca48-zoning.json"),new com.google.gson.Gson().toJson(report));
+        System.out.println("CA48 district purposes: "+plan.districts().stream().map(d -> d.id().value()+"="+d.properties().values()).toList());
+        helper.succeed();
+    }
+
     private static void verify(GameTestHelper helper,SettlementRegion region,long planSeed) throws Exception {
         var registry=helper.getLevel().registryAccess();
         var noise=registry.registryOrThrow(Registries.NOISE_SETTINGS).getHolderOrThrow(NoiseGeneratorSettings.OVERWORLD);

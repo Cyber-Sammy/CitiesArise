@@ -158,6 +158,9 @@ final class DistrictCityPlanner {
         // Re-select crossings city-wide: local shortcuts must not spend the budget before district connections.
         var bare = new SettlementPlan(request.settlementId(), new RoadGraph(nodes, segments), parcels, buildings,
                 Set.of(), PlanProperties.empty(), districts);
+        bare = SettlementZoningPlanner.apply(bare,request.seed(),request.settings().districts().zoning());
+        parcels = new ArrayList<>(bare.parcels()); buildings = new ArrayList<>(bare.buildingSlots());
+        districts = new ArrayList<>(bare.districts());
         var preparation = TerrainPreparationPlanner.plan(request, new RegionalElevationPlan(zones, transitions));
         if (preparation.plan().isEmpty()) return Optional.empty();
         var initialPreparation = preparation.plan().orElseThrow();

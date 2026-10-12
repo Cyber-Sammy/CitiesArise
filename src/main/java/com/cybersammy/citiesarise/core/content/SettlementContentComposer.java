@@ -9,8 +9,12 @@ public final class SettlementContentComposer {
     private SettlementContentComposer() { }
     public static ResolvedSettlementContent compose(SettlementPlan plan,TerrainPreparationPlan preparation,long seed,com.cybersammy.citiesarise.core.building.BuildingContentSettings settings) {
         Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingContent> buildings=new LinkedHashMap<>();
+        var context=new com.cybersammy.citiesarise.core.building.BuildingSelectionContext(plan);
+        var decisions=new LinkedHashMap<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection>();
         for(BuildingSlot slot:plan.buildingSlots()) {
-            var selected=com.cybersammy.citiesarise.core.building.BuildingSelector.select(slot,seed,settings);
+            var selection=com.cybersammy.citiesarise.core.building.BuildingSelector.select(slot,seed,settings,context.forSlot(slot));
+            decisions.put(slot.id(),selection.selection());
+            var selected=selection.content();
             if(selected.isEmpty()) continue;
             var content=selected.orElseThrow();
             if(content.composition().isEmpty()) { buildings.put(slot.id(),content); continue; }
@@ -31,7 +35,7 @@ public final class SettlementContentComposer {
                     return plan.roadGraph().bridges().stream().anyMatch(b -> b.bounds().contains(
                             new com.cybersammy.citiesarise.core.geometry.GridPoint(world.x(),world.z())));
                 })).toList();
-        var result=new ResolvedSettlementContent(buildings,settings.surfaces(),props,settings.surfaceTemplates());
+        var result=new ResolvedSettlementContent(buildings,settings.surfaces(),props,settings.surfaceTemplates(),decisions);
         result.validateAgainst(plan);
         return result;
     }

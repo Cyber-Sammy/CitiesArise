@@ -80,6 +80,9 @@ tasks.named('processGameTestResources') {
     from('examples/datapacks/composition_fixture') {
         include 'data/test/**'
     }
+    from('examples/datapacks/zoning_fixture') {
+        include 'data/zoning/**'
+    }
 }
 
 dependencies {

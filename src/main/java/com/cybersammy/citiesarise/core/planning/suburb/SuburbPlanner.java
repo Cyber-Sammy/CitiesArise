@@ -147,6 +147,7 @@ public final class SuburbPlanner {
                 request.settings().preferredMaxFillDepth()
         );
         try {
+            if (!compactDistrict) plan = SettlementZoningPlanner.apply(plan,request.seed(),request.settings().districts().zoning());
             var content=com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
                     plan, preparationPlan, request.seed(), request.settings().buildings());
             return SuburbPlanningResult.success(plan, preparationPlan, siteAssessment).withContent(content);

@@ -49,6 +49,13 @@ public final class SettlementPlanJsonExporter {
         json.beginObject();
         json.objectField("placementMaterials", () -> content.placementMaterials().entrySet().stream()
                 .sorted(Map.Entry.comparingByKey()).forEach(e -> json.stringField(e.getKey(),e.getValue())));
+        json.arrayField("selections", () -> content.selections().entrySet().stream().sorted(Comparator.comparing(e -> e.getKey().value())).forEach(entry -> json.arrayValue(() -> {
+            var decision=entry.getValue(); json.beginObject(); json.stringField("slotId",entry.getKey().value());
+            json.stringField("rule",decision.rule()); json.stringField("asset",decision.asset()); json.stringField("palette",decision.palette());
+            json.stringField("fallback",Boolean.toString(decision.fallback()));
+            json.arrayField("tags", () -> writeTags(json,decision.context().tags()));
+            json.objectField("properties", () -> writeProperties(json,decision.context().properties())); json.endObject();
+        })));
         json.arrayField("buildings", () -> content.buildings().entrySet().stream()
                 .sorted(Comparator.comparing(e -> e.getKey().value())).forEach(entry -> json.arrayValue(() -> {
                     var building=entry.getValue();
@@ -90,6 +97,8 @@ public final class SettlementPlanJsonExporter {
         if (!plan.districts().isEmpty()) json.arrayField("districts", () -> plan.districts().forEach(district -> json.arrayValue(() -> {
             json.beginObject();
             json.stringField("id", district.id().value());
+            json.arrayField("tags", () -> writeTags(json,district.tags()));
+            json.objectField("properties", () -> writeProperties(json,district.properties()));
             json.objectField("bounds", () -> writeBounds(json, district.bounds()));
             json.arrayField("footprint", () -> district.footprint().forEach(part -> json.arrayValue(() -> {
                 json.beginObject(); writeBounds(json, part); json.endObject();

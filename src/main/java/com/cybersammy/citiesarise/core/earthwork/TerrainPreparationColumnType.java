@@ -2,6 +2,7 @@ package com.cybersammy.citiesarise.core.earthwork;
 
 public enum TerrainPreparationColumnType {
     PLATFORM,
+    CUT_SLOPE,
     BUILDING_SHOULDER,
     PARCEL_SHOULDER,
     ROAD_SHOULDER,

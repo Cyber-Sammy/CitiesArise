@@ -13,8 +13,13 @@ public record TerrainTransitionSettings(
         int buildingShoulderMaxFillDepth,
         boolean retainingWalls,
         int retainingWallMinimumHeight,
-        int supportLiningDepth
+        int supportLiningDepth,
+        int cutSlopeRadius
 ) {
+    public TerrainTransitionSettings(int accessRun, int roadRadius, int roadFill, int parcelRadius, int parcelFill,
+            int buildingRadius, int buildingFill, boolean walls, int wallHeight, int liningDepth) {
+        this(accessRun,roadRadius,roadFill,parcelRadius,parcelFill,buildingRadius,buildingFill,walls,wallHeight,liningDepth,0);
+    }
     public TerrainTransitionSettings(int accessRun, int roadRadius, int roadFill, int parcelRadius, int parcelFill,
             int buildingRadius, int buildingFill, boolean walls, int wallHeight) {
         this(accessRun, roadRadius, roadFill, parcelRadius, parcelFill, buildingRadius, buildingFill, walls, wallHeight, 0);
@@ -25,6 +30,7 @@ public record TerrainTransitionSettings(
     public static final int MAX_ACCESS_RUN_PER_RISE = 8;
 
     public TerrainTransitionSettings {
+        requireRange(cutSlopeRadius,0,MAX_SUPPORT_RADIUS,"cutSlopeRadius");
         requireRange(supportLiningDepth, 0, OrdinaryGroundSupport.REQUIRED_SOLID_DEPTH, "supportLiningDepth");
         requireRange(buildingAccessRunPerRise, 1, MAX_ACCESS_RUN_PER_RISE, "buildingAccessRunPerRise");
         requireRange(roadShoulderRadius, 0, MAX_SUPPORT_RADIUS, "roadShoulderRadius");

@@ -37,6 +37,41 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class TerrainPreparationPlannerTest {
+    @Test void cutBanksRiseAwayFromRoadWithoutTouchingReservedColumnsOrWater() {
+        var west=node("cut-west",4,4);var east=node("cut-east",5,4);var road=segment("cut-road",west,east);
+        var zone=new ElevationZone(road.id(),ElevationZoneType.ROAD_SEGMENT,new GridBounds(new GridPoint(4,4),new GridSize(2,1)),64);
+        var water=new GridPoint(4,3);
+        var survey=TerrainSurvey.sample(new GridBounds(new GridPoint(0,0),new GridSize(12,12)),
+                point -> Optional.of(new TerrainCell(point,68,point.equals(water),0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var transitions=new TerrainTransitionSettings(1,0,0,0,0,0,0,false,2,0,3);
+        var request=new SuburbPlanningRequest(id("cut-city"),survey,42,settings(1,3).withTerrainTransitions(transitions));
+        var preparation=TerrainPreparationPlanner.plan(request,new RegionalElevationPlan(List.of(zone),List.of())).plan().orElseThrow();
+        var columns=preparation.columns().stream().collect(java.util.stream.Collectors.toMap(TerrainPreparationColumn::point,c -> c));
+        assertEquals(64,columns.get(new GridPoint(4,4)).targetElevation());
+        assertEquals(65,columns.get(new GridPoint(3,4)).targetElevation());
+        assertEquals(66,columns.get(new GridPoint(2,4)).targetElevation());
+        assertFalse(columns.containsKey(water));
+        assertEquals(TerrainPreparationColumnType.CUT_SLOPE,columns.get(new GridPoint(3,4)).type());
+        var plan=new SettlementPlan(id("cut-city"),new RoadGraph(List.of(west,east),List.of(road)),List.of(),List.of(),Set.of(),PlanProperties.empty());
+        var validator=new TerrainPreparationPlanValidator();assertTrue(validator.validate(plan,preparation).isEmpty(),validator.validate(plan,preparation).toString());
+        var bad=preparation.columns().stream().map(c -> c.type()==TerrainPreparationColumnType.CUT_SLOPE
+                ? new TerrainPreparationColumn(c.point(),c.sourceElementId(),c.targetElevation()+1,c.cutDepth(),0,c.type()):c).toList();
+        assertFalse(validator.validate(plan,TerrainPreparationPlan.of(preparation.elevationPlan(),preparation.areas(),bad,transitions)).isEmpty());
+    }
+
+    @Test void optionalCutBlendingCannotRejectAffordableRequiredWorks() {
+        var road=id("cut-road");var zone=new ElevationZone(road,ElevationZoneType.ROAD_SEGMENT,new GridBounds(new GridPoint(4,4),new GridSize(2,1)),64);
+        var survey=TerrainSurvey.sample(new GridBounds(new GridPoint(0,0),new GridSize(12,12)),
+                point -> Optional.of(new TerrainCell(point,68,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var base=new SuburbPlanningSettings(1,1.0,1,3,3,0,20,1,1,3,3,6L);
+        var disabled=base.withTerrainTransitions(new TerrainTransitionSettings(1,0,0,0,0,0,0,false,2,0));
+        var enabled=base.withTerrainTransitions(new TerrainTransitionSettings(1,0,0,0,0,0,0,false,2,0,3));
+        var elevations=new RegionalElevationPlan(List.of(zone),List.of());
+        var original=TerrainPreparationPlanner.plan(new SuburbPlanningRequest(id("city"),survey,42,disabled),elevations).plan().orElseThrow();
+        var treated=TerrainPreparationPlanner.plan(new SuburbPlanningRequest(id("city"),survey,42,enabled),elevations).plan().orElseThrow();
+        assertEquals(6,treated.totalVolume());assertEquals(original.columns(),treated.columns());
+    }
+
     @Test
     void supportLiningCannotBypassConstructionBudgetOnFlatGround() {
         var base = new SuburbPlanningSettings(1, 1.0, 1, 3, 3, 0, 20, 1, 1, 3, 3, 0L);

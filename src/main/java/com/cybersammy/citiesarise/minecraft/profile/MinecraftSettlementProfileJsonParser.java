@@ -99,12 +99,37 @@ public final class MinecraftSettlementProfileJsonParser {
             }
             palettes.add(value.getAsString());
         }
+        var rules=new java.util.ArrayList<com.cybersammy.citiesarise.core.building.BuildingContentRule>();
+        for(var element:ZoningJsonParser.array(content,"rules",64)) {
+            var rule=ZoningJsonParser.object(element);
+            var rulePool=new java.util.ArrayList<BuildingContentSettings.Entry>();
+            for(var entryElement:ZoningJsonParser.array(rule,"pool",16)) {
+                var entry=ZoningJsonParser.object(entryElement);
+                rulePool.add(new BuildingContentSettings.Entry(requiredAsset(catalog,contentString(entry,"asset")),requiredInt(entry,"weight")));
+            }
+            var rulePalettes=new java.util.ArrayList<String>();
+            for(var palette:ZoningJsonParser.array(rule,"palettes",64)) {
+                if(!palette.isJsonPrimitive() || !palette.getAsJsonPrimitive().isString()) throw new IllegalArgumentException("Rule palettes must be strings");
+                rulePalettes.add(palette.getAsString());
+            }
+            rules.add(new com.cybersammy.citiesarise.core.building.BuildingContentRule(contentString(rule,"id"),
+                    rule.has("match")?ZoningJsonParser.metadata(ZoningJsonParser.object(rule.get("match"))):com.cybersammy.citiesarise.core.model.MetadataSelector.ANY,
+                    rulePool,rulePalettes,requiredAsset(catalog,contentString(rule,"fallback"))));
+        }
         var settings=new BuildingContentSettings(pool, palettes,
-                requiredAsset(catalog, contentString(content, "fallback")), catalog.palettes(), catalog.compositions(), catalog.surfaces(), catalog.props(), catalog.surfaceTemplates());
+                requiredAsset(catalog, contentString(content, "fallback")), catalog.palettes(), catalog.compositions(), catalog.surfaces(), catalog.props(), catalog.surfaceTemplates(),rules);
+        validateBinding(pool,palettes,settings.fallback(),catalog);
+        for(var rule:rules) validateBinding(rule.pool(),rule.palettes(),rule.fallback(),catalog);
+        return settings;
+    }
+
+    private static void validateBinding(java.util.List<BuildingContentSettings.Entry> pool,java.util.List<String> palettes,
+            BuildingAsset fallback,ContentCatalogParser.Catalog catalog) {
         var assets=new java.util.ArrayList<BuildingAsset>(pool.stream().map(BuildingContentSettings.Entry::asset).toList());
-        assets.add(settings.fallback());
+        assets.add(fallback);
         for(var asset:assets) for(String paletteId:palettes) {
             var palette=catalog.palettes().get(paletteId);
+            if(palette==null) throw new IllegalArgumentException("Unknown palette: "+paletteId);
             if(asset.provider().equals("modules")) {
                 var recipe=catalog.compositions().get(asset.parameters().get("composition"));
                 var moduleIds=new java.util.HashSet<>(recipe.roots()); moduleIds.addAll(recipe.attachments());
@@ -114,14 +139,13 @@ public final class MinecraftSettlementProfileJsonParser {
                     "floor","wall","roof","window","workbench","bookshelf","light","door","damaged_roof")))
                 throw new IllegalArgumentException("Incomplete procedural_house palette: "+paletteId);
         }
-        return settings;
     }
 
     private static com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings parseDistricts(JsonObject planning) {
         if (!planning.has("districts")) return com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings.single();
         var value = requiredObject(planning, "districts");
         return new com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings(
-                optionalInt(value, "maxCount", 4), optionalInt(value, "targetParcels", 4), optionalInt(value, "maxConnectionAttempts", 8));
+                optionalInt(value, "maxCount", 4), optionalInt(value, "targetParcels", 4), optionalInt(value, "maxConnectionAttempts", 8), ZoningJsonParser.parse(value));
     }
 
     private static BuildingAsset requiredAsset(ContentCatalogParser.Catalog catalog, String id) {
@@ -238,7 +262,8 @@ public final class MinecraftSettlementProfileJsonParser {
                         "retainingWallMinimumHeight",
                         defaults.retainingWallMinimumHeight()
                 ),
-                optionalInt(transitions, "supportLiningDepth", defaults.supportLiningDepth())
+                optionalInt(transitions, "supportLiningDepth", defaults.supportLiningDepth()),
+                optionalInt(transitions,"cutSlopeRadius",defaults.cutSlopeRadius())
         );
     }
 

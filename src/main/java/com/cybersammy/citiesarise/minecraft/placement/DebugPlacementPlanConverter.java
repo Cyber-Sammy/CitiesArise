@@ -231,7 +231,7 @@ public final class DebugPlacementPlanConverter {
     private static DebugPlacementRole preparationRole(TerrainPreparationColumnType type) {
         return switch (type) {
             case PLATFORM -> null;
-            case BUILDING_SHOULDER, PARCEL_SHOULDER, ROAD_SHOULDER -> DebugPlacementRole.TERRAIN_SURFACE;
+            case CUT_SLOPE, BUILDING_SHOULDER, PARCEL_SHOULDER, ROAD_SHOULDER -> DebugPlacementRole.TERRAIN_SURFACE;
             case RETAINING_WALL -> DebugPlacementRole.TERRAIN_RETAINING_WALL;
             case ROAD_TRANSITION_STEP -> DebugPlacementRole.ROAD_TRANSITION_STEP;
             case BUILDING_ACCESS -> DebugPlacementRole.BUILDING_ACCESS_SURFACE;

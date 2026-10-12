@@ -157,7 +157,7 @@ final class DistrictCityPlanner {
         }
         // Re-select crossings city-wide: local shortcuts must not spend the budget before district connections.
         var bare = new SettlementPlan(request.settlementId(), new RoadGraph(nodes, segments), parcels, buildings,
-                Set.of(), PlanProperties.empty(), Map.of(), List.of(), request.settings().buildings().surfaceTemplates(), districts);
+                Set.of(), PlanProperties.empty(), districts);
         var preparation = TerrainPreparationPlanner.plan(request, new RegionalElevationPlan(zones, transitions));
         if (preparation.plan().isEmpty()) return Optional.empty();
         var initialPreparation = preparation.plan().orElseThrow();
@@ -199,7 +199,7 @@ final class DistrictCityPlanner {
                 var candidatePreparation = TerrainPreparationPlanner.plan(request, new RegionalElevationPlan(proposedZones, proposedTransitions));
                 if (candidatePreparation.plan().isEmpty()) continue;
                 var proposedPlan = new SettlementPlan(bare.id(), proposedGraph, parcels, buildings, bare.tags(), bare.properties(),
-                        bare.placementMaterials(), bare.props(), bare.surfaceTemplates(), districts);
+                        districts);
                 if (!new TerrainPreparationPlanValidator().validate(proposedPlan, candidatePreparation.plan().orElseThrow()).isEmpty()) continue;
                 // Retained district entrances and authored modules must still fit the combined plan.
                 try {
@@ -228,23 +228,15 @@ final class DistrictCityPlanner {
         }
         var prep = preparation.plan().orElseThrow();
         if (!new PlanValidator().validate(bridged).isEmpty() || !new TerrainPreparationPlanValidator().validate(bridged, prep).isEmpty()) return Optional.empty();
-        SettlementPlan composed;
+        com.cybersammy.citiesarise.core.content.ResolvedSettlementContent content;
         try {
-            composed = com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(bridged, prep,
+            content = com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(bridged, prep,
                     request.seed(), request.settings().buildings());
         } catch (IllegalArgumentException incompatibleContent) {
             return Optional.empty();
         }
-        // Composition must not introduce props into the bridge reservation.
-        final var bridgeReservations = composed.roadGraph().bridges();
-        var props = composed.props().stream().filter(prop -> prop.composition().cells().stream().noneMatch(cell -> {
-            var world = prop.origin().add(cell.position());
-            return bridgeReservations.stream().anyMatch(b -> b.bounds().contains(new GridPoint(world.x(), world.z())));
-        })).toList();
-        composed = new SettlementPlan(composed.id(), composed.roadGraph(), composed.parcels(), composed.buildingSlots(), composed.tags(),
-                composed.properties(), composed.placementMaterials(), props, composed.surfaceTemplates(), districts);
-        var result = acceptance.validate(request, SuburbPlanningResult.success(composed, prep, EarthworkSiteAssessment.evaluate(prep,
-                request.settings().preferredMaxCutDepth(), request.settings().preferredMaxFillDepth())));
+        var result = acceptance.validate(request, SuburbPlanningResult.success(bridged, prep, EarthworkSiteAssessment.evaluate(prep,
+                request.settings().preferredMaxCutDepth(), request.settings().preferredMaxFillDepth())).withContent(content));
         return result.successful() ? Optional.of(result) : Optional.empty();
     }
 

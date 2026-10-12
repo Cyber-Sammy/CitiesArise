@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Objects;
 
 public final class SuburbDebugPlanJsonExporter {
-    private static final int SCHEMA_VERSION = 1;
+    private static final int SCHEMA_VERSION = 2;
     private static final String LINE_SEPARATOR = System.lineSeparator();
 
     private final SettlementPlanJsonExporter planJsonExporter;
@@ -104,6 +104,9 @@ public final class SuburbDebugPlanJsonExporter {
         output.append(',').append(LINE_SEPARATOR);
         appendFieldPrefix(output, "plan", "  ");
         appendRawWithContinuationIndent(output, planJsonExporter.exportPlan(result.plan()), "  ");
+        output.append(',').append(LINE_SEPARATOR);
+        appendFieldPrefix(output,"content","  ");
+        appendRawWithContinuationIndent(output,planJsonExporter.exportContent(result.content()),"  ");
     }
 
     private static void appendNumberField(StringBuilder output, String name, long value, boolean first) {

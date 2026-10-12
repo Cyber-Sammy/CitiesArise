@@ -6,5 +6,5 @@ import java.util.List;
 
 /** Produces bounded operations for an already selected asset and its prepared entrance. */
 public interface BuildingPlacementProvider {
-    List<DebugBlockPlacementOperation> create(BuildingSlot slot, GridPoint entrance);
+    List<DebugBlockPlacementOperation> create(BuildingSlot slot, com.cybersammy.citiesarise.core.building.BuildingContent content, GridPoint entrance);
 }

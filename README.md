@@ -659,3 +659,19 @@ District candidate selection validates both earthwork preparation and adapter gr
 ### Terrain sampling performance
 
 For the standard vanilla noise generator, city surveys share interpolation across aligned 16x16 grids and cache primitive height, water and full-depth solid-ground answers (up to 256 grids per provider). Exact terrain and four-layer ground-support checks remain enabled. Custom generator subclasses and unsupported height ranges use the original sampling API. This reduces repeated noise calculation while teleportation and world shutdown wait for required chunk generation.
+
+### Semantic city map and resolved content
+
+`SettlementPlan` contains district, road, bridge, parcel and building-slot metadata, including stable element IDs and planned elevations. It does not contain selected assets, block palettes, assembled building voxels, props or surface templates. `TerrainPreparationPlan` describes the required terrain work separately.
+
+`SettlementContentComposer.compose(plan, preparation, seed, buildingSettings)` produces an immutable `ResolvedSettlementContent`: selected and assembled buildings keyed by slot ID, placement materials, props and surface templates. Existing datapack catalogs and procedural providers use this separate result. Compatible content can be assembled again for the same map without rerouting streets or reallocating parcels; content must fit the slot, prepared entrance and reserved infrastructure envelope. A pack that changes planning dimensions or terrain policy can still change the map.
+
+Java placement providers now receive the semantic `BuildingSlot`, its selected `BuildingContent` and its prepared entrance as separate arguments. Use `DebugPlacementPlanConverter.convert(plan, preparation, content)` for resolved placement. Overloads without content intentionally use legacy placeholder geometry. Planning results and debug results carry the semantic plan and content separately, so callers should pass both to placement.
+
+Debug JSON schema version 2 exports `plan` and `content` as separate sibling fields. Asset/provider/material/module/prop diagnostics are under `content`; semantic geometry stays under `plan`. Seed-search element filters consume both fields of the planning result, preserving searches for props and modular buildings.
+
+The datapack JSON schema has not changed. Existing saved structure snapshots (versions 1 through 7) still store resolved placement operations and remain readable; existing buildings are not redrawn when a datapack reloads. New generation resolves content from the current profile.
+
+### Protection from late lake generation
+
+Vanilla water/lava lake features run after structure placement and can otherwise carve through a prepared yard. Cities Arise rejects a complete lake feature before any block writes when its bounded 16x8x16 write envelope (plus a one-block horizontal buffer) intersects saved settlement placement columns or their four-block support. This uses structure references and chunk-local placement slices, including neighboring chunks and loaded legacy pieces. Unrelated terrain, gaps between districts and lakes sufficiently below buildings remain eligible. It does not remove existing lakes, change player-placed fluids or suppress all worldgen features; custom features that bypass vanilla LakeFeature are outside this hook. Already damaged chunks need new generation to see the prevention.

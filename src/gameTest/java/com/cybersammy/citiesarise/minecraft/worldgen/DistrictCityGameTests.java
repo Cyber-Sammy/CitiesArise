@@ -35,7 +35,7 @@ public final class DistrictCityGameTests {
         helper.assertTrue(result.successful(),"Expanded city rejected: "+result.failureReason());
         var plan=result.plan().orElseThrow();
         helper.assertTrue(plan.districts().size()==6 && plan.parcels().size()>=28,"Expanded city lost districts");
-        var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow());
+        var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow(),result.content());
         var snapshot=SuburbStructurePlacementSnapshot.from(placement);
         var tag=new CompoundTag();snapshot.save(tag);
         var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
@@ -71,7 +71,7 @@ public final class DistrictCityGameTests {
         var level=helper.getLevel();
         for(int x=0;x<120;x++) for(int z=0;z<48;z++) for(int y=-4;y<=x/20;y++)
             level.setBlock(origin.offset(x,y,z),Blocks.STONE.defaultBlockState(),2);
-        var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow());
+        var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow(),result.content());
         var snapshot=SuburbStructurePlacementSnapshot.from(placement);
         var tag=new CompoundTag(); snapshot.save(tag);
         var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
@@ -122,7 +122,7 @@ public final class DistrictCityGameTests {
                     : wet && y==-3 ? Blocks.WATER.defaultBlockState() : Blocks.AIR.defaultBlockState();
             level.setBlock(origin.offset(x,y,z),state,2);
         }
-        var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow());
+        var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow(),result.content());
         var snapshot=SuburbStructurePlacementSnapshot.from(placement);
         var tag=new CompoundTag(); snapshot.save(tag);
         var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();

@@ -27,7 +27,7 @@ final class SuburbDebugPlanJsonExporterTest {
     void exportsDebugMetadataAndPlan() {
         String json = exporter.export(successfulResult());
 
-        assertTrue(json.contains("\"schemaVersion\": 1"));
+        assertTrue(json.contains("\"schemaVersion\": 2"));
         assertTrue(json.contains("\"region\": { \"x\": 2, \"z\": -3 }"));
         assertTrue(json.contains("\"surveyBounds\": { \"x\": 100, \"z\": 200, \"width\": 120, \"depth\": 72 }"));
         assertTrue(json.contains("\"seed\": 42"));

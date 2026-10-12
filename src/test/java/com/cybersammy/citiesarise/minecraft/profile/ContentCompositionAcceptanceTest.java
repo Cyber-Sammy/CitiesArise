@@ -35,19 +35,50 @@ class ContentCompositionAcceptanceTest {
             assertTrue(result.successful(),result.toString());
             assertEquals(result,SuburbPlanner.defaults().plan(request));
             var plan=result.plan().orElseThrow();
-            assertFalse(plan.props().isEmpty());
-            assertTrue(plan.props().stream().anyMatch(p -> p.ruleId().equals("test:road_lamp")));
+            if(seed==42L) {
+                var original=profile.suburbPlanningSettings().buildings();
+                var palettes=new LinkedHashMap<String,Map<String,String>>();
+                original.paletteDefinitions().forEach((id,materials) -> {
+                    var replacement=new LinkedHashMap<>(materials);
+                    replacement.put("wall","minecraft:gold_block"); palettes.put(id,replacement);
+                });
+                var replacement=new com.cybersammy.citiesarise.core.building.BuildingContentSettings(
+                        original.pool(),original.palettes(),original.fallback(),palettes,original.compositions(),
+                        original.surfaces(),original.props(),original.surfaceTemplates());
+                var rebound=SettlementContentComposer.compose(plan,result.terrainPreparationPlan().orElseThrow(),seed,replacement);
+                var replanned=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(request.settlementId(),survey,seed,
+                        request.settings().withBuildings(replacement),request.terrainResponsePolicy()));
+                assertTrue(replanned.successful(),replanned.toString());
+                assertEquals(result.plan(),replanned.plan());
+                assertEquals(result.terrainPreparationPlan(),replanned.terrainPreparationPlan());
+                assertEquals(rebound,replanned.content());
+                assertNotEquals(result.content(),rebound);
+                var changed=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow(),rebound);
+                assertTrue(changed.operations().stream().anyMatch(o -> o.material().equals("minecraft:gold_block")));
+                var exported=JsonParser.parseString(new com.cybersammy.citiesarise.core.debug.SettlementPlanJsonExporter()
+                        .export(plan,rebound)).getAsJsonObject();
+                assertFalse(exported.getAsJsonObject("plan").has("props"));
+                assertFalse(exported.getAsJsonObject("plan").getAsJsonArray("buildingSlots").get(0).getAsJsonObject().has("modules"));
+                assertEquals(plan.buildingSlots().size(),exported.getAsJsonObject("content").getAsJsonArray("buildings").size());
+                var counts=com.cybersammy.citiesarise.core.debug.PlanElementFilter.counts(plan,
+                        result.terrainPreparationPlan().orElseThrow(),rebound);
+                assertEquals(plan.buildingSlots().size(),counts.get("modular_building"));
+                assertEquals(rebound.props().size(),counts.get("props"));
+            }
+
+            assertFalse(result.content().props().isEmpty());
+            assertTrue(result.content().props().stream().anyMatch(p -> p.ruleId().equals("test:road_lamp")));
             var accessPoints=result.terrainPreparationPlan().orElseThrow().columns().stream().filter(c ->
                     c.type()==com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType.BUILDING_ACCESS
                     || c.type()==com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType.BUILDING_ACCESS_STEP)
                     .map(com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn::point).collect(java.util.stream.Collectors.toSet());
-            for(var prop:plan.props()) for(var cell:prop.composition().cells()) {
+            for(var prop:result.content().props()) for(var cell:prop.composition().cells()) {
                 var point=new GridPoint(prop.origin().x()+cell.position().x(),prop.origin().z()+cell.position().z());
                 assertFalse(accessPoints.contains(point));
                 assertTrue(plan.buildingSlots().stream().noneMatch(s -> s.bounds().contains(point)));
             }
-            assertTrue(plan.buildingSlots().stream().allMatch(s -> s.content().orElseThrow().resolved().orElseThrow().modules().size()==4));
-            var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow());
+            assertTrue(plan.buildingSlots().stream().allMatch(s -> result.content().buildings().get(s.id()).resolved().orElseThrow().modules().size()==4));
+            var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow(),result.content());
             assertTrue(placement.operations().stream().anyMatch(o -> o.role()==DebugPlacementRole.ROAD_SURFACE && o.material().equals("minecraft:deepslate_tiles")));
             assertTrue(placement.operations().stream().anyMatch(o -> o.role()==DebugPlacementRole.ROAD_SURFACE && o.material().equals("minecraft:polished_deepslate")));
             assertTrue(placement.operations().stream().anyMatch(o -> o.verticalOffset()==-1 && o.material().equals("minecraft:stone_bricks")));
@@ -58,10 +89,10 @@ class ContentCompositionAcceptanceTest {
                 assertTrue(placement.operations().stream().anyMatch(o -> o.point().equals(transition.anchor()) && o.verticalOffset()==1 && o.material().equals("minecraft:air")));
             }
             assertEquals(placement.operations().size(),placement.operations().stream().map(DebugBlockPlacementOperation::position).distinct().count());
-            var roadProp=plan.props().stream().filter(p -> p.ruleId().equals("test:road_lamp")).findFirst().orElseThrow();
+            var roadProp=result.content().props().stream().filter(p -> p.ruleId().equals("test:road_lamp")).findFirst().orElseThrow();
             var raised=new ResolvedProp(roadProp.ruleId(),roadProp.source(),roadProp.origin(),roadProp.platformY()+3,roadProp.composition(),roadProp.materials());
-            var explicitHeightPlan=new SettlementPlan(plan.id(),plan.roadGraph(),plan.parcels(),plan.buildingSlots(),plan.tags(),plan.properties(),plan.placementMaterials(),List.of(raised));
-            assertTrue(new DebugPlacementPlanConverter().convert(explicitHeightPlan).operations().stream()
+            var explicitContent=new ResolvedSettlementContent(result.content().buildings(),result.content().placementMaterials(),List.of(raised),result.content().surfaceTemplates());
+            assertTrue(new DebugPlacementPlanConverter().convert(plan,explicitContent).operations().stream()
                     .filter(o -> o.material().equals("minecraft:sea_lantern")).allMatch(o -> o.platformY().orElseThrow()==raised.platformY()),
                     "An explicit prop elevation must not be overwritten by its source road's platform");
         }

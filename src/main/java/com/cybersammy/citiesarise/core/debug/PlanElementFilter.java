@@ -18,11 +18,16 @@ public record PlanElementFilter(Set<String> required) {
         return required.stream().allMatch(element -> counts.getOrDefault(element,0)>0);
     }
     public static Map<String,Integer> counts(SettlementPlan plan, TerrainPreparationPlan preparation) {
+        return counts(plan,preparation,com.cybersammy.citiesarise.core.content.ResolvedSettlementContent.EMPTY);
+    }
+    public static Map<String,Integer> counts(SettlementPlan plan, TerrainPreparationPlan preparation,
+            com.cybersammy.citiesarise.core.content.ResolvedSettlementContent content) {
+        content.validateAgainst(plan);
         var counts = new TreeMap<String,Integer>();
         counts.put("settlement",1);
         counts.put("bridge",plan.roadGraph().bridges().size());
-        counts.put("props",plan.props().size());
-        counts.put("modular_building",(int)plan.buildingSlots().stream().filter(b -> b.content().flatMap(c -> c.resolved()).isPresent()).count());
+        counts.put("props",content.props().size());
+        counts.put("modular_building",(int)content.buildings().values().stream().filter(c -> c.resolved().isPresent()).count());
         counts.put("earthworks",preparation.requiresEarthworks()?1:0);
         for (var entry : Map.of("road_step",TerrainPreparationColumnType.ROAD_TRANSITION_STEP,
                 "access_step",TerrainPreparationColumnType.BUILDING_ACCESS_STEP,

@@ -24,19 +24,19 @@ class BuildingSelectorTest {
         Set<String> assets = new HashSet<>();
         Set<String> palettes = new HashSet<>();
         for (long seed = 0; seed < 200; seed++) {
-            BuildingSlot selected = BuildingSelector.select(slot(10), seed, content());
+            var selected = BuildingSelector.select(slot(10), seed, content());
             assertEquals(selected, BuildingSelector.select(slot(10), seed, content()));
-            assertEquals(slot(10).bounds(), selected.bounds());
-            assets.add(selected.properties().find(PlanPropertyKeys.BUILDING_ASSET).orElseThrow());
-            palettes.add(selected.properties().find(PlanPropertyKeys.BUILDING_PALETTE).orElseThrow());
+            assertTrue(selected.orElseThrow().asset().fits(slot(10).bounds().size()));
+            assets.add(selected.orElseThrow().asset().id());
+            palettes.add(selected.orElseThrow().materials().equals(content().paletteDefinitions().get("oak")) ? "oak" : "stone");
         }
         assertEquals(Set.of("cities_arise:cottage", "cities_arise:bungalow", "cities_arise:studio"), assets);
         assertEquals(Set.of("oak", "stone"), palettes);
     }
 
     @Test void incompatibleAssetsUseDeclaredFallbackWithoutClipping() {
-        assertEquals(slot(3), BuildingSelector.select(slot(3), 5, content()));
-        assertEquals(slot(40), BuildingSelector.select(slot(40), 5, content()));
+        assertTrue(BuildingSelector.select(slot(3), 5, content()).isEmpty());
+        assertTrue(BuildingSelector.select(slot(40), 5, content()).isEmpty());
     }
 
     @Test void rejectsInvalidPoolsAndIncompatibleFallback() {
@@ -52,6 +52,6 @@ class BuildingSelectorTest {
         var configured = original.withBuildings(content());
         assertNotEquals(original, configured);
         assertEquals(content(), configured.withTerrainTransitions(original.terrainTransitions()).buildings());
-        assertEquals(slot(10), BuildingSelector.select(slot(10), 2, BuildingContentSettings.legacy()));
+        assertTrue(BuildingSelector.select(slot(10), 2, BuildingContentSettings.legacy()).isEmpty());
     }
 }

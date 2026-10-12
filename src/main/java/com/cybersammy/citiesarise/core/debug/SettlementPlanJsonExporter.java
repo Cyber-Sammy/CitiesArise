@@ -17,18 +17,21 @@ import java.util.Objects;
 import java.util.Set;
 
 public final class SettlementPlanJsonExporter {
-    private static final int SCHEMA_VERSION = 1;
+    private static final int SCHEMA_VERSION = 2;
     private static final Comparator<PlanTag> TAG_ORDER = Comparator.comparing(PlanTag::value);
     private static final Comparator<Map.Entry<PlanPropertyKey, String>> PROPERTY_ORDER =
             Comparator.comparing(entry -> entry.getKey().value());
 
-    public String export(SettlementPlan plan) {
+    public String export(SettlementPlan plan) { return export(plan,com.cybersammy.citiesarise.core.content.ResolvedSettlementContent.EMPTY); }
+    public String export(SettlementPlan plan,com.cybersammy.citiesarise.core.content.ResolvedSettlementContent content) {
+        content.validateAgainst(plan);
         Objects.requireNonNull(plan, "plan");
 
         JsonBuilder json = new JsonBuilder();
         json.beginObject();
         json.numberField("schemaVersion", SCHEMA_VERSION);
         json.rawField("plan", exportPlan(plan));
+        json.rawField("content", exportContent(content));
         json.endObject();
         return json.toString();
     }
@@ -39,6 +42,41 @@ public final class SettlementPlanJsonExporter {
         JsonBuilder json = new JsonBuilder();
         writePlan(json, plan);
         return json.toString();
+    }
+
+    public String exportContent(com.cybersammy.citiesarise.core.content.ResolvedSettlementContent content) {
+        JsonBuilder json=new JsonBuilder();
+        json.beginObject();
+        json.objectField("placementMaterials", () -> content.placementMaterials().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey()).forEach(e -> json.stringField(e.getKey(),e.getValue())));
+        json.arrayField("buildings", () -> content.buildings().entrySet().stream()
+                .sorted(Comparator.comparing(e -> e.getKey().value())).forEach(entry -> json.arrayValue(() -> {
+                    var building=entry.getValue();
+                    json.beginObject(); json.stringField("slotId",entry.getKey().value());
+                    json.stringField("asset",building.asset().id()); json.stringField("provider",building.asset().provider());
+                    json.objectField("materials", () -> building.materials().entrySet().stream().sorted(Map.Entry.comparingByKey())
+                            .forEach(e -> json.stringField(e.getKey(),e.getValue())));
+                    building.resolved().ifPresent(composition -> {
+            json.arrayField("modules", () -> composition.modules().forEach(module -> json.arrayValue(() -> {
+                json.beginObject(); json.stringField("id",module.id()); json.stringField("variant",module.variant());
+                json.numberField("x",module.origin().x()); json.numberField("y",module.origin().y()); json.numberField("z",module.origin().z());
+                json.numberField("rotation",module.rotation()); json.endObject();
+            })));
+            json.stringField("connections",String.join("; ",composition.connections()));
+            json.stringField("caps",String.join("; ",composition.cappedJoints()));
+            json.stringField("damage",String.join("; ",composition.damageDecisions()));
+        });
+                    json.endObject();
+                })));
+        if(!content.props().isEmpty()) json.arrayField("props", () -> content.props().forEach(prop -> json.arrayValue(() -> {
+            json.beginObject(); json.stringField("rule",prop.ruleId()); json.stringField("source",prop.source().value());
+            json.numberField("x",prop.origin().x()); json.numberField("y",prop.platformY()+prop.origin().y()); json.numberField("z",prop.origin().z());
+            json.stringField("modules",String.join(",",prop.composition().modules().stream().map(m -> m.id()+"/"+m.variant()).toList()));
+            json.stringField("caps",String.join("; ",prop.composition().cappedJoints()));
+            json.stringField("damage",String.join("; ",prop.composition().damageDecisions())); json.endObject();
+        })));
+        json.arrayField("surfaceTemplates", () -> content.surfaceTemplates().keySet().stream().sorted().forEach(json::arrayStringValue));
+        json.endObject(); return json.toString();
     }
 
     private static void writePlan(JsonBuilder json, SettlementPlan plan) {
@@ -58,13 +96,6 @@ public final class SettlementPlanJsonExporter {
             })));
             json.arrayField("parcels", () -> district.parcels().forEach(id -> json.arrayStringValue(id.value())));
             json.endObject();
-        })));
-        if(!plan.props().isEmpty()) json.arrayField("props", () -> plan.props().forEach(prop -> json.arrayValue(() -> {
-            json.beginObject(); json.stringField("rule",prop.ruleId()); json.stringField("source",prop.source().value());
-            json.numberField("x",prop.origin().x()); json.numberField("y",prop.platformY()+prop.origin().y()); json.numberField("z",prop.origin().z());
-            json.stringField("modules",String.join(",",prop.composition().modules().stream().map(m -> m.id()+"/"+m.variant()).toList()));
-            json.stringField("caps",String.join("; ",prop.composition().cappedJoints()));
-            json.stringField("damage",String.join("; ",prop.composition().damageDecisions())); json.endObject();
         })));
         json.endObject();
     }
@@ -160,16 +191,6 @@ public final class SettlementPlanJsonExporter {
         json.objectField("bounds", () -> writeBounds(json, buildingSlot.bounds()));
         json.arrayField("tags", () -> writeTags(json, buildingSlot.tags()));
         json.objectField("properties", () -> writeProperties(json, buildingSlot.properties()));
-        buildingSlot.content().flatMap(com.cybersammy.citiesarise.core.building.BuildingContent::resolved).ifPresent(composition -> {
-            json.arrayField("modules", () -> composition.modules().forEach(module -> json.arrayValue(() -> {
-                json.beginObject(); json.stringField("id",module.id()); json.stringField("variant",module.variant());
-                json.numberField("x",module.origin().x()); json.numberField("y",module.origin().y()); json.numberField("z",module.origin().z());
-                json.numberField("rotation",module.rotation()); json.endObject();
-            })));
-            json.stringField("connections",String.join("; ",composition.connections()));
-            json.stringField("caps",String.join("; ",composition.cappedJoints()));
-            json.stringField("damage",String.join("; ",composition.damageDecisions()));
-        });
         json.endObject();
     }
 

@@ -90,8 +90,8 @@ final class SuburbStructureGeneration {
         }
 
         DebugPlacementPlan placementPlan = result.optionalTerrainPreparationPlan()
-                .map(preparationPlan -> planConverter.convert(result.plan(), preparationPlan))
-                .orElseGet(() -> planConverter.convert(result.plan()));
+                .map(preparationPlan -> planConverter.convert(result.plan(), preparationPlan,result.content()))
+                .orElseGet(() -> planConverter.convert(result.plan(),result.content()));
         SuburbStructurePlacementSnapshot snapshot = SuburbStructurePlacementSnapshot.from(placementPlan);
         if (placementPlan.operations().stream().anyMatch(op -> op.platformY().isPresent()
                 && (op.platformY().getAsInt() + op.verticalOffset() < context.heightAccessor().getMinBuildHeight()

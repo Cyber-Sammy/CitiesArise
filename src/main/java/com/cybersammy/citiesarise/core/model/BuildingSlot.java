@@ -9,14 +9,9 @@ public record BuildingSlot(
         PlanElementId parcelId,
         GridBounds bounds,
         Set<PlanTag> tags,
-        PlanProperties properties,
-        java.util.Optional<com.cybersammy.citiesarise.core.building.BuildingContent> content
+        PlanProperties properties
 ) implements PlanElement {
-    public BuildingSlot(PlanElementId id, PlanElementId parcelId, GridBounds bounds, Set<PlanTag> tags, PlanProperties properties) {
-        this(id,parcelId,bounds,tags,properties,java.util.Optional.empty());
-    }
     public BuildingSlot {
-        Objects.requireNonNull(content,"content");
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(parcelId, "parcelId");
         Objects.requireNonNull(bounds, "bounds");

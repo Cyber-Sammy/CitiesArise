@@ -14,7 +14,8 @@ public record SuburbPlanningResult(
         List<PlanValidationError> validationErrors,
         Optional<SuburbTerrainDiagnostic> terrainDiagnostic,
         Optional<TerrainPreparationPlan> terrainPreparationPlan,
-        Optional<EarthworkSiteAssessment> siteAssessment
+        Optional<EarthworkSiteAssessment> siteAssessment,
+        com.cybersammy.citiesarise.core.content.ResolvedSettlementContent content
 ) {
     public SuburbPlanningResult(
             Optional<SettlementPlan> plan,
@@ -35,7 +36,21 @@ public record SuburbPlanningResult(
         this(plan, failureReason, validationErrors, terrainDiagnostic, terrainPreparationPlan, Optional.empty());
     }
 
+    public SuburbPlanningResult(Optional<SettlementPlan> plan, Optional<SuburbPlanningFailureReason> failureReason,
+            List<PlanValidationError> validationErrors, Optional<SuburbTerrainDiagnostic> terrainDiagnostic,
+            Optional<TerrainPreparationPlan> terrainPreparationPlan, Optional<EarthworkSiteAssessment> siteAssessment) {
+        this(plan,failureReason,validationErrors,terrainDiagnostic,terrainPreparationPlan,siteAssessment,
+                com.cybersammy.citiesarise.core.content.ResolvedSettlementContent.EMPTY);
+    }
+    public SuburbPlanningResult withContent(com.cybersammy.citiesarise.core.content.ResolvedSettlementContent content) {
+        if (plan.isEmpty()) throw new IllegalStateException("Content requires a successful semantic plan");
+        return new SuburbPlanningResult(plan,failureReason,validationErrors,terrainDiagnostic,terrainPreparationPlan,siteAssessment,content);
+    }
     public SuburbPlanningResult {
+        Objects.requireNonNull(content,"content");
+        if(plan.isPresent()) content.validateAgainst(plan.orElseThrow());
+        else if(!content.equals(com.cybersammy.citiesarise.core.content.ResolvedSettlementContent.EMPTY))
+            throw new IllegalArgumentException("Failed planning must not carry content");
         Objects.requireNonNull(plan, "plan");
         Objects.requireNonNull(failureReason, "failureReason");
         Objects.requireNonNull(terrainDiagnostic, "terrainDiagnostic");

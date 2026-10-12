@@ -1,13 +1,12 @@
 package com.cybersammy.citiesarise.core.building;
 
 import com.cybersammy.citiesarise.core.model.BuildingSlot;
-import com.cybersammy.citiesarise.core.model.PlanPropertyKeys;
 import java.util.Random;
 
 public final class BuildingSelector {
     private BuildingSelector() { }
 
-    public static BuildingSlot select(BuildingSlot slot, long seed, BuildingContentSettings settings) {
+    public static java.util.Optional<BuildingContent> select(BuildingSlot slot, long seed, BuildingContentSettings settings) {
         var candidates = settings.pool().stream().filter(e -> e.asset().fits(slot.bounds().size())).toList();
         // Each slot has its own stream: unrelated slots and iteration order cannot affect selection.
         Random random = new Random(seed ^ ((long) slot.id().value().hashCode() << 32)
@@ -23,12 +22,10 @@ public final class BuildingSelector {
         if (!selected.fits(slot.bounds().size())) {
             throw new IllegalArgumentException("No building asset or fallback fits slot " + slot.id().value());
         }
-        if (selected.provider().equals("placeholder")) return slot;
+        if (selected.provider().equals("placeholder")) return java.util.Optional.empty();
         String palette=settings.palettes().get(random.nextInt(settings.palettes().size()));
         BuildingContent content=new BuildingContent(selected,settings.paletteDefinitions().get(palette),
                 java.util.Optional.ofNullable(selected.parameters().get("composition")).map(settings.compositions()::get),java.util.Optional.empty());
-        return new BuildingSlot(slot.id(), slot.parcelId(), slot.bounds(), slot.tags(), slot.properties()
-                .with(PlanPropertyKeys.BUILDING_ASSET, selected.id())
-                .with(PlanPropertyKeys.BUILDING_PALETTE, palette), java.util.Optional.of(content));
+        return java.util.Optional.of(content);
     }
 }

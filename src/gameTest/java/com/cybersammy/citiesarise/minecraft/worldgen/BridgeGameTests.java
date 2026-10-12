@@ -26,9 +26,10 @@ public final class BridgeGameTests {
                 new Cell(new Vec(0,0,0), "minecraft:stone_bricks", false),
                 new Cell(new Vec(0,1,0), "minecraft:polished_deepslate", false)), true);
         var plan = new SettlementPlan(new PlanElementId("test:city"), new RoadGraph(List.of(a,b), List.of(), List.of(bridge)),
-                List.of(), List.of(), Set.of(), PlanProperties.empty(),
-                Map.of("BRIDGE_RAIL","minecraft:stone_brick_wall", "FOUNDATION","minecraft:stone"), List.of(), Map.of("BRIDGE_DECK", deck));
-        var placement = new DebugPlacementPlanConverter().convert(plan);
+                List.of(), List.of(), Set.of(), PlanProperties.empty());
+        var content=new ResolvedSettlementContent(Map.of(),
+                Map.of("BRIDGE_RAIL","minecraft:stone_brick_wall", "FOUNDATION","minecraft:stone"),List.of(),Map.of("BRIDGE_DECK",deck));
+        var placement = new DebugPlacementPlanConverter().convert(plan,content);
         helper.assertTrue(placement.operations().stream().allMatch(op -> op.role().bridge()), "Replacement lost bridge semantics");
         for (int d=0; d<=bridge.length(); d++) for (int w=-2; w<=2; w++) {
             var point=bridge.point(d,w);
@@ -80,14 +81,14 @@ public final class BridgeGameTests {
                     new Cell(new Vec(0,0,0),"minecraft:stone_bricks",false),
                     new Cell(new Vec(0,1,0),"minecraft:polished_deepslate",false)),true);
             var plan=new SettlementPlan(new PlanElementId("test:city"),new RoadGraph(List.of(a,b),List.of(),List.of(bridge)),
-                    List.of(),List.of(),Set.of(),PlanProperties.empty(),Map.of("BRIDGE_STEP","minecraft:andesite_slab"),
-                    List.of(),Map.of("BRIDGE_DECK",deck));
+                    List.of(),List.of(),Set.of(),PlanProperties.empty());
+            var content=new ResolvedSettlementContent(Map.of(),Map.of("BRIDGE_STEP","minecraft:andesite_slab"),List.of(),Map.of("BRIDGE_DECK",deck));
             for(int d=0;d<=bridge.length();d++) for(int w=-2;w<=2;w++) {
                 var point=bridge.point(d,w);
                 for(int y=origin.getY()-8;y<=origin.getY()+8;y++) level.setBlock(new BlockPos(point.x(),y,point.z()),
                         bridge.bank(d) && y<=bridge.deckElevation(d)?Blocks.STONE.defaultBlockState():Blocks.AIR.defaultBlockState(),2);
             }
-            var placement=new DebugPlacementPlanConverter().convert(plan);
+            var placement=new DebugPlacementPlanConverter().convert(plan,content);
             var snapshot=SuburbStructurePlacementSnapshot.from(placement);
             var tag=new CompoundTag();snapshot.save(tag);
             helper.assertTrue(tag.getInt("SnapshotVersion")==7,"Missing graded bridge snapshot version");
@@ -138,8 +139,9 @@ public final class BridgeGameTests {
                     y<=ground?Blocks.STONE.defaultBlockState():Blocks.AIR.defaultBlockState(),2);
         }
         var plan=new SettlementPlan(new PlanElementId("test:city"),new RoadGraph(List.of(a,b),List.of(),List.of(bridge)),
-                List.of(),List.of(),Set.of(),PlanProperties.empty(),Map.of("BRIDGE_PIER","minecraft:polished_andesite"),List.of(),Map.of());
-        var placement=new DebugPlacementPlanConverter().convert(plan);
+                List.of(),List.of(),Set.of(),PlanProperties.empty());
+        var content=new ResolvedSettlementContent(Map.of(),Map.of("BRIDGE_PIER","minecraft:polished_andesite"),List.of(),Map.of());
+        var placement=new DebugPlacementPlanConverter().convert(plan,content);
         var tag=new CompoundTag();SuburbStructurePlacementSnapshot.from(placement).save(tag);
         var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
         var debug=new DebugPlacementApplier();debug.apply(level,restored,true);

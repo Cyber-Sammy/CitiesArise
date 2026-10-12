@@ -14,15 +14,15 @@ class VanillaBuildingPlacementProviderTest {
     static BuildingSlot slot(BuildingAsset asset, String palette) {
         return new BuildingSlot(new PlanElementId("test:house"), new PlanElementId("test:parcel"),
                 new GridBounds(new GridPoint(12, -4), new GridSize(10, 12)), Set.of(),
-                PlanProperties.of(PlanPropertyKeys.BUILDING_ASSET, asset.id()).with(PlanPropertyKeys.BUILDING_PALETTE, palette), Optional.of(VanillaCatalogFixture.content(asset,palette)));
+                PlanProperties.empty());
     }
 
     @Test void eachVariantStaysWithinDeclaredVolumeAndHasDoorsWindowsAndFurniture() {
         Set<List<DebugBlockPlacementOperation>> geometries = new HashSet<>();
         for (BuildingAsset asset : List.of(VanillaCatalogFixture.COTTAGE, VanillaCatalogFixture.BUNGALOW, VanillaCatalogFixture.STUDIO)) {
             BuildingSlot slot = slot(asset, "oak");
-            var operations = provider.create(slot, new GridPoint(17, -4));
-            assertEquals(operations, provider.create(slot, new GridPoint(17, -4)));
+            var operations = provider.create(slot, VanillaCatalogFixture.content(asset,"oak"), new GridPoint(17, -4));
+            assertEquals(operations, provider.create(slot, VanillaCatalogFixture.content(asset,"oak"), new GridPoint(17, -4)));
             assertTrue(operations.stream().allMatch(o -> slot.bounds().contains(o.point()) && o.verticalOffset() <= asset.height()));
             assertTrue(operations.stream().allMatch(o -> o.sourceElementId().equals(slot.id())));
             for (var role : List.of(DebugPlacementRole.DOOR_NORTH_LOWER, DebugPlacementRole.DOOR_NORTH_UPPER,
@@ -45,11 +45,11 @@ class VanillaBuildingPlacementProviderTest {
             checkEntrance(slot, new GridPoint(b.minX(), z), new GridPoint(b.minX() + 1, z));
             checkEntrance(slot, new GridPoint(b.maxXExclusive() - 1, z), new GridPoint(b.maxXExclusive() - 2, z));
         }
-        assertThrows(IllegalArgumentException.class, () -> provider.create(slot, new GridPoint(17, 0)));
+        assertThrows(IllegalArgumentException.class, () -> provider.create(slot, VanillaCatalogFixture.content(VanillaCatalogFixture.COTTAGE,"stone"), new GridPoint(17, 0)));
     }
 
     private void checkEntrance(BuildingSlot slot, GridPoint entrance, GridPoint inward) {
-        var ops = provider.create(slot, entrance);
+        var ops = provider.create(slot, VanillaCatalogFixture.content(VanillaCatalogFixture.COTTAGE,"stone"), entrance);
         assertEquals(2, ops.stream().filter(o -> o.point().equals(entrance) && o.role().name().startsWith("DOOR_")).count());
         for (int y = 1; y <= 2; y++) {
             int offset = y;
@@ -59,8 +59,8 @@ class VanillaBuildingPlacementProviderTest {
     }
 
     @Test void paletteChangesMaterialsAndExistingRoleIdsRemainStable() {
-        assertNotEquals(provider.create(slot(VanillaCatalogFixture.STUDIO, "oak"), new GridPoint(17, -4)),
-                provider.create(slot(VanillaCatalogFixture.STUDIO, "stone"), new GridPoint(17, -4)));
+        assertNotEquals(provider.create(slot(VanillaCatalogFixture.STUDIO, "oak"), VanillaCatalogFixture.content(VanillaCatalogFixture.STUDIO,"oak"), new GridPoint(17, -4)),
+                provider.create(slot(VanillaCatalogFixture.STUDIO, "stone"), VanillaCatalogFixture.content(VanillaCatalogFixture.STUDIO,"stone"), new GridPoint(17, -4)));
         assertEquals(0, DebugPlacementRole.FOUNDATION.serializedId());
         assertEquals(17, DebugPlacementRole.TERRAIN_RETAINING_WALL.serializedId());
         for (var role : DebugPlacementRole.values()) assertEquals(role, DebugPlacementRole.fromSerializedId(role.serializedId()));

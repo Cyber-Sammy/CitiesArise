@@ -1,5 +1,6 @@
 package com.cybersammy.citiesarise.minecraft.placement;
 
+import com.cybersammy.citiesarise.core.content.ResolvedSettlementContent;
 import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator;
@@ -46,21 +47,24 @@ public final class DebugPlacementPlanConverter {
     private static final int ROOF_BASE_OFFSET = 4;
     private static final int ROOF_RIDGE_OFFSET = 5;
 
-    public DebugPlacementPlan convert(SettlementPlan plan) {
+    public DebugPlacementPlan convert(SettlementPlan plan) { return convert(plan,ResolvedSettlementContent.EMPTY); }
+    public DebugPlacementPlan convert(SettlementPlan plan,ResolvedSettlementContent content) {
+        content.validateAgainst(plan);
         Objects.requireNonNull(plan, "plan");
-        return withSurfaceTemplates(withBridges(convert(plan, Map.of()), plan),plan);
+        return withSurfaceTemplates(withBridges(convert(plan, content, Map.of()), plan,content),plan,content);
     }
 
     private DebugPlacementPlan convert(
             SettlementPlan plan,
+            ResolvedSettlementContent content,
             Map<PlanElementId, GridPoint> buildingAccessAnchors
     ) {
         Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition = new LinkedHashMap<>();
 
         addRoadOperations(plan.roadGraph(), operationsByPosition);
         addParcelOperations(plan, operationsByPosition);
-        addBuildingSlotOperations(plan, buildingAccessAnchors, operationsByPosition);
-        for(var prop:plan.props()) for(var cell:prop.composition().cells()) {
+        addBuildingSlotOperations(plan, content, buildingAccessAnchors, operationsByPosition);
+        for(var prop:content.props()) for(var cell:prop.composition().cells()) {
             var point=prop.origin().add(cell.position());
             String material=cell.material().contains(":") ? cell.material() : prop.materials().get(cell.material());
             if(material==null) throw new IllegalArgumentException("Unknown prop material: "+cell.material());
@@ -71,29 +75,33 @@ public final class DebugPlacementPlanConverter {
         Map<PlanElementId, Integer> platformElevations = platformElevations(plan);
         return new DebugPlacementPlan(operationsByPosition.values()
                 .stream()
-                .map(operation -> withPlatformElevation(withMaterial(operation, plan.placementMaterials()), platformElevations))
+                .map(operation -> withPlatformElevation(withMaterial(operation, content.placementMaterials()), platformElevations))
                 .toList());
     }
 
     public DebugPlacementPlan convert(SettlementPlan plan, TerrainPreparationPlan preparationPlan) {
+        return convert(plan,preparationPlan,ResolvedSettlementContent.EMPTY);
+    }
+    public DebugPlacementPlan convert(SettlementPlan plan, TerrainPreparationPlan preparationPlan, ResolvedSettlementContent content) {
+        content.validateAgainst(plan);
         Objects.requireNonNull(plan, "plan");
         Objects.requireNonNull(preparationPlan, "preparationPlan");
         List<PlanValidationError> errors = new TerrainPreparationPlanValidator().validate(plan, preparationPlan);
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(errors.getFirst().message());
         }
-        DebugPlacementPlan placementPlan = convert(plan, buildingAccessAnchors(preparationPlan));
+        DebugPlacementPlan placementPlan = convert(plan, content, buildingAccessAnchors(preparationPlan));
         Map<GridPoint, Integer> elevationByPoint = preparationElevations(preparationPlan);
         DebugPlacementPlan preparedPlan = new DebugPlacementPlan(placementPlan.operations()
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
         return withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
-                .map(operation -> withMaterial(operation,plan.placementMaterials())).toList()), plan),plan);
+                .map(operation -> withMaterial(operation,content.placementMaterials())).toList()), plan,content),plan,content);
     }
 
-    private DebugPlacementPlan withBridges(DebugPlacementPlan placement, SettlementPlan plan) {
-        var template = plan.surfaceTemplates().get("BRIDGE_DECK");
+    private DebugPlacementPlan withBridges(DebugPlacementPlan placement, SettlementPlan plan,ResolvedSettlementContent content) {
+        var template = content.surfaceTemplates().get("BRIDGE_DECK");
         if (template != null && plan.roadGraph().bridges().stream().anyMatch(b -> template.size().y() > b.deckDepth())) {
             throw new IllegalArgumentException("Bridge deck template exceeds reserved deckDepth");
         }
@@ -110,7 +118,7 @@ public final class DebugPlacementPlanConverter {
             if (!replaced) operations.put(operation.position(), operation);
         }
         for (var bridge : plan.roadGraph().bridges()) for (var operation : bridgeProvider.create(bridge)) {
-            operations.put(operation.position(), withMaterial(operation, plan.placementMaterials()));
+            operations.put(operation.position(), withMaterial(operation, content.placementMaterials()));
         }
         return new DebugPlacementPlan(List.copyOf(operations.values()));
     }
@@ -121,8 +129,8 @@ public final class DebugPlacementPlanConverter {
         return new DebugBlockPlacementOperation(op.point(),op.verticalOffset(),op.role(),op.sourceElementId(),op.platformY(),material,op.rotation(),fill);
     }
 
-    private static DebugPlacementPlan withSurfaceTemplates(DebugPlacementPlan placement,SettlementPlan plan) {
-        if(plan.surfaceTemplates().isEmpty()) return placement;
+    private static DebugPlacementPlan withSurfaceTemplates(DebugPlacementPlan placement,SettlementPlan plan,ResolvedSettlementContent content) {
+        if(content.surfaceTemplates().isEmpty()) return placement;
         Map<PlanElementId,Integer> turns=new java.util.HashMap<>(); Map<PlanElementId,RoadNode> nodes=new java.util.HashMap<>();
         plan.roadGraph().nodes().forEach(n -> nodes.put(n.id(),n));
         for(var road:plan.roadGraph().segments()) {
@@ -136,7 +144,7 @@ public final class DebugPlacementPlanConverter {
         for(var op:placement.operations()) {
             if (op.role() == DebugPlacementRole.SUPPORT_LINING) continue;
             if (op.role() == DebugPlacementRole.BRIDGE_DECK && op.verticalOffset() != 0) continue;
-            var template=plan.surfaceTemplates().get(op.role().name()); if(template==null) continue;
+            var template=content.surfaceTemplates().get(op.role().name()); if(template==null) continue;
             int turn=template.alignToRoad()?turns.getOrDefault(op.sourceElementId(),0):0;
             int x=op.point().x(),z=op.point().z();
             int u=Math.floorMod(switch(turn) { case 1 -> z; case 2 -> -x; case 3 -> -z; default -> x; },template.size().x());
@@ -448,16 +456,17 @@ public final class DebugPlacementPlanConverter {
 
     private void addBuildingSlotOperations(
             SettlementPlan plan,
+            ResolvedSettlementContent content,
             Map<PlanElementId, GridPoint> buildingAccessAnchors,
             Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
         for (BuildingSlot buildingSlot : plan.buildingSlots()) {
-            if (buildingSlot.content().isPresent()) {
+            if (content.buildings().containsKey(buildingSlot.id())) {
                 GridPoint entrance = doorwayPoint(buildingSlot.bounds(), buildingAccessAnchors.get(buildingSlot.id()));
-                String providerId=buildingSlot.content().orElseThrow().asset().provider();
+                String providerId=content.buildings().get(buildingSlot.id()).asset().provider();
                 BuildingPlacementProvider provider=buildingProviders.get(providerId);
                 if(provider==null) throw new IllegalArgumentException("Unregistered building provider: "+providerId);
-                for (var operation : provider.create(buildingSlot, entrance)) {
+                for (var operation : provider.create(buildingSlot, content.buildings().get(buildingSlot.id()), entrance)) {
                     addOperation(operation, operationsByPosition);
                 }
                 continue;

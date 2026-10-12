@@ -28,7 +28,8 @@ public record SuburbDebugPlanResult(
         SuburbTerrainDiagnostic terrainDiagnostic,
         TerrainPreparationPlan terrainPreparationPlan,
         EarthworkSiteAssessment siteAssessment,
-        List<PlanValidationError> validationErrors
+        List<PlanValidationError> validationErrors,
+        com.cybersammy.citiesarise.core.content.ResolvedSettlementContent content
 ) {
     public SuburbDebugPlanResult(
             SettlementRegion region,
@@ -70,11 +71,21 @@ public record SuburbDebugPlanResult(
         this(region, surveyBounds, seed, successful, plan, failureReason, terrainDiagnostic, terrainPreparationPlan, null);
     }
 
+    public SuburbDebugPlanResult(SettlementRegion region, GridBounds surveyBounds, long seed, boolean successful,
+            SettlementPlan plan, SuburbPlanningFailureReason failureReason, SuburbTerrainDiagnostic terrainDiagnostic,
+            TerrainPreparationPlan terrainPreparationPlan, EarthworkSiteAssessment siteAssessment, List<PlanValidationError> validationErrors) {
+        this(region,surveyBounds,seed,successful,plan,failureReason,terrainDiagnostic,terrainPreparationPlan,siteAssessment,
+                validationErrors,com.cybersammy.citiesarise.core.content.ResolvedSettlementContent.EMPTY);
+    }
     public SuburbDebugPlanResult {
+        Objects.requireNonNull(content,"content");
         validationErrors = List.copyOf(validationErrors);
         Objects.requireNonNull(region, "region");
         Objects.requireNonNull(surveyBounds, "surveyBounds");
         rejectMissingOutcome(successful, plan, failureReason);
+        if (successful) content.validateAgainst(plan);
+        else if(!content.equals(com.cybersammy.citiesarise.core.content.ResolvedSettlementContent.EMPTY))
+            throw new IllegalArgumentException("Failed planning must not carry content");
         rejectUnexpectedTerrainDiagnostic(successful, failureReason, terrainDiagnostic);
         rejectUnexpectedSiteAssessment(successful, terrainPreparationPlan, siteAssessment);
     }
@@ -97,7 +108,7 @@ public record SuburbDebugPlanResult(
                 result.terrainDiagnostic().orElse(null),
                 result.terrainPreparationPlan().orElse(null),
                 result.siteAssessment().orElse(null),
-                result.validationErrors()
+                result.validationErrors(), result.content()
         );
     }
 

@@ -52,12 +52,12 @@ public final class SuburbPlanTransformService {
         }
 
         if (result.terrainPreparationPlan().isEmpty()) {
-            return SuburbPlanningResult.success(transformedPlan);
+            return SuburbPlanningResult.success(transformedPlan).withContent(result.content());
         }
 
         TerrainPreparationPlan preparationPlan = result.terrainPreparationPlan().orElseThrow();
         return result.siteAssessment()
                 .map(assessment -> SuburbPlanningResult.success(transformedPlan, preparationPlan, assessment))
-                .orElseGet(() -> SuburbPlanningResult.success(transformedPlan, preparationPlan));
+                .orElseGet(() -> SuburbPlanningResult.success(transformedPlan, preparationPlan)).withContent(result.content());
     }
 }

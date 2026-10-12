@@ -38,9 +38,9 @@ class PlayableSuburbAcceptanceTest {
             if (result.successful()) {
                 var plan = result.plan().orElseThrow();
                 var preparation = result.terrainPreparationPlan().orElseThrow();
-                var placed = new DebugPlacementPlanConverter().convert(plan, preparation);
+                var placed = new DebugPlacementPlanConverter().convert(plan, preparation,result.content());
                 count = placed.operations().size();
-                assertTrue(plan.buildingSlots().stream().allMatch(s -> s.properties().find(PlanPropertyKeys.BUILDING_ASSET).isPresent()));
+                assertTrue(plan.buildingSlots().stream().allMatch(s -> result.content().buildings().containsKey(s.id())));
                 for (var transition : preparation.elevationPlan().transitions()) {
                     if (transition.type() != com.cybersammy.citiesarise.core.earthwork.ElevationTransitionType.BUILDING_ACCESS) continue;
                     assertEquals(2, placed.operations().stream().filter(op -> op.sourceElementId().equals(transition.targetZoneId())

@@ -112,7 +112,7 @@ class DistrictCityPlannerTest {
         var graph = new RoadGraph(plan.roadGraph().nodes(), plan.roadGraph().segments().stream()
                 .filter(s -> !s.id().value().contains("district-link-")).toList(),List.of());
         var disconnected = new SettlementPlan(plan.id(),graph,plan.parcels(),plan.buildingSlots(),plan.tags(),plan.properties(),
-                plan.placementMaterials(),plan.props(),plan.surfaceTemplates(),plan.districts());
+                plan.districts());
         assertTrue(new com.cybersammy.citiesarise.core.validation.PlanValidator().validate(disconnected).stream()
                 .anyMatch(error -> error.message().contains("connected")));
     }

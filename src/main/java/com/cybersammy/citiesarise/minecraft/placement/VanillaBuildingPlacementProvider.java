@@ -11,8 +11,8 @@ import java.util.List;
 
 public final class VanillaBuildingPlacementProvider implements BuildingPlacementProvider {
     @Override
-    public List<DebugBlockPlacementOperation> create(BuildingSlot slot, GridPoint entrance) {
-        BuildingAsset asset = slot.content().orElseThrow().asset();
+    public List<DebugBlockPlacementOperation> create(BuildingSlot slot, com.cybersammy.citiesarise.core.building.BuildingContent content, GridPoint entrance) {
+        BuildingAsset asset = content.asset();
         if (!asset.provider().equals("procedural_house") || !asset.fits(slot.bounds().size())) {
             throw new IllegalArgumentException("Unsupported building asset or footprint: " + asset.id());
         }
@@ -27,8 +27,8 @@ public final class VanillaBuildingPlacementProvider implements BuildingPlacement
         for (int z = b.minZ(); z < b.maxZExclusive(); z++) {
             for (int x = b.minX(); x < b.maxXExclusive(); x++) {
                 GridPoint point = new GridPoint(x, z);
-                add(result, slot, point, -1, DebugPlacementRole.FOUNDATION);
-                add(result, slot, point, 0, DebugPlacementRole.BUILDING_FLOOR);
+                add(result, slot, content, point, -1, DebugPlacementRole.FOUNDATION);
+                add(result, slot, content, point, 0, DebugPlacementRole.BUILDING_FLOOR);
                 for (int y = 1; y <= 3; y++) {
                     DebugPlacementRole role = DebugPlacementRole.BUILDING_INTERIOR_AIR;
                     if (edge(b, x, z)) {
@@ -49,7 +49,7 @@ public final class VanillaBuildingPlacementProvider implements BuildingPlacement
                             && Math.abs(x - entrance.x()) + Math.abs(z - entrance.z()) > 2) {
                         role = DebugPlacementRole.BUILDING_BOOKSHELF;
                     }
-                    add(result, slot, point, y, role);
+                    add(result, slot, content, point, y, role);
                 }
                 int insetX = Math.min(x - b.minX(), b.maxXExclusive() - 1 - x);
                 int insetZ = Math.min(z - b.minZ(), b.maxZExclusive() - 1 - z);
@@ -61,10 +61,10 @@ public final class VanillaBuildingPlacementProvider implements BuildingPlacement
                 };
                 for (int y = 4; y <= 4 + rise; y++) {
                     // Fill gables and hip roof, without clearing anything outside the generated volume.
-                    add(result, slot, point, y, roof);
+                    add(result, slot, content, point, y, roof);
                 }
                 if (x == b.minX() + b.size().width() / 2 && z == b.minZ() + b.size().depth() / 2) {
-                    add(result, slot, point, 3, DebugPlacementRole.BUILDING_CEILING_LIGHT);
+                    add(result, slot, content, point, 3, DebugPlacementRole.BUILDING_CEILING_LIGHT);
                 }
             }
         }
@@ -90,9 +90,9 @@ public final class VanillaBuildingPlacementProvider implements BuildingPlacement
         return upper ? DebugPlacementRole.DOOR_EAST_UPPER : DebugPlacementRole.DOOR_EAST_LOWER;
     }
 
-    private static void add(List<DebugBlockPlacementOperation> operations, BuildingSlot slot,
+    private static void add(List<DebugBlockPlacementOperation> operations, BuildingSlot slot, com.cybersammy.citiesarise.core.building.BuildingContent content,
             GridPoint point, int y, DebugPlacementRole role) {
-        var palette=slot.content().orElseThrow().materials();
+        var palette=content.materials();
         String key=switch(role) {
             case OAK_HOUSE_WALL -> "wall"; case RED_HOUSE_ROOF -> "roof"; case DECAYED_BUILDING_ROOF -> "damaged_roof";
             case BUILDING_FLOOR -> "floor"; case BUILDING_WINDOW -> "window"; case BUILDING_WORKBENCH -> "workbench";

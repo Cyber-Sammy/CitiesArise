@@ -1,6 +1,5 @@
 package com.cybersammy.citiesarise.core.planning.suburb;
 
-import com.cybersammy.citiesarise.core.building.BuildingSelector;
 import com.cybersammy.citiesarise.core.earthwork.EarthworkSiteAssessment;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor;
@@ -135,8 +134,6 @@ public final class SuburbPlanner {
 
         TerrainPreparationPlan preparationPlan = preparation.plan().orElseThrow();
         try {
-            plan = com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
-                    plan, preparationPlan, request.seed(), request.settings().buildings());
             plan = com.cybersammy.citiesarise.core.road.BridgePlanner.attach(request, plan, preparationPlan,
                     candidate -> acceptance.validate(request,SuburbPlanningResult.success(candidate,preparationPlan)).successful());
         } catch (IllegalArgumentException exception) {
@@ -149,7 +146,15 @@ public final class SuburbPlanner {
                 request.settings().preferredMaxCutDepth(),
                 request.settings().preferredMaxFillDepth()
         );
-        return SuburbPlanningResult.success(plan, preparationPlan, siteAssessment);
+        try {
+            var content=com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
+                    plan, preparationPlan, request.seed(), request.settings().buildings());
+            return SuburbPlanningResult.success(plan, preparationPlan, siteAssessment).withContent(content);
+        } catch (IllegalArgumentException exception) {
+            return SuburbPlanningResult.invalid(List.of(PlanValidationError.forElement(
+                    com.cybersammy.citiesarise.core.validation.PlanValidationErrorCode.CONTENT_COMPOSITION_FAILED,
+                    plan.id(), exception.getMessage())));
+        }
     }
 
     private static boolean hasEnoughParcels(SuburbLayout layout, SuburbPlanningRequest request) {
@@ -682,8 +687,7 @@ public final class SuburbPlanner {
         List<BuildingSlot> buildingSlots = new ArrayList<>();
 
         for (int index = 0; index < parcels.size(); index++) {
-            buildingSlots.add(BuildingSelector.select(
-                    buildingSlot(request, parcels.get(index), index), request.seed(), request.settings().buildings()));
+            buildingSlots.add(buildingSlot(request, parcels.get(index), index));
         }
 
         return List.copyOf(buildingSlots);

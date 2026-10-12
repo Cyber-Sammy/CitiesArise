@@ -66,10 +66,8 @@ public final class PlayableSuburbGameTests {
             GridPoint minimum = new GridPoint(origin.getX() + index * 14, origin.getZ());
             BuildingSlot slot = new BuildingSlot(new PlanElementId("test:house_" + index), new PlanElementId("test:parcel_" + index),
                     new GridBounds(minimum, new GridSize(10, 12)), Set.of(),
-                    PlanProperties.of(PlanPropertyKeys.BUILDING_ASSET, assets[index].id())
-                            .with(PlanPropertyKeys.BUILDING_PALETTE, index == 1 ? "stone" : "oak"),
-                    Optional.of(new com.cybersammy.citiesarise.core.building.BuildingContent(assets[index],catalog.palettes().get(index==1?"stone":"oak"),Optional.empty(),Optional.empty())));
-            for (var op : new VanillaBuildingPlacementProvider().create(slot, new GridPoint(minimum.x() + 5, minimum.z()))) {
+                    PlanProperties.empty());
+            for (var op : new VanillaBuildingPlacementProvider().create(slot, new com.cybersammy.citiesarise.core.building.BuildingContent(assets[index],catalog.palettes().get(index==1?"stone":"oak"),Optional.empty(),Optional.empty()), new GridPoint(minimum.x() + 5, minimum.z()))) {
                 operations.put(op.position(), new DebugBlockPlacementOperation(op.point(), op.verticalOffset(), op.role(), op.sourceElementId(), OptionalInt.of(floor),op.material(),op.rotation()));
             }
         }

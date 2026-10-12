@@ -163,7 +163,7 @@ public final class SeedSearchTool {
                     }
                     continue;
                 }
-                var counts=PlanElementFilter.counts(result.plan(),result.optionalTerrainPreparationPlan().orElseThrow());
+                var counts=PlanElementFilter.counts(result.plan(),result.optionalTerrainPreparationPlan().orElseThrow(),result.content());
                 if(!filter.matches(counts)) { reject(report,"ELEMENT_FILTER"); continue; }
                 // Run the real structure-start path too: biome rules, vertical placement bounds and current profile store.
                 report.addProperty("phase","VERIFYING_START"); checkpoint(output,report,started);

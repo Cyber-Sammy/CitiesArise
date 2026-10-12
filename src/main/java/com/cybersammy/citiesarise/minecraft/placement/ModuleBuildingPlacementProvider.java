@@ -6,8 +6,7 @@ import java.util.*;
 
 public final class ModuleBuildingPlacementProvider implements BuildingPlacementProvider {
     @Override
-    public List<DebugBlockPlacementOperation> create(BuildingSlot slot,GridPoint entrance) {
-        var content=slot.content().orElseThrow();
+    public List<DebugBlockPlacementOperation> create(BuildingSlot slot,com.cybersammy.citiesarise.core.building.BuildingContent content,GridPoint entrance) {
         var composition=content.resolved().orElseThrow(() -> new IllegalArgumentException("Composition must be resolved before placement"));
         List<DebugBlockPlacementOperation> operations=new ArrayList<>();
         for(var cell:composition.cells()) {

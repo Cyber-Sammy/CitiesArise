@@ -28,8 +28,8 @@ public final class ContentCompositionGameTests {
                 com.cybersammy.citiesarise.core.model.PlanProperties.of(com.cybersammy.citiesarise.core.model.PlanPropertyKeys.PLATFORM_Y,Integer.toString(origin.getY())));
         var semantic=new com.cybersammy.citiesarise.core.model.SettlementPlan(new PlanElementId("test:surface"),
                 new com.cybersammy.citiesarise.core.model.RoadGraph(List.of(start,end),List.of(road)),List.of(),List.of(),Set.of(),
-                com.cybersammy.citiesarise.core.model.PlanProperties.empty(),catalog.surfaces(),List.of(),catalog.surfaceTemplates());
-        var plan=new DebugPlacementPlanConverter().convert(semantic);
+                com.cybersammy.citiesarise.core.model.PlanProperties.empty());
+        var plan=new DebugPlacementPlanConverter().convert(semantic,new ResolvedSettlementContent(Map.of(),catalog.surfaces(),List.of(),catalog.surfaceTemplates()));
         for(var point:plan.operations().stream().map(DebugBlockPlacementOperation::point).distinct().toList()) {
             for(int y=origin.getY()-3;y<helper.getLevel().getMaxBuildHeight();y++) helper.getLevel().setBlock(new BlockPos(point.x(),y,point.z()),Blocks.AIR.defaultBlockState(),2);
             helper.getLevel().setBlock(new BlockPos(point.x(),origin.getY()-4,point.z()),Blocks.DIRT.defaultBlockState(),2);

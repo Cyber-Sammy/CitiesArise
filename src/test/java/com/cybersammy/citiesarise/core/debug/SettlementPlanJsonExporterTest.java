@@ -28,7 +28,7 @@ final class SettlementPlanJsonExporterTest {
     void exportsSemanticPlanElements() {
         String json = exporter.export(plan());
 
-        assertTrue(json.contains("\"schemaVersion\": 1"));
+        assertTrue(json.contains("\"schemaVersion\": 2"));
         assertTrue(json.contains("\"id\": \"test/settlement\""));
         assertTrue(json.contains("\"roadGraph\""));
         assertTrue(json.contains("\"startNodeId\": \"test/node-a\""));

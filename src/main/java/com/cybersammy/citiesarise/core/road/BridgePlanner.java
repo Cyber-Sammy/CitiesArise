@@ -83,12 +83,7 @@ public final class BridgePlanner {
 
     private static SettlementPlan withBridges(SettlementPlan plan,List<BridgePlan> selected) {
         return new SettlementPlan(plan.id(), new RoadGraph(plan.roadGraph().nodes(), plan.roadGraph().segments(), selected),
-                plan.parcels(), plan.buildingSlots(), plan.tags(), plan.properties(), plan.placementMaterials(),
-                plan.props().stream().filter(prop -> prop.composition().cells().stream().noneMatch(cell -> {
-                    var world = prop.origin().add(cell.position());
-                    var point = new GridPoint(world.x(), world.z());
-                    return selected.stream().anyMatch(bridge -> bridge.bounds().contains(point));
-                })).toList(), plan.surfaceTemplates(), plan.districts());
+                plan.parcels(), plan.buildingSlots(), plan.tags(), plan.properties(), plan.districts());
     }
 
     private static void join(Map<PlanElementId, PlanElementId> components, PlanElementId first, PlanElementId second) {
@@ -113,10 +108,6 @@ public final class BridgePlanner {
                 || (!policy.bridges().allowDryCrossings()
                 && policy.responseFor(TerrainFeatureType.WATER) != TerrainResponse.CROSS_IF_SUPPORTED)) return List.of();
         var settings = policy.bridges();
-        var template = plan.surfaceTemplates().get("BRIDGE_DECK");
-        if (template != null && template.size().y() > settings.deckDepth()) {
-            throw new IllegalArgumentException("Bridge deck template exceeds reserved deckDepth");
-        }
         List<RoadNode> nodes = plan.roadGraph().nodes().stream().sorted(Comparator.comparing(n -> n.id().value())).toList();
         Map<PlanElementId, Integer> levels = new HashMap<>();
         Map<PlanElementId, Integer> widths = new HashMap<>();

@@ -13,15 +13,17 @@ class SurfaceTemplateTest {
         var a=new RoadNode(new PlanElementId("a"),new GridPoint(-3,-2),Set.of(),PlanProperties.empty());
         var b=new RoadNode(new PlanElementId("b"),east?new GridPoint(1,-2):new GridPoint(-3,2),Set.of(),PlanProperties.empty());
         var road=new RoadSegment(new PlanElementId("road"),a.id(),b.id(),3,Set.of(),PlanProperties.of(PlanPropertyKeys.PLATFORM_Y,"64"));
+        return new SettlementPlan(new PlanElementId("plan"),new RoadGraph(List.of(a,b),List.of(road)),List.of(),List.of(),Set.of(),PlanProperties.empty());
+    }
+    private ResolvedSettlementContent content() {
         var template=new SurfaceTemplate(new Vec(2,2,1),List.of(new Cell(new Vec(0,0,0),"minecraft:stone",false),
                 new Cell(new Vec(1,0,0),"minecraft:stone",false),new Cell(new Vec(0,1,0),"minecraft:stone_brick_stairs[facing=north]",false),
                 new Cell(new Vec(1,1,0),"minecraft:deepslate_tiles",false)),true);
-        return new SettlementPlan(new PlanElementId("plan"),new RoadGraph(List.of(a,b),List.of(road)),List.of(),List.of(),Set.of(),PlanProperties.empty(),
-                Map.of("FOUNDATION","minecraft:andesite"),List.of(),Map.of("ROAD_SURFACE",template));
+        return new ResolvedSettlementContent(Map.of(),Map.of("FOUNDATION","minecraft:andesite"),List.of(),Map.of("ROAD_SURFACE",template));
     }
     @Test void tilesAtNegativeCoordinatesRotateWithRoadAndKeepTheirFillPolicy() {
         for(boolean east:List.of(false,true)) {
-            var source=plan(east); var placed=new DebugPlacementPlanConverter().convert(source);
+            var source=plan(east); var placed=new DebugPlacementPlanConverter().convert(source,content());
             var atOrigin=placed.operations().stream().filter(o -> o.point().equals(new GridPoint(-3,-2))).toList();
             var top=atOrigin.stream().filter(o -> o.verticalOffset()==0).findFirst().orElseThrow();
             assertEquals(east?3:0,top.rotation());

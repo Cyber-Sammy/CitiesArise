@@ -43,8 +43,7 @@ final class RegionalElevationPlanner {
                 parcelElevations.parcels(),
                 parcelElevations.buildingSlots(),
                 settlementPlan.tags(),
-                settlementPlan.properties(), settlementPlan.placementMaterials(), settlementPlan.props(),
-                settlementPlan.surfaceTemplates(), settlementPlan.districts()
+                settlementPlan.properties(), settlementPlan.districts()
         );
         List<ElevationZone> zones = elevationZones(elevatedPlan);
         RegionalElevationPlan elevationPlan = new RegionalElevationPlan(
@@ -83,7 +82,7 @@ final class RegionalElevationPlanner {
                     TerrainPlatform.withElevation(
                             slot.properties(),
                             requiredParcelElevation(elevationByParcel, slot.parcelId())
-                    ), slot.content()
+                    )
             ));
         }
         return new ParcelElevationResult(

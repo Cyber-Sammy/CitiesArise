@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.Objects;
 
 /** Semantic local development footprint, independent of block assets or architectural style. */
-public record DistrictPlan(PlanElementId id, GridBounds bounds, List<PlanElementId> parcels, List<GridBounds> footprint) {
+public record DistrictPlan(PlanElementId id, GridBounds bounds, List<PlanElementId> parcels, List<GridBounds> footprint, java.util.Set<PlanTag> tags, PlanProperties properties) {
+    public DistrictPlan(PlanElementId id, GridBounds bounds, List<PlanElementId> parcels, List<GridBounds> footprint) {
+        this(id,bounds,parcels,footprint,java.util.Set.of(),PlanProperties.empty());
+    }
     public DistrictPlan(PlanElementId id, GridBounds bounds, List<PlanElementId> parcels) {
         this(id, bounds, parcels, List.of(bounds));
     }
@@ -13,6 +16,8 @@ public record DistrictPlan(PlanElementId id, GridBounds bounds, List<PlanElement
     public DistrictPlan {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(bounds, "bounds");
+        tags = java.util.Set.copyOf(tags);
+        Objects.requireNonNull(properties);
         parcels = List.copyOf(parcels);
         footprint = List.copyOf(footprint);
         if (footprint.isEmpty() || footprint.stream().anyMatch(part -> !bounds.contains(part)))

@@ -1,0 +1,183 @@
+{
+  "survey": {
+    "width": 224,
+    "depth": 224
+  },
+  "planning": {
+    "districts": {
+      "maxCount": 8,
+      "targetParcels": 6,
+      "maxConnectionAttempts": 8,
+      "zoning": {
+        "districtTypes": [
+          {
+            "id": "zoning:homes",
+            "weight": 1,
+            "properties": {
+              "zoning:purpose": "homes",
+              "zoning:style": "warm"
+            }
+          },
+          {
+            "id": "zoning:workshops",
+            "weight": 1,
+            "properties": {
+              "zoning:purpose": "workshops",
+              "zoning:style": "stone"
+            }
+          }
+        ],
+        "rules": [
+          {
+            "target": "PARCEL",
+            "every": 3,
+            "offset": 1,
+            "properties": {
+              "zoning:purpose": "homes",
+              "zoning:style": "warm"
+            }
+          },
+          {
+            "target": "BUILDING_SLOT",
+            "every": 5,
+            "offset": 0,
+            "properties": {
+              "zoning:purpose": "landmark"
+            }
+          }
+        ]
+      }
+    },
+    "roadWidth": 5,
+    "maxBuildableSlope": 0.75,
+    "minimumParcelCount": 12,
+    "targetParcelCount": 32,
+    "maximumParcelCount": 40,
+    "parcelWidth": 16,
+    "parcelDepth": 18,
+    "buildingMargin": 4,
+    "maxElevationRange": 10,
+    "preferredMaxCutDepth": 3,
+    "preferredMaxFillDepth": 3,
+    "maxCutDepth": 8,
+    "maxFillDepth": 10,
+    "maxBuildingFoundationDepth": 8,
+    "maxEarthworkVolume": 80000,
+    "buildings": {
+      "catalog": "zoning:fixture",
+      "pool": [
+        {
+          "asset": "zoning:house",
+          "weight": 1
+        }
+      ],
+      "palettes": [
+        "zoning:palette"
+      ],
+      "fallback": "zoning:empty",
+      "rules": [
+        {
+          "id": "zoning:landmark",
+          "match": {
+            "properties": {
+              "zoning:purpose": "landmark"
+            }
+          },
+          "pool": [
+            {
+              "asset": "zoning:landmark",
+              "weight": 1
+            }
+          ],
+          "palettes": [
+            "zoning:landmark"
+          ],
+          "fallback": "zoning:empty"
+        },
+        {
+          "id": "zoning:homes",
+          "match": {
+            "properties": {
+              "zoning:purpose": "homes"
+            }
+          },
+          "pool": [
+            {
+              "asset": "zoning:cottage",
+              "weight": 1
+            }
+          ],
+          "palettes": [
+            "zoning:warm"
+          ],
+          "fallback": "zoning:empty"
+        },
+        {
+          "id": "zoning:workshops",
+          "match": {
+            "properties": {
+              "zoning:purpose": "workshops"
+            }
+          },
+          "pool": [
+            {
+              "asset": "zoning:house",
+              "weight": 1
+            }
+          ],
+          "palettes": [
+            "zoning:palette"
+          ],
+          "fallback": "zoning:empty"
+        }
+      ]
+    },
+    "terrainTransitions": {
+      "buildingAccessRunPerRise": 2,
+      "roadShoulderRadius": 2,
+      "roadShoulderMaxFillDepth": 3,
+      "parcelShoulderRadius": 3,
+      "parcelShoulderMaxFillDepth": 3,
+      "buildingShoulderRadius": 3,
+      "buildingShoulderMaxFillDepth": 3,
+      "retainingWalls": true,
+      "retainingWallMinimumHeight": 2,
+      "supportLiningDepth": 4,
+      "cutSlopeRadius": 8
+    }
+  },
+  "terrainPolicy": {
+    "responses": {
+      "water": "cross_if_supported",
+      "blockedTerrain": "avoid",
+      "steepSlope": "terraform"
+    },
+    "capabilities": [
+      "bridge"
+    ],
+    "adaptation": {
+      "sensitivity": 0.5,
+      "maxTerraformArea": 32,
+      "maxTerraformRelief": 4,
+      "maxTerraformVolume": 160
+    },
+    "bridges": {
+      "maxLength": 48,
+      "maxCount": 2,
+      "deckDepth": 1,
+      "minimumClearance": 0,
+      "allowDryCrossings": true,
+      "minimumDryClearance": 2,
+      "maxConstructionVolume": 4096,
+      "maxCandidateChecks": 32,
+      "maxElevationDifference": 2,
+      "terrainSupports": {
+        "maxBankCut": 1,
+        "maxBankFill": 1,
+        "maxTerrainWorkVolume": 256,
+        "pierSpacing": 12,
+        "maxPierHeight": 16
+      }
+    }
+  }
+}

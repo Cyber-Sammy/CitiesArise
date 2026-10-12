@@ -8,7 +8,14 @@ public record BuildingContentSettings(List<Entry> pool, List<String> palettes, B
         java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions,
         java.util.Map<String,String> surfaces,
         List<com.cybersammy.citiesarise.core.content.PropRule> props,
-        java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> surfaceTemplates) {
+        java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> surfaceTemplates, List<BuildingContentRule> rules) {
+    public BuildingContentSettings(List<Entry> pool,List<String> palettes,BuildingAsset fallback,
+            java.util.Map<String,java.util.Map<String,String>> definitions,
+            java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions,
+            java.util.Map<String,String> surfaces,List<com.cybersammy.citiesarise.core.content.PropRule> props,
+            java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> templates) {
+        this(pool,palettes,fallback,definitions,compositions,surfaces,props,templates,List.of());
+    }
     public BuildingContentSettings(List<Entry> pool,List<String> palettes,BuildingAsset fallback,
             java.util.Map<String,java.util.Map<String,String>> definitions,
             java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions,java.util.Map<String,String> surfaces,
@@ -21,6 +28,9 @@ public record BuildingContentSettings(List<Entry> pool, List<String> palettes, B
         this(pool,palettes,fallback,definitions,compositions,surfaces,List.of());
     }
     public BuildingContentSettings {
+        rules=List.copyOf(rules);
+        if(rules.size()>64 || rules.stream().map(BuildingContentRule::id).distinct().count()!=rules.size())
+            throw new IllegalArgumentException("Content rules allow at most 64 unique ids");
         surfaceTemplates=java.util.Map.copyOf(surfaceTemplates);
         props=List.copyOf(props);
         if(props.size()>16) throw new IllegalArgumentException("Too many prop rules");
@@ -39,6 +49,11 @@ public record BuildingContentSettings(List<Entry> pool, List<String> palettes, B
                 || !paletteDefinitions.keySet().containsAll(palettes)) throw new IllegalArgumentException("Unknown or duplicate palette");
         for(Entry entry:pool) validateAsset(entry.asset(),compositions);
         validateAsset(fallback,compositions);
+        for(var rule:rules) {
+            if(!paletteDefinitions.keySet().containsAll(rule.palettes())) throw new IllegalArgumentException("Unknown rule palette: "+rule.id());
+            for(var entry:rule.pool()) validateAsset(entry.asset(),compositions);
+            validateAsset(rule.fallback(),compositions);
+        }
     }
     private static void validateAsset(BuildingAsset asset, java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions) {
         String recipe=asset.parameters().get("composition");

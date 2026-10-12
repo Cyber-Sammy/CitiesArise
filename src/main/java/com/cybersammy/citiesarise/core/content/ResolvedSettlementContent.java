@@ -7,9 +7,14 @@ import java.util.*;
 /** Immutable provider output keyed by semantic element identity, separate from the city map. */
 public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buildings,
         Map<String, String> placementMaterials, List<ResolvedProp> props,
-        Map<String, SurfaceTemplate> surfaceTemplates) {
+        Map<String, SurfaceTemplate> surfaceTemplates, Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection> selections) {
+    public ResolvedSettlementContent(Map<PlanElementId,BuildingContent> buildings,Map<String,String> materials,
+            List<ResolvedProp> props,Map<String,SurfaceTemplate> templates) {
+        this(buildings,materials,props,templates,Map.of());
+    }
     public static final ResolvedSettlementContent EMPTY = new ResolvedSettlementContent(Map.of(), Map.of(), List.of(), Map.of());
     public ResolvedSettlementContent {
+        selections = Map.copyOf(selections);
         buildings = Map.copyOf(buildings);
         placementMaterials = Map.copyOf(placementMaterials);
         props = List.copyOf(props);
@@ -23,6 +28,7 @@ public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buil
         plan.roadGraph().bridges().forEach(b -> ids.add(b.id()));
         var slots = new HashMap<PlanElementId, BuildingSlot>();
         plan.buildingSlots().forEach(slot -> { slots.put(slot.id(), slot); ids.add(slot.id()); });
+        if(!slots.keySet().containsAll(selections.keySet())) throw new IllegalArgumentException("Unknown selection slot");
         buildings.forEach((id, content) -> {
             var slot = slots.get(id);
             if (slot == null || !content.asset().fits(slot.bounds().size()))

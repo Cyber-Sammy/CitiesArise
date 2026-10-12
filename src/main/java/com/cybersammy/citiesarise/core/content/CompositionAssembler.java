@@ -96,7 +96,7 @@ public final class CompositionAssembler {
         var cells=new LinkedHashMap<>(state.cells);
         for(Cell cell:effective.cells) {
             Vec point=rotateCell(cell.position(),effective.base.size(),turn).add(origin);
-            cells.put(point,new PlacedCell(point,cell.material(),turn));
+            cells.put(point,new PlacedCell(point,cell.material(),turn,cell.providerData()));
         }
         var open=new ArrayList<>(state.open);
         if(target!=null) open.remove(target);
@@ -117,7 +117,7 @@ public final class CompositionAssembler {
         Effective effective=effective(module,severity,airMaterial,seed);
         if(effective.joints.stream().anyMatch(j -> !j.optional() && !j.external())) return Optional.empty();
         Map<Vec,PlacedCell> cells=new LinkedHashMap<>();
-        effective.cells.forEach(c -> cells.put(c.position(),new PlacedCell(c.position(),c.material(),0)));
+        effective.cells.forEach(c -> cells.put(c.position(),new PlacedCell(c.position(),c.material(),0,c.providerData())));
         List<String> caps=new ArrayList<>();
         for(Joint joint:effective.joints) if(joint.optional() && !joint.external()) {
             caps.add(joint.id()); for(Vec point:ModuleDefinition.jointCells(joint)) cells.put(point,new PlacedCell(point,joint.capMaterial(),0));

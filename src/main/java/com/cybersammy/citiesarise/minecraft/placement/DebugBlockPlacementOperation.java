@@ -13,8 +13,13 @@ public record DebugBlockPlacementOperation(
         OptionalInt platformY,
         String material,
         int rotation,
-        String fillMaterial
+        String fillMaterial,
+        java.util.Map<String,String> providerData
 ) {
+    public DebugBlockPlacementOperation(GridPoint point,int verticalOffset,DebugPlacementRole role,
+            PlanElementId sourceElementId,OptionalInt platformY,String material,int rotation,String fillMaterial) {
+        this(point,verticalOffset,role,sourceElementId,platformY,material,rotation,fillMaterial,java.util.Map.of());
+    }
     public DebugBlockPlacementOperation(GridPoint point,int verticalOffset,DebugPlacementRole role,
             PlanElementId sourceElementId,OptionalInt platformY,String material,int rotation) {
         this(point,verticalOffset,role,sourceElementId,platformY,material,rotation,"");
@@ -33,6 +38,7 @@ public record DebugBlockPlacementOperation(
         this(point,verticalOffset,role,sourceElementId,platformY,"",0);
     }
     public DebugBlockPlacementOperation {
+        providerData=com.cybersammy.citiesarise.core.content.ProviderData.copy(providerData);
         Objects.requireNonNull(material,"material");
         Objects.requireNonNull(fillMaterial,"fillMaterial");
         if(fillMaterial.length()>512 || fillMaterial.contains("\n") || fillMaterial.contains("\r")) throw new IllegalArgumentException("Invalid fill material");

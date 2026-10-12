@@ -83,6 +83,8 @@ class ContentCompositionAcceptanceTest {
             assertTrue(placement.operations().stream().anyMatch(o -> o.role()==DebugPlacementRole.ROAD_SURFACE && o.material().equals("minecraft:polished_deepslate")));
             assertTrue(placement.operations().stream().anyMatch(o -> o.verticalOffset()==-1 && o.material().equals("minecraft:stone_bricks")));
             assertTrue(placement.operations().stream().anyMatch(o -> o.fillMaterial().equals("minecraft:andesite")));
+            assertTrue(placement.operations().stream().anyMatch(o -> o.material().startsWith("minecraft:chest")
+                    && o.providerData().getOrDefault("minecraft:block_entity","").contains("minecraft:bread")));
             assertTrue(placement.operations().stream().anyMatch(o -> o.material().equals("minecraft:sea_lantern")));
             for(var transition:result.terrainPreparationPlan().orElseThrow().elevationPlan().transitions()) {
                 if(transition.type()!=com.cybersammy.citiesarise.core.earthwork.ElevationTransitionType.BUILDING_ACCESS) continue;

@@ -72,7 +72,15 @@ public final class ContentCatalogParser {
         validateTraits(materialRules,palettes);
         long totalCells=modules.values().stream().mapToLong(m -> m.cells().size()+m.variants().stream().mapToLong(v -> v.cells().size()).sum()).sum();
         if(totalCells>262144) throw new IllegalArgumentException("Catalog exceeds total cell budget");
+        long payloadSize=0;
         for(var module:modules.values()) {
+            var all=new ArrayList<Cell>(module.cells());
+            module.variants().forEach(v -> all.addAll(v.cells()));
+            for(var cell:all) {
+                validateCellData(cell,palettes);
+                payloadSize+=cell.providerData().values().stream().mapToLong(String::length).sum();
+            }
+            if(payloadSize>4_000_000) throw new IllegalArgumentException("Catalog exceeds provider data budget");
             var materials=new HashSet<String>();
             module.cells().forEach(c -> materials.add(c.material()));
             module.joints().stream().filter(Joint::optional).forEach(j -> materials.add(j.capMaterial()));
@@ -110,6 +118,9 @@ public final class ContentCatalogParser {
             List<Cell> cells=cells(t,size);
             for(Cell c:cells) {
                 resources.validateMaterial(c.material());
+                resources.validateProviderData(c.material(),c.providerData());
+                payloadSize+=c.providerData().values().stream().mapToLong(String::length).sum();
+                if(payloadSize>4_000_000) throw new IllegalArgumentException("Catalog exceeds provider data budget");
                 if(c.position().y()==size.y()-1 && !entry.getKey().equals("PARCEL_BOUNDARY")) resources.validateWalkingSurface(c.material());
             }
             templates.put(entry.getKey(),new SurfaceTemplate(size,cells,bool(t,"alignToRoad",false)));
@@ -175,7 +186,7 @@ public final class ContentCatalogParser {
         }
         for(JsonElement value:array(json,"cells")) {
             JsonObject cell=value.getAsJsonObject(); Vec point=vec(cell.getAsJsonArray("at"));
-            result.put(point,new Cell(point,string(cell,"material"),bool(cell,"destructible",false)));
+            result.put(point,new Cell(point,string(cell,"material"),bool(cell,"destructible",false),cell.has("blockEntity") ? Map.of(com.cybersammy.citiesarise.minecraft.placement.TemplateBlockEntities.KEY,string(cell,"blockEntity")) : Map.of()));
         }
         return List.copyOf(result.values());
     }
@@ -195,12 +206,19 @@ public final class ContentCatalogParser {
             }
             List<Cell> cells=new ArrayList<>(); var blocks=nbt.getList("blocks",net.minecraft.nbt.Tag.TAG_COMPOUND);
             for(int i=0;i<blocks.size();i++) {
-                var block=blocks.getCompound(i); if(block.contains("nbt")) throw new IllegalArgumentException("Block entity templates are not supported");
+                var block=blocks.getCompound(i);
+                if(block.contains("nbt") && !block.contains("nbt",net.minecraft.nbt.Tag.TAG_COMPOUND)) throw new IllegalArgumentException("Template block entity data must be compound");
                 var pos=block.getList("pos",net.minecraft.nbt.Tag.TAG_INT);
-                cells.add(new Cell(new Vec(pos.getInt(0),pos.getInt(1),pos.getInt(2)),materials.get(block.getInt("state")),false));
+                if(pos.size()!=3 || block.getInt("state")<0 || block.getInt("state")>=materials.size()) throw new IllegalArgumentException("Invalid template position/state index");
+                cells.add(new Cell(new Vec(pos.getInt(0),pos.getInt(1),pos.getInt(2)),materials.get(block.getInt("state")),false,block.contains("nbt") ? com.cybersammy.citiesarise.minecraft.placement.TemplateBlockEntities.encode(block.getCompound("nbt")) : Map.of()));
             }
             return List.copyOf(cells);
         } catch(IOException exception) { throw new IllegalArgumentException("Cannot read template "+id,exception); }
+    }
+    private void validateCellData(Cell cell,Map<String,Map<String,String>> palettes) {
+        var states=cell.material().contains(":") ? List.of(cell.material()) : palettes.values().stream()
+                .filter(p -> p.containsKey(cell.material())).map(p -> p.get(cell.material())).distinct().toList();
+        for(String state:states) resources.validateProviderData(state,cell.providerData());
     }
     private static List<Joint> joints(JsonObject parent,String key) {
         List<Joint> result=new ArrayList<>();

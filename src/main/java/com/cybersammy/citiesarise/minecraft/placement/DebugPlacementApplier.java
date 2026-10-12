@@ -15,8 +15,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 public final class DebugPlacementApplier {
-    private static final int UPDATE_FLAGS = 2;
-
     private final DebugBlockMaterialProvider materialProvider;
     private final DebugPlacementUndoStore undoStore;
 
@@ -70,10 +68,10 @@ public final class DebugPlacementApplier {
         int ground=placementY(level,x,z,top);
         BlockState fill=MinecraftContentMaterials.resolve(policy.fillMaterial(),0);
         for(int y=Math.max(level.getMinBuildHeight(),ground+1);y<Math.min(target,level.getMaxBuildHeight());y++) {
-            BlockPos p=new BlockPos(x,y,z); snapshot.capture(p,level.getBlockState(p)); level.setBlock(p,fill,UPDATE_FLAGS);
+            BlockPos p=new BlockPos(x,y,z); snapshot.capture(level,p); TemplateBlockEntities.place(level,p,fill,java.util.Map.of());
         }
         for(int y=Math.max(target+1,level.getMinBuildHeight());y<Math.min(top,level.getMaxBuildHeight());y++) {
-            BlockPos p=new BlockPos(x,y,z); snapshot.capture(p,level.getBlockState(p)); level.setBlock(p,Blocks.AIR.defaultBlockState(),UPDATE_FLAGS);
+            BlockPos p=new BlockPos(x,y,z); snapshot.capture(level,p); TemplateBlockEntities.place(level,p,Blocks.AIR.defaultBlockState(),java.util.Map.of());
         }
     }
 
@@ -120,8 +118,8 @@ public final class DebugPlacementApplier {
                     || existing.is(BlockTags.LEAVES) || existing.is(BlockTags.LOGS)
                     || MinecraftVegetationClassifier.isClearable(existing)) return false;
         }
-        snapshotBuilder.capture(position, level.getBlockState(position));
-        return level.setBlock(position, state, UPDATE_FLAGS);
+        snapshotBuilder.capture(level,position);
+        return TemplateBlockEntities.place(level,position,state,operation.providerData());
     }
 
     private int placementY(ServerLevel level, int x, int z, int topHeight) {
@@ -175,8 +173,8 @@ public final class DebugPlacementApplier {
             return;
         }
 
-        snapshotBuilder.capture(position, state);
-        level.setBlock(position, Blocks.AIR.defaultBlockState(), UPDATE_FLAGS);
+        snapshotBuilder.capture(level,position);
+        TemplateBlockEntities.place(level,position,Blocks.AIR.defaultBlockState(),java.util.Map.of());
     }
 
     private static boolean isVegetation(BlockState state) {

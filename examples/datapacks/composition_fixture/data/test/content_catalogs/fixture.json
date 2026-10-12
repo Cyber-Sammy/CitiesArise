@@ -712,7 +712,8 @@
             0,
             0
           ],
-          "material": "minecraft:bookshelf"
+          "material": "minecraft:chest[facing=north,type=single,waterlogged=false]",
+          "blockEntity": "{id:'minecraft:chest',Items:[{Slot:0b,id:'minecraft:bread',count:3}]}"
         }
       ],
       "contract": {

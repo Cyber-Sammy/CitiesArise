@@ -7,8 +7,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 public final class DebugPlacementUndoStore {
-    private static final int UPDATE_FLAGS = 3;
-
     private final ScopedSingleSnapshotStore<ResourceKey<Level>, DebugPlacementSnapshot> snapshots = new ScopedSingleSnapshotStore<>();
 
     public void save(ServerLevel level, DebugPlacementSnapshot snapshot) {
@@ -38,7 +36,7 @@ public final class DebugPlacementUndoStore {
 
         for (int index = changes.size() - 1; index >= 0; index--) {
             DebugPlacementSnapshot.BlockChange change = changes.get(index);
-            level.setBlock(change.position(), change.previousState(), UPDATE_FLAGS);
+            TemplateBlockEntities.restore(level,change.position(),change.previousState(),change.previousEntityData());
         }
 
         return DebugPlacementUndoResult.restored(changes.size());

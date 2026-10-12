@@ -38,7 +38,8 @@ final class MinecraftWorldgenBlockAccess implements WorldgenBlockAccess {
 
     @Override
     public boolean placeOperation(WorldgenBlockPosition position, com.cybersammy.citiesarise.minecraft.placement.DebugBlockPlacementOperation operation) {
-        return level.setBlock(toBlockPos(position),materialProvider.blockState(operation),UPDATE_FLAGS);
+        return com.cybersammy.citiesarise.minecraft.placement.TemplateBlockEntities.place(
+                level,toBlockPos(position),materialProvider.blockState(operation),operation.providerData());
     }
 
     @Override

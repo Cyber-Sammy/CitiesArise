@@ -91,7 +91,7 @@ public final class BridgeGameTests {
             var placement=new DebugPlacementPlanConverter().convert(plan,content);
             var snapshot=SuburbStructurePlacementSnapshot.from(placement);
             var tag=new CompoundTag();snapshot.save(tag);
-            helper.assertTrue(tag.getInt("SnapshotVersion")==7,"Missing graded bridge snapshot version");
+            helper.assertTrue(tag.getInt("SnapshotVersion")==8,"Missing graded bridge snapshot version");
             var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
             helper.assertTrue(snapshot.equals(SuburbStructurePlacementSnapshot.from(restored)),"Lost row elevation or material");
             var debug=new DebugPlacementApplier();

@@ -18,8 +18,9 @@ public record ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint
         public Face opposite() { return switch(this) { case UP -> DOWN; case DOWN -> UP; default -> values()[(ordinal()+2)%4]; }; }
         public Face rotate(int turn) { return ordinal()<4 ? values()[(ordinal()+turn)%4] : this; }
     }
-    public record Cell(Vec position, String material, boolean destructible) {
-        public Cell { Objects.requireNonNull(position); requireText(material); }
+    public record Cell(Vec position, String material, boolean destructible, Map<String,String> providerData) {
+        public Cell(Vec position, String material, boolean destructible) { this(position,material,destructible,Map.of()); }
+        public Cell { Objects.requireNonNull(position); requireText(material); providerData=ProviderData.copy(providerData); }
     }
     public record Joint(String id, String type, Set<String> accepts, Vec position, Face face,
             int width, int height, boolean optional, boolean external, String capMaterial) {

@@ -15,7 +15,6 @@ public final class MinecraftContentMaterials {
             try {
                 var parsed=BlockStateParser.parseForBlock(BuiltInRegistries.BLOCK.asLookup(),value,false);
                 state=parsed.blockState();
-                if(state.hasBlockEntity()) throw new IllegalArgumentException("Block entity content is not supported: "+value);
             } catch(com.mojang.brigadier.exceptions.CommandSyntaxException exception) {
                 throw new IllegalArgumentException("Invalid content block state: "+value,exception);
             }

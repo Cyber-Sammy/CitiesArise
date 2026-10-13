@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 final class MinecraftWorldgenBlockAccess implements WorldgenBlockAccess {
+    @Override public boolean wholeTreeCleanup() { return true; }
     private static final int UPDATE_FLAGS = 2;
 
     private final WorldGenLevel level;

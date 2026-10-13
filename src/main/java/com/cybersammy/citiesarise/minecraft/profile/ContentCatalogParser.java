@@ -11,7 +11,7 @@ import java.util.*;
 public final class ContentCatalogParser {
     public record Catalog(Map<String,BuildingAsset> assets, Map<String,Map<String,String>> palettes,
             Map<String,CompositionSettings> compositions, Map<String,String> surfaces, List<PropRule> props,
-            MaterialRules materialRules, Map<String,ModuleDefinition> modules, Map<String,SurfaceTemplate> surfaceTemplates) { }
+            MaterialRules materialRules, Map<String,ModuleDefinition> modules, Map<String,SurfaceTemplate> surfaceTemplates, List<ParcelContentRule> parcelRules) { }
     private final ContentResources resources;
     public ContentCatalogParser(ContentResources resources) { this.resources=Objects.requireNonNull(resources); }
     public Catalog load(String id) {
@@ -109,27 +109,60 @@ public final class ContentCatalogParser {
                     strings(p,"forbiddenTags"),integer(p,"inset",1),integer(p,"spacing",8),integer(p,"damageSeverity",0),air,modules,materialRules));
         }
         if(props.size()>16) throw new IllegalArgumentException("Too many prop rules");
+        Map<String,SurfaceTemplate> templates=parseSurfaceTemplates(json,false);
+        List<ParcelContentRule> parcelRules=new ArrayList<>();
+        for(var element:ZoningJsonParser.array(json,"parcelRules",64)) {
+            var rule=ZoningJsonParser.object(element);
+            var localSurfaces=stringMap(object(rule,"surfaces"));
+            for(var material:localSurfaces.values()) { resources.validateMaterial(material); resources.validateWalkingSurface(material); }
+            parcelRules.add(new ParcelContentRule(string(rule,"id"),
+                    rule.has("match")?ZoningJsonParser.metadata(ZoningJsonParser.object(rule.get("match"))):com.cybersammy.citiesarise.core.model.MetadataSelector.ANY,
+                    localSurfaces,parseSurfaceTemplates(rule,true),parcelPropIds(rule)));
+        }
+        if(parcelRules.stream().map(ParcelContentRule::id).distinct().count()!=parcelRules.size()) throw new IllegalArgumentException("Duplicate parcel binding ids");
+        for(var rule:parcelRules) for(String id:rule.props()) {
+            var prop=props.stream().filter(p -> p.id().equals(id)).findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown parcel prop: "+id));
+            if(!prop.anchor().equals("parcel_corner")) throw new IllegalArgumentException("Parcel binding requires parcel_corner prop: "+id);
+        }
+        var allTemplates=new ArrayList<SurfaceTemplate>(templates.values());
+        parcelRules.forEach(r -> allTemplates.addAll(r.surfaceTemplates().values()));
+        for(var template:allTemplates) for(var cell:template.cells())
+            payloadSize+=cell.providerData().values().stream().mapToLong(String::length).sum();
+        if(payloadSize>4_000_000) throw new IllegalArgumentException("Catalog exceeds provider data budget");
+        for(String role:List.of("FOUNDATION","TERRAIN_FILL","BRIDGE_ABUTMENT","BRIDGE_PIER","SUPPORT_LINING")) if(surfaces.containsKey(role)) resources.validateTraits(surfaces.get(role),false,true,false);
+        if(surfaces.containsKey("BRIDGE_STEP")) resources.validateBridgeSurface(surfaces.get("BRIDGE_STEP"),true);
+        if(surfaces.containsKey("BRIDGE_DECK")) resources.validateWalkingSurface(surfaces.get("BRIDGE_DECK"));
+        if(surfaces.containsKey("BRIDGE_CLEARANCE")) throw new IllegalArgumentException("Bridge clearance is reserved air, not a surface material");
+        return new Catalog(Map.copyOf(assets),Map.copyOf(palettes),Map.copyOf(compositions),Map.copyOf(surfaces),List.copyOf(props),materialRules,Map.copyOf(modules),Map.copyOf(templates),List.copyOf(parcelRules));
+    }
+    private static List<String> parcelPropIds(JsonObject rule) {
+        var ids=new ArrayList<String>();
+        for(var item:ZoningJsonParser.array(rule,"props",16)) {
+            if(!item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString()) throw new IllegalArgumentException("Parcel prop ids must be strings");
+            ids.add(item.getAsString());
+        }
+        return List.copyOf(ids);
+    }
+    private Map<String,SurfaceTemplate> parseSurfaceTemplates(JsonObject json,boolean parcel) {
+        long payloadSize=0;
         Map<String,SurfaceTemplate> templates=new LinkedHashMap<>();
         Set<String> roles=Set.of("ROAD_SURFACE","WORN_ROAD_SURFACE","PARCEL_YARD","PARCEL_BOUNDARY","TERRAIN_SURFACE",
                 "ROAD_END_CURB","BUILDING_ACCESS_SURFACE","BUILDING_ACCESS_STEP","ROAD_TRANSITION_STEP","BRIDGE_DECK");
         for(var entry:object(json,"surfaceTemplates").entrySet()) {
-            if(!roles.contains(entry.getKey())) throw new IllegalArgumentException("Unsupported surface template role: "+entry.getKey());
+            if(!(parcel ? ParcelContentRule.ROLES : roles).contains(entry.getKey())) throw new IllegalArgumentException("Unsupported surface template role: "+entry.getKey());
             var t=entry.getValue().getAsJsonObject(); Vec size=vec(t.getAsJsonArray("size"));
+            if(parcel && size.y()!=1) throw new IllegalArgumentException("Parcel templates must be one block deep");
             List<Cell> cells=cells(t,size);
             for(Cell c:cells) {
                 resources.validateMaterial(c.material());
                 resources.validateProviderData(c.material(),c.providerData());
                 payloadSize+=c.providerData().values().stream().mapToLong(String::length).sum();
                 if(payloadSize>4_000_000) throw new IllegalArgumentException("Catalog exceeds provider data budget");
-                if(c.position().y()==size.y()-1 && !entry.getKey().equals("PARCEL_BOUNDARY")) resources.validateWalkingSurface(c.material());
+                if(c.position().y()==size.y()-1 && (parcel || !entry.getKey().equals("PARCEL_BOUNDARY"))) resources.validateWalkingSurface(c.material());
             }
             templates.put(entry.getKey(),new SurfaceTemplate(size,cells,bool(t,"alignToRoad",false)));
         }
-        for(String role:List.of("FOUNDATION","TERRAIN_FILL","BRIDGE_ABUTMENT","BRIDGE_PIER","SUPPORT_LINING")) if(surfaces.containsKey(role)) resources.validateTraits(surfaces.get(role),false,true,false);
-        if(surfaces.containsKey("BRIDGE_STEP")) resources.validateBridgeSurface(surfaces.get("BRIDGE_STEP"),true);
-        if(surfaces.containsKey("BRIDGE_DECK")) resources.validateWalkingSurface(surfaces.get("BRIDGE_DECK"));
-        if(surfaces.containsKey("BRIDGE_CLEARANCE")) throw new IllegalArgumentException("Bridge clearance is reserved air, not a surface material");
-        return new Catalog(Map.copyOf(assets),Map.copyOf(palettes),Map.copyOf(compositions),Map.copyOf(surfaces),List.copyOf(props),materialRules,Map.copyOf(modules),Map.copyOf(templates));
+        return Map.copyOf(templates);
     }
     private void validateTraits(MaterialRules rules,Map<String,Map<String,String>> palettes) {
         Set<String> materials=new HashSet<>(rules.passable()); materials.addAll(rules.supportive());

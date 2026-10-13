@@ -18,6 +18,11 @@ public final class BuildingSelectionContext {
             parcels.put(parcel.id(),overlay(parent,parcel.tags(),parcel.properties()));
         }
     }
+    public MetadataSelector forParcel(PlanElementId id) {
+        var metadata=parcels.get(id);
+        if(metadata==null) throw new IllegalArgumentException("Unknown parcel: "+id.value());
+        return metadata;
+    }
     public MetadataSelector forSlot(BuildingSlot slot) {
         var parent=parcels.get(slot.parcelId());
         if(parent==null) throw new IllegalArgumentException("Unknown slot parcel: "+slot.parcelId().value());

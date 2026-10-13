@@ -21,6 +21,45 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class PlayableSuburbGameTests {
     @GameTest(template = "empty", timeoutTicks = 100)
+    public static void cactusCleanupPreservesAuthoredPropsAndOutsideVegetation(GameTestHelper helper) {
+        var level=helper.getLevel();
+        var origin=helper.absolutePos(new BlockPos(256,8,256));
+        var id=new PlanElementId("test:desert_yard");
+        var operations=new ArrayList<DebugBlockPlacementOperation>();
+        for(int dx=0;dx<4;dx++) {
+            level.setBlock(origin.offset(dx,0,0),Blocks.SAND.defaultBlockState(),2);
+            for(int dy=1;dy<=3;dy++) level.setBlock(origin.offset(dx,dy,0),Blocks.CACTUS.defaultBlockState(),2);
+            operations.add(new DebugBlockPlacementOperation(new GridPoint(origin.getX()+dx,origin.getZ()),0,
+                    DebugPlacementRole.PARCEL_YARD,id,OptionalInt.of(origin.getY())));
+        }
+        var outside=origin.offset(20,0,0);
+        level.setBlock(outside,Blocks.SAND.defaultBlockState(),2);
+        level.setBlock(outside.above(),Blocks.CACTUS.defaultBlockState(),2);
+        // Explicit content using the same plant must survive deferred cleanup.
+        operations.add(new DebugBlockPlacementOperation(new GridPoint(origin.getX()+3,origin.getZ()),1,
+                DebugPlacementRole.CONTENT_BLOCK,id,OptionalInt.of(origin.getY()),"minecraft:cactus",0));
+        var plan=new DebugPlacementPlan(operations);
+        var projector=new DebugPlacementChunkProjector().partition(plan);
+        var chunks=operations.stream().map(o -> PlacementChunk.containing(o.point())).distinct().toList();
+        var applier=new WorldgenPlacementApplier();
+        for(var chunk:chunks) applier.apply(level,projector.slice(chunk));
+        helper.assertTrue(level.getBlockState(origin.above()).isAir(),"Initial cactus cleanup failed");
+        level.setBlock(origin.offset(1,1,0),Blocks.CACTUS.defaultBlockState(),2);
+        var cleanup=new WorldgenVegetationCleanupIndex(plan);
+        for(var chunk:chunks) applier.clearVegetation(level,cleanup.slice(chunk));
+        for(int dx=0;dx<4;dx++) for(int dy=1;dy<=3;dy++) {
+            var state=level.getBlockState(origin.offset(dx,dy,0));
+            helper.assertTrue(dx==3 && dy==1?state.is(Blocks.CACTUS):state.isAir(),"Unexpected cactus after yard cleanup");
+        }
+        helper.assertTrue(level.getBlockState(outside.above()).is(Blocks.CACTUS),"Cactus outside construction was removed");
+        level.setBlock(origin.above(),Blocks.CACTUS.defaultBlockState(),2);
+        var debug=new DebugPlacementApplier();debug.apply(level,plan,true);
+        helper.assertTrue(level.getBlockState(origin.above()).isAir(),"Debug cactus cleanup failed");
+        debug.undoLast(level);
+        helper.assertTrue(level.getBlockState(origin.above()).is(Blocks.CACTUS),"Undo lost original cactus");
+        helper.succeed();
+    }
+    @GameTest(template = "empty", timeoutTicks = 100)
     public static void materialProviderProtectsGeneratedLogsAndLeaves(GameTestHelper helper) {
         BlockPos origin = helper.absolutePos(new BlockPos(8, 3, 8));
         var level = helper.getLevel();

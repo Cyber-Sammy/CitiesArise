@@ -21,7 +21,7 @@ public final class MinecraftVegetationClassifier {
         if (state.is(BlockTags.LOGS)) {
             return true;
         }
-        if (isBamboo(state)) {
+        if (isBamboo(state) || state.is(Blocks.CACTUS)) {
             return true;
         }
         if (!state.getFluidState().isEmpty()) {

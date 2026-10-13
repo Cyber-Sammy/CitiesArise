@@ -29,13 +29,19 @@ public final class SettlementContentComposer {
                             assembler.failure()+": "+slot.id().value()+" asset="+content.asset().id()));
             buildings.put(slot.id(),content.resolved(resolved));
         }
-        var props=SurfacePropPlanner.plan(plan,preparation,settings.props(),seed).stream().filter(prop ->
+        Map<PlanElementId,ResolvedParcelContent> parcels=new LinkedHashMap<>();
+        for(var parcel:plan.parcels()) {
+            var metadata=context.forParcel(parcel.id());
+            settings.parcelRules().stream().filter(r -> r.match().matches(metadata.tags(),metadata.properties())).findFirst()
+                    .ifPresent(r -> parcels.put(parcel.id(),new ResolvedParcelContent(r.id(),metadata,r.surfaces(),r.surfaceTemplates(),r.props())));
+        }
+        var props=SurfacePropPlanner.plan(plan,preparation,settings.props(),seed,parcels).stream().filter(prop ->
                 prop.composition().cells().stream().noneMatch(cell -> {
                     var world=prop.origin().add(cell.position());
                     return plan.roadGraph().bridges().stream().anyMatch(b -> b.bounds().contains(
                             new com.cybersammy.citiesarise.core.geometry.GridPoint(world.x(),world.z())));
                 })).toList();
-        var result=new ResolvedSettlementContent(buildings,settings.surfaces(),props,settings.surfaceTemplates(),decisions);
+        var result=new ResolvedSettlementContent(buildings,settings.surfaces(),props,settings.surfaceTemplates(),decisions,parcels);
         result.validateAgainst(plan);
         return result;
     }

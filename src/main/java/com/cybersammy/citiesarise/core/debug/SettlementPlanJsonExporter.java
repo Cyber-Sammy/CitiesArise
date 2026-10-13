@@ -56,6 +56,15 @@ public final class SettlementPlanJsonExporter {
             json.arrayField("tags", () -> writeTags(json,decision.context().tags()));
             json.objectField("properties", () -> writeProperties(json,decision.context().properties())); json.endObject();
         })));
+        json.arrayField("parcels", () -> content.parcels().entrySet().stream().sorted(Comparator.comparing(e -> e.getKey().value())).forEach(entry -> json.arrayValue(() -> {
+            var decision=entry.getValue(); json.beginObject(); json.stringField("parcelId",entry.getKey().value());
+            json.stringField("rule",decision.rule());
+            json.arrayField("tags", () -> writeTags(json,decision.context().tags()));
+            json.objectField("properties", () -> writeProperties(json,decision.context().properties()));
+            json.objectField("surfaces", () -> decision.surfaces().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(e -> json.stringField(e.getKey(),e.getValue())));
+            json.arrayField("surfaceTemplates", () -> decision.surfaceTemplates().keySet().stream().sorted().forEach(json::arrayStringValue));
+            json.arrayField("props", () -> decision.props().forEach(json::arrayStringValue)); json.endObject();
+        })));
         json.arrayField("buildings", () -> content.buildings().entrySet().stream()
                 .sorted(Comparator.comparing(e -> e.getKey().value())).forEach(entry -> json.arrayValue(() -> {
                     var building=entry.getValue();

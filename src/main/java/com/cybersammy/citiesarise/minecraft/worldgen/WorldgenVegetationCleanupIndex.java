@@ -11,9 +11,11 @@ import java.util.Objects;
 
 final class WorldgenVegetationCleanupIndex {
     private final Map<PlacementChunk, List<DebugBlockPlacementOperation>> operationsByAffectedChunk;
+    private final List<DebugBlockPlacementOperation> protectedOperations;
 
     WorldgenVegetationCleanupIndex(DebugPlacementPlan plan) {
         Objects.requireNonNull(plan, "plan");
+        protectedOperations=plan.operations();
         Map<PlacementChunk, List<DebugBlockPlacementOperation>> indexed = new LinkedHashMap<>();
         for (DebugBlockPlacementOperation operation : plan.operations()) {
             addAffectedChunks(indexed, operation);
@@ -27,7 +29,7 @@ final class WorldgenVegetationCleanupIndex {
         Objects.requireNonNull(chunk, "chunk");
         return new WorldgenVegetationCleanupPlan(
                 chunk,
-                operationsByAffectedChunk.getOrDefault(chunk, List.of())
+                operationsByAffectedChunk.getOrDefault(chunk, List.of()),protectedOperations
         );
     }
 

@@ -117,7 +117,7 @@ public final class MinecraftSettlementProfileJsonParser {
                     rulePool,rulePalettes,requiredAsset(catalog,contentString(rule,"fallback"))));
         }
         var settings=new BuildingContentSettings(pool, palettes,
-                requiredAsset(catalog, contentString(content, "fallback")), catalog.palettes(), catalog.compositions(), catalog.surfaces(), catalog.props(), catalog.surfaceTemplates(),rules);
+                requiredAsset(catalog, contentString(content, "fallback")), catalog.palettes(), catalog.compositions(), catalog.surfaces(), catalog.props(), catalog.surfaceTemplates(),rules,catalog.parcelRules());
         validateBinding(pool,palettes,settings.fallback(),catalog);
         for(var rule:rules) validateBinding(rule.pool(),rule.palettes(),rule.fallback(),catalog);
         return settings;
@@ -144,8 +144,13 @@ public final class MinecraftSettlementProfileJsonParser {
     private static com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings parseDistricts(JsonObject planning) {
         if (!planning.has("districts")) return com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings.single();
         var value = requiredObject(planning, "districts");
+        var sizes=new java.util.ArrayList<com.cybersammy.citiesarise.core.planning.suburb.DistrictParcelSize>();
+        for(var item:ZoningJsonParser.array(value,"parcelSizes",8)) {
+            var size=ZoningJsonParser.object(item);
+            sizes.add(new com.cybersammy.citiesarise.core.planning.suburb.DistrictParcelSize(ZoningJsonParser.string(size,"id"),requiredInt(size,"width"),requiredInt(size,"depth")));
+        }
         return new com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings(
-                optionalInt(value, "maxCount", 4), optionalInt(value, "targetParcels", 4), optionalInt(value, "maxConnectionAttempts", 8), ZoningJsonParser.parse(value));
+                optionalInt(value, "maxCount", 4), optionalInt(value, "targetParcels", 4), optionalInt(value, "maxConnectionAttempts", 8), ZoningJsonParser.parse(value),sizes);
     }
 
     private static BuildingAsset requiredAsset(ContentCatalogParser.Catalog catalog, String id) {

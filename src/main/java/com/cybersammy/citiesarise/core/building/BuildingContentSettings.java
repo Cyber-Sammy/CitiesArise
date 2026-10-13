@@ -8,7 +8,15 @@ public record BuildingContentSettings(List<Entry> pool, List<String> palettes, B
         java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions,
         java.util.Map<String,String> surfaces,
         List<com.cybersammy.citiesarise.core.content.PropRule> props,
-        java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> surfaceTemplates, List<BuildingContentRule> rules) {
+        java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> surfaceTemplates, List<BuildingContentRule> rules,
+        List<com.cybersammy.citiesarise.core.content.ParcelContentRule> parcelRules) {
+    public BuildingContentSettings(List<Entry> pool,List<String> palettes,BuildingAsset fallback,
+            java.util.Map<String,java.util.Map<String,String>> definitions,
+            java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions,
+            java.util.Map<String,String> surfaces,List<com.cybersammy.citiesarise.core.content.PropRule> props,
+            java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> templates,List<BuildingContentRule> rules) {
+        this(pool,palettes,fallback,definitions,compositions,surfaces,props,templates,rules,List.of());
+    }
     public BuildingContentSettings(List<Entry> pool,List<String> palettes,BuildingAsset fallback,
             java.util.Map<String,java.util.Map<String,String>> definitions,
             java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions,
@@ -28,6 +36,15 @@ public record BuildingContentSettings(List<Entry> pool, List<String> palettes, B
         this(pool,palettes,fallback,definitions,compositions,surfaces,List.of());
     }
     public BuildingContentSettings {
+        parcelRules=List.copyOf(parcelRules);
+        if(parcelRules.size()>64 || parcelRules.stream().map(com.cybersammy.citiesarise.core.content.ParcelContentRule::id).distinct().count()!=parcelRules.size())
+            throw new IllegalArgumentException("Parcel rules allow at most 64 unique ids");
+        var propIds=props.stream().map(com.cybersammy.citiesarise.core.content.PropRule::id).collect(java.util.stream.Collectors.toSet());
+        if(propIds.size()!=props.size()) throw new IllegalArgumentException("Duplicate prop ids");
+        for(var rule:parcelRules) for(String id:rule.props()) {
+            var prop=props.stream().filter(p -> p.id().equals(id)).findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown parcel prop: "+id));
+            if(!prop.anchor().equals("parcel_corner")) throw new IllegalArgumentException("Parcel binding requires parcel_corner prop: "+id);
+        }
         rules=List.copyOf(rules);
         if(rules.size()>64 || rules.stream().map(BuildingContentRule::id).distinct().count()!=rules.size())
             throw new IllegalArgumentException("Content rules allow at most 64 unique ids");

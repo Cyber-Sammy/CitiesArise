@@ -37,6 +37,11 @@ public final class DebugPlacementApplier {
 
         int placedBlocks = 0;
         DebugPlacementSnapshotBuilder snapshotBuilder = new DebugPlacementSnapshotBuilder();
+        for(var position:com.cybersammy.citiesarise.minecraft.worldgen.TreeCleanup.discover(
+                level,placementPlan.operations(),placementPlan.operations(),false,materialProvider).keySet()) {
+            snapshotBuilder.capture(level,position);
+            TemplateBlockEntities.place(level,position,Blocks.AIR.defaultBlockState(),java.util.Map.of());
+        }
 
         Map<GridPoint,DebugBlockPlacementOperation> fillPolicies=new LinkedHashMap<>();
         for(var operation:placementPlan.operations()) if(!operation.role().bridge() && operation.role()!=DebugPlacementRole.SUPPORT_LINING && !operation.fillMaterial().isEmpty() && operation.platformY().isPresent()) {
@@ -169,7 +174,7 @@ public final class DebugPlacementApplier {
         BlockPos position = new BlockPos(x, y, z);
         BlockState state = level.getBlockState(position);
 
-        if (!isVegetation(state)) {
+        if (!isVegetation(state) || state.is(BlockTags.LEAVES) || state.is(BlockTags.LOGS)) {
             return;
         }
 

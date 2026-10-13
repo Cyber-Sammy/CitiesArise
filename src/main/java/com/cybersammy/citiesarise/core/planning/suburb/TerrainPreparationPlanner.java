@@ -9,6 +9,7 @@ import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType;
 import com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZone;
+import com.cybersammy.citiesarise.core.earthwork.DescendingApron;
 import com.cybersammy.citiesarise.core.earthwork.ElevationZoneType;
 import com.cybersammy.citiesarise.core.earthwork.ParcelTerrainShoulderPolicy;
 import com.cybersammy.citiesarise.core.earthwork.RegionalElevationPlan;
@@ -83,9 +84,11 @@ final class TerrainPreparationPlanner {
             return TerrainPreparationAssessment.rejected(shoulderDiagnostic.orElseThrow());
         }
 
+        removeDisconnectedAprons(request, zones, columns);
         Map<GridPoint,TerrainPreparationColumn> requiredColumns = new LinkedHashMap<>(columns);
         addCutSlopes(request,zones,adaptationPlan,columns);
         addFillSlopes(request,zones,adaptationPlan,columns);
+        removeDisconnectedAprons(request, zones, columns);
         List<TerrainPreparationArea> areas = normalizedAreas(zones, columns.values());
         TerrainPreparationPlan preparationPlan = TerrainPreparationPlan.of(
                 elevationPlan,
@@ -108,6 +111,29 @@ final class TerrainPreparationPlanner {
             ));
         }
         return TerrainPreparationAssessment.accepted(preparationPlan);
+    }
+
+    private static void removeDisconnectedAprons(SuburbPlanningRequest request, List<ElevationZone> zones,
+            Map<GridPoint, TerrainPreparationColumn> columns) {
+        var bySource = new HashMap<PlanElementId, ElevationZone>();
+        zones.forEach(zone -> bySource.put(zone.sourceElementId(), zone));
+        var candidates = columns.values().stream().filter(c -> {
+            var zone = bySource.get(c.sourceElementId());
+            return zone != null && !zone.bounds().contains(c.point())
+                    && (c.type() == TerrainPreparationColumnType.FILL_SLOPE
+                    || c.type() == TerrainPreparationColumnType.PARCEL_SHOULDER
+                    || c.type() == TerrainPreparationColumnType.RETAINING_WALL && zone.type() == ElevationZoneType.PARCEL_PAD);
+        }).sorted(java.util.Comparator.comparingInt(c ->
+                DescendingApron.distance(bySource.get(c.sourceElementId()).bounds(), c.point()))).toList();
+        for (var candidate : candidates) {
+            var bounds = bySource.get(candidate.sourceElementId()).bounds();
+            if (!DescendingApron.connected(bounds, candidate.point(), candidate.targetElevation(), point -> {
+                var planned = columns.get(point);
+                if (planned != null) return planned.targetElevation();
+                var natural = TerrainPlatform.requiredTerrainCell(request, point);
+                return natural.water() || natural.terrainCategory() == TerrainCategory.BLOCKED ? Integer.MIN_VALUE : natural.height() - 1;
+            })) columns.remove(candidate.point());
+        }
     }
 
     private static void addFillSlopes(SuburbPlanningRequest request,List<ElevationZone> zones,

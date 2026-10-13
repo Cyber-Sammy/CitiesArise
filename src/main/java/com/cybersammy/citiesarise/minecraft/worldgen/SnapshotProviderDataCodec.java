@@ -28,7 +28,7 @@ final class SnapshotProviderDataCodec {
         for(int i=0;i<restored.size();i++) {
             if(indices[i]<0 || indices[i]>=data.size()) throw new IllegalArgumentException("Invalid provider data index");
             var op=restored.get(i);
-            restored.set(i,new Operation(op.point(),op.verticalOffset(),op.role(),op.platformY(),op.material(),op.rotation(),op.fillMaterial(),data.get(indices[i])));
+            restored.set(i,new Operation(op.point(),op.verticalOffset(),op.role(),op.platformY(),op.material(),op.rotation(),op.fillMaterial(),data.get(indices[i]),op.sourceId()));
         }
     }
     static void save(CompoundTag tag,List<Operation> operations) {

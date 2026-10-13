@@ -46,7 +46,8 @@ public final class SettlementRegistryGameTests {
             helper.assertTrue(messages.stream().anyMatch(m->m.contains("SAVED_DIAGNOSTIC") && m.contains("-8896")),"Candidate mislabeled or absent from locate");
             messages.clear();dispatcher.execute("citiesarise locate list",source);
             helper.assertTrue(messages.stream().anyMatch(m->m.contains("-8768")),"Second candidate missing from list");
-            helper.assertTrue(SettlementRegistry.get(helper.getLevel()).entries().stream().noneMatch(e->e.metadata().profile().equals("test:profile")),"Diagnostic candidate was promoted to generated");
+            helper.assertTrue(SettlementRegistry.get(helper.getLevel()).entries().stream().noneMatch(e->e.metadata().centerX()==first.x() && e.metadata().centerZ()==first.z()
+                    || e.metadata().centerX()==second.x() && e.metadata().centerZ()==second.z()),"Diagnostic candidate was promoted to generated");
             helper.succeed();
         } finally { Files.deleteIfExists(file);Files.deleteIfExists(directory); }
     }

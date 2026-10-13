@@ -44,7 +44,11 @@ public enum DebugPlacementRole {
     SUPPORT_LINING(40),
     BRIDGE_STEP(41),
     BRIDGE_PIER(42),
-    TERRAIN_CUT_SURFACE(43);
+    TERRAIN_CUT_SURFACE(43),
+    SUSPENDED_CONTENT(44),
+    STRUCTURAL_BEAM(45),
+    STRUCTURAL_PIER(46),
+    STRUCTURAL_BRACE(47);
 
     private final int serializedId;
 
@@ -54,6 +58,10 @@ public enum DebugPlacementRole {
 
     public int serializedId() {
         return serializedId;
+    }
+
+    public boolean suspended() {
+        return this==SUSPENDED_CONTENT || this==STRUCTURAL_BEAM || this==STRUCTURAL_PIER || this==STRUCTURAL_BRACE;
     }
 
     public boolean bridge() {
@@ -73,7 +81,7 @@ public enum DebugPlacementRole {
         return switch (this) {
             case SUPPORT_LINING -> 1;
             case BRIDGE_PIER, BRIDGE_STEP, BRIDGE_DECK, BRIDGE_RAIL, BRIDGE_ABUTMENT, BRIDGE_CLEARANCE -> 80;
-            case CONTENT_BLOCK -> 50;
+            case SUSPENDED_CONTENT, STRUCTURAL_BEAM, STRUCTURAL_PIER, STRUCTURAL_BRACE, CONTENT_BLOCK -> 50;
             case OAK_HOUSE_WALL, STONE_HOUSE_WALL -> 40;
             case RED_HOUSE_ROOF, SLATE_HOUSE_ROOF, BUILDING_WINDOW, BUILDING_WORKBENCH,
                     BUILDING_BOOKSHELF, BUILDING_CEILING_LIGHT -> 50;

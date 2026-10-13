@@ -29,7 +29,10 @@ public final class WorldgenVegetationCleanup {
 
     public static void onServerTick(ServerTickEvent.Post event) {
         Objects.requireNonNull(event, "event");
-        for(var level:event.getServer().getAllLevels()) PendingTreeRemoval.get(level).applyReady(level);
+        for(var level:event.getServer().getAllLevels()) {
+            PendingStructuralPlacement.get(level).applyReady(level);
+            PendingTreeRemoval.get(level).applyReady(level);
+        }
         int completed = 0;
         for (Map.Entry<CleanupKey, WorldgenVegetationCleanupPlan> entry : PENDING.entrySet()) {
             if (completed >= MAX_CLEANUPS_PER_TICK) {

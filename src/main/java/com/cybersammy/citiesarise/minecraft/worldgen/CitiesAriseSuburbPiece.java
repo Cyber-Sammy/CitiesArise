@@ -26,6 +26,7 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
     private final int centerX;
     private final int centerZ;
     private final Metadata registryTemplate;
+    private final StructuralSupportBlueprint structuralBlueprint;
 
     CitiesAriseSuburbPiece(BoundingBox boundingBox, SuburbStructurePlacementSnapshot snapshot) {
         this(boundingBox, snapshot, "cities_arise:legacy_unknown", "cities_arise:legacy",
@@ -34,7 +35,13 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
 
     CitiesAriseSuburbPiece(BoundingBox boundingBox, SuburbStructurePlacementSnapshot snapshot,
                           String profileId, String planId, int centerX, int centerZ) {
+        this(boundingBox,snapshot,profileId,planId,centerX,centerZ,null);
+    }
+
+    CitiesAriseSuburbPiece(BoundingBox boundingBox,SuburbStructurePlacementSnapshot snapshot,
+            String profileId,String planId,int centerX,int centerZ,StructuralSupportBlueprint structuralBlueprint) {
         super(CitiesAriseWorldgen.SUBURB_PIECE_TYPE.get(), 0, Objects.requireNonNull(boundingBox, "boundingBox"));
+        this.structuralBlueprint=structuralBlueprint;
         this.profileId = Objects.requireNonNull(profileId);
         this.planId = Objects.requireNonNull(planId);
         this.centerX = centerX;
@@ -48,6 +55,7 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
     CitiesAriseSuburbPiece(CompoundTag tag) {
         super(CitiesAriseWorldgen.SUBURB_PIECE_TYPE.get(), Objects.requireNonNull(tag, "tag"));
         this.snapshot = SuburbStructurePlacementSnapshot.load(tag);
+        this.structuralBlueprint=tag.contains("StructuralBlueprint")?StructuralSupportBlueprint.load(tag.getCompound("StructuralBlueprint")):null;
         this.profileId = tag.contains("SettlementProfile") ? tag.getString("SettlementProfile") : "cities_arise:legacy_unknown";
         this.planId = tag.contains("SettlementPlan") ? tag.getString("SettlementPlan") : "cities_arise:legacy";
         this.centerX = tag.contains("SettlementCenterX") ? tag.getInt("SettlementCenterX") : boundingBox.getCenter().getX();
@@ -60,6 +68,7 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
     @Override
     protected void addAdditionalSaveData(StructurePieceSerializationContext context, CompoundTag tag) {
         snapshot.save(tag);
+        if(structuralBlueprint!=null) tag.put("StructuralBlueprint",structuralBlueprint.save());
         tag.putString("SettlementProfile", profileId);
         tag.putString("SettlementPlan", planId);
         tag.putInt("SettlementCenterX", centerX);
@@ -78,6 +87,12 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
     ) {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(chunkPos, "chunkPos");
+        if(structuralBlueprint!=null && structuralBlueprint.settings().enabled()) {
+            var server=level.getLevel();
+            ServerThreadPublication.publish(server.getServer(),()->PendingStructuralPlacement.get(server)
+                    .add(profileId,planId,centerX,centerZ,snapshot,structuralBlueprint));
+            return;
+        }
         PlacementChunk chunk = new PlacementChunk(chunkPos.x, chunkPos.z);
         DebugChunkPlacementPlan chunkPlan = placementIndex.slice(chunk);
         if (!chunkPlan.operations().isEmpty()) {
@@ -100,6 +115,12 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
         return new Metadata(dimension, profileId, planId, centerX, centerZ,
                 registryTemplate.minX(), registryTemplate.minZ(), registryTemplate.maxX(), registryTemplate.maxZ(),
                 registryTemplate.placementChunks());
+    }
+
+    boolean requiresFinalTerrain() { return structuralBlueprint!=null && structuralBlueprint.settings().enabled(); }
+
+    DebugChunkPlacementPlan carvingProtectionSlice(PlacementChunk chunk) {
+        return requiresFinalTerrain()?new DebugChunkPlacementPlan(chunk,java.util.List.of()):placementSlice(chunk);
     }
 
     DebugChunkPlacementPlan placementSlice(PlacementChunk chunk) {

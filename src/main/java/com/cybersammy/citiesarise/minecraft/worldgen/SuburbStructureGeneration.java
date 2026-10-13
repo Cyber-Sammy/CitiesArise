@@ -108,7 +108,10 @@ final class SuburbStructureGeneration {
         if(Math.floorDiv(boundingBox.minX(),16)<startX-8 || Math.floorDiv(boundingBox.maxX(),16)>startX+8
                 || Math.floorDiv(boundingBox.minZ(),16)<startZ-8 || Math.floorDiv(boundingBox.maxZ(),16)>startZ+8) return Optional.empty();
         return Optional.of(new Generation(center, new CitiesAriseSuburbPiece(boundingBox, snapshot,
-                profile.id().value(), result.plan().id().value(), center.getX(), center.getZ())));
+                profile.id().value(), result.plan().id().value(), center.getX(), center.getZ(),
+                profile.structuralSupports().enabled() && result.optionalTerrainPreparationPlan().isPresent()
+                        ? StructuralSupportBlueprint.from(result.plan(),result.optionalTerrainPreparationPlan().orElseThrow(),profile.structuralSupports(),result.content().placementMaterials())
+                                .withinConstructionBudget(profile.suburbPlanningSettings().maxEarthworkVolume()-result.optionalTerrainPreparationPlan().orElseThrow().constructionVolume()):null)));
     }
 
     private static BlockPos regionCenter(Structure.GenerationContext context) {
@@ -150,6 +153,8 @@ final class SuburbStructureGeneration {
     ) {
         int fillDepth = profile.suburbPlanningSettings().maxFillDepth();
         int minimumY = snapshot.minimumPlatformY() + Math.min(-fillDepth - 1, snapshot.minimumVerticalOffset());
+        if(profile.structuralSupports().enabled()) minimumY=Math.min(minimumY,
+                snapshot.minimumPlatformY()-profile.structuralSupports().maximumDepth());
         return Math.max(context.heightAccessor().getMinBuildHeight(), minimumY);
     }
 

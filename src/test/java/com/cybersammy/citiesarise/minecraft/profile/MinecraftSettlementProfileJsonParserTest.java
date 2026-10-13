@@ -22,6 +22,15 @@ import org.junit.jupiter.api.Test;
 final class MinecraftSettlementProfileJsonParserTest {
     private final MinecraftSettlementProfileJsonParser parser = new MinecraftSettlementProfileJsonParser();
 
+    @Test void structuralSupportsAreOptInBoundedAndProfileOwned() {
+        var data=validJson();assertTrue(!parser.parse(id(),data).structuralSupports().enabled());
+        data.getAsJsonObject("planning").add("structuralSupports",JsonParser.parseString(
+                "{\"enabled\":true,\"maximumDepth\":32,\"maximumSpan\":12,\"pierSpacing\":4,\"maximumVolume\":20000}"));
+        var settings=parser.parse(id(),data).structuralSupports();assertTrue(settings.enabled());assertEquals(32,settings.maximumDepth());
+        data.getAsJsonObject("planning").getAsJsonObject("structuralSupports").addProperty("maximumDepth",1000);
+        assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+    }
+
     @Test void parsesDistrictLimitsWithoutLosingThemDuringContentResolution() {
         var data = validJson();
         assertEquals(1, parser.parse(id(), data).suburbPlanningSettings().districts().maxCount());

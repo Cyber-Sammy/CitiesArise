@@ -11,6 +11,7 @@ public final class CitiesAriseWorldgenConfig {
     private static final ModConfigSpec.IntValue LOCATE_SEARCH_RADIUS_REGIONS;
     private static final ModConfigSpec.IntValue LOCATE_MAX_CANDIDATE_ATTEMPTS;
     private static final ModConfigSpec.IntValue LOCATE_IMPROVEMENT_CANDIDATE_ATTEMPTS;
+    private static final ModConfigSpec.IntValue LOCATE_TIME_LIMIT_SECONDS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -35,8 +36,11 @@ public final class CitiesAriseWorldgenConfig {
                 .comment("Maximum deterministic candidates fully planned by /citiesarise locate diagnostic.")
                 .defineInRange("locateMaxCandidateAttempts", 256, 1, 4096);
         LOCATE_IMPROVEMENT_CANDIDATE_ATTEMPTS = builder
-                .comment("Additional candidates checked after /citiesarise locate diagnostic finds its first accepted site.")
+                .comment("Additional candidates checked only by /citiesarise locate diagnostic best after its first accepted site.")
                 .defineInRange("locateImprovementCandidateAttempts", 16, 0, 4096);
+        LOCATE_TIME_LIMIT_SECONDS = builder
+                .comment("Diagnostic search time budget, checked between candidates. A running candidate may finish after this budget.")
+                .defineInRange("locateTimeLimitSeconds", 60, 1, 3600);
         builder.pop();
 
         SPEC = builder.build();
@@ -64,6 +68,8 @@ public final class CitiesAriseWorldgenConfig {
     public static int locateMaxCandidateAttempts() {
         return LOCATE_MAX_CANDIDATE_ATTEMPTS.get();
     }
+
+    public static int locateTimeLimitSeconds() { return LOCATE_TIME_LIMIT_SECONDS.get(); }
 
     public static int locateImprovementCandidateAttempts() {
         return LOCATE_IMPROVEMENT_CANDIDATE_ATTEMPTS.get();

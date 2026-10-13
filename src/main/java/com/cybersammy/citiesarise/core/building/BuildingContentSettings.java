@@ -43,7 +43,7 @@ public record BuildingContentSettings(List<Entry> pool, List<String> palettes, B
         if(propIds.size()!=props.size()) throw new IllegalArgumentException("Duplicate prop ids");
         for(var rule:parcelRules) for(String id:rule.props()) {
             var prop=props.stream().filter(p -> p.id().equals(id)).findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown parcel prop: "+id));
-            if(!prop.anchor().equals("parcel_corner")) throw new IllegalArgumentException("Parcel binding requires parcel_corner prop: "+id);
+            if(!prop.parcelAnchor()) throw new IllegalArgumentException("Parcel binding requires parcel prop: "+id);
         }
         rules=List.copyOf(rules);
         if(rules.size()>64 || rules.stream().map(BuildingContentRule::id).distinct().count()!=rules.size())

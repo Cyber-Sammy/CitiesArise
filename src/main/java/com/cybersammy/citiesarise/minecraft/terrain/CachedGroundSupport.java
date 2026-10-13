@@ -17,7 +17,7 @@ final class CachedGroundSupport {
     }
 
     boolean supported(TerrainPreparationColumn column) {
-        if(column.type()==TerrainPreparationColumnType.PARCEL_SHOULDER) return true;
+        if((column.type()==TerrainPreparationColumnType.PARCEL_SHOULDER || column.type()==TerrainPreparationColumnType.FILL_SLOPE)) return true;
         int contact=Math.min(column.targetElevation()-1,column.targetElevation()-column.fillDepth());
         return answers.getOrCreate(new Key(column.point(),contact),
                 () -> OrdinaryGroundSupport.supported(column,columns.apply(column.point())));

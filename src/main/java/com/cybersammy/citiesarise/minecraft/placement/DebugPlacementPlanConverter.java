@@ -133,8 +133,8 @@ public final class DebugPlacementPlanConverter {
         return withMaterial(op,content.placementMaterials());
     }
     private static DebugBlockPlacementOperation withMaterial(DebugBlockPlacementOperation op, Map<String,String> materials) {
-        String material=op.role()==DebugPlacementRole.BRIDGE_CLEARANCE?"minecraft:air":op.material().isEmpty()?materials.getOrDefault(op.role().name(),""):op.material();
-        String fill=op.fillMaterial().isEmpty()?materials.getOrDefault(op.role()==DebugPlacementRole.TERRAIN_SURFACE?"TERRAIN_FILL":"FOUNDATION",""):op.fillMaterial();
+        String material=op.role()==DebugPlacementRole.BRIDGE_CLEARANCE?"minecraft:air":op.material().isEmpty()?materials.getOrDefault(op.role()==DebugPlacementRole.TERRAIN_CUT_SURFACE?"TERRAIN_SURFACE":op.role().name(),""):op.material();
+        String fill=op.fillMaterial().isEmpty()?materials.getOrDefault((op.role()==DebugPlacementRole.TERRAIN_SURFACE || op.role()==DebugPlacementRole.TERRAIN_CUT_SURFACE)?"TERRAIN_FILL":"FOUNDATION",""):op.fillMaterial();
         return new DebugBlockPlacementOperation(op.point(),op.verticalOffset(),op.role(),op.sourceElementId(),op.platformY(),material,op.rotation(),fill,op.providerData());
     }
 
@@ -247,7 +247,8 @@ public final class DebugPlacementPlanConverter {
     private static DebugPlacementRole preparationRole(TerrainPreparationColumnType type) {
         return switch (type) {
             case PLATFORM -> null;
-            case CUT_SLOPE, BUILDING_SHOULDER, PARCEL_SHOULDER, ROAD_SHOULDER -> DebugPlacementRole.TERRAIN_SURFACE;
+            case CUT_SLOPE -> DebugPlacementRole.TERRAIN_CUT_SURFACE;
+            case FILL_SLOPE, BUILDING_SHOULDER, PARCEL_SHOULDER, ROAD_SHOULDER -> DebugPlacementRole.TERRAIN_SURFACE;
             case RETAINING_WALL -> DebugPlacementRole.TERRAIN_RETAINING_WALL;
             case ROAD_TRANSITION_STEP -> DebugPlacementRole.ROAD_TRANSITION_STEP;
             case BUILDING_ACCESS -> DebugPlacementRole.BUILDING_ACCESS_SURFACE;

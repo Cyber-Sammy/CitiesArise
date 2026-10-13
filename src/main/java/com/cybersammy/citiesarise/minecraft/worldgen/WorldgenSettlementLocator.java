@@ -42,7 +42,15 @@ public final class WorldgenSettlementLocator {
         return findBestAsync(level,origin,java.util.Set.of());
     }
 
+    public CompletableFuture<SearchResult> findFirstAsync(ServerLevel level, BlockPos origin, java.util.Set<SettlementRegion> excluded) {
+        return findAsync(level,origin,excluded,false);
+    }
+
     public CompletableFuture<SearchResult> findBestAsync(ServerLevel level, BlockPos origin, java.util.Set<SettlementRegion> excluded) {
+        return findAsync(level,origin,excluded,true);
+    }
+
+    private CompletableFuture<SearchResult> findAsync(ServerLevel level, BlockPos origin, java.util.Set<SettlementRegion> excluded, boolean ranked) {
         var skipped=java.util.Set.copyOf(excluded);
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(origin, "origin");
@@ -71,7 +79,7 @@ public final class WorldgenSettlementLocator {
                 origin.getZ(),
                 CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
                 CitiesAriseWorldgenConfig.locateMaxCandidateAttempts(),
-                CitiesAriseWorldgenConfig.locateImprovementCandidateAttempts(),
+                ranked ? CitiesAriseWorldgenConfig.locateImprovementCandidateAttempts() : 0,
                 region -> !skipped.contains(region) && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,context.surveySize())
                         && candidateSelector.isCandidate(worldSeed, region, regionModulo)
                         && placement.isStructureRegion(region)
@@ -83,8 +91,10 @@ public final class WorldgenSettlementLocator {
                     return evaluation;
                 },
                 EarthworkSiteAssessment::compareTo,
-                executor
+                executor,
+                java.util.concurrent.TimeUnit.SECONDS.toNanos(CitiesAriseWorldgenConfig.locateTimeLimitSeconds())
         ).thenApply(outcome -> {
+            if(outcome.timeLimitReached()) increment(rejectionCounts,"SEARCH_TIME_LIMIT");
             var raw=searchResult(outcome,rejectionCounts);
             var located=raw.settlement().map(found->{
                 var center=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.center(found.region(),context.surveySize());

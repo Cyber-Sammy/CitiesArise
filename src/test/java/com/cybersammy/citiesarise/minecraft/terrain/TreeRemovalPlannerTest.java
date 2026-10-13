@@ -52,4 +52,20 @@ class TreeRemovalPlannerTest {
         assertFalse(result.remove().contains(new Point(4,0,0)));
         assertFalse(result.remove().contains(new Point(24,0,0)));
     }
+    @Test void mixedVanillaBushAndOrphanFoliageCanBeRemovedWithoutOtherTrees() {
+        var blocks=new HashMap<Point,Node>();
+        blocks.put(new Point(0,0,0),new Node("jungle",true));
+        blocks.put(new Point(0,1,0),new Node("oak",false));blocks.put(new Point(1,1,0),new Node("oak",false));
+        var result=TreeRemovalPlanner.discover(new Point(1,1,0),p->Optional.ofNullable(blocks.get(p)));
+        assertEquals(blocks.keySet(),result.remove());
+        blocks.clear();blocks.put(new Point(0,8,0),new Node("oak",false));blocks.put(new Point(1,8,0),new Node("oak",false));
+        assertEquals(blocks.keySet(),TreeRemovalPlanner.discover(new Point(0,8,0),p->Optional.ofNullable(blocks.get(p))).remove());
+        var custom=new Point(2,1,0);
+        var mixed=new HashMap<Point,Node>();mixed.put(new Point(0,0,0),new Node("jungle",true));
+        mixed.put(new Point(0,1,0),new Node("oak",false));mixed.put(new Point(1,1,0),new Node("oak",false));
+        mixed.put(custom,new Node("custom",false,false));
+        assertFalse(TreeRemovalPlanner.discover(new Point(0,0,0),p->Optional.ofNullable(mixed.get(p))).remove().contains(custom));
+        blocks.replaceAll((p,n)->new Node("custom",false,false));
+        assertTrue(TreeRemovalPlanner.discover(new Point(0,8,0),p->Optional.ofNullable(blocks.get(p))).remove().isEmpty());
+    }
 }

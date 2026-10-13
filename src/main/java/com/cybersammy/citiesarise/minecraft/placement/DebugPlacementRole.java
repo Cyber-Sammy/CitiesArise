@@ -43,7 +43,8 @@ public enum DebugPlacementRole {
     BRIDGE_CLEARANCE(39),
     SUPPORT_LINING(40),
     BRIDGE_STEP(41),
-    BRIDGE_PIER(42);
+    BRIDGE_PIER(42),
+    TERRAIN_CUT_SURFACE(43);
 
     private final int serializedId;
 
@@ -83,7 +84,7 @@ public enum DebugPlacementRole {
             case TERRAIN_FILL -> 0;
             case PARCEL_YARD -> 10;
             case PARCEL_BOUNDARY -> 20;
-            case TERRAIN_SURFACE -> 25;
+            case TERRAIN_CUT_SURFACE, TERRAIN_SURFACE -> 25;
             case TERRAIN_RETAINING_WALL -> 26;
             case BUILDING_FLOOR -> 30;
             case BUILDING_WALL -> 40;

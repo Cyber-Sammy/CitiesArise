@@ -7,7 +7,9 @@ import com.cybersammy.citiesarise.core.content.ModuleDefinition.Vec;
 import java.util.*;
 
 final class SurfacePropPlanner {
-    private record Anchor(PlanElementId source,GridPoint point,GridBounds bounds) { }
+    private record Anchor(PlanElementId source,GridPoint point,GridBounds bounds,ParcelPropLayout layout) {
+        Anchor(PlanElementId source,GridPoint point,GridBounds bounds) { this(source,point,bounds,null); }
+    }
     private SurfacePropPlanner() { }
     static List<ResolvedProp> plan(SettlementPlan plan,TerrainPreparationPlan preparation,List<PropRule> rules,long seed) {
         return plan(plan,preparation,rules,seed,Map.of());
@@ -33,10 +35,17 @@ final class SurfacePropPlanner {
         List<ResolvedProp> result=new ArrayList<>();
         for(PropRule rule:rules) {
             List<Anchor> anchors=new ArrayList<>();
-            if(rule.anchor().equals("parcel_corner")) for(var parcel:plan.parcels()) {
+            if(rule.parcelAnchor()) for(var parcel:plan.parcels()) {
                 var binding=parcels.get(parcel.id());
                 if(binding!=null && !binding.props().contains(rule.id())) continue;
-                var b=parcel.bounds(); anchors.add(new Anchor(parcel.id(),new GridPoint(b.minX()+rule.inset(),b.minZ()+rule.inset()),b));
+                var b=parcel.bounds();
+                if(rule.layoutAnchor()) {
+                    long localSeed=seed^parcel.id().value().hashCode()^rule.id().hashCode();
+                    if(new Random(localSeed).nextInt(100)>=rule.chance()) continue;
+                    ParcelPropLayout.of(plan,preparation,parcel).ifPresent(layout->{
+                        for(var point:layout.candidates(rule,localSeed)) anchors.add(new Anchor(parcel.id(),point,b,layout));
+                    });
+                } else anchors.add(new Anchor(parcel.id(),new GridPoint(b.minX()+rule.inset(),b.minZ()+rule.inset()),b));
             } else for(var road:plan.roadGraph().segments()) {
                 var a=nodes.get(road.startNodeId()).point(); var b=nodes.get(road.endNodeId()).point();
                 int radius=(road.width()+1)/2+rule.inset();
@@ -49,17 +58,30 @@ final class SurfacePropPlanner {
                 }
             }
             Set<GridPoint> usedAnchors=new HashSet<>();
+            Map<PlanElementId,Set<GridPoint>> usedLayoutAnchors=new HashMap<>();
+            Map<PlanElementId,Integer> accepted=new HashMap<>();
             for(Anchor anchor:anchors) {
-                if(!usedAnchors.add(anchor.point)) continue;
+                if(rule.layoutAnchor() && accepted.getOrDefault(anchor.source,0)>=rule.maxCount()) continue;
+                if(rule.layoutAnchor()) {
+                    if(!usedLayoutAnchors.computeIfAbsent(anchor.source,ignored->new HashSet<>()).add(anchor.point)) continue;
+                } else if(!usedAnchors.add(anchor.point)) continue;
                 var candidates=new ArrayList<>(rule.pool().stream().filter(m -> m.tags().containsAll(rule.requiredTags())
                         && Collections.disjoint(m.tags(),rule.forbiddenTags())).sorted(Comparator.comparing(ModuleDefinition::id)).toList());
                 Collections.shuffle(candidates,new Random(seed^anchor.source.value().hashCode()^rule.id().hashCode()));
                 for(var module:candidates) {
-                    Integer height=heights.get(anchor.point); if(height==null) continue;
+                    var origin=anchor.layout==null?anchor.point:anchor.layout.world(anchor.point,module.size());
+                    int turn=anchor.layout==null?0:anchor.layout.turn();
+                    var size=CompositionAssembler.rotatedSize(module.size(),turn);
+                    Integer height=heights.get(origin); if(height==null) continue;
                     Set<GridPoint> footprint=new HashSet<>(); boolean fits=true;
-                    for(int z=0;z<module.size().z();z++) for(int x=0;x<module.size().x();x++) {
-                        GridPoint point=new GridPoint(anchor.point.x()+x,anchor.point.z()+z); footprint.add(point);
+                    for(int z=0;z<size.z();z++) for(int x=0;x<size.x();x++) {
+                        GridPoint point=new GridPoint(origin.x()+x,origin.z()+z); footprint.add(point);
                         if(occupied.contains(point) || !height.equals(heights.get(point)) || (anchor.bounds!=null && !anchor.bounds.contains(point))) fits=false;
+                        if(anchor.layout!=null) {
+                            if(!anchor.layout.permits(anchor.layout.local(point),rule)) fits=false;
+                            for(int dz=-rule.clearance();dz<=rule.clearance();dz++) for(int dx=-rule.clearance();dx<=rule.clearance();dx++)
+                                if(occupied.contains(new GridPoint(point.x()+dx,point.z()+dz))) fits=false;
+                        }
                     }
                     if(!fits) continue;
                     var composition=CompositionAssembler.standalone(module,rule.severity(),rule.airMaterial(),seed^anchor.source.value().hashCode());
@@ -68,7 +90,9 @@ final class SurfacePropPlanner {
                             m -> m.tags().containsAll(rule.requiredTags()) && Collections.disjoint(m.tags(),rule.forbiddenTags()),
                             rule.airMaterial(),rule.severity(),seed^anchor.source.value().hashCode()).resolve(composition.get());
                     if(composition.isEmpty()) continue;
-                    result.add(new ResolvedProp(rule.id(),anchor.source,new Vec(anchor.point.x(),1,anchor.point.z()),height,composition.get(),rule.materials()));
+                    var resolved=turn==0?composition.get():ParcelPropLayout.rotate(composition.get(),module.size(),turn,rule.definitions());
+                    result.add(new ResolvedProp(rule.id(),anchor.source,new Vec(origin.x(),1,origin.z()),height,resolved,rule.materials()));
+                    accepted.merge(anchor.source,1,Integer::sum);
                     occupied.addAll(footprint); break;
                 }
             }

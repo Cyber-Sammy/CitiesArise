@@ -14,6 +14,31 @@ import net.neoforged.neoforge.gametest.*;
 @PrefixGameTestTemplate(false)
 public final class WholeTreeCleanupGameTests {
     @GameTest(template="empty",timeoutTicks=100)
+    public static void vanillaJungleBushAndFloatingLeavesClearWithoutPersistentDecoration(GameTestHelper helper) {
+        var level=helper.getLevel();var origin=helper.absolutePos(new BlockPos(5120,10,5120));
+        for(int cx=(origin.getX()-16)>>4;cx<=(origin.getX()+16)>>4;cx++)
+            for(int cz=(origin.getZ()-16)>>4;cz<=(origin.getZ()+16)>>4;cz++) level.getChunk(cx,cz);
+        for(int x=-3;x<=6;x++) for(int z=-3;z<=3;z++) {
+            level.setBlock(origin.offset(x,0,z),Blocks.DIRT.defaultBlockState(),2);
+            for(int y=1;y<=14;y++) level.setBlock(origin.offset(x,y,z),Blocks.AIR.defaultBlockState(),2);
+        }
+        level.setBlock(origin.offset(2,1,0),Blocks.JUNGLE_LOG.defaultBlockState(),2);
+        for(int x=0;x<=4;x++) for(int z=-1;z<=1;z++) level.setBlock(origin.offset(x,2,z),
+                Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.DISTANCE,1),2);
+        level.setBlock(origin.offset(0,10,0),Blocks.JUNGLE_LEAVES.defaultBlockState(),2);
+        var decoration=origin.offset(0,11,0);
+        level.setBlock(decoration,Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT,true),2);
+        var plan=plan(origin.offset(-1,0,0));
+        var debug=new DebugPlacementApplier();debug.apply(level,plan,true);
+        helper.assertTrue(level.getBlockState(origin.offset(2,1,0)).isAir(),"Mixed-family jungle bush trunk remains");
+        helper.assertTrue(level.getBlockState(origin.offset(0,2,0)).isAir(),"Jungle bush canopy remains");
+        helper.assertTrue(level.getBlockState(origin.offset(0,10,0)).isAir(),"Floating orphan leaves remain");
+        helper.assertTrue(level.getBlockState(decoration).is(Blocks.OAK_LEAVES),"Persistent decoration was cleared");
+        debug.undoLast(level);
+        helper.assertTrue(level.getBlockState(origin.offset(2,1,0)).is(Blocks.JUNGLE_LOG),"Undo lost natural bush");
+        helper.succeed();
+    }
+    @GameTest(template="empty",timeoutTicks=100)
     public static void canopyContactAcrossChunkBoundarySurvivesQueueReload(GameTestHelper helper) {
         var origin=helper.absolutePos(new BlockPos(2048,10,2048));
         origin=new BlockPos((origin.getX()&~15)+14,origin.getY(),origin.getZ());

@@ -121,6 +121,9 @@ final class WorldgenChunkPlacement {
     }
 
     private static PlatformPreparation preparation(DebugBlockPlacementOperation operation, int platformY) {
+        if (operation.role() == DebugPlacementRole.TERRAIN_CUT_SURFACE) {
+            return new PlatformPreparation(platformY, DebugPlacementRole.TERRAIN_FILL, false, operation.fillMaterial());
+        }
         if (operation.role() == DebugPlacementRole.TERRAIN_SURFACE) {
             return new PlatformPreparation(platformY, DebugPlacementRole.TERRAIN_FILL, true, operation.fillMaterial());
         }

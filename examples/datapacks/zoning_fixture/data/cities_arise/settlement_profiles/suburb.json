@@ -38,6 +38,15 @@
             }
           },
           {
+            "offset": 2,
+            "every": 4,
+            "properties": {
+              "zoning:purpose": "workshops",
+              "zoning:style": "stone"
+            },
+            "target": "PARCEL"
+          },
+          {
             "target": "BUILDING_SLOT",
             "every": 5,
             "offset": 0,
@@ -160,7 +169,8 @@
       "retainingWalls": true,
       "retainingWallMinimumHeight": 2,
       "supportLiningDepth": 4,
-      "cutSlopeRadius": 8
+      "cutSlopeRadius": 8,
+      "fillSlopeRadius": 8
     }
   },
   "terrainPolicy": {

@@ -18,6 +18,57 @@ import net.neoforged.neoforge.gametest.*;
 @PrefixGameTestTemplate(false)
 public final class NaturalCityTerrainGameTests {
     @GameTest(template="empty",timeoutTicks=400)
+    public static void reportedJungleCoastCityIsReproducible(GameTestHelper helper) throws Exception {
+        var registry=helper.getLevel().registryAccess();
+        var noise=registry.registryOrThrow(Registries.NOISE_SETTINGS).getHolderOrThrow(NoiseGeneratorSettings.OVERWORLD);
+        var biomes=MultiNoiseBiomeSource.createFromPreset(registry.registryOrThrow(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST)
+                .getHolderOrThrow(MultiNoiseBiomeSourceParameterLists.OVERWORLD));
+        var generator=new NoiseBasedChunkGenerator(biomes,noise);
+        var random=RandomState.create(noise.value(),registry.lookupOrThrow(Registries.NOISE),8896177137983281459L);
+        Path pack=Path.of("../examples/datapacks/zoning_fixture/data");
+        var fixture=com.google.gson.JsonParser.parseString(Files.readString(pack.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject();
+        var profile=new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("cities_arise:suburb"),fixture,
+                (id,directory,extension)->{var parts=id.split(":",2);return Files.newInputStream(pack.resolve(parts[0]).resolve(directory).resolve(parts[1]+extension));});
+        var provider=new TiledCityTerrainProvider(new MinecraftWorldgenTerrainProvider(generator,random,generator.getMinY(),generator.getGenDepth()));
+        var survey=provider.sample(CityPlanningArea.bounds(new SettlementRegion(16,18),profile.surveySize()));
+        var request=new SuburbPlanningRequest(new PlanElementId("cities_arise:debug_suburb_16_18"),survey,-7408052889241543381L,
+                profile.suburbPlanningSettings(),profile.terrainResponsePolicy());
+        var planner=SuburbPlanner.defaults();var result=WorldgenWaterMaskRefiner.refine(planner,provider,request,planner.plan(request));
+        helper.assertTrue(result.successful(),"Reported jungle city rejected: "+result.failureReason());
+        var plan=result.plan().orElseThrow();var prep=result.terrainPreparationPlan().orElseThrow();
+        var report=com.google.gson.JsonParser.parseString(new com.cybersammy.citiesarise.core.debug.SettlementPlanJsonExporter().export(plan,result.content())).getAsJsonObject();
+        report.add("preparation",new com.google.gson.Gson().toJsonTree(prep));
+        var placement=new com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlanConverter().convert(plan,prep,result.content());
+        helper.assertTrue(result.content().props().stream().anyMatch(p->p.ruleId().equals("zoning:work_area")),"Reported city has no demonstrated workshop work area");
+        helper.assertTrue(prep.columns().stream().anyMatch(c->c.type()==com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType.FILL_SLOPE),
+                "Reported city has no descending embankment blending");
+        var walkHeights=new HashMap<com.cybersammy.citiesarise.core.geometry.GridPoint,Double>();
+        var materials=new com.cybersammy.citiesarise.minecraft.placement.VanillaDebugBlockMaterialProvider();
+        for(var operation:placement.operations()) if(Set.of(com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.ROAD_SURFACE,
+                com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.WORN_ROAD_SURFACE,
+                com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.ROAD_TRANSITION_STEP).contains(operation.role())) {
+            double top=operation.platformY().orElseThrow()+operation.verticalOffset()+materials.blockState(operation)
+                    .getCollisionShape(net.minecraft.world.level.EmptyBlockGetter.INSTANCE,net.minecraft.core.BlockPos.ZERO).max(net.minecraft.core.Direction.Axis.Y);
+            walkHeights.merge(operation.point(),top,Math::max);
+        }
+        var roadNodes=new HashMap<PlanElementId,com.cybersammy.citiesarise.core.model.RoadNode>();plan.roadGraph().nodes().forEach(n->roadNodes.put(n.id(),n));
+        for(var road:plan.roadGraph().segments()) {
+            var a=roadNodes.get(road.startNodeId()).point();var b=roadNodes.get(road.endNodeId()).point();
+            int dx=Integer.signum(b.x()-a.x()),dz=Integer.signum(b.z()-a.z()),length=Math.abs(b.x()-a.x())+Math.abs(b.z()-a.z());
+            for(int i=0;i<length;i++) {
+                var p=new com.cybersammy.citiesarise.core.geometry.GridPoint(a.x()+dx*i,a.z()+dz*i);
+                var q=new com.cybersammy.citiesarise.core.geometry.GridPoint(p.x()+dx,p.z()+dz);
+                helper.assertTrue(walkHeights.containsKey(p) && walkHeights.containsKey(q)
+                        && Math.abs(walkHeights.get(p)-walkHeights.get(q))<=0.5001,"Road centerline has a gap or non-walkable jump");
+            }
+        }
+        report.add("placement",new com.google.gson.Gson().toJsonTree(placement.operations().stream().map(o->Map.of(
+                "x",o.point().x(),"z",o.point().z(),"y",o.platformY().orElseThrow()+o.verticalOffset(),
+                "role",o.role().name(),"material",o.material(),"source",o.sourceElementId().value())).toList()));
+        Files.writeString(Path.of("../build/ca57-audit.json"),new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(report));
+        helper.succeed();
+    }
+    @GameTest(template="empty",timeoutTicks=400)
     public static void ordinaryOverworldReliefSupportsDistrictCity(GameTestHelper helper) throws Exception {
         verify(helper,new SettlementRegion(14,-12),-3537454410882008615L);
     }
@@ -48,7 +99,12 @@ public final class NaturalCityTerrainGameTests {
         var fixture=com.google.gson.JsonParser.parseString(Files.readString(pack.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject();
         // Keep the reported CA48 cut-bank regression at its original 16x18 parcel geometry.
         fixture.getAsJsonObject("planning").getAsJsonObject("districts").remove("parcelSizes");
-        if(legacyShoulders) fixture.getAsJsonObject("planning").getAsJsonObject("terrainTransitions").addProperty("parcelShoulderRadius",3);
+        if(legacyShoulders) {
+            fixture.getAsJsonObject("planning").getAsJsonObject("terrainTransitions").addProperty("parcelShoulderRadius",3);
+            fixture.getAsJsonObject("planning").getAsJsonObject("terrainTransitions").addProperty("fillSlopeRadius",0);
+            fixture.getAsJsonObject("planning").getAsJsonObject("districts").getAsJsonObject("zoning").getAsJsonArray("rules").remove(1);
+            fixture.getAsJsonObject("planning").addProperty("maxBuildingFoundationDepth",8);
+        }
         var profile=new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("cities_arise:suburb"),fixture,
                 (id,directory,extension)->{var parts=id.split(":",2);return Files.newInputStream(pack.resolve(parts[0]).resolve(directory).resolve(parts[1]+extension));});
         var bounds=CityPlanningArea.bounds(new SettlementRegion(12,0),profile.surveySize());
@@ -85,7 +141,7 @@ public final class NaturalCityTerrainGameTests {
         var placement=new com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlanConverter().convert(plan,prep,result.content());
         var bank=banks.getFirst();
         helper.assertTrue(placement.operations().stream().anyMatch(o -> o.point().equals(bank.point())
-                && o.role()==com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.TERRAIN_SURFACE
+                && o.role()==com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.TERRAIN_CUT_SURFACE
                 && o.platformY().orElseThrow()==bank.targetElevation()),"Cut bank lost its terrain carving operation");
         var report=com.google.gson.JsonParser.parseString(new com.cybersammy.citiesarise.core.debug.SettlementPlanJsonExporter().export(plan,result.content())).getAsJsonObject();
         report.add("preparation",new com.google.gson.Gson().toJsonTree(prep));

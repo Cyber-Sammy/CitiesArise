@@ -65,8 +65,10 @@ public final class CitiesAriseCommands {
                         .executes(context -> runSavedLocate(context.getSource(),0))
                         .then(Commands.literal("generated").executes(context -> runGeneratedLocate(context.getSource())))
                         .then(Commands.literal("potential").executes(context -> runPotentialLocate(context.getSource())))
-                        .then(Commands.literal("diagnostic").executes(context -> runLocate(context.getSource(),false))
-                                .then(Commands.literal("next").executes(context -> runLocate(context.getSource(),true))))
+                        .then(Commands.literal("diagnostic").executes(context -> runLocate(context.getSource(),false,false))
+                                .then(Commands.literal("next").executes(context -> runLocate(context.getSource(),true,false)))
+                                .then(Commands.literal("best").executes(context -> runLocate(context.getSource(),false,true))
+                                        .then(Commands.literal("next").executes(context -> runLocate(context.getSource(),true,true)))))
                         .then(Commands.literal("list").executes(context -> runSavedLocate(context.getSource(),1))
                                 .then(Commands.argument("page",com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
                                         .executes(context -> runSavedLocate(context.getSource(),com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(context,"page")))))
@@ -82,7 +84,7 @@ public final class CitiesAriseCommands {
                                 .executes(context -> runDebugUndo(context.getSource())))));
     }
 
-    private int runLocate(CommandSourceStack source, boolean next) {
+    private int runLocate(CommandSourceStack source, boolean next, boolean ranked) {
         if (!CitiesAriseWorldgenConfig.enabled()) {
             String summary = "Cities Arise worldgen is disabled.";
             source.sendFailure(Component.literal(summary));
@@ -98,7 +100,9 @@ public final class CitiesAriseCommands {
         }
 
         BlockPos origin = BlockPos.containing(source.getPosition());
-        String startedSummary = "Diagnostic planning started. Results are candidates, not proof of generated settlements.";
+        String startedSummary = (ranked ? "Ranked diagnostic planning started." : "Diagnostic planning started; returning the first accepted site.")
+                + " Results are candidates, not proof of generated settlements. Time budget="
+                + CitiesAriseWorldgenConfig.locateTimeLimitSeconds()+"s; a running candidate may finish after the budget.";
         source.sendSuccess(() -> Component.literal(startedSummary), false);
         logCommandResult(startedSummary);
         MinecraftServer server = source.getServer();
@@ -113,8 +117,9 @@ public final class CitiesAriseCommands {
                 SettlementRegistry.get(source.getLevel()).entries().forEach(e -> excluded.add(
                         com.cybersammy.citiesarise.minecraft.planning.SettlementRegion.fromBlockPosition(e.metadata().centerX(),e.metadata().centerZ())));
             }
-            settlementLocator.findBestAsync(source.getLevel(), origin,excluded)
-                    .whenComplete((result, exception) -> server.execute(() -> {
+            var search=ranked ? settlementLocator.findBestAsync(source.getLevel(),origin,excluded)
+                    : settlementLocator.findFirstAsync(source.getLevel(),origin,excluded);
+            search.whenComplete((result, exception) -> server.execute(() -> {
                         completeLocate(source, result, exception);
                         source.sendSuccess(() -> Component.literal("Diagnostic elapsedMs=" + elapsedMs(started)), false);
                     }));

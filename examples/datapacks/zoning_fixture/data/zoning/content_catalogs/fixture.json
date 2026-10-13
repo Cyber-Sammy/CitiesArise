@@ -1022,6 +1022,34 @@
           "material": "minecraft:oak_leaves[persistent=true]"
         }
       ]
+    },
+    "zoning:yard_workbench": {
+      "tags": [
+        "zoning:style"
+      ],
+      "cells": [
+        {
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "material": "minecraft:crafting_table"
+        },
+        {
+          "at": [
+            1,
+            0,
+            0
+          ],
+          "material": "minecraft:barrel[facing=north,open=false]"
+        }
+      ],
+      "size": [
+        2,
+        1,
+        1
+      ]
     }
   },
   "compositions": {
@@ -1115,11 +1143,14 @@
     "BRIDGE_DECK": "minecraft:polished_deepslate",
     "BRIDGE_RAIL": "minecraft:polished_blackstone_brick_wall",
     "BRIDGE_PIER": "minecraft:polished_andesite",
-    "BRIDGE_ABUTMENT": "minecraft:stone_bricks"
+    "BRIDGE_ABUTMENT": "minecraft:stone_bricks",
+    "ROAD_TRANSITION_STEP": "minecraft:deepslate_tile_slab[type=bottom,waterlogged=false]",
+    "ROAD_END_CURB": "minecraft:deepslate_tile_slab[type=bottom,waterlogged=false]",
+    "WORN_ROAD_SURFACE": "minecraft:cracked_deepslate_tiles"
   },
   "props": {
     "zoning:yard_lamp": {
-      "anchor": "parcel_corner",
+      "anchor": "parcel_entrance",
       "pool": [
         "zoning:lamp"
       ],
@@ -1127,10 +1158,12 @@
       "inset": 1,
       "requiredTags": [
         "zoning:style"
-      ]
+      ],
+      "spacing": 1,
+      "clearance": 1
     },
     "zoning:home_planter": {
-      "anchor": "parcel_corner",
+      "anchor": "parcel_front",
       "pool": [
         "zoning:planter"
       ],
@@ -1138,7 +1171,24 @@
       "inset": 1,
       "requiredTags": [
         "zoning:style"
-      ]
+      ],
+      "spacing": 2,
+      "clearance": 1
+    },
+    "zoning:work_area": {
+      "pool": [
+        "zoning:yard_workbench"
+      ],
+      "inset": 1,
+      "chance": 100,
+      "requiredTags": [
+        "zoning:style"
+      ],
+      "clearance": 1,
+      "spacing": 2,
+      "palette": "zoning:palette",
+      "maxCount": 1,
+      "anchor": "parcel_back"
     }
   },
   "materialRules": {
@@ -1156,50 +1206,22 @@
   },
   "surfaceTemplates": {
     "ROAD_SURFACE": {
-      "size": [
-        2,
-        2,
-        2
-      ],
-      "alignToRoad": true,
-      "fills": [
-        {
-          "from": [
-            0,
-            0,
-            0
-          ],
-          "to": [
-            1,
-            0,
-            1
-          ],
-          "material": "minecraft:stone_bricks"
-        },
-        {
-          "from": [
-            0,
-            1,
-            0
-          ],
-          "to": [
-            1,
-            1,
-            1
-          ],
-          "material": "minecraft:deepslate_tiles"
-        }
-      ],
       "cells": [
         {
+          "material": "minecraft:deepslate_tiles",
           "at": [
             0,
-            1,
+            0,
             0
-          ],
-          "material": "minecraft:polished_deepslate"
+          ]
         }
-      ]
+      ],
+      "size": [
+        1,
+        1,
+        1
+      ],
+      "alignToRoad": true
     },
     "PARCEL_YARD": {
       "cells": [
@@ -1316,7 +1338,8 @@
         }
       },
       "props": [
-        "zoning:yard_lamp"
+        "zoning:yard_lamp",
+        "zoning:work_area"
       ]
     }
   ]

@@ -13,6 +13,7 @@ public final class SettlementRegistryLifecycle {
                 .flatMap(start -> start.getPieces().stream())
                 .filter(CitiesAriseSuburbPiece.class::isInstance)
                 .map(CitiesAriseSuburbPiece.class::cast)
+                .filter(piece->!piece.requiresFinalTerrain())
                 .map(piece -> piece.registryMetadata(level.dimension().location().toString()))
                 .toList();
         if (!metadata.isEmpty()) ServerThreadPublication.publish(level.getServer(), () -> {

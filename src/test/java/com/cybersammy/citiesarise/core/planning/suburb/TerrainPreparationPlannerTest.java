@@ -37,6 +37,25 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class TerrainPreparationPlannerTest {
+    @Test void fillBankCannotRestartBeyondAnUnfilledInnerTrench() {
+        var source = id("trench-pad");
+        var bounds = new GridBounds(new GridPoint(4,4),new GridSize(2,2));
+        var zone = new ElevationZone(source,ElevationZoneType.PARCEL_PAD,bounds,64);
+        var survey = TerrainSurvey.sample(new GridBounds(new GridPoint(0,0),new GridSize(12,12)), point -> {
+            // The first two western strips are too deep for cosmetic fill; the third is affordable.
+            int height = point.x() == 2 || point.x() == 3 ? 55 : point.x() >= 6 ? 62 : 60;
+            return Optional.of(new TerrainCell(point,height,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE));
+        });
+        var transitions = new TerrainTransitionSettings(1,0,0,0,0,0,0,false,2,0,0,4);
+        var settings = new SuburbPlanningSettings(1,1.0,1,3,3,0,20,1,1,10,10,1000L).withTerrainTransitions(transitions);
+        var preparation = TerrainPreparationPlanner.plan(new SuburbPlanningRequest(id("trench-city"),survey,42,settings),
+                new RegionalElevationPlan(List.of(zone),List.of())).plan().orElseThrow();
+        assertFalse(preparation.columns().stream().anyMatch(c -> c.point().equals(new GridPoint(1,4))),
+                "An affordable outer terrace must not surround an unfilled inner trench");
+        assertTrue(preparation.columns().stream().anyMatch(c -> c.point().equals(new GridPoint(7,4))),
+                "The connected opposite bank must remain");
+    }
+
     @Test void fillBanksDescendWithoutOverwritingRoadsWaterOrDeepVoids() {
         var west=node("fill-west",4,4);var east=node("fill-east",5,4);var road=segment("fill-road",west,east);
         var zone=new ElevationZone(road.id(),ElevationZoneType.ROAD_SEGMENT,new GridBounds(new GridPoint(4,4),new GridSize(2,1)),64);

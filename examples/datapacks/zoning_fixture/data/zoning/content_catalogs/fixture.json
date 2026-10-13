@@ -1146,7 +1146,10 @@
     "BRIDGE_ABUTMENT": "minecraft:stone_bricks",
     "ROAD_TRANSITION_STEP": "minecraft:deepslate_tile_slab[type=bottom,waterlogged=false]",
     "ROAD_END_CURB": "minecraft:deepslate_tile_slab[type=bottom,waterlogged=false]",
-    "WORN_ROAD_SURFACE": "minecraft:cracked_deepslate_tiles"
+    "WORN_ROAD_SURFACE": "minecraft:cracked_deepslate_tiles",
+    "STRUCTURAL_BEAM": "minecraft:stripped_oak_log[axis=x]",
+    "STRUCTURAL_PIER": "minecraft:stripped_oak_log[axis=y]",
+    "STRUCTURAL_BRACE": "minecraft:stripped_oak_log[axis=x]"
   },
   "props": {
     "zoning:yard_lamp": {

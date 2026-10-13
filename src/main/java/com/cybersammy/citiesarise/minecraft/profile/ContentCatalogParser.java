@@ -130,7 +130,7 @@ public final class ContentCatalogParser {
         for(var template:allTemplates) for(var cell:template.cells())
             payloadSize+=cell.providerData().values().stream().mapToLong(String::length).sum();
         if(payloadSize>4_000_000) throw new IllegalArgumentException("Catalog exceeds provider data budget");
-        for(String role:List.of("FOUNDATION","TERRAIN_FILL","BRIDGE_ABUTMENT","BRIDGE_PIER","SUPPORT_LINING")) if(surfaces.containsKey(role)) resources.validateTraits(surfaces.get(role),false,true,false);
+        for(String role:List.of("FOUNDATION","TERRAIN_FILL","BRIDGE_ABUTMENT","BRIDGE_PIER","SUPPORT_LINING","STRUCTURAL_BEAM","STRUCTURAL_PIER","STRUCTURAL_BRACE")) if(surfaces.containsKey(role)) resources.validateTraits(surfaces.get(role),false,true,false);
         if(surfaces.containsKey("BRIDGE_STEP")) resources.validateBridgeSurface(surfaces.get("BRIDGE_STEP"),true);
         if(surfaces.containsKey("BRIDGE_DECK")) resources.validateWalkingSurface(surfaces.get("BRIDGE_DECK"));
         if(surfaces.containsKey("BRIDGE_CLEARANCE")) throw new IllegalArgumentException("Bridge clearance is reserved air, not a surface material");

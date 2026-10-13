@@ -340,6 +340,17 @@ public final class CitiesAriseCommands {
         DebugPlacementPlan placementPlan = result.optionalTerrainPreparationPlan()
                 .map(preparationPlan -> placementPlanConverter.convert(result.plan(), preparationPlan,result.content()))
                 .orElseGet(() -> placementPlanConverter.convert(result.plan(),result.content()));
+        var structuralProfile=planningService.debugProfile(source.getLevel());
+        var supports=structuralProfile.map(com.cybersammy.citiesarise.core.profile.SettlementProfile::structuralSupports)
+                .orElse(com.cybersammy.citiesarise.core.earthwork.StructuralSupportSettings.disabled());
+        if(supports.enabled() && result.optionalTerrainPreparationPlan().isPresent()) {
+            var blueprint=com.cybersammy.citiesarise.minecraft.worldgen.StructuralSupportBlueprint.from(
+                    result.plan(),result.optionalTerrainPreparationPlan().orElseThrow(),supports,result.content().placementMaterials())
+                    .withinConstructionBudget(structuralProfile.orElseThrow().suburbPlanningSettings().maxEarthworkVolume()-result.optionalTerrainPreparationPlan().orElseThrow().constructionVolume());
+            var adapted=com.cybersammy.citiesarise.minecraft.worldgen.StructuralSupportPlacement.resolveReady(source.getLevel(),placementPlan,blueprint);
+            if(adapted.plan().isEmpty()) { source.sendFailure(Component.literal("Structural placement rejected: "+adapted.reason()));return 0; }
+            placementPlan=adapted.plan().orElseThrow();
+        }
         int placedBlocks = placementApplier.apply(
                 source.getLevel(),
                 placementPlan,

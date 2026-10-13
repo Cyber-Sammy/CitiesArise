@@ -17,7 +17,8 @@ public final class VanillaDebugBlockMaterialProvider implements DebugBlockMateri
             case BRIDGE_RAIL -> Blocks.STONE_BRICK_WALL.defaultBlockState();
             case BRIDGE_ABUTMENT -> Blocks.COBBLESTONE.defaultBlockState();
             case BRIDGE_CLEARANCE -> Blocks.AIR.defaultBlockState();
-            case CONTENT_BLOCK -> Blocks.AIR.defaultBlockState();
+            case STRUCTURAL_BEAM, STRUCTURAL_PIER, STRUCTURAL_BRACE -> Blocks.STRIPPED_OAK_LOG.defaultBlockState();
+            case SUSPENDED_CONTENT, CONTENT_BLOCK -> Blocks.AIR.defaultBlockState();
             case OAK_HOUSE_WALL -> Blocks.OAK_PLANKS.defaultBlockState();
             case STONE_HOUSE_WALL -> Blocks.STONE_BRICKS.defaultBlockState();
             case RED_HOUSE_ROOF -> Blocks.RED_TERRACOTTA.defaultBlockState();

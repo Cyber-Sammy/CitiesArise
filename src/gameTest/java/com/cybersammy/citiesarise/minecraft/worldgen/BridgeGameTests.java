@@ -43,7 +43,13 @@ public final class BridgeGameTests {
         var tag = new CompoundTag(); snapshot.save(tag);
         tag.putInt("SnapshotVersion",5); // Prior flat-bridge snapshots stay readable.
         var restored = SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
-        helper.assertTrue(SuburbStructurePlacementSnapshot.from(restored).equals(snapshot), "Bridge operations changed on snapshot reload");
+        helper.assertTrue(java.util.Arrays.equals(SuburbStructurePlacementSnapshot.from(restored).toIntArray(),snapshot.toIntArray()), "Bridge geometry changed on legacy snapshot reload");
+        for(int i=0;i<snapshot.operations().size();i++) {
+            var before=snapshot.operations().get(i);var after=SuburbStructurePlacementSnapshot.from(restored).operations().get(i);
+            helper.assertTrue(before.material().equals(after.material()) && before.fillMaterial().equals(after.fillMaterial())
+                    && before.rotation()==after.rotation(),"Legacy bridge materials changed");
+            helper.assertTrue(after.sourceId().equals("cities_arise:structure_piece"),"Legacy snapshot source fallback changed");
+        }
         var projector = new DebugPlacementChunkProjector().partition(restored);
         var chunks = restored.operations().stream().map(op -> PlacementChunk.containing(op.point())).distinct().toList();
         helper.assertTrue(chunks.size()>1, "Fixture must cross chunk boundaries");
@@ -91,7 +97,7 @@ public final class BridgeGameTests {
             var placement=new DebugPlacementPlanConverter().convert(plan,content);
             var snapshot=SuburbStructurePlacementSnapshot.from(placement);
             var tag=new CompoundTag();snapshot.save(tag);
-            helper.assertTrue(tag.getInt("SnapshotVersion")==8,"Missing graded bridge snapshot version");
+            helper.assertTrue(tag.getInt("SnapshotVersion")==9,"Missing graded bridge snapshot version");
             var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
             helper.assertTrue(snapshot.equals(SuburbStructurePlacementSnapshot.from(restored)),"Lost row elevation or material");
             var debug=new DebugPlacementApplier();

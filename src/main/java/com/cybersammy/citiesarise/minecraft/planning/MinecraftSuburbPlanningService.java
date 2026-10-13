@@ -346,6 +346,10 @@ public final class MinecraftSuburbPlanningService {
         return debugResult;
     }
 
+    public Optional<SettlementProfile> debugProfile(ServerLevel level) {
+        return activeProfile(level,new SettlementProfileId(CitiesAriseConfig.debugSettlementProfileId()));
+    }
+
     Optional<SettlementProfile> activeProfile(ServerLevel level, SettlementProfileId profileId) {
         DebugSettlementProfileSelection.SelectionResult result = profileCache.getOrCreate(
                 profileId,

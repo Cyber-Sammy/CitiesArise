@@ -171,6 +171,13 @@
       "supportLiningDepth": 4,
       "cutSlopeRadius": 8,
       "fillSlopeRadius": 8
+    },
+    "structuralSupports": {
+      "enabled": true,
+      "maximumDepth": 32,
+      "maximumSpan": 12,
+      "pierSpacing": 4,
+      "maximumVolume": 20000
     }
   },
   "terrainPolicy": {

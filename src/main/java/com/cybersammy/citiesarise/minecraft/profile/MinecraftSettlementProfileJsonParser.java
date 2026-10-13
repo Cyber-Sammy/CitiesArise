@@ -51,7 +51,8 @@ public final class MinecraftSettlementProfileJsonParser {
                 id,
                 parseSurveySize(survey),
                 parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning, resources)).withDistricts(parseDistricts(planning)),
-                parseTerrainResponsePolicy(json)
+                parseTerrainResponsePolicy(json),
+                parseStructuralSupports(planning)
         );
         if (profile.terrainResponsePolicy().bridges().maxElevationDifference() > 0) {
             var buildings = profile.suburbPlanningSettings().buildings();
@@ -271,6 +272,16 @@ public final class MinecraftSettlementProfileJsonParser {
                 optionalInt(transitions,"cutSlopeRadius",defaults.cutSlopeRadius()),
                 optionalInt(transitions,"fillSlopeRadius",defaults.fillSlopeRadius())
         );
+    }
+
+    private static com.cybersammy.citiesarise.core.earthwork.StructuralSupportSettings parseStructuralSupports(JsonObject planning) {
+        var defaults=com.cybersammy.citiesarise.core.earthwork.StructuralSupportSettings.disabled();
+        if(!planning.has("structuralSupports")) return defaults;
+        var value=requiredObject(planning,"structuralSupports");
+        return new com.cybersammy.citiesarise.core.earthwork.StructuralSupportSettings(
+                optionalBoolean(value,"enabled",false),optionalInt(value,"maximumDepth",defaults.maximumDepth()),
+                optionalInt(value,"maximumSpan",defaults.maximumSpan()),optionalInt(value,"pierSpacing",defaults.pierSpacing()),
+                optionalInt(value,"maximumVolume",defaults.maximumVolume()));
     }
 
     private static TerrainResponsePolicy parseTerrainResponsePolicy(JsonObject profile) {

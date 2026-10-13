@@ -82,6 +82,7 @@ class ParcelContentAcceptanceTest {
                 case "roadprop" -> {
                     var road=json.getAsJsonObject("props").getAsJsonObject("zoning:yard_lamp").deepCopy();
                     road.addProperty("anchor","road_edge");
+                    road.remove("clearance");road.remove("maxCount");road.remove("chance");
                     json.getAsJsonObject("props").add("test:road_lamp",road);
                     first.add("props",JsonParser.parseString("[\"test:road_lamp\"]"));
                 }

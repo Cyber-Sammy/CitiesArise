@@ -15,6 +15,32 @@ import org.junit.jupiter.api.Test;
 final class WorldgenRegionSearchTest {
     private final WorldgenRegionSearch search = new WorldgenRegionSearch();
 
+    @Test void firstAcceptedSiteReturnsWithoutEvaluatingAnImprovement() {
+        var calls=new java.util.concurrent.atomic.AtomicInteger();
+        var result=search.findBest(64,64,4,256,0,region->true,region->{
+            int attempt=calls.incrementAndGet();
+            if(attempt==1) return Optional.empty();
+            if(attempt==2) return Optional.of(10);
+            throw new AssertionError("First accepted result must not wait for another candidate");
+        },Integer::compare);
+        assertEquals(2,calls.get());assertEquals(10,result.result().orElseThrow().evaluation());
+    }
+
+    @Test void elapsedBudgetStopsBeforeAnotherCandidateAndPreservesBestResult() {
+        var clock=new java.util.concurrent.atomic.AtomicLong();
+        var result=search.findBest(64,64,4,256,16,region->true,region->{
+            clock.addAndGet(120);return Optional.of(10);
+        },Integer::compare,60,clock::get);
+        assertEquals(1,result.attemptedCandidates());assertEquals(10,result.result().orElseThrow().evaluation());
+        assertTrue(result.timeLimitReached());
+        clock.set(0);
+        var rejected=search.findBest(64,64,4,256,0,region->true,region->{
+            clock.addAndGet(120);return Optional.<Integer>empty();
+        },Integer::compare,60,clock::get);
+        assertEquals(1,rejected.attemptedCandidates());assertTrue(rejected.result().isEmpty());
+        assertTrue(rejected.timeLimitReached());
+    }
+
     @Test
     void nextSkipsSavedAndRejectedRegionsWithoutSpendingTheAttemptBudget() {
         var visited=new java.util.HashSet<SettlementRegion>();

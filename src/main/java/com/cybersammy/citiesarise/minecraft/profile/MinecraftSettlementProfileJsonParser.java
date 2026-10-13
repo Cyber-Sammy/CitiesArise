@@ -268,7 +268,8 @@ public final class MinecraftSettlementProfileJsonParser {
                         defaults.retainingWallMinimumHeight()
                 ),
                 optionalInt(transitions, "supportLiningDepth", defaults.supportLiningDepth()),
-                optionalInt(transitions,"cutSlopeRadius",defaults.cutSlopeRadius())
+                optionalInt(transitions,"cutSlopeRadius",defaults.cutSlopeRadius()),
+                optionalInt(transitions,"fillSlopeRadius",defaults.fillSlopeRadius())
         );
     }
 

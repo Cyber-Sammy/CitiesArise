@@ -85,6 +85,7 @@ final class TerrainPreparationPlanner {
 
         Map<GridPoint,TerrainPreparationColumn> requiredColumns = new LinkedHashMap<>(columns);
         addCutSlopes(request,zones,adaptationPlan,columns);
+        addFillSlopes(request,zones,adaptationPlan,columns);
         List<TerrainPreparationArea> areas = normalizedAreas(zones, columns.values());
         TerrainPreparationPlan preparationPlan = TerrainPreparationPlan.of(
                 elevationPlan,
@@ -92,7 +93,7 @@ final class TerrainPreparationPlanner {
                 List.copyOf(columns.values()),
                 request.settings().terrainTransitions()
         );
-        // Cosmetic cut blending must never turn an otherwise affordable city into a rejection.
+        // Cosmetic bank blending must never turn an otherwise affordable city into a rejection.
         if (preparationPlan.constructionVolume() > request.settings().maxEarthworkVolume()
                 && columns.size() != requiredColumns.size()) {
             columns = requiredColumns;
@@ -107,6 +108,33 @@ final class TerrainPreparationPlanner {
             ));
         }
         return TerrainPreparationAssessment.accepted(preparationPlan);
+    }
+
+    private static void addFillSlopes(SuburbPlanningRequest request,List<ElevationZone> zones,
+            TerrainAdaptationPlan adaptation,Map<GridPoint,TerrainPreparationColumn> columns) {
+        int radius=request.settings().terrainTransitions().fillSlopeRadius();
+        if(radius==0) return;
+        var reserved=Map.copyOf(columns);
+        for(var zone:zones.stream().sorted(java.util.Comparator.comparing(z -> z.sourceElementId().value())).toList()) {
+            var b=zone.bounds();
+            for(int z=Math.max(request.survey().bounds().minZ(),b.minZ()-radius);z<Math.min(request.survey().bounds().maxZExclusive(),b.maxZExclusive()+radius);z++)
+                for(int x=Math.max(request.survey().bounds().minX(),b.minX()-radius);x<Math.min(request.survey().bounds().maxXExclusive(),b.maxXExclusive()+radius);x++) {
+                    var point=new GridPoint(x,z); if(reserved.containsKey(point)) continue;
+                    var nearest=new GridPoint(Math.clamp(x,b.minX(),b.maxXExclusive()-1),Math.clamp(z,b.minZ(),b.maxZExclusive()-1));
+                    var edge=reserved.get(nearest);
+                    if(edge==null || edge.fillDepth()==0 || !edge.sourceElementId().equals(zone.sourceElementId())) continue;
+                    int distance=Math.max(Math.abs(x-nearest.x()),Math.abs(z-nearest.z()));
+                    if(distance==0 || distance>radius) continue;
+                    var cell=TerrainPlatform.requiredTerrainCell(request,point);
+                    if(shoulderTerrainDiagnostic(cell,adaptation).isPresent()) continue;
+                    int target=zone.targetElevation()-distance,fill=target-(cell.height()-1);
+                    // A cosmetic apron cannot become deep structural fill or spend the support budget.
+                    if(fill<=0 || fill>Math.min(TerrainTransitionSettings.MAX_SUPPORT_FILL_DEPTH,request.settings().maxFillDepth())) continue;
+                    var existing=columns.get(point);
+                    if(existing!=null && existing.targetElevation()>=target) continue;
+                    columns.put(point,new TerrainPreparationColumn(point,zone.sourceElementId(),target,0,fill,TerrainPreparationColumnType.FILL_SLOPE));
+                }
+        }
     }
 
     private static void addCutSlopes(SuburbPlanningRequest request,List<ElevationZone> zones,

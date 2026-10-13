@@ -69,11 +69,18 @@ public final class TreeCleanup {
         if(state.is(BlockTags.LEAVES)) {
             if(state.hasProperty(LeavesBlock.PERSISTENT) && state.getValue(LeavesBlock.PERSISTENT)) return Optional.empty();
             if(!name.endsWith("_leaves")) return Optional.empty();
-            return Optional.of(new Node(id.getNamespace()+":"+name.substring(0,name.length()-7),false));
+            String family=id.getNamespace()+":"+name.substring(0,name.length()-7);
+            if(id.getNamespace().equals("minecraft") && (name.equals("azalea_leaves") || name.equals("flowering_azalea_leaves"))) family="minecraft:oak";
+            boolean known=id.getNamespace().equals("minecraft") && Set.of("minecraft:oak","minecraft:birch","minecraft:spruce",
+                    "minecraft:jungle","minecraft:acacia","minecraft:dark_oak","minecraft:mangrove","minecraft:cherry").contains(family);
+            return Optional.of(new Node(family,false,known));
         }
         if(state.is(BlockTags.LOGS) && !name.startsWith("stripped_")) {
             String suffix=name.endsWith("_log")?"_log":name.endsWith("_wood")?"_wood":"";
-            if(!suffix.isEmpty()) return Optional.of(new Node(id.getNamespace()+":"+name.substring(0,name.length()-suffix.length()),true));
+            if(!suffix.isEmpty()) {
+                String family=id.getNamespace()+":"+name.substring(0,name.length()-suffix.length());
+                return Optional.of(new Node(family,true));
+            }
         }
         return Optional.empty();
     }

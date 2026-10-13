@@ -75,7 +75,8 @@ settlementProfileId = "cities_arise:suburb"
 candidateRegionModulo = 16
 locateSearchRadiusRegions = 64
 locateMaxCandidateAttempts = 256
-locateImprovementCandidateAttempts = 16
+locateImprovementCandidateAttempts = 16 # Only diagnostic best
+locateTimeLimitSeconds = 60
 ```
 
 NeoForge 21.1 stores this config in the physical client or dedicated server `config` directory, so the setting applies to every world started by that installation. It requires a world restart, only affects newly generated chunks, and has no undo command. Back up important worlds before enabling it and disable it again when testing is complete.
@@ -86,7 +87,7 @@ The structure set aligns candidate starts to the same 128x128-block grid used by
 
 An accepted start stores a versioned compact placement snapshot in its structure piece. Minecraft saves and reloads that snapshot with normal structure data, so already-created starts do not depend on live profile objects. During generation the piece runs at `top_layer_modification`, after normal vegetation, writes only the placement slice belonging to the current chunk, and clears vegetation, including natural cactus columns, within a bounded construction buffer around occupied columns. Explicit plant content remains protected during deferred cleanup. It never intentionally writes to or force-loads neighboring chunks. Chunk generation order does not change the regional plan.
 
-Tree cleanup now discovers natural log/leaf groups before placement overwrites their trunk. A tree is selected when an occupied construction column intersects its trunk or an unambiguously owned part of its canopy. Leaf ownership uses nearest same-family log components through up to six face-connected leaf blocks; leaves shared with surviving trees are retained. Continuous forest boundaries do not select neighboring trees. Natural families are inferred from matching namespaced `_log`, `_wood` and `_leaves` block ids; stripped logs, persistent leaves and provider-defined plant blocks are protected. This is bounded inference, not stored tree identity: inseparable touching log branches can form one component, while unsupported tree families, unavailable regions, oversized components and ambiguous canopy contacts are handled conservatively. Discovery uses a 24-block horizontal envelope, 64-block vertical difference, at most 16,384 vegetation nodes and 131,072 sampled discovery positions per capture, with at most 64 component attempts. Exact discovered block targets outside the current chunk are persisted in per-dimension SavedData and removed only on the server thread when their chunks are already ready (up to 4,096 target visits per tick). Changed block types and persistent decorations are retained. Debug placement includes whole-tree removal in undo. Block entities such as bee nests are not part of log/leaf removal. Existing clipped trees are not globally repaired.
+Tree cleanup now discovers natural log/leaf groups before placement overwrites their trunk. A tree is selected when an occupied construction column intersects its trunk or an unambiguously owned part of its canopy. Leaf ownership uses nearest log components (including vanilla mixed-species bushes) through up to six face-connected leaf blocks; leaves shared with surviving trees are retained. Continuous forest boundaries do not select neighboring trees. Touched bounded trunkless vanilla leaf islands are also removed. Natural families are inferred from namespaced `_log`, `_wood` and `_leaves` block ids; stripped logs, persistent leaves and provider-defined plant blocks are protected. Unknown leaf families only attach to matching trunk families and are not treated as removable orphan foliage. This is bounded inference, not stored tree identity: inseparable touching log branches can form one component, while unsupported tree families, unavailable regions, oversized components and ambiguous canopy contacts are handled conservatively. Discovery uses a 24-block horizontal envelope, 64-block vertical difference, at most 16,384 vegetation nodes and 131,072 sampled discovery positions per capture, with at most 64 component attempts. Exact discovered block targets outside the current chunk are persisted in per-dimension SavedData and removed only on the server thread when their chunks are already ready (up to 4,096 target visits per tick). Changed block types and persistent decorations are retained. Debug placement includes whole-tree removal in undo. Block entities such as bee nests are not part of log/leaf removal. Existing clipped trees are not globally repaired.
 
 The nearest accepted Cities Arise structure can be found with the standard command:
 
@@ -105,6 +106,7 @@ Operators can use three separate discovery modes:
 /citiesarise locate potential
 /citiesarise locate diagnostic
 /citiesarise locate diagnostic next
+/citiesarise locate diagnostic best
 /citiesarise locate list [page]
 /citiesarise locate cancel
 
@@ -120,7 +122,7 @@ Operators can use three separate discovery modes:
 
 Commands report lookup/diagnostic elapsed time separately. Recorded placement time sums first successful per-chunk placement callbacks; structure planning time is logged separately when planning logging is enabled. These measurements are not interchangeable and do not imply a measured real-world speedup.
 
-The diagnostic uses the same world seed, candidate density, settlement profile, terrain survey, and plan cache as automatic generation. It does not load chunks. `locateSearchRadiusRegions` controls the geographic radius and `locateMaxCandidateAttempts` limits expensive full planning. The search stops earlier after finding an accepted site and checking `locateImprovementCandidateAttempts` additional deterministic candidates; the default improvement window is `16`. Among candidates checked inside that bounded window, the command selects the best site by quantitative earthwork cost (`totalVolume + preferredDepthExcess`), maximum depth, density across columns that actually require cut or fill, and remaining deterministic metrics. `DIRECT`, `MODERATE`, and `MAJOR` are descriptive categories and do not create a hard ranking boundary. Distance and region coordinates remain the final tie-break order. A failed search still checks up to the configured maximum and reports rejection counts by reason.
+The diagnostic uses the same world seed, candidate density, settlement profile, terrain survey, and plan cache as automatic generation. It does not load chunks. `locateSearchRadiusRegions` controls the geographic radius and `locateMaxCandidateAttempts` limits expensive full planning. Ordinary `diagnostic` and `diagnostic next` return the first accepted site immediately, regardless of an existing `locateImprovementCandidateAttempts` setting. Use `diagnostic best` (or `diagnostic best next`) explicitly to compare `locateImprovementCandidateAttempts` additional deterministic candidates after the first accepted site; its default improvement window is `16`. Both modes use `locateTimeLimitSeconds` (1..3600, default 60): the budget is checked between candidates, and the running full-plan evaluation may overrun it. No new candidate starts once the budget expires, the best completed accepted result is retained, and budget exhaustion is reported as `SEARCH_TIME_LIMIT`. This is not a hard cancellation deadline or a speedup of individual planning. In ranked mode, the command selects the best site by quantitative earthwork cost (`totalVolume + preferredDepthExcess`), maximum depth, density across columns that actually require cut or fill, and remaining deterministic metrics. `DIRECT`, `MODERATE`, and `MAJOR` are descriptive categories and do not create a hard ranking boundary. Distance and region coordinates remain the final tie-break order. A failed search still checks up to the configured maximum and reports rejection counts by reason.
 
 The diagnostic coordinates identify the center of the checked settlement region, safely away from its boundaries; they are not proof that Minecraft has created a structure start there. Potential mode still reports a structure placement anchor. Use `locate generated` for recorded lifecycle state, or `/locate structure cities_arise:suburb` for Minecraft's Structure API search. Chunks generated before Cities Arise worldgen was enabled cannot be retroactively populated.
 
@@ -564,7 +566,7 @@ the settings above; omission keeps legacy exact-bank/no-pier behavior.
 ### Continuing diagnostic locate searches
 
 `/citiesarise locate diagnostic` starts a fresh terrain search near your current
-position and saves its selected accepted candidate. `/citiesarise locate diagnostic next`
+position and saves its first accepted candidate. `/citiesarise locate diagnostic next`
 searches for another, excluding saved candidates, recorded settlement regions and
 rejected regions checked during this server-session search series. Exclusions do
 not consume the candidate-attempt budget. Other accepted but unselected candidates
@@ -817,13 +819,13 @@ Content catalogs may define an ordered `parcelRules` array. The first matching r
 ]
 ```
 
-`props` references ids in the same catalog's existing `props` object; referenced rules must use `parcel_corner`. These modules use the existing palette, joint, damage and nested-content contracts. An empty or omitted list suppresses parcel props for the selected binding. Omitted material/template roles retain the global role; a selected material suppresses the inherited template for that role, and a selected local template takes precedence over its material. Unmatched parcels retain legacy global materials/templates and parcel props. Road-edge props remain global. Global prop definitions are also the legacy defaults, so packs that define multiple styles should bind all relevant parcels (an empty-match last rule can serve as a fallback).
+`props` references ids in the same catalog's existing `props` object; referenced rules must use a parcel anchor (`parcel_corner`, `parcel_front`, `parcel_back`, `parcel_side` or `parcel_entrance`). These modules use the existing palette, joint, damage and nested-content contracts. An empty or omitted list suppresses parcel props for the selected binding. Omitted material/template roles retain the global role; a selected material suppresses the inherited template for that role, and a selected local template takes precedence over its material. Unmatched parcels retain legacy global materials/templates and parcel props. Road-edge props remain global. Global prop definitions are also the legacy defaults, so packs that define multiple styles should bind all relevant parcels (an empty-match last rule can serve as a fallback).
 
 Only `PARCEL_YARD` and `PARCEL_BOUNDARY` are allowed in parcel bindings. Templates must have a complete top layer, size at most 16x1x16, and valid walking surfaces; fluid/unsafe materials are rejected during server resource loading. Rule ids must be unique: at most 64 rules, 16 unique known parcel prop references per rule, and the existing metadata/catalog/payload limits. Global surface templates retain their existing depth limits. Local content never changes terrain elevations, earthwork budgets, foundations, shared roads, bridges or building access. Props still require prepared level ground, avoid building footprints and traveled/access corridors, and may be omitted when no safe footprint fits.
 
 `content.parcels` in debug JSON records matched parcel ids, rule ids, effective metadata, local materials/template roles and requested prop ids; `content.props` records actual placed decoration. Semantic geometry remains in `plan`. Placement snapshots store the final operations, so local choices survive chunk projection and reload. Already generated settlements retain their saved appearance.
 
-The updated `zoning_fixture` uses uniform grass for home yards, dirt-path borders and one oak planter per suitable parcel. Workshops use uniform stone-brick paving, andesite borders and one small lantern per suitable parcel. Road-edge lamps are omitted to avoid clusters at short road-segment endpoints. Existing access paths are retained. The demo uses a one-block parcel shoulder radius so parcel retaining walls sit directly next to the platform instead of forming detached terraces with soil strips between them. With the parcel-content mod already installed, replace only the enabled demo pack and generate a new city; saved cities retain their previous decoration.
+The updated `zoning_fixture` uses uniform grass for home yards, dirt-path borders and one oak planter per suitable parcel. Workshops use uniform stone-brick paving, andesite borders and one small lantern per suitable parcel. Road-edge lamps are omitted to avoid clusters at short road-segment endpoints. Existing access paths are retained. The demo uses a one-block parcel shoulder radius so parcel retaining walls sit directly next to the platform instead of forming detached terraces with soil strips between them. Install the matching new mod JAR and updated enabled demo pack before generating a new city; saved cities retain their previous decoration.
 
 ## District parcel size variants
 
@@ -842,3 +844,38 @@ Sizes describe frontage width and depth; footprints rotate with street orientati
 At most eight unique nonempty ids (up to 128 characters), dimensions 4..64, with the existing global building margin and a valid fallback slot. Invalid/fractional dimensions, duplicate ids or margins/fallbacks that cannot fit are rejected at reload. Partition reservations conservatively account for the largest configured width/depth; very large variants may reduce district count or capacity. All normal terrain, connectivity and earthwork checks remain active. Building providers still size-filter against the actual slot. Variant assignment is independent of the authored zoning purpose/style; no size-to-style mapping is hardcoded.
 
 Multi-district plans expose `parcel_size`, `parcel_width` and `parcel_depth` on district metadata for diagnostics and optional content selectors. These are frontage dimensions, not fixed world X/Z orientation. Changing the list can change city geometry and assignments; saved existing settlements retain their operations. The updated zoning demo enables 15x16, 16x18 and 20x20 variants. With a building margin of 4, the compact slot is 7x8 and fits every demo building pool. Smaller slots can select the configured placeholder fallback and display legacy debug houses; profile validation only requires the fallback to fit. The older CA48 cut-bank regression deliberately freezes its original 16x18 layout and three-block parcel shoulder radius; the separate varied-city regression validates the enabled pack.
+
+### Entrance-aware parcel decoration
+
+Prop rules may use `parcel_front`, `parcel_back`, `parcel_side` or `parcel_entrance` in addition to the legacy `parcel_corner` and `road_edge` anchors. New anchors derive their orientation from the prepared building entrance and its road access. With multiple building slots, the first slot by id with prepared access provides the frame; all building slots remain excluded. Parcels without a prepared entrance skip layout props.
+
+Front and rear zones lie outside the building footprint on the entrance and opposite sides; side zones run alongside the building. The entrance zone is the front area within five blocks of the entrance in local Manhattan distance. The complete rotated module footprint must fit the selected zone and parcel inset, stay on one prepared elevation, and avoid buildings, access paths, roads and previously placed props. Modules and block states rotate with the entrance, preserving nested content and provider payloads.
+
+```json
+"my_pack:work_area": {
+  "anchor": "parcel_back",
+  "pool": ["my_pack:workbench"],
+  "palette": "my_pack:workshop",
+  "inset": 1,
+  "spacing": 2,
+  "maxCount": 1,
+  "chance": 100,
+  "clearance": 1
+}
+```
+
+For layout anchors, `maxCount` is 1..8 per rule per parcel (default 1), `chance` is an integer 0..100 percent per parcel (default 100), and `clearance` is 0..3 blocks around the footprint from occupied cells (default 0). `spacing` sets the local candidate lattice; accepted modules reserve their entire footprint. Choices use city seed, parcel id and rule id; at most 128 candidates are attempted per rule per parcel. Rule order determines placement priority. Incompatible geometry skips decoration rather than changing terrain or blocking access. The three layout controls require a layout anchor; legacy anchors retain their earlier behavior with default values.
+
+The zoning demo places one planter in a suitable home front yard, one small lantern near a suitable workshop entrance, and a crafting-table/barrel work area in a suitable rear yard with 100 percent parcel selection. Selected props can still be skipped when no safe space fits. Install the new JAR and updated enabled pack before generating a new city; existing saved settlements retain their operations.
+
+### Jungle coast regression corrections
+
+Vanilla jungle bushes use jungle logs with oak leaves. Tree ownership now accepts this mixed foliage while keeping separate trunk components, shared canopy and persistent/template vegetation protection. Touched bounded vanilla leaf islands without a trunk owner are removed; unknown families and incomplete discovery remain conservative. Existing clipped trees outside newly occupied construction columns are not globally repaired.
+
+The demo adds a parcel workshop override (`every:4, offset:2`) after its home override, so home-only district rolls still demonstrate workshops. Work areas use `chance:100`; unsuitable rear-yard geometry may still skip a module. These crafting-table/barrel modules are outdoor examples, not a complete workshop interior or villager job assignment system.
+
+The demo road template is one layer of deepslate tiles. Transition/end slabs use the same dark material, and worn sections use cracked deepslate tiles. Existing graded road elevations remain; the natural coast regression checks actual collision heights along every centerline for missing surfaces or jumps above half a block.
+
+Optional `planning.terrainTransitions.fillSlopeRadius` (integer 0..8, default 0) adds descending terrain aprons outside filled platform edges. The demo enables 8. The apron drops one block per horizontal Chebyshev step, retains reserved platform/access/shoulder columns, and skips water and policy-rejected ground. Each added column has at most three blocks of fill, counts toward earthwork volume, and follows optional parcel-shoulder support semantics. Exact structural support checks for roads, platforms and walls remain unchanged. Optional cut and fill banks are omitted together if they exceed the construction budget. This softens modest embankments; deep cliff foundations retain their structural walls rather than filling ravines or hiding caves. The demo retains its original eight-block foundation limit and parcel sizes: reducing the limit to six rejected the reported coastal city's connected layout, so that tuning was not shipped.
+
+Cut banks now use a separate saved placement role (`TERRAIN_CUT_SURFACE`, id 43) that actually carves the high-side ground during chunk placement. Previously the generic terrain-surface operation was filtered out by a fill-only placement guard. Existing role ids and saved operations remain compatible; newly planned banks use the corrected role and the existing `TERRAIN_SURFACE` palette material.

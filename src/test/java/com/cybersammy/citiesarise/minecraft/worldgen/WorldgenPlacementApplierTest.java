@@ -20,6 +20,17 @@ import java.util.OptionalInt;
 import org.junit.jupiter.api.Test;
 
 class WorldgenPlacementApplierTest {
+    @Test void plannedCutBankActuallyCarvesTerrainAndPreservesDeeperGround() {
+        var point=new GridPoint(8,8);
+        var operation=new DebugBlockPlacementOperation(point,0,DebugPlacementRole.TERRAIN_CUT_SURFACE,
+                new PlanElementId("test:cut-bank"),OptionalInt.of(64));
+        var slice=new DebugPlacementChunkProjector().partition(new DebugPlacementPlan(List.of(operation))).slice(TARGET_CHUNK);
+        var level=new FakeWorldgenBlockAccess();level.surfaceHeight(8,8,69);level.put(8,63,8,WorldgenSurfaceMaterial.OTHER);
+        new WorldgenChunkPlacement().apply(level,slice);
+        assertTrue(level.hasPlacement(8,64,8,DebugPlacementRole.TERRAIN_CUT_SURFACE));
+        for(int y=65;y<69;y++) assertEquals(WorldgenSurfaceMaterial.AIR,level.materialAt(8,y,8));
+        assertEquals(WorldgenSurfaceMaterial.OTHER,level.materialAt(8,63,8));
+    }
     @Test
     void supportLiningOutsideWorldIsSkippedInsteadOfClamped() {
         var operation = new DebugBlockPlacementOperation(new GridPoint(8,8),-5,DebugPlacementRole.SUPPORT_LINING,

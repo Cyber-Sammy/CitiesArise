@@ -24,6 +24,13 @@ final class WorldgenRegionSearch {
             Comparator<T> comparator,
             Executor executor
     ) {
+        return findBestAsync(originX,originZ,searchRadius,maxCandidateAttempts,improvementCandidateAttempts,
+                candidatePredicate,evaluator,comparator,executor,Long.MAX_VALUE);
+    }
+
+    <T> CompletableFuture<Outcome<T>> findBestAsync(int originX,int originZ,int searchRadius,int maxCandidateAttempts,
+            int improvementCandidateAttempts,Predicate<SettlementRegion> candidatePredicate,
+            Function<SettlementRegion,Optional<T>> evaluator,Comparator<T> comparator,Executor executor,long timeLimitNanos) {
         Objects.requireNonNull(executor, "executor");
         return CompletableFuture.supplyAsync(
                 () -> findBest(
@@ -34,7 +41,9 @@ final class WorldgenRegionSearch {
                         improvementCandidateAttempts,
                         candidatePredicate,
                         evaluator,
-                        comparator
+                        comparator,
+                        timeLimitNanos,
+                        System::nanoTime
                 ),
                 executor
         );
@@ -50,6 +59,16 @@ final class WorldgenRegionSearch {
             Function<SettlementRegion, Optional<T>> evaluator,
             Comparator<T> comparator
     ) {
+        return findBest(originX,originZ,searchRadius,maxCandidateAttempts,improvementCandidateAttempts,
+                candidatePredicate,evaluator,comparator,Long.MAX_VALUE,System::nanoTime);
+    }
+
+    <T> Outcome<T> findBest(int originX,int originZ,int searchRadius,int maxCandidateAttempts,
+            int improvementCandidateAttempts,Predicate<SettlementRegion> candidatePredicate,
+            Function<SettlementRegion,Optional<T>> evaluator,Comparator<T> comparator,long timeLimitNanos,
+            java.util.function.LongSupplier clock) {
+        if(timeLimitNanos<=0) throw new IllegalArgumentException("timeLimitNanos must be positive");
+        long started=clock.getAsLong();
         requirePositive(searchRadius, "searchRadius");
         requirePositive(maxCandidateAttempts, "maxCandidateAttempts");
         requireNonNegative(improvementCandidateAttempts, "improvementCandidateAttempts");
@@ -62,8 +81,10 @@ final class WorldgenRegionSearch {
         Optional<Candidate<T>> bestCandidate = Optional.empty();
         int attempts = 0;
         int firstAcceptedAttempt = -1;
+        boolean timedOut=false;
         for (SettlementRegion region : regions) {
             rejectInterruptedSearch();
+            if(clock.getAsLong()-started>=timeLimitNanos) { timedOut=true; break; }
             if (!candidatePredicate.test(region)) {
                 continue;
             }
@@ -86,7 +107,8 @@ final class WorldgenRegionSearch {
                 break;
             }
         }
-        return outcome(bestCandidate, attempts);
+        var result=outcome(bestCandidate, attempts);
+        return new Outcome<>(result.result(),attempts,timedOut);
     }
 
     private static <T> Optional<Candidate<T>> selectBetter(
@@ -186,7 +208,8 @@ final class WorldgenRegionSearch {
         }
     }
 
-    record Outcome<T>(Optional<Result<T>> result, int attemptedCandidates) {
+    record Outcome<T>(Optional<Result<T>> result, int attemptedCandidates,boolean timeLimitReached) {
+        Outcome(Optional<Result<T>> result,int attemptedCandidates) { this(result,attemptedCandidates,false); }
         Outcome {
             Objects.requireNonNull(result, "result");
             if (attemptedCandidates < 0) {

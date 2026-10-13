@@ -10,7 +10,7 @@ public final class OrdinaryGroundSupport {
 
     public static boolean supported(TerrainPreparationColumn column, IntPredicate solidAtY) {
         // Optional downhill blending must not veto an otherwise supported settlement.
-        if (column.type() == TerrainPreparationColumnType.PARCEL_SHOULDER) return true;
+        if ((column.type() == TerrainPreparationColumnType.PARCEL_SHOULDER || column.type() == TerrainPreparationColumnType.FILL_SLOPE)) return true;
         int contactY = Math.min(column.targetElevation() - 1,
                 column.targetElevation() - column.fillDepth());
         for (int depth = 0; depth < REQUIRED_SOLID_DEPTH; depth++) {

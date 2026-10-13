@@ -20,12 +20,23 @@ public final class WorldgenPlacementApplier {
     }
 
     public int apply(WorldGenLevel level, DebugChunkPlacementPlan placementPlan) {
+        return apply(level,placementPlan,placementPlan.operations());
+    }
+
+    int apply(WorldGenLevel level, DebugChunkPlacementPlan placementPlan,java.util.List<com.cybersammy.citiesarise.minecraft.placement.DebugBlockPlacementOperation> protectedOperations) {
         Objects.requireNonNull(level, "level");
+        TreeCleanup.enqueue(level,TreeCleanup.discover(level,placementPlan.operations(),protectedOperations,false,materialProvider));
         return chunkPlacement.apply(new MinecraftWorldgenBlockAccess(level, materialProvider), placementPlan);
     }
 
     void clearVegetation(WorldGenLevel level, WorldgenVegetationCleanupPlan cleanupPlan) {
         Objects.requireNonNull(level, "level");
+        if(level instanceof net.minecraft.server.level.ServerLevel server) {
+            var pending=PendingTreeRemoval.get(server);
+            pending.add(TreeCleanup.discover(level,cleanupPlan.influencingOperations().stream()
+                    .filter(op->cleanupPlan.chunk().contains(op.point())).toList(),cleanupPlan.protectedOperations(),true,materialProvider));
+            pending.applyReady(server);
+        }
         chunkPlacement.clearVegetation(
                 new MinecraftWorldgenBlockAccess(level, materialProvider),
                 cleanupPlan

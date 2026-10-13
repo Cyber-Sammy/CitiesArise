@@ -68,6 +68,9 @@ public final class SuburbPlanner {
         if (request.settings().districts().maxCount() > 1) {
             return DistrictCityPlanner.plan(this, request, acceptance);
         }
+        var selectedSize=request.settings().districts().parcelSize(request.seed(),request.settlementId().value(),0);
+        if(selectedSize.isPresent()) request=new SuburbPlanningRequest(request.settlementId(),request.survey(),request.seed(),
+                request.settings().withParcelSize(selectedSize.orElseThrow()),request.terrainResponsePolicy());
         var result = planSingle(request, acceptance, false,false);
         return result.successful() ? acceptance.validate(request, result) : result;
     }

@@ -29,6 +29,7 @@ public final class WorldgenVegetationCleanup {
 
     public static void onServerTick(ServerTickEvent.Post event) {
         Objects.requireNonNull(event, "event");
+        for(var level:event.getServer().getAllLevels()) PendingTreeRemoval.get(level).applyReady(level);
         int completed = 0;
         for (Map.Entry<CleanupKey, WorldgenVegetationCleanupPlan> entry : PENDING.entrySet()) {
             if (completed >= MAX_CLEANUPS_PER_TICK) {
@@ -62,7 +63,9 @@ public final class WorldgenVegetationCleanup {
         }
         List<DebugBlockPlacementOperation> operations = new ArrayList<>(first.influencingOperations());
         operations.addAll(second.influencingOperations());
-        return new WorldgenVegetationCleanupPlan(first.chunk(), operations);
+        var protectedOperations=new ArrayList<>(first.protectedOperations());
+        protectedOperations.addAll(second.protectedOperations());
+        return new WorldgenVegetationCleanupPlan(first.chunk(), operations,protectedOperations);
     }
 
     private record CleanupKey(ResourceKey<Level> dimension, PlacementChunk chunk) {

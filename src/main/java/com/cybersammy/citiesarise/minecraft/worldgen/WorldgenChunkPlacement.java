@@ -419,6 +419,7 @@ final class WorldgenChunkPlacement {
                     continue;
                 }
                 WorldgenSurfaceMaterial material = level.material(position);
+                if(level.wholeTreeCleanup() && (material==WorldgenSurfaceMaterial.LOGS || material==WorldgenSurfaceMaterial.LEAVES)) continue;
                 boolean clearLog = vegetationColumn.clearLogs()
                         && !vegetationColumn.protectedVegetationYs().contains(y);
                 if (!vegetationColumn.protectedVegetationYs().contains(y) && isVegetation(material, clearLog)) {

@@ -1,6 +1,7 @@
 package com.cybersammy.citiesarise.minecraft.worldgen;
 
 interface WorldgenBlockAccess {
+    default boolean wholeTreeCleanup() { return false; }
     default boolean canLineSupport(WorldgenBlockPosition position) {
         return material(position) == WorldgenSurfaceMaterial.OTHER;
     }

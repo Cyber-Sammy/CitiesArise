@@ -23,7 +23,9 @@ class ZoningAcceptanceTest {
         };
     }
     private static JsonObject json() throws Exception {
-        return JsonParser.parseString(Files.readString(DATA.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject();
+        var value=JsonParser.parseString(Files.readString(DATA.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject();
+        value.getAsJsonObject("planning").getAsJsonObject("districts").remove("parcelSizes");
+        return value;
     }
     private static SettlementProfile parse(JsonObject value) {
         return new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("cities_arise:suburb"),value,resources());
@@ -48,7 +50,7 @@ class ZoningAcceptanceTest {
         }
         var original=request.settings().buildings();var palettes=new LinkedHashMap<String,Map<String,String>>();
         original.paletteDefinitions().forEach((id,values) -> {var copy=new LinkedHashMap<>(values);copy.put("wall","minecraft:gold_block");palettes.put(id,copy);});
-        var replacement=new BuildingContentSettings(original.pool(),original.palettes(),original.fallback(),palettes,original.compositions(),original.surfaces(),original.props(),original.surfaceTemplates(),original.rules());
+        var replacement=new BuildingContentSettings(original.pool(),original.palettes(),original.fallback(),palettes,original.compositions(),original.surfaces(),original.props(),original.surfaceTemplates(),original.rules(),original.parcelRules());
         var rebound=SettlementContentComposer.compose(plan,result.terrainPreparationPlan().orElseThrow(),42,replacement);
         assertEquals(content.selections(),rebound.selections()); assertNotEquals(content.buildings(),rebound.buildings());
         var replanned=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(request.settlementId(),survey,42,request.settings().withBuildings(replacement),request.terrainResponsePolicy()));

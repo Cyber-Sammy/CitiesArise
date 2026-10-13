@@ -7,13 +7,20 @@ import java.util.*;
 /** Immutable provider output keyed by semantic element identity, separate from the city map. */
 public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buildings,
         Map<String, String> placementMaterials, List<ResolvedProp> props,
-        Map<String, SurfaceTemplate> surfaceTemplates, Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection> selections) {
+        Map<String, SurfaceTemplate> surfaceTemplates, Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection> selections,
+        Map<PlanElementId,ResolvedParcelContent> parcels) {
+    public ResolvedSettlementContent(Map<PlanElementId,BuildingContent> buildings,Map<String,String> materials,
+            List<ResolvedProp> props,Map<String,SurfaceTemplate> templates,
+            Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection> selections) {
+        this(buildings,materials,props,templates,selections,Map.of());
+    }
     public ResolvedSettlementContent(Map<PlanElementId,BuildingContent> buildings,Map<String,String> materials,
             List<ResolvedProp> props,Map<String,SurfaceTemplate> templates) {
         this(buildings,materials,props,templates,Map.of());
     }
     public static final ResolvedSettlementContent EMPTY = new ResolvedSettlementContent(Map.of(), Map.of(), List.of(), Map.of());
     public ResolvedSettlementContent {
+        parcels = Map.copyOf(parcels);
         selections = Map.copyOf(selections);
         buildings = Map.copyOf(buildings);
         placementMaterials = Map.copyOf(placementMaterials);
@@ -26,6 +33,8 @@ public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buil
         plan.parcels().forEach(p -> ids.add(p.id()));
         plan.roadGraph().segments().forEach(r -> ids.add(r.id()));
         plan.roadGraph().bridges().forEach(b -> ids.add(b.id()));
+        var parcelIds=plan.parcels().stream().map(Parcel::id).collect(java.util.stream.Collectors.toSet());
+        if(!parcelIds.containsAll(parcels.keySet())) throw new IllegalArgumentException("Unknown parcel content source");
         var slots = new HashMap<PlanElementId, BuildingSlot>();
         plan.buildingSlots().forEach(slot -> { slots.put(slot.id(), slot); ids.add(slot.id()); });
         if(!slots.keySet().containsAll(selections.keySet())) throw new IllegalArgumentException("Unknown selection slot");

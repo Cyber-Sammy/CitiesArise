@@ -75,7 +75,7 @@ public final class DebugPlacementPlanConverter {
         Map<PlanElementId, Integer> platformElevations = platformElevations(plan);
         return new DebugPlacementPlan(operationsByPosition.values()
                 .stream()
-                .map(operation -> withPlatformElevation(withMaterial(operation, content.placementMaterials()), platformElevations))
+                .map(operation -> withPlatformElevation(withMaterial(operation, content), platformElevations))
                 .toList());
     }
 
@@ -97,7 +97,7 @@ public final class DebugPlacementPlanConverter {
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
         return withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
-                .map(operation -> withMaterial(operation,content.placementMaterials())).toList()), plan,content),plan,content);
+                .map(operation -> withMaterial(operation,content)).toList()), plan,content),plan,content);
     }
 
     private DebugPlacementPlan withBridges(DebugPlacementPlan placement, SettlementPlan plan,ResolvedSettlementContent content) {
@@ -118,11 +118,20 @@ public final class DebugPlacementPlanConverter {
             if (!replaced) operations.put(operation.position(), operation);
         }
         for (var bridge : plan.roadGraph().bridges()) for (var operation : bridgeProvider.create(bridge)) {
-            operations.put(operation.position(), withMaterial(operation, content.placementMaterials()));
+            operations.put(operation.position(), withMaterial(operation, content));
         }
         return new DebugPlacementPlan(List.copyOf(operations.values()));
     }
 
+    private static DebugBlockPlacementOperation withMaterial(DebugBlockPlacementOperation op, ResolvedSettlementContent content) {
+        var local=content.parcels().get(op.sourceElementId());
+        if(local!=null && com.cybersammy.citiesarise.core.content.ParcelContentRule.ROLES.contains(op.role().name())) {
+            String material=local.surfaces().getOrDefault(op.role().name(),content.placementMaterials().getOrDefault(op.role().name(),""));
+            return withMaterial(new DebugBlockPlacementOperation(op.point(),op.verticalOffset(),op.role(),op.sourceElementId(),
+                    op.platformY(),material,op.rotation(),op.fillMaterial(),op.providerData()),content.placementMaterials());
+        }
+        return withMaterial(op,content.placementMaterials());
+    }
     private static DebugBlockPlacementOperation withMaterial(DebugBlockPlacementOperation op, Map<String,String> materials) {
         String material=op.role()==DebugPlacementRole.BRIDGE_CLEARANCE?"minecraft:air":op.material().isEmpty()?materials.getOrDefault(op.role().name(),""):op.material();
         String fill=op.fillMaterial().isEmpty()?materials.getOrDefault(op.role()==DebugPlacementRole.TERRAIN_SURFACE?"TERRAIN_FILL":"FOUNDATION",""):op.fillMaterial();
@@ -130,7 +139,7 @@ public final class DebugPlacementPlanConverter {
     }
 
     private static DebugPlacementPlan withSurfaceTemplates(DebugPlacementPlan placement,SettlementPlan plan,ResolvedSettlementContent content) {
-        if(content.surfaceTemplates().isEmpty()) return placement;
+        if(content.surfaceTemplates().isEmpty() && content.parcels().isEmpty()) return placement;
         Map<PlanElementId,Integer> turns=new java.util.HashMap<>(); Map<PlanElementId,RoadNode> nodes=new java.util.HashMap<>();
         plan.roadGraph().nodes().forEach(n -> nodes.put(n.id(),n));
         for(var road:plan.roadGraph().segments()) {
@@ -144,7 +153,14 @@ public final class DebugPlacementPlanConverter {
         for(var op:placement.operations()) {
             if (op.role() == DebugPlacementRole.SUPPORT_LINING) continue;
             if (op.role() == DebugPlacementRole.BRIDGE_DECK && op.verticalOffset() != 0) continue;
-            var template=content.surfaceTemplates().get(op.role().name()); if(template==null) continue;
+            var template=content.surfaceTemplates().get(op.role().name());
+            var local=content.parcels().get(op.sourceElementId());
+            if(local!=null && com.cybersammy.citiesarise.core.content.ParcelContentRule.ROLES.contains(op.role().name())) {
+                // A selected material also replaces an inherited template for that role.
+                if(local.surfaces().containsKey(op.role().name())) template=null;
+                if(local.surfaceTemplates().containsKey(op.role().name())) template=local.surfaceTemplates().get(op.role().name());
+            }
+            if(template==null) continue;
             int turn=template.alignToRoad()?turns.getOrDefault(op.sourceElementId(),0):0;
             int x=op.point().x(),z=op.point().z();
             int u=Math.floorMod(switch(turn) { case 1 -> z; case 2 -> -x; case 3 -> -z; default -> x; },template.size().x());

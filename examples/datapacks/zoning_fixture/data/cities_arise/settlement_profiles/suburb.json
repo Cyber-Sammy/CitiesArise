@@ -46,7 +46,24 @@
             }
           }
         ]
-      }
+      },
+      "parcelSizes": [
+        {
+          "id": "zoning:compact",
+          "width": 15,
+          "depth": 16
+        },
+        {
+          "id": "zoning:standard",
+          "width": 16,
+          "depth": 18
+        },
+        {
+          "id": "zoning:spacious",
+          "width": 20,
+          "depth": 20
+        }
+      ]
     },
     "roadWidth": 5,
     "maxBuildableSlope": 0.75,
@@ -136,7 +153,7 @@
       "buildingAccessRunPerRise": 2,
       "roadShoulderRadius": 2,
       "roadShoulderMaxFillDepth": 3,
-      "parcelShoulderRadius": 3,
+      "parcelShoulderRadius": 1,
       "parcelShoulderMaxFillDepth": 3,
       "buildingShoulderRadius": 3,
       "buildingShoulderMaxFillDepth": 3,

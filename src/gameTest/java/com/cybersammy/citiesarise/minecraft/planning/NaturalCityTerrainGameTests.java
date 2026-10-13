@@ -29,6 +29,15 @@ public final class NaturalCityTerrainGameTests {
 
     @GameTest(template="empty",timeoutTicks=400)
     public static void reportedZoningCityReliefIsReproducible(GameTestHelper helper) throws Exception {
+        verifyReportedZoningCity(helper,true);
+    }
+
+    @GameTest(template="empty",timeoutTicks=400)
+    public static void parcelRetainingWallsAbutPlatformsOnNaturalRelief(GameTestHelper helper) throws Exception {
+        verifyReportedZoningCity(helper,false);
+    }
+
+    private static void verifyReportedZoningCity(GameTestHelper helper,boolean legacyShoulders) throws Exception {
         var registry=helper.getLevel().registryAccess();
         var noise=registry.registryOrThrow(Registries.NOISE_SETTINGS).getHolderOrThrow(NoiseGeneratorSettings.OVERWORLD);
         var biomes=MultiNoiseBiomeSource.createFromPreset(registry.registryOrThrow(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST)
@@ -36,8 +45,11 @@ public final class NaturalCityTerrainGameTests {
         var generator=new NoiseBasedChunkGenerator(biomes,noise);
         var random=RandomState.create(noise.value(),registry.lookupOrThrow(Registries.NOISE),7189931796180591508L);
         Path pack=Path.of("../examples/datapacks/zoning_fixture/data");
-        var profile=new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("cities_arise:suburb"),
-                com.google.gson.JsonParser.parseString(Files.readString(pack.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject(),
+        var fixture=com.google.gson.JsonParser.parseString(Files.readString(pack.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject();
+        // Keep the reported CA48 cut-bank regression at its original 16x18 parcel geometry.
+        fixture.getAsJsonObject("planning").getAsJsonObject("districts").remove("parcelSizes");
+        if(legacyShoulders) fixture.getAsJsonObject("planning").getAsJsonObject("terrainTransitions").addProperty("parcelShoulderRadius",3);
+        var profile=new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("cities_arise:suburb"),fixture,
                 (id,directory,extension)->{var parts=id.split(":",2);return Files.newInputStream(pack.resolve(parts[0]).resolve(directory).resolve(parts[1]+extension));});
         var bounds=CityPlanningArea.bounds(new SettlementRegion(12,0),profile.surveySize());
         var provider=new TiledCityTerrainProvider(new MinecraftWorldgenTerrainProvider(generator,random,generator.getMinY(),generator.getGenDepth()));
@@ -48,6 +60,22 @@ public final class NaturalCityTerrainGameTests {
         var result=WorldgenWaterMaskRefiner.refine(planner,provider,request,planner.plan(request));
         helper.assertTrue(result.successful(),"Reported zoning city rejected: "+result.failureReason());
         var plan=result.plan().orElseThrow();var prep=result.terrainPreparationPlan().orElseThrow();
+        int parcelWalls=0;
+        for(var column:prep.columns()) {
+            if(column.type()!=com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType.RETAINING_WALL) continue;
+            var parcel=plan.parcels().stream().filter(p -> p.id().equals(column.sourceElementId())).findFirst();
+            if(parcel.isEmpty()) continue;
+            parcelWalls++;
+            var b=parcel.orElseThrow().bounds();var p=column.point();
+            int dx=Math.max(0,Math.max(b.minX()-p.x(),p.x()-b.maxXExclusive()+1));
+            int dz=Math.max(0,Math.max(b.minZ()-p.z(),p.z()-b.maxZExclusive()+1));
+            if(!legacyShoulders) helper.assertTrue(Math.max(dx,dz)==1,"Parcel retaining wall is separated from its platform by a terrain strip");
+        }
+        helper.assertTrue(parcelWalls>0,"Relief fixture must exercise parcel retaining walls");
+        helper.assertTrue(new com.cybersammy.citiesarise.core.validation.PlanValidator().validate(plan).isEmpty()
+                && new com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator().validate(plan,prep).isEmpty(),
+                "Natural city plan/preparation invalid");
+        if(!legacyShoulders) { helper.succeed(); return; }
         helper.assertTrue(result.content().selections().values().stream().filter(d -> d.rule().equals("zoning:homes")).count()==4,
                 "Reported all-workshop city must still demonstrate four wooden homes via parcel rules");
         var banks=prep.columns().stream().filter(c -> c.type()==com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumnType.CUT_SLOPE).toList();
@@ -75,8 +103,10 @@ public final class NaturalCityTerrainGameTests {
         var generator=new NoiseBasedChunkGenerator(biomes,noise);
         var random=RandomState.create(noise.value(),registry.lookupOrThrow(Registries.NOISE),1160011880237027703L);
         Path pack=Path.of("../examples/datapacks/composition_fixture/data");
-        var profile=new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("cities_arise:suburb"),
-                com.google.gson.JsonParser.parseString(Files.readString(pack.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject(),
+        var fixture=com.google.gson.JsonParser.parseString(Files.readString(pack.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject();
+        // Keep the reported CA48 cut-bank regression at its original 16x18 parcel geometry.
+        fixture.getAsJsonObject("planning").getAsJsonObject("districts").remove("parcelSizes");
+        var profile=new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("cities_arise:suburb"),fixture,
                 (id,directory,extension)->{var parts=id.split(":",2);return Files.newInputStream(pack.resolve(parts[0]).resolve(directory).resolve(parts[1]+extension));});
         var bounds=CityPlanningArea.bounds(region,profile.surveySize());
         var provider=new TiledCityTerrainProvider(new MinecraftWorldgenTerrainProvider(generator,random,generator.getMinY(),generator.getGenDepth()));

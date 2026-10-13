@@ -680,7 +680,7 @@
             2,
             0
           ],
-          "material": "minecraft:sea_lantern"
+          "material": "minecraft:lantern[hanging=false,waterlogged=false]"
         }
       ],
       "tags": [
@@ -994,6 +994,34 @@
           ]
         ]
       }
+    },
+    "zoning:planter": {
+      "size": [
+        1,
+        2,
+        1
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "cells": [
+        {
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "material": "minecraft:oak_planks"
+        },
+        {
+          "at": [
+            0,
+            1,
+            0
+          ],
+          "material": "minecraft:oak_leaves[persistent=true]"
+        }
+      ]
     }
   },
   "compositions": {
@@ -1101,17 +1129,16 @@
         "zoning:style"
       ]
     },
-    "zoning:road_lamp": {
-      "anchor": "road_edge",
+    "zoning:home_planter": {
+      "anchor": "parcel_corner",
       "pool": [
-        "zoning:lamp"
+        "zoning:planter"
       ],
-      "palette": "zoning:palette",
-      "inset": 3,
+      "palette": "zoning:warm",
+      "inset": 1,
       "requiredTags": [
         "zoning:style"
-      ],
-      "spacing": 8
+      ]
     }
   },
   "materialRules": {
@@ -1175,35 +1202,20 @@
       ]
     },
     "PARCEL_YARD": {
-      "size": [
-        2,
-        1,
-        2
-      ],
-      "fills": [
-        {
-          "from": [
-            0,
-            0,
-            0
-          ],
-          "to": [
-            1,
-            0,
-            1
-          ],
-          "material": "minecraft:grass_block"
-        }
-      ],
       "cells": [
         {
+          "material": "minecraft:grass_block",
           "at": [
             0,
             0,
             0
-          ],
-          "material": "minecraft:moss_block"
+          ]
         }
+      ],
+      "size": [
+        1,
+        1,
+        1
       ]
     },
     "BRIDGE_DECK": {
@@ -1239,5 +1251,73 @@
         }
       ]
     }
-  }
+  },
+  "parcelRules": [
+    {
+      "id": "zoning:home_yard",
+      "match": {
+        "properties": {
+          "zoning:purpose": "homes"
+        }
+      },
+      "surfaces": {
+        "PARCEL_BOUNDARY": "minecraft:dirt_path"
+      },
+      "surfaceTemplates": {
+        "PARCEL_YARD": {
+          "cells": [
+            {
+              "material": "minecraft:grass_block",
+              "at": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "size": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "props": [
+        "zoning:home_planter"
+      ]
+    },
+    {
+      "id": "zoning:workshop_yard",
+      "match": {
+        "properties": {
+          "zoning:purpose": "workshops"
+        }
+      },
+      "surfaces": {
+        "PARCEL_BOUNDARY": "minecraft:polished_andesite"
+      },
+      "surfaceTemplates": {
+        "PARCEL_YARD": {
+          "cells": [
+            {
+              "material": "minecraft:stone_bricks",
+              "at": [
+                0,
+                0,
+                0
+              ]
+            }
+          ],
+          "size": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "props": [
+        "zoning:yard_lamp"
+      ]
+    }
+  ]
 }

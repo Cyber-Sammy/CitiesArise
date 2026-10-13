@@ -82,7 +82,7 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
         DebugChunkPlacementPlan chunkPlan = placementIndex.slice(chunk);
         if (!chunkPlan.operations().isEmpty()) {
             long started = System.nanoTime();
-            new WorldgenPlacementApplier().apply(level, chunkPlan);
+            new WorldgenPlacementApplier().apply(level, chunkPlan,snapshot.toPlacementPlan().operations());
             long elapsed = System.nanoTime() - started;
             var serverLevel = level.getLevel();
             var metadata = registryMetadata(serverLevel.dimension().location().toString());

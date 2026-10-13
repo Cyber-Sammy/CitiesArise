@@ -7,11 +7,16 @@ import java.util.Objects;
 
 record WorldgenVegetationCleanupPlan(
         PlacementChunk chunk,
-        List<DebugBlockPlacementOperation> influencingOperations
+        List<DebugBlockPlacementOperation> influencingOperations,
+        List<DebugBlockPlacementOperation> protectedOperations
 ) {
+    WorldgenVegetationCleanupPlan(PlacementChunk chunk,List<DebugBlockPlacementOperation> operations) {
+        this(chunk,operations,operations);
+    }
     WorldgenVegetationCleanupPlan {
         Objects.requireNonNull(chunk, "chunk");
         Objects.requireNonNull(influencingOperations, "influencingOperations");
         influencingOperations = List.copyOf(influencingOperations);
+        protectedOperations = List.copyOf(protectedOperations);
     }
 }

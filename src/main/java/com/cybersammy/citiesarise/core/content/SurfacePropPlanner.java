@@ -10,6 +10,10 @@ final class SurfacePropPlanner {
     private record Anchor(PlanElementId source,GridPoint point,GridBounds bounds) { }
     private SurfacePropPlanner() { }
     static List<ResolvedProp> plan(SettlementPlan plan,TerrainPreparationPlan preparation,List<PropRule> rules,long seed) {
+        return plan(plan,preparation,rules,seed,Map.of());
+    }
+    static List<ResolvedProp> plan(SettlementPlan plan,TerrainPreparationPlan preparation,List<PropRule> rules,long seed,
+            Map<PlanElementId,ResolvedParcelContent> parcels) {
         Map<GridPoint,Integer> heights=new HashMap<>(); Set<GridPoint> access=new HashSet<>();
         for(var column:preparation.columns()) {
             heights.put(column.point(),column.targetElevation());
@@ -30,6 +34,8 @@ final class SurfacePropPlanner {
         for(PropRule rule:rules) {
             List<Anchor> anchors=new ArrayList<>();
             if(rule.anchor().equals("parcel_corner")) for(var parcel:plan.parcels()) {
+                var binding=parcels.get(parcel.id());
+                if(binding!=null && !binding.props().contains(rule.id())) continue;
                 var b=parcel.bounds(); anchors.add(new Anchor(parcel.id(),new GridPoint(b.minX()+rule.inset(),b.minZ()+rule.inset()),b));
             } else for(var road:plan.roadGraph().segments()) {
                 var a=nodes.get(road.startNodeId()).point(); var b=nodes.get(road.endNodeId()).point();

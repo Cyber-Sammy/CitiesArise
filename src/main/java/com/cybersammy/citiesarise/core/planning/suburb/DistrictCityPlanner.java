@@ -55,14 +55,17 @@ final class DistrictCityPlanner {
                     : SuburbPlanningFailureReason.DISTRICT_CONNECTION_FAILED);
         // A small survey may not fit subdivisions. Preserve the existing single-district option.
         var fallback = new SuburbPlanningRequest(request.settlementId(), request.survey(), request.seed(),
-                settings.withDistricts(DistrictPlanningSettings.single()), request.terrainResponsePolicy());
+                settings.withDistricts(settings.districts().parcelSizes().isEmpty()?DistrictPlanningSettings.single():
+                        new DistrictPlanningSettings(1,settings.districts().targetParcels(),settings.districts().maxConnectionAttempts(),settings.districts().zoning(),settings.districts().parcelSizes())), request.terrainResponsePolicy());
         return planner.plan(fallback, acceptance);
     }
 
     private static Optional<Local> planLocal(SuburbPlanner planner, SuburbPlanningRequest request,
             TerrainDistrictGrowth.Region region, int index, int capacity, PlanningAcceptance acceptance) {
         var excluded = new HashSet<GridPoint>();
-        var settings = request.settings().forDistrict(Math.min(capacity, request.settings().targetParcelCount()));
+        var size=request.settings().districts().parcelSize(request.seed(),request.settlementId().value(),index);
+        var districtSettings=size.map(request.settings()::withParcelSize).orElse(request.settings());
+        var settings = districtSettings.forDistrict(Math.min(capacity, request.settings().targetParcelCount()));
         var policy = request.terrainResponsePolicy();
         var responses = new java.util.EnumMap<com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType, com.cybersammy.citiesarise.core.terrain.policy.TerrainResponse>(policy.responses());
         responses.put(com.cybersammy.citiesarise.core.terrain.policy.TerrainFeatureType.BLOCKED_TERRAIN,
@@ -89,7 +92,7 @@ final class DistrictCityPlanner {
                 // Region ownership is a hard reservation, independent of a pack's terrain responses.
                 if (result.terrainPreparationPlan().orElseThrow().columns().stream()
                         .anyMatch(c -> !region.points().contains(c.point()) || excluded.contains(c.point()))) return Optional.empty();
-                return Optional.of(new Local(region, result));
+                return Optional.of(new Local(region, result, size));
             }
             // Local terrain failures identify a point; reserve its shoulder and search another layout.
             if (result.terrainDiagnostic().isEmpty() || java.util.Collections.disjoint(
@@ -106,8 +109,8 @@ final class DistrictCityPlanner {
 
     private static List<GridBounds> partitions(SuburbPlanningRequest request) {
         var settings = request.settings();
-        int minimumWidth = settings.roadWidth() + settings.parcelWidth() * 2;
-        int minimumDepth = 2 * (settings.roadWidth() + settings.terrainTransitions().roadShoulderRadius() + settings.parcelDepth());
+        int minimumWidth = settings.roadWidth() + settings.districts().parcelSizes().stream().mapToInt(DistrictParcelSize::width).max().orElse(settings.parcelWidth()) * 2;
+        int minimumDepth = 2 * (settings.roadWidth() + settings.terrainTransitions().roadShoulderRadius() + settings.districts().parcelSizes().stream().mapToInt(DistrictParcelSize::depth).max().orElse(settings.parcelDepth()));
         List<GridBounds> bounds = new ArrayList<>(List.of(request.survey().bounds()));
         while (bounds.size() < settings.districts().maxCount()) {
             GridBounds split = bounds.stream().filter(b -> b.size().width() >= minimumWidth * 2
@@ -153,7 +156,7 @@ final class DistrictCityPlanner {
             parcels.addAll(p.parcels()); buildings.addAll(p.buildingSlots());
             var elevation = local.result().terrainPreparationPlan().orElseThrow().elevationPlan();
             zones.addAll(elevation.zones()); transitions.addAll(elevation.transitions());
-            districts.add(new DistrictPlan(p.id(), local.region().bounds(), p.parcels().stream().map(Parcel::id).toList(), local.region().footprint()));
+            districts.add(new DistrictPlan(p.id(), local.region().bounds(), p.parcels().stream().map(Parcel::id).toList(), local.region().footprint(),Set.of(),local.size().map(DistrictParcelSize::properties).orElse(PlanProperties.empty())));
         }
         // Re-select crossings city-wide: local shortcuts must not spend the budget before district connections.
         var bare = new SettlementPlan(request.settlementId(), new RoadGraph(nodes, segments), parcels, buildings,
@@ -292,7 +295,7 @@ final class DistrictCityPlanner {
         return result;
     }
     private static int elevation(RoadSegment segment) { return Integer.parseInt(segment.properties().find(PlanPropertyKeys.PLATFORM_Y).orElseThrow()); }
-    private record Local(TerrainDistrictGrowth.Region region, SuburbPlanningResult result) { }
+    private record Local(TerrainDistrictGrowth.Region region, SuburbPlanningResult result, Optional<DistrictParcelSize> size) { }
     private record Port(RoadNode node, int y, int degree) { }
     private record Pair(Port a, Port b) {
         int distance() { return Math.abs(a.node().point().x() - b.node().point().x()) + Math.abs(a.node().point().z() - b.node().point().z()); }

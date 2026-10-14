@@ -66,7 +66,7 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
         if(recipe!=null) tag.put("Recipe",recipe.save());
         tag.putString("Ravines",new com.google.gson.Gson().toJson(ravines));
         tag.putInt("Depth",settings.maximumDepth());tag.putInt("Span",settings.maximumSpan());
-        tag.putInt("Spacing",settings.pierSpacing());tag.putInt("Volume",settings.maximumVolume());
+        tag.putInt("ShallowFoundationHeight",settings.maximumShallowFoundationHeight());tag.putInt("Spacing",settings.pierSpacing());tag.putInt("Volume",settings.maximumVolume());
         var list=new ListTag();
         for(var e:envelopes) {
             var row=new CompoundTag();row.putString("Source",e.source().value());row.putString("Kind",e.kind().name());
@@ -76,7 +76,7 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
     }
     static StructuralSupportBlueprint load(CompoundTag tag) {
         if(tag.getInt("Version")<1 || tag.getInt("Version")>2) throw new IllegalArgumentException("Unsupported structural blueprint version");
-        var settings=new StructuralSupportSettings(tag.getBoolean("Enabled"),tag.getInt("Depth"),tag.getInt("Span"),tag.getInt("Spacing"),tag.getInt("Volume"));
+        var settings=new StructuralSupportSettings(tag.getBoolean("Enabled"),tag.getInt("Depth"),tag.getInt("Span"),tag.getInt("Spacing"),tag.getInt("Volume"),tag.contains("ShallowFoundationHeight")?tag.getInt("ShallowFoundationHeight"):2);
         var list=new ArrayList<StructuralSupportPlanner.Envelope>();
         for(var item:tag.getList("Envelopes",Tag.TAG_COMPOUND)) {
             if(list.size()>=4096) throw new IllegalArgumentException("Too many structural envelopes");

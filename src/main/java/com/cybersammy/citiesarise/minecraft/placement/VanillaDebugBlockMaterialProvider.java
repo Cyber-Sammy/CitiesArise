@@ -33,6 +33,7 @@ public final class VanillaDebugBlockMaterialProvider implements DebugBlockMateri
             case DOOR_SOUTH_LOWER, DOOR_SOUTH_UPPER -> door(Direction.SOUTH, role == DebugPlacementRole.DOOR_SOUTH_UPPER);
             case DOOR_WEST_LOWER, DOOR_WEST_UPPER -> door(Direction.WEST, role == DebugPlacementRole.DOOR_WEST_UPPER);
             case DOOR_EAST_LOWER, DOOR_EAST_UPPER -> door(Direction.EAST, role == DebugPlacementRole.DOOR_EAST_UPPER);
+            case PARCEL_FOUNDATION -> Blocks.STONE_BRICKS.defaultBlockState();
             case FOUNDATION -> Blocks.COBBLESTONE.defaultBlockState();
             case TERRAIN_FILL -> Blocks.DIRT.defaultBlockState();
             case TERRAIN_CUT_SURFACE, TERRAIN_SURFACE -> Blocks.GRASS_BLOCK.defaultBlockState();

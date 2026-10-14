@@ -62,4 +62,38 @@ class StructuralSupportPlannerTest {
         assertEquals(StructuralSupportPlanner.plan(List.of(a,b),settings,ground),StructuralSupportPlanner.plan(List.of(b,a),settings,ground));
         assertTrue(StructuralSupportPlanner.plan(List.of(a),StructuralSupportSettings.disabled(),(x,y,z)->{throw new AssertionError();}).cells().isEmpty());
     }
+    @Test void shallowRaisedParcelUsesFoundationButDeepAndThinRoofGapsKeepPiers() {
+        var e=envelope("raised",0,0,4,4,StructuralSupportPlanner.Kind.PARCEL);
+        var policy=new StructuralSupportSettings(true,32,12,4,20000,5);
+        var shallow=StructuralSupportPlanner.plan(List.of(e),policy,(x,y,z)->y<=64);
+        assertTrue(shallow.accepted());assertTrue(shallow.suspended().isEmpty());assertEquals(80,shallow.cells().size());
+        assertTrue(shallow.cells().stream().allMatch(c->c.role()==StructuralSupportPlanner.Role.FOUNDATION));
+        for(var ground:List.<StructuralSupportPlanner.Ground>of((x,y,z)->y<=62,(x,y,z)->y==68 || y<=43)) {
+            var deep=StructuralSupportPlanner.plan(List.of(e),policy,ground);assertTrue(deep.accepted());
+            assertFalse(deep.suspended().isEmpty());assertTrue(deep.cells().stream().noneMatch(c->c.role()==StructuralSupportPlanner.Role.FOUNDATION));
+        }
+    }
+    @Test void shallowFoundationHonorsFluidVolumeAndDoesNotChangeRoadSupports() {
+        var e=envelope("raised",0,0,4,4,StructuralSupportPlanner.Kind.PARCEL);
+        var policy=new StructuralSupportSettings(true,32,12,4,20000,5);
+        var wet=new StructuralSupportPlanner.Ground() {
+            public boolean solid(int x,int y,int z){return y<=64;}
+            public boolean fluid(int x,int y,int z){return y==66;}
+        };
+        assertTrue(StructuralSupportPlanner.plan(List.of(e),policy,wet).cells().stream().noneMatch(c->c.role()==StructuralSupportPlanner.Role.FOUNDATION));
+        assertEquals("STRUCTURAL_VOLUME_LIMIT",StructuralSupportPlanner.plan(List.of(e),new StructuralSupportSettings(true,32,12,4,79,5),(x,y,z)->y<=64).rejection().orElseThrow());
+        var road=StructuralSupportPlanner.plan(List.of(envelope("road",0,0,4,4,StructuralSupportPlanner.Kind.ROAD)),policy,(x,y,z)->y<=64);
+        assertFalse(road.suspended().isEmpty());assertTrue(road.cells().stream().noneMatch(c->c.role()==StructuralSupportPlanner.Role.FOUNDATION));
+    }
+
+    @Test void mixedParcelKeepsWoodOnlyAboveDeepVoidAndBoundsTheNewSetting() {
+        var e=envelope("mixed",0,0,8,4,StructuralSupportPlanner.Kind.PARCEL);
+        var result=StructuralSupportPlanner.plan(List.of(e),new StructuralSupportSettings(true,32,12,4,20000,5),(x,y,z)->y<=(x<4?64:43));
+        assertTrue(result.accepted());assertTrue(result.suspended().stream().allMatch(c->c.point().x()>=4));
+        assertTrue(result.cells().stream().filter(c->c.position().x()<4).allMatch(c->c.role()==StructuralSupportPlanner.Role.FOUNDATION));
+        assertThrows(IllegalArgumentException.class,()->new StructuralSupportSettings(true,32,12,4,20000,9));
+        assertThrows(IllegalArgumentException.class,()->new StructuralSupportSettings(true,32,12,4,20000,-1));
+        assertEquals(2,new StructuralSupportSettings(true,32,12,4,20000,null).maximumShallowFoundationHeight());
+    }
+
 }

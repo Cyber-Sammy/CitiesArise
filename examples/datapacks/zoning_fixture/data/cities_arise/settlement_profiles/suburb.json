@@ -177,7 +177,8 @@
       "maximumDepth": 32,
       "maximumSpan": 12,
       "pierSpacing": 4,
-      "maximumVolume": 20000
+      "maximumVolume": 20000,
+      "maximumShallowFoundationHeight": 5
     },
     "ravineRoads": {
       "mode": "bridge",

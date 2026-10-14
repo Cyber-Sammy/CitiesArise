@@ -35,7 +35,7 @@ public final class ZoningGameTests {
                     PlanProperties.of(new PlanPropertyKey("zoning:purpose"),i==0?"homes":"workshops"));
             var selected=BuildingSelector.select(slot,42,settings).orElseThrow();
             var resolved=new CompositionAssembler().assemble(selected.composition().orElseThrow(),7,7,new Vec(3,1,0),Face.NORTH,42).orElseThrow();
-            helper.assertTrue(resolved.cells().stream().mapToInt(c -> c.position().y()).max().orElseThrow()==(i==0?4:9),"Selected wrong building height");
+            helper.assertTrue(resolved.cells().stream().mapToInt(c -> c.position().y()).max().orElseThrow()==(i==0?4:8),"Selected wrong building height");
             for(var cell:resolved.cells()) operations.add(new DebugBlockPlacementOperation(
                     new GridPoint(slot.bounds().minX()+cell.position().x(),slot.bounds().minZ()+cell.position().z()),cell.position().y(),
                     DebugPlacementRole.CONTENT_BLOCK,slot.id(),OptionalInt.of(origin.getY()),

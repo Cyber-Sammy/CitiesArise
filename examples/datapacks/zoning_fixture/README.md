@@ -172,3 +172,29 @@ Snapshot v9 retains source-element ids for every operation, including structural
 Automated coverage includes cliff piers/corbels, dry ravine spans, absent anchors and budget rejection without partial geometry, deterministic envelope order, snapshot/source persistence, reverse chunk placement, debug undo, pending queue reload, unloaded-chunk waiting, untouched water, accessible road entrances and final bank supports for semantic bridges. Ordinary-world visual acceptance is still needed for the supplied build.
 
 Optional descending banks are checked for a continuous inward connection to their platform. A bank cannot restart beyond an omitted deep, water or reserved lower strip and create an artificial moat. Support-enabled placement repeats this check on final terrain before snapshot publication, removing detached optional surfaces/retaining faces together with their lining. Connected banks retain the existing three-block cosmetic fill cap; deep ravines remain open for structural supports. This prevents added detached terraces; it does not fill natural ravines or retrofit saved settlements.
+
+## Final terrain junctions and ravine roads
+
+Suspended road and parcel floors now have explicit, saved clearance operations above them (up to 12 blocks), independent of foundation fill below. Authored content is preserved. Selected shallow retaining edges attach inside the pad with a consistent face; deep suspended columns retain structural beams and open space. These corrections apply before placement of new settlements; existing placed cities are not rebuilt.
+
+Profiles with enabled `planning.structuralSupports` may add:
+
+```json
+"ravineRoads": {
+  "mode": "bridge",
+  "minimumDepth": 4,
+  "maximumFillDepth": 32,
+  "maximumFillVolume": 20000,
+  "edgeClearance": 2,
+  "maximumDetour": 24,
+  "maximumRoutingAttempts": 2
+}
+```
+
+The block is optional; omission retains the legacy support policy. Presence enables the policy. `mode` is required: `fill` fills only the road footprint within depth/volume budgets (fluid or insufficient footing rejects it); `bridge` preserves the opening beneath supported spans; `follow_edge` reserves the opening and rebuilds the complete road, parcels, frontage, access and content together on final terrain. Strict follow_edge rejects a city if no acceptable layout fits; it never silently switches to a crossing. The demo selects bridge.
+
+Integer ranges: minimumDepth 4..16, maximumFillDepth 4..48, maximumFillVolume 1..100000, edgeClearance 0..8, maximumDetour 4..48, maximumRoutingAttempts 1..3. Defaults are shown above except edgeClearance defaults to 2. Total construction remains subject to the profile earthwork allowance. Fill accounting also covers gaps deeper than ordinary three-block preparation even when minimumDepth is higher.
+
+Follow_edge captures an immutable bounded final-terrain survey from already FULL chunks before placing any city blocks, then plans on one background worker (three admitted jobs). The complete survey reservation must be loaded together; it never forces chunks. Captured inputs and resolved operations survive reload. Debug command resolution is synchronous. Survey limits are 224x224 and 512 vertical blocks; attempts and detours are bounded. Opposed exposed banks and voids exposed by the planned corridor cut are considered; four-layer intact roofs and ordinary water crossings are preserved. This is conservative terrain inference, not stored cave identity. A detour may relocate the whole layout. Base-generator locate acceptance cannot guarantee final follow_edge acceptance.
+
+Use the matching new JAR and zoning_fixture ZIP before generating fresh settlements. Earlier saved resolved snapshots retain their recorded operations. Clearance or construction-limit failures reject before partial city placement.

@@ -178,6 +178,15 @@
       "maximumSpan": 12,
       "pierSpacing": 4,
       "maximumVolume": 20000
+    },
+    "ravineRoads": {
+      "mode": "bridge",
+      "minimumDepth": 4,
+      "maximumFillDepth": 32,
+      "maximumFillVolume": 20000,
+      "edgeClearance": 2,
+      "maximumDetour": 24,
+      "maximumRoutingAttempts": 2
     }
   },
   "terrainPolicy": {

@@ -11,6 +11,7 @@ public final class VanillaDebugBlockMaterialProvider implements DebugBlockMateri
     public BlockState blockState(DebugPlacementRole role) {
         return switch (role) {
             case SUPPORT_LINING -> Blocks.STONE_BRICKS.defaultBlockState();
+            case TERRAIN_CLEARANCE -> Blocks.AIR.defaultBlockState();
             case BRIDGE_PIER -> Blocks.STONE_BRICKS.defaultBlockState();
             case BRIDGE_STEP -> Blocks.STONE_BRICK_SLAB.defaultBlockState();
             case BRIDGE_DECK -> Blocks.STONE_BRICKS.defaultBlockState();

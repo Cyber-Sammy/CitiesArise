@@ -74,7 +74,7 @@ public final class SettlementPlanJsonExporter {
                             .forEach(e -> json.stringField(e.getKey(),e.getValue())));
                     building.resolved().ifPresent(composition -> {
             json.arrayField("modules", () -> composition.modules().forEach(module -> json.arrayValue(() -> {
-                json.beginObject(); json.stringField("id",module.id()); json.stringField("variant",module.variant());
+                json.beginObject(); json.stringField("id",module.id()); json.stringField("variant",module.variant());json.stringField("layout",module.layout());
                 json.numberField("x",module.origin().x()); json.numberField("y",module.origin().y()); json.numberField("z",module.origin().z());
                 json.numberField("rotation",module.rotation()); json.endObject();
             })));

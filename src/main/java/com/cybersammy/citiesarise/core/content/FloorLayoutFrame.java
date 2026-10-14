@@ -54,15 +54,16 @@ final class FloorLayoutFrame {
         return Optional.empty();
     }
     Optional<String> validate(ResolvedComposition result,CompositionSettings settings,int structuralCount) {
+        return validate(result,settings,structuralCount,Set.of());
+    }
+    Optional<String> validate(ResolvedComposition result,CompositionSettings settings,int structuralCount,Set<String> closedPorts) {
         var cells=new HashMap<Vec,PlacedCell>();result.cells().forEach(c->cells.put(c.position(),c));
         for(var p:cells.keySet())if(!mask.contains(new GridPoint(p.x(),p.z())) || p.y()<origin.y() || p.y()>=origin.y()+layout.size().y())return Optional.of("Floor content outside footprint");
         var actualPorts=new ArrayList<Joint>();var targets=new ArrayList<Vec>();
         for(int roomIndex=0;roomIndex<structuralCount;roomIndex++) {
             var m=result.modules().get(roomIndex);var module=settings.modules().get(m.id());
             String owner=module.id()+"#"+roomIndex;
-            var variant=module.variants().stream().filter(v->v.id().equals(m.variant())).findFirst();
-            var joints=new ArrayList<>(module.joints().stream().filter(j->variant.isEmpty() || !variant.orElseThrow().closedJoints().contains(j.id())).toList());
-            variant.ifPresent(v->joints.addAll(v.addedJoints()));
+            var joints=new ArrayList<>(module.jointsFor(m.variant(),m.layout()));
             joints.removeIf(j->result.damageDecisions().contains(owner+":closed:"+j.id()));
             module.damage().optionalJoints().stream().filter(j->result.damageDecisions().contains(owner+":opened:"+j.id())).forEach(joints::add);
             var walkPoints=new ArrayList<Vec>();
@@ -71,6 +72,10 @@ final class FloorLayoutFrame {
                 if(q.external() && !facade(q))return Optional.of("Exterior floor opening faces another room");
                 boolean declaredWalk=ports.stream().anyMatch(p->p.walkable() && p.type().equals(q.type()) && p.at().equals(q.position()) && p.face()==q.face());
                 boolean declaredNonWalk=ports.stream().anyMatch(p->!p.walkable() && p.type().equals(q.type()) && p.at().equals(q.position()) && p.face()==q.face());
+                if(q.face().ordinal()>=4 && declaredWalk && ports.stream().noneMatch(p->closedPorts.contains(p.id()) && p.at().equals(q.position()) && p.face()==q.face())) {
+                    var p=ModuleDefinition.jointCells(q).getFirst();
+                    walkPoints.add(q.face()==Face.UP?p.add(new Vec(0,-1,0)):p);
+                }
                 if(q.face().ordinal()<4 && q.height()>=2 && (!q.external() || declaredWalk) && !declaredNonWalk) {
                     var p=ModuleDefinition.jointCells(q).getFirst();
                     // A capped optional opening is not a circulation requirement.
@@ -84,14 +89,14 @@ final class FloorLayoutFrame {
                 }
             }
             if(!layout.fillers().contains(m.id())) {
-                if(walkPoints.isEmpty())return Optional.of("Room has no horizontal circulation port");
+                if(walkPoints.isEmpty())return Optional.of("Room has no circulation port");
             }
             targets.addAll(walkPoints);
         }
         for(var port:ports) {
             if(actualPorts.stream().noneMatch(j->j.type().equals(port.type()) && j.position().equals(port.at()) && j.face()==port.face()
                     && j.width()==port.width() && j.height()==port.height()))return Optional.of("Missing fixed floor port: "+port.id());
-            if(port.walkable()) {
+            if(port.walkable() && !closedPorts.contains(port.id())) {
                 for(var p:ModuleDefinition.jointCells(port.joint())) {
                     if(!passable(cells,p,settings))return Optional.of("Blocked fixed floor port: "+port.id());
                 }

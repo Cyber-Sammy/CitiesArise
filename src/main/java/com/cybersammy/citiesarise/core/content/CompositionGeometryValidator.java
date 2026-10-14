@@ -15,7 +15,7 @@ public final class CompositionGeometryValidator {
         for (PlacedModule placed : plan.modules()) {
             ModuleDefinition module = definitions.get(placed.id());
             if (module == null) return Optional.of("Missing resolved module: " + placed.id());
-            var contract=module.contractFor(placed.variant());
+            var contract=module.contractFor(placed.variant(),placed.layout());
             for (Vec p : contract.clearance()) {
                 if (!passable(cells, world(p,module,placed), rules,air))
                     return Optional.of("Blocked clearance in " + module.id() + " at " + p);

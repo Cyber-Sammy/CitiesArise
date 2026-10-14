@@ -36,16 +36,54 @@ public final class ContentCatalogParser {
             }
             JsonObject d=object(data,"damage");
             Damage damage=new Damage(bool(d,"enabled",false),integer(d,"maxRemovedCells",0),strings(d,"closableJoints"),joints(d,"optionalJoints"));
-            modules.put(entry.getKey(),new ModuleDefinition(entry.getKey(),size,cells(data,size),joints(data,"joints"),strings(data,"tags"),variants,damage,contract(object(data,"contract")),boundaries(data)));
+            var layouts=new ArrayList<RoomLayout>();
+            for(var item:array(data,"layouts")) {
+                var l=item.getAsJsonObject();layouts.add(new RoomLayout(string(l,"id"),integer(l,"weight",1),cells(l,size),strings(l,"closedJoints"),joints(l,"addedJoints"),
+                        l.has("contract")?Optional.of(contract(object(l,"contract"))):Optional.empty(),l.has("boundaries")?boundaries(l):null,stringMap(object(l,"choices"))));
+            }
+            var adjacency=new ArrayList<RoomAdjacency>();
+            for(var item:array(data,"adjacency")) {
+                var a=item.getAsJsonObject();adjacency.add(new RoomAdjacency(string(a,"neighbor"),text(a,"joint",""),text(a,"neighborJoint",""),
+                        a.has("rotation")?integer(a,"rotation",0):null,a.has("offset")?vec(a.getAsJsonArray("offset")):null,integer(a,"weight",1)));
+            }
+            modules.put(entry.getKey(),new ModuleDefinition(entry.getKey(),size,cells(data,size),joints(data,"joints"),strings(data,"tags"),variants,damage,contract(object(data,"contract")),boundaries(data),layouts,adjacency));
+        }
+        for(var module:modules.values()) {
+            for(var layout:module.layouts())module.forLayout(layout.id());
+            for(var rule:module.adjacency())if(!modules.containsKey(rule.neighbor()))throw new IllegalArgumentException("Unknown adjacency neighbor: "+rule.neighbor());
         }
         for(var module:modules.values()) for(var c:module.allContracts()) for(var mount:c.mounts()) for(String id:mount.pool())
             if(!modules.containsKey(id)) throw new IllegalArgumentException("Unknown nested module: "+id);
         Map<String,CompositionSettings> compositions=new LinkedHashMap<>();
         for(var entry:object(json,"compositions").entrySet()) {
             JsonObject c=entry.getValue().getAsJsonObject();
+            if(c.has("buildingSections"))continue;
             compositions.put(entry.getKey(),new CompositionSettings(modules,list(c,"roots"),list(c,"attachments"),string(c,"entranceJoint"),
                     strings(c,"requiredTags"),strings(c,"forbiddenTags"),strings(c,"exceptions"),integer(c,"minimumModules",1),integer(c,"maximumModules",8),
                     integer(c,"maximumHeight",64),integer(c,"damageSeverity",0),text(c,"airMaterial","minecraft:air"),materialRules,c.has("floorLayout")?floorLayout(object(c,"floorLayout")):null));
+        }
+        for(var entry:object(json,"compositions").entrySet()) {
+            var c=entry.getValue().getAsJsonObject();if(!c.has("buildingSections"))continue;
+            var data=object(c,"buildingSections");var sections=new ArrayList<BuildingSections.Section>();
+            CompositionSettings first=null;
+            for(var item:array(data,"sections")) {
+                var s=item.getAsJsonObject();var floor=compositions.get(string(s,"floor"));
+                if(floor==null || floor.floorLayout()==null)throw new IllegalArgumentException("Building section needs a known floor composition");
+                if(first==null)first=floor;
+                if(floor.damageSeverity()!=first.damageSeverity() || !floor.airMaterial().equals(first.airMaterial())
+                        || !floor.requiredTags().equals(first.requiredTags()) || !floor.forbiddenTags().equals(first.forbiddenTags()) || !floor.exceptions().equals(first.exceptions()))
+                    throw new IllegalArgumentException("Section floors must share building material and selection policies");
+                var f=new BuildingSections.Floor(floor.roots(),floor.attachments(),floor.entranceJoint(),floor.minimumModules(),floor.maximumModules(),floor.floorLayout(),
+                        text(s,"down",""),text(s,"up",""),sectionSurface(object(s,"floorBoundary")),sectionSurface(object(s,"ceilingBoundary")));
+                sections.add(new BuildingSections.Section(string(s,"id"),integer(s,"floors",1),f));
+            }
+            if(first==null)throw new IllegalArgumentException("Building needs at least one section");
+            var recipe=new BuildingSections(sections,string(data,"bottomCap"),string(data,"topCap"),text(data,"basement",""),text(data,"roof",""));
+            resources.validateMaterial(recipe.bottomCap());resources.validateMaterial(recipe.topCap());
+            if(!materialRules.supportive().contains(recipe.bottomCap()) || !materialRules.supportive().contains(recipe.topCap()))
+                throw new IllegalArgumentException("Building terminal caps must be supportive");
+            compositions.put(entry.getKey(),new CompositionSettings(modules,first.roots(),first.attachments(),first.entranceJoint(),first.requiredTags(),first.forbiddenTags(),first.exceptions(),
+                    integer(c,"minimumModules",1),integer(c,"maximumModules",16),integer(c,"maximumHeight",64),first.damageSeverity(),first.airMaterial(),materialRules,null,recipe));
         }
         Map<String,BuildingAsset> assets=new LinkedHashMap<>();
         for(var entry:object(json,"assets").entrySet()) {
@@ -70,13 +108,14 @@ public final class ContentCatalogParser {
         }
         surfaces.values().forEach(resources::validateMaterial);
         validateTraits(materialRules,palettes);
-        long totalCells=modules.values().stream().mapToLong(m -> m.cells().size()+m.variants().stream().mapToLong(v -> v.cells().size()).sum()).sum();
+        long totalCells=modules.values().stream().mapToLong(m -> m.cells().size()+m.variants().stream().mapToLong(v -> v.cells().size()).sum()+m.layouts().stream().mapToLong(l->l.cells().size()).sum()).sum();
         if(totalCells>262144) throw new IllegalArgumentException("Catalog exceeds total cell budget");
         long payloadSize=0;
         for(var module:modules.values()) {
             var all=new ArrayList<Cell>(module.cells());
             module.boundaries().forEach(b->all.addAll(b.gapCells()));
             module.variants().forEach(v -> all.addAll(v.cells()));
+            module.layouts().forEach(l->{all.addAll(l.cells());if(l.boundaries()!=null)l.boundaries().forEach(b->all.addAll(b.gapCells()));});
             for(var cell:all) {
                 validateCellData(cell,palettes);
                 payloadSize+=cell.providerData().values().stream().mapToLong(String::length).sum();
@@ -87,6 +126,7 @@ public final class ContentCatalogParser {
         module.boundaries().forEach(b->b.gapCells().forEach(c->materials.add(c.material())));
             module.joints().stream().filter(Joint::optional).forEach(j -> materials.add(j.capMaterial()));
             module.variants().forEach(v -> { v.cells().forEach(c -> materials.add(c.material())); v.addedJoints().stream().filter(Joint::optional).forEach(j -> materials.add(j.capMaterial())); });
+            module.layouts().forEach(l->{l.cells().forEach(c->materials.add(c.material()));l.addedJoints().stream().filter(Joint::optional).forEach(j->materials.add(j.capMaterial()));if(l.boundaries()!=null)l.boundaries().forEach(b->b.gapCells().forEach(c->materials.add(c.material())));});
             module.damage().optionalJoints().forEach(j -> materials.add(j.capMaterial()));
             for(String material:materials) {
                 if(material.contains(":")) resources.validateMaterial(material);
@@ -94,6 +134,13 @@ public final class ContentCatalogParser {
             }
         }
         compositions.values().forEach(c -> resources.validateMaterial(c.airMaterial()));
+        for(var c:compositions.values())if(c.buildingSections()!=null)for(var s:c.buildingSections().sections())
+            for(var surface:List.of(s.recipe().floor(),s.recipe().ceiling()))for(var cell:surface.gapCells()) {
+                if(cell.material().contains(":"))resources.validateMaterial(cell.material());
+                else if(palettes.values().stream().noneMatch(p->p.containsKey(cell.material())))throw new IllegalArgumentException("Unknown section gap material token");
+                validateCellData(cell,palettes);payloadSize+=cell.providerData().values().stream().mapToLong(String::length).sum();
+            }
+        if(payloadSize>4_000_000)throw new IllegalArgumentException("Catalog exceeds provider data budget");
         List<PropRule> props=new ArrayList<>();
         for(var entry:object(json,"props").entrySet()) {
             JsonObject p=entry.getValue().getAsJsonObject();
@@ -198,6 +245,7 @@ public final class ContentCatalogParser {
         module.boundaries().forEach(b->b.gapCells().forEach(c->materials.add(c.material())));
         module.joints().stream().filter(Joint::optional).forEach(j -> materials.add(j.capMaterial()));
         module.variants().forEach(v -> { v.cells().forEach(c -> materials.add(c.material())); v.addedJoints().stream().filter(Joint::optional).forEach(j -> materials.add(j.capMaterial())); });
+        module.layouts().forEach(l->{l.cells().forEach(c->materials.add(c.material()));l.addedJoints().stream().filter(Joint::optional).forEach(j->materials.add(j.capMaterial()));if(l.boundaries()!=null)l.boundaries().forEach(b->b.gapCells().forEach(c->materials.add(c.material())));});
         module.damage().optionalJoints().forEach(j -> materials.add(j.capMaterial()));
         for(String material:materials) if(!material.contains(":") && !palette.containsKey(material))
             throw new IllegalArgumentException("Palette missing token "+material+" for module "+module.id());
@@ -272,6 +320,14 @@ public final class ContentCatalogParser {
         var minima=new LinkedHashMap<String,Integer>();object(data,"minimumCounts").entrySet().forEach(e->minima.put(e.getKey(),integer(object(data,"minimumCounts"),e.getKey(),0)));
         var maxima=new LinkedHashMap<String,Integer>();object(data,"maximumCounts").entrySet().forEach(e->maxima.put(e.getKey(),integer(object(data,"maximumCounts"),e.getKey(),16)));
         return new FloorLayout(new Vec(width,integer(data,"height",5),rows.size()),mask,list(data,"rooms"),list(data,"fillers"),rotations,ports,string(data,"entrance"),minima,maxima);
+    }
+    private static BuildingSections.Surface sectionSurface(JsonObject data) {
+        var connector=new ArrayList<Cell>();
+        for(var value:array(data,"gapCells")) {
+            var c=value.getAsJsonObject();connector.add(new Cell(vec(c.getAsJsonArray("at")),string(c,"material"),false,
+                    c.has("blockEntity")?Map.of(com.cybersammy.citiesarise.minecraft.placement.TemplateBlockEntities.KEY,string(c,"blockEntity")):Map.of()));
+        }
+        return new BuildingSections.Surface(string(data,"type"),strings(data,"accepts"),integer(data,"priority",0),bool(data,"retain",false),integer(data,"gap",0),connector);
     }
     private static List<ModuleBoundary> boundaries(JsonObject data) {
         var result=new ArrayList<ModuleBoundary>();

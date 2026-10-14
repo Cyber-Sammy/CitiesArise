@@ -6,7 +6,10 @@ import com.cybersammy.citiesarise.core.content.ModuleDefinition.Vec;
 /** Coordinates are relative to the prepared building slot, with floor at Y=0. */
 public record ResolvedComposition(List<PlacedModule> modules, List<PlacedCell> cells, List<String> connections,
         List<String> cappedJoints, List<String> damageDecisions) {
-    public record PlacedModule(String id, String variant, Vec origin, int rotation) { }
+    public record PlacedModule(String id, String variant, Vec origin, int rotation,String layout) {
+        public PlacedModule(String id,String variant,Vec origin,int rotation){this(id,variant,origin,rotation,"base");}
+        public PlacedModule {layout=layout==null?"base":layout;}
+    }
     public record PlacedCell(Vec position, String material, int rotation, java.util.Map<String,String> providerData) {
         public PlacedCell(Vec position, String material, int rotation) { this(position,material,rotation,java.util.Map.of()); }
         public PlacedCell { providerData=ProviderData.copy(providerData); }

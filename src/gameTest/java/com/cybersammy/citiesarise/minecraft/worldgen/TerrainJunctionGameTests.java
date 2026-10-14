@@ -159,14 +159,17 @@ public final class TerrainJunctionGameTests {
         // Simulate a pre-boundary frozen recipe: older records omit the newly optional module field.
         var legacy=recipe.save();var chunks=legacy.getList("Json",8);var body=new StringBuilder();
         for(int i=0;i<chunks.size();i++)body.append(chunks.getString(i));
-        var tree=com.google.gson.JsonParser.parseString(body.toString());removeBoundaryFields(tree);
+        var tree=com.google.gson.JsonParser.parseString(body.toString());restoreLegacyExteriorAccess(tree);removeBoundaryFields(tree);
         var encoded=tree.toString();var parts=new net.minecraft.nbt.ListTag();
         for(int i=0;i<encoded.length();i+=8192)parts.add(net.minecraft.nbt.StringTag.valueOf(encoded.substring(i,Math.min(i+8192,encoded.length()))));
         legacy.put("Json",parts);var oldRecipe=FinalTerrainPlanningRecipe.load(legacy);
         helper.assertTrue(oldRecipe.profile().structuralSupports().maximumShallowFoundationHeight()==2,"Older frozen foundation policy changed");
         helper.assertTrue(oldRecipe.profile().suburbPlanningSettings().buildings().compositions().values().stream().allMatch(c->c.floorLayout()==null),"Older floor recipes did not retain legacy assembly");
+        helper.assertTrue(oldRecipe.profile().suburbPlanningSettings().buildings().compositions().values().stream().allMatch(c->c.buildingSections()==null),"Older recipes did not default to legacy section assembly");
         helper.assertTrue(oldRecipe.profile().suburbPlanningSettings().buildings().compositions().values().stream()
                 .allMatch(c->c.modules().values().stream().allMatch(m->m.boundaries().isEmpty())),"Older module recipes did not default to legacy boundaries");
+        helper.assertTrue(oldRecipe.profile().suburbPlanningSettings().buildings().compositions().values().stream()
+                .allMatch(c->c.modules().values().stream().allMatch(m->m.layouts().isEmpty() && m.adjacency().isEmpty())),"Older module recipes did not default to legacy layout selection");
         helper.succeed();
     }
     @GameTest(template="empty",timeoutTicks=100)
@@ -184,9 +187,26 @@ public final class TerrainJunctionGameTests {
         helper.assertTrue(!queued.save(new CompoundTag(),level.registryAccess()).getList("Pending",10).getCompound(0).contains("Captured"),"Capture started before full reservation ready");
         helper.succeed();
     }
+    private static void restoreLegacyExteriorAccess(com.google.gson.JsonElement tree) {
+        if(tree.isJsonObject()) {
+            var object=tree.getAsJsonObject();
+            // Older floors used a horizontal facade entrance; stripping constraints alone cannot recreate that catalog.
+            if(object.has("floorLayout") && object.has("entranceJoint") && object.get("entranceJoint").getAsString().equals("down"))
+                object.addProperty("entranceJoint","entrance");
+            if(object.has("id") && object.has("cells") && object.has("joints")
+                    && java.util.Set.of("zoning:section_main","zoning:section_narrow").contains(object.get("id").getAsString())) {
+                object.getAsJsonArray("joints").add(com.google.gson.JsonParser.parseString("{\"id\":\"entrance\",\"type\":\"zoning:entrance\",\"accepts\":[],\"position\":{\"x\":3,\"y\":1,\"z\":0},\"face\":\"NORTH\",\"width\":1,\"height\":2,\"optional\":false,\"external\":true,\"capMaterial\":\"\"}"));
+                for(var item:object.getAsJsonArray("cells")) {
+                    var cell=item.getAsJsonObject();var p=cell.getAsJsonObject("position");
+                    if(p.get("x").getAsInt()==3 && p.get("z").getAsInt()==0 && (p.get("y").getAsInt()==1 || p.get("y").getAsInt()==2))cell.addProperty("material","minecraft:air");
+                }
+            }
+            object.entrySet().forEach(e->restoreLegacyExteriorAccess(e.getValue()));
+        } else if(tree.isJsonArray())tree.getAsJsonArray().forEach(TerrainJunctionGameTests::restoreLegacyExteriorAccess);
+    }
     private static void removeBoundaryFields(com.google.gson.JsonElement tree) {
         if(tree.isJsonObject()) {
-            tree.getAsJsonObject().remove("floorLayout");tree.getAsJsonObject().remove("boundaries");tree.getAsJsonObject().remove("maximumShallowFoundationHeight");tree.getAsJsonObject().entrySet().forEach(e->removeBoundaryFields(e.getValue()));
+            tree.getAsJsonObject().remove("layouts");tree.getAsJsonObject().remove("adjacency");tree.getAsJsonObject().remove("buildingSections");tree.getAsJsonObject().remove("floorLayout");tree.getAsJsonObject().remove("boundaries");tree.getAsJsonObject().remove("maximumShallowFoundationHeight");tree.getAsJsonObject().entrySet().forEach(e->removeBoundaryFields(e.getValue()));
         } else if(tree.isJsonArray())tree.getAsJsonArray().forEach(TerrainJunctionGameTests::removeBoundaryFields);
     }
 

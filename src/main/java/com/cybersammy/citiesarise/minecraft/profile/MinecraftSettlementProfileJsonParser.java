@@ -145,6 +145,9 @@ public final class MinecraftSettlementProfileJsonParser {
             if(asset.provider().equals("modules")) {
                 var recipe=catalog.compositions().get(asset.parameters().get("composition"));
                 var moduleIds=new java.util.HashSet<>(recipe.roots()); moduleIds.addAll(recipe.attachments());
+                if(recipe.buildingSections()!=null)moduleIds.addAll(recipe.buildingSections().moduleIds());
+                if(recipe.buildingSections()!=null)for(var section:recipe.buildingSections().sections())for(var surface:java.util.List.of(section.recipe().floor(),section.recipe().ceiling()))
+                    for(var cell:surface.gapCells())if(!cell.material().contains(":") && !palette.containsKey(cell.material()))throw new IllegalArgumentException("Palette missing section gap token "+cell.material());
                 for(String moduleId:moduleIds) ContentCatalogParser.validatePaletteTree(recipe.modules().get(moduleId),recipe.modules(),palette);
             }
             if(asset.provider().equals("procedural_house") && !palette.keySet().containsAll(Set.of(

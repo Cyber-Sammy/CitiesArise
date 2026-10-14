@@ -39,7 +39,7 @@ public record FloorLayout(Vec size,List<GridPoint> footprint,List<String> rooms,
             }
         }
         var entry=ports.stream().filter(p->p.id().equals(entrance)).findFirst().orElseThrow(()->new IllegalArgumentException("Unknown floor entrance"));
-        if(entry.face().ordinal()>=4 || !entry.walkable())throw new IllegalArgumentException("Floor entrance must be walkable and horizontal");
+        if(entry.face()==Face.UP || !entry.walkable())throw new IllegalArgumentException("Floor access must be walkable and horizontal or downward");
         if(new HashSet<>(rooms).size()!=rooms.size() || new HashSet<>(fillers).size()!=fillers.size() || !Collections.disjoint(rooms,fillers))throw new IllegalArgumentException("Duplicate floor room or filler identity");
         var pool=new HashSet<>(rooms);pool.addAll(fillers);
         for(var counts:List.of(minimumCounts,maximumCounts))for(var e:counts.entrySet())if(!pool.contains(e.getKey()) || e.getValue()<0 || e.getValue()>16)throw new IllegalArgumentException("Invalid floor room count");
@@ -50,5 +50,12 @@ public record FloorLayout(Vec size,List<GridPoint> footprint,List<String> rooms,
         for(var id:pool)if(!modules.containsKey(id))throw new IllegalArgumentException("Unknown floor room: "+id);
         if(!pool.containsAll(roots) || !pool.containsAll(attachments))throw new IllegalArgumentException("Composition pool outside floor room pool");
         for(var id:pool)if(modules.get(id).size().y()!=size.y())throw new IllegalArgumentException("Room height differs from floor height");
+    }
+    /** A downward access anchor denotes internal arrival from the floor below. */
+    boolean acceptsRootAccess(Joint joint) {
+        var access=ports.stream().filter(p->p.id().equals(entrance)).findFirst().orElseThrow();
+        return joint.face()==access.face() && joint.type().equals(access.type())
+                && joint.width()==access.width() && joint.height()==access.height()
+                && (access.face()==Face.DOWN ? !joint.external() : joint.external());
     }
 }

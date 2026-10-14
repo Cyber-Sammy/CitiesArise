@@ -907,3 +907,19 @@ Snapshot v9 retains source-element ids for every operation, including structural
 Automated coverage includes cliff piers/corbels, dry ravine spans, absent anchors and budget rejection without partial geometry, deterministic envelope order, snapshot/source persistence, reverse chunk placement, debug undo, pending queue reload, unloaded-chunk waiting, untouched water, accessible road entrances and final bank supports for semantic bridges. Ordinary-world visual acceptance is still needed for the supplied build.
 
 Optional descending banks are checked for a continuous inward connection to their platform. A bank cannot restart beyond an omitted deep, water or reserved lower strip and create an artificial moat. Support-enabled placement repeats this check on final terrain before snapshot publication, removing detached optional surfaces/retaining faces together with their lining. Connected banks retain the existing three-block cosmetic fill cap; deep ravines remain open for structural supports. This prevents added detached terraces; it does not fill natural ravines or retrofit saved settlements.
+
+### Planning performance
+
+Terrain-bank preparation uses bucketed lookup snapshots rather than compact maps with linear probing. Dense coordinate hashes made those compact maps expensive during repeated city planning. The snapshots are still immutable and local to one preparation call; this does not change coordinate hashes, iteration order, terrain checks, construction limits or cache lifetime.
+
+Cold-provider measurements in separate Minecraft benchmark JVMs with JFR profiling enabled:
+
+| Fixture | Before | After |
+| --- | ---: | ---: |
+| Reported ravine city (CA58) | 151.7 s | 23.2 s |
+| Reported jungle-coast city (CA57) | 66.7 s | 19.3 s |
+| CA58 rejected by a one-block construction budget | 4.8 s | 5.0 s |
+
+Both accepted fixtures retained identical canonical plans, content, preparation and placement operations; the rejected fixture retained its outcome/reason. Exact-survey and support-check counts were unchanged. These are isolated planning measurements, not a guaranteed teleport duration. Initial noise sampling and remaining planner work still cost time; final carved-terrain support placement is separate.
+
+Developers can run the opt-in benchmark with `gradlew runPlanningBenchmark -PplanningBenchmarkLabel=baseline` on the pre-optimization version, preserve `build/planning-benchmark/baseline`, then run `gradlew runPlanningBenchmark -PplanningBenchmarkLabel=optimized` on the changed version. It creates fresh generator/provider inputs for each fixture, writes stage timings and canonical geometry under `build/planning-benchmark/<label>`, compares against a saved baseline when available, and records `planning.jfr`. Use the same Java/runtime/profile and fixture order for comparison. The benchmark uses its own repository runtime world, is excluded from ordinary GameTests, and is not included in the shipped JAR.

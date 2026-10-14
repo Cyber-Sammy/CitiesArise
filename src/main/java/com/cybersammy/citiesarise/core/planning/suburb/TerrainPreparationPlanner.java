@@ -140,7 +140,8 @@ final class TerrainPreparationPlanner {
             TerrainAdaptationPlan adaptation,Map<GridPoint,TerrainPreparationColumn> columns) {
         int radius=request.settings().terrainTransitions().fillSlopeRadius();
         if(radius==0) return;
-        var reserved=Map.copyOf(columns);
+        // Lookup-only snapshot: Map.copyOf uses linear probing and dense GridPoint hashes collide.
+        var reserved=java.util.Collections.unmodifiableMap(new HashMap<>(columns));
         for(var zone:zones.stream().sorted(java.util.Comparator.comparing(z -> z.sourceElementId().value())).toList()) {
             var b=zone.bounds();
             for(int z=Math.max(request.survey().bounds().minZ(),b.minZ()-radius);z<Math.min(request.survey().bounds().maxZExclusive(),b.maxZExclusive()+radius);z++)
@@ -167,7 +168,7 @@ final class TerrainPreparationPlanner {
             TerrainAdaptationPlan adaptation,Map<GridPoint,TerrainPreparationColumn> columns) {
         int radius=request.settings().terrainTransitions().cutSlopeRadius();
         if(radius==0) return;
-        var reserved=Map.copyOf(columns);
+        var reserved=java.util.Collections.unmodifiableMap(new HashMap<>(columns));
         for(var zone:zones.stream().sorted(java.util.Comparator.comparing(z -> z.sourceElementId().value())).toList()) {
             var b=zone.bounds();
             for(int z=Math.max(request.survey().bounds().minZ(),b.minZ()-radius);z<Math.min(request.survey().bounds().maxZExclusive(),b.maxZExclusive()+radius);z++)

@@ -17,7 +17,10 @@ public final class StructuralSupportPlanner {
         public Result { cells=List.copyOf(cells); suspended=List.copyOf(suspended); }
         public boolean accepted() { return rejection.isEmpty(); }
     }
-    @FunctionalInterface public interface Ground { boolean solid(int x,int y,int z); }
+    @FunctionalInterface public interface Ground {
+        boolean solid(int x,int y,int z);
+        default boolean fluid(int x,int y,int z) {return false;}
+    }
     private StructuralSupportPlanner() { }
 
     public static Result plan(List<Envelope> envelopes,StructuralSupportSettings settings,Ground ground) {

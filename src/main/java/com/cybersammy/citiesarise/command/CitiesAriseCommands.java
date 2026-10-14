@@ -346,6 +346,7 @@ public final class CitiesAriseCommands {
         if(supports.enabled() && result.optionalTerrainPreparationPlan().isPresent()) {
             var blueprint=com.cybersammy.citiesarise.minecraft.worldgen.StructuralSupportBlueprint.from(
                     result.plan(),result.optionalTerrainPreparationPlan().orElseThrow(),supports,result.content().placementMaterials())
+                    .withRecipe(new com.cybersammy.citiesarise.minecraft.worldgen.FinalTerrainPlanningRecipe(structuralProfile.orElseThrow(),result.surveyBounds(),result.seed(),result.plan().id().value()))
                     .withinConstructionBudget(structuralProfile.orElseThrow().suburbPlanningSettings().maxEarthworkVolume()-result.optionalTerrainPreparationPlan().orElseThrow().constructionVolume());
             var adapted=com.cybersammy.citiesarise.minecraft.worldgen.StructuralSupportPlacement.resolveReady(source.getLevel(),placementPlan,blueprint);
             if(adapted.plan().isEmpty()) { source.sendFailure(Component.literal("Structural placement rejected: "+adapted.reason()));return 0; }

@@ -52,7 +52,8 @@ public final class MinecraftSettlementProfileJsonParser {
                 parseSurveySize(survey),
                 parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning, resources)).withDistricts(parseDistricts(planning)),
                 parseTerrainResponsePolicy(json),
-                parseStructuralSupports(planning)
+                parseStructuralSupports(planning),
+                parseRavineRoads(planning)
         );
         if (profile.terrainResponsePolicy().bridges().maxElevationDifference() > 0) {
             var buildings = profile.suburbPlanningSettings().buildings();
@@ -65,6 +66,16 @@ public final class MinecraftSettlementProfileJsonParser {
         }
         limits.validate(profile);
         return profile;
+    }
+
+    private static com.cybersammy.citiesarise.core.road.RavineRoadSettings parseRavineRoads(JsonObject planning) {
+        var defaults=com.cybersammy.citiesarise.core.road.RavineRoadSettings.disabled();
+        if(!planning.has("ravineRoads")) return defaults;
+        var json=requiredObject(planning,"ravineRoads");
+        var mode=com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.valueOf(contentString(json,"mode").toUpperCase(java.util.Locale.ROOT));
+        return new com.cybersammy.citiesarise.core.road.RavineRoadSettings(true,mode,
+                optionalInt(json,"minimumDepth",4),optionalInt(json,"maximumFillDepth",32),optionalInt(json,"maximumFillVolume",20000),
+                optionalInt(json,"edgeClearance",2),optionalInt(json,"maximumDetour",24),optionalInt(json,"maximumRoutingAttempts",2));
     }
 
     private static com.cybersammy.citiesarise.core.road.BridgeTerrainSettings parseBridgeTerrain(JsonObject bridges) {

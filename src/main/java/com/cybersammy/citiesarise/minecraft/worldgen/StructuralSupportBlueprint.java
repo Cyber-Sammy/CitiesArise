@@ -8,11 +8,21 @@ import net.minecraft.nbt.*;
 
 /** Persisted reservations and policy, separate from immutable content and eventual support geometry. */
 public record StructuralSupportBlueprint(StructuralSupportSettings settings,
-        List<StructuralSupportPlanner.Envelope> envelopes,Map<String,String> materials,int constructionAllowance) {
+        List<StructuralSupportPlanner.Envelope> envelopes,Map<String,String> materials,int constructionAllowance,
+        com.cybersammy.citiesarise.core.road.RavineRoadSettings ravines,FinalTerrainPlanningRecipe recipe) {
+    public StructuralSupportBlueprint(StructuralSupportSettings settings,List<StructuralSupportPlanner.Envelope> envelopes,Map<String,String> materials,int allowance) {
+        this(settings,envelopes,materials,allowance,com.cybersammy.citiesarise.core.road.RavineRoadSettings.disabled(),null);
+    }
     public StructuralSupportBlueprint(StructuralSupportSettings settings,List<StructuralSupportPlanner.Envelope> envelopes,Map<String,String> materials) {
         this(settings,envelopes,materials,settings.maximumVolume());
     }
-    public StructuralSupportBlueprint { if(constructionAllowance<0 || constructionAllowance>100000) throw new IllegalArgumentException("Invalid structural allowance");envelopes=List.copyOf(envelopes);materials=Map.copyOf(materials); }
+    public StructuralSupportBlueprint {
+        Objects.requireNonNull(settings);Objects.requireNonNull(ravines);
+        if(ravines.enabled() && !settings.enabled()) throw new IllegalArgumentException("Ravine policy requires structural support");
+        if(constructionAllowance<0 || constructionAllowance>100000) throw new IllegalArgumentException("Invalid structural allowance");
+        envelopes=List.copyOf(envelopes);materials=Map.copyOf(materials);
+        if(envelopes.size()>4096) throw new IllegalArgumentException("Too many structural envelopes");
+    }
     public static StructuralSupportBlueprint from(TerrainPreparationPlan preparation,StructuralSupportSettings settings,Map<String,String> materials) {
         var envelopes=new ArrayList<>(preparation.elevationPlan().zones().stream()
                 .filter(z->z.type()==ElevationZoneType.PARCEL_PAD || z.type()==ElevationZoneType.ROAD_SEGMENT)
@@ -43,10 +53,18 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
         return new StructuralSupportBlueprint(settings,envelopes,materials);
     }
     public StructuralSupportBlueprint withinConstructionBudget(long remaining) {
-        return new StructuralSupportBlueprint(settings,envelopes,materials,(int)Math.clamp(remaining,0,settings.maximumVolume()));
+        int limit=Math.max(settings.maximumVolume(),ravines.enabled() && ravines.mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FILL?ravines.maximumFillVolume():0);
+        return new StructuralSupportBlueprint(settings,envelopes,materials,(int)Math.clamp(remaining,0,limit),ravines,recipe);
+    }
+    public StructuralSupportBlueprint withRecipe(FinalTerrainPlanningRecipe recipe) {
+        var policy=recipe.profile().ravineRoads();
+        return new StructuralSupportBlueprint(settings,envelopes,materials,constructionAllowance,policy,
+                policy.enabled() && policy.mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE?recipe:null);
     }
     CompoundTag save() {
-        var tag=new CompoundTag();tag.putInt("Version",1);tag.putInt("Allowance",constructionAllowance);tag.putBoolean("Enabled",settings.enabled());
+        var tag=new CompoundTag();tag.putInt("Version",2);tag.putInt("Allowance",constructionAllowance);tag.putBoolean("Enabled",settings.enabled());
+        if(recipe!=null) tag.put("Recipe",recipe.save());
+        tag.putString("Ravines",new com.google.gson.Gson().toJson(ravines));
         tag.putInt("Depth",settings.maximumDepth());tag.putInt("Span",settings.maximumSpan());
         tag.putInt("Spacing",settings.pierSpacing());tag.putInt("Volume",settings.maximumVolume());
         var list=new ListTag();
@@ -57,7 +75,7 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
         tag.put("Envelopes",list);var palette=new CompoundTag();materials.forEach(palette::putString);tag.put("Materials",palette);return tag;
     }
     static StructuralSupportBlueprint load(CompoundTag tag) {
-        if(tag.getInt("Version")!=1) throw new IllegalArgumentException("Unsupported structural blueprint version");
+        if(tag.getInt("Version")<1 || tag.getInt("Version")>2) throw new IllegalArgumentException("Unsupported structural blueprint version");
         var settings=new StructuralSupportSettings(tag.getBoolean("Enabled"),tag.getInt("Depth"),tag.getInt("Span"),tag.getInt("Spacing"),tag.getInt("Volume"));
         var list=new ArrayList<StructuralSupportPlanner.Envelope>();
         for(var item:tag.getList("Envelopes",Tag.TAG_COMPOUND)) {
@@ -69,6 +87,9 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
         }
         var palette=new HashMap<String,String>();var data=tag.getCompound("Materials");
         data.getAllKeys().forEach(key->palette.put(key,data.getString(key)));
-        return new StructuralSupportBlueprint(settings,list,palette,tag.contains("Allowance")?tag.getInt("Allowance"):settings.maximumVolume());
+        var ravines=tag.contains("Ravines")?new com.google.gson.Gson().fromJson(tag.getString("Ravines"),com.cybersammy.citiesarise.core.road.RavineRoadSettings.class)
+                :com.cybersammy.citiesarise.core.road.RavineRoadSettings.disabled();
+        return new StructuralSupportBlueprint(settings,list,palette,tag.contains("Allowance")?tag.getInt("Allowance"):settings.maximumVolume(),
+                ravines,tag.contains("Recipe")?FinalTerrainPlanningRecipe.load(tag.getCompound("Recipe")):null);
     }
 }

@@ -111,6 +111,7 @@ final class SuburbStructureGeneration {
                 profile.id().value(), result.plan().id().value(), center.getX(), center.getZ(),
                 profile.structuralSupports().enabled() && result.optionalTerrainPreparationPlan().isPresent()
                         ? StructuralSupportBlueprint.from(result.plan(),result.optionalTerrainPreparationPlan().orElseThrow(),profile.structuralSupports(),result.content().placementMaterials())
+                                .withRecipe(new FinalTerrainPlanningRecipe(profile,result.surveyBounds(),result.seed(),result.plan().id().value()))
                                 .withinConstructionBudget(profile.suburbPlanningSettings().maxEarthworkVolume()-result.optionalTerrainPreparationPlan().orElseThrow().constructionVolume()):null)));
     }
 
@@ -136,13 +137,16 @@ final class SuburbStructureGeneration {
     ) {
         int minY = minimumStructureY(snapshot, profile, context);
         int maxY = maximumStructureY(snapshot, profile, context);
+        var reservation=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.bounds(
+                SettlementRegion.fromBlockPosition(regionCenter(context).getX(),regionCenter(context).getZ()),profile.surveySize());
+        boolean full=profile.ravineRoads().enabled() && profile.ravineRoads().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE;
         return new BoundingBox(
-                snapshot.minimumX() - WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
-                minY,
-                snapshot.minimumZ() - WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
-                snapshot.maximumX() + WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
-                maxY,
-                snapshot.maximumZ() + WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS
+                full?reservation.minX():snapshot.minimumX() - WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
+                full?context.heightAccessor().getMinBuildHeight():minY,
+                full?reservation.minZ():snapshot.minimumZ() - WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
+                full?reservation.maxXExclusive()-1:snapshot.maximumX() + WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
+                full?context.heightAccessor().getMaxBuildHeight()-1:maxY,
+                full?reservation.maxZExclusive()-1:snapshot.maximumZ() + WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS
         );
     }
 

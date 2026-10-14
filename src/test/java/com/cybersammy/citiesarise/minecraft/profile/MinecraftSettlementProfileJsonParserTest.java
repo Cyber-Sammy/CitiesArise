@@ -21,6 +21,18 @@ import org.junit.jupiter.api.Test;
 
 final class MinecraftSettlementProfileJsonParserTest {
     private final MinecraftSettlementProfileJsonParser parser = new MinecraftSettlementProfileJsonParser();
+    @Test void ravineModesAreOptInBoundedAndRequireFinalTerrainSupport() {
+        var data=validJson();assertTrue(!parser.parse(id(),data).ravineRoads().enabled());
+        data.getAsJsonObject("planning").add("ravineRoads",JsonParser.parseString("{\"mode\":\"follow_edge\",\"maximumDetour\":24}"));
+        assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+        data.getAsJsonObject("planning").add("structuralSupports",JsonParser.parseString("{\"enabled\":true}"));
+        for(String mode:java.util.List.of("fill","bridge","follow_edge")) {
+            data.getAsJsonObject("planning").getAsJsonObject("ravineRoads").addProperty("mode",mode);
+            assertEquals(mode.toUpperCase(java.util.Locale.ROOT),parser.parse(id(),data).ravineRoads().mode().name());
+        }
+        data.getAsJsonObject("planning").getAsJsonObject("ravineRoads").addProperty("maximumDetour",1000);
+        assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+    }
 
     @Test void structuralSupportsAreOptInBoundedAndProfileOwned() {
         var data=validJson();assertTrue(!parser.parse(id(),data).structuralSupports().enabled());

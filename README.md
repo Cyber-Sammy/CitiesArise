@@ -923,3 +923,29 @@ Cold-provider measurements in separate Minecraft benchmark JVMs with JFR profili
 Both accepted fixtures retained identical canonical plans, content, preparation and placement operations; the rejected fixture retained its outcome/reason. Exact-survey and support-check counts were unchanged. These are isolated planning measurements, not a guaranteed teleport duration. Initial noise sampling and remaining planner work still cost time; final carved-terrain support placement is separate.
 
 Developers can run the opt-in benchmark with `gradlew runPlanningBenchmark -PplanningBenchmarkLabel=baseline` on the pre-optimization version, preserve `build/planning-benchmark/baseline`, then run `gradlew runPlanningBenchmark -PplanningBenchmarkLabel=optimized` on the changed version. It creates fresh generator/provider inputs for each fixture, writes stage timings and canonical geometry under `build/planning-benchmark/<label>`, compares against a saved baseline when available, and records `planning.jfr`. Use the same Java/runtime/profile and fixture order for comparison. The benchmark uses its own repository runtime world, is excluded from ordinary GameTests, and is not included in the shipped JAR.
+
+## Final terrain junctions and ravine roads
+
+Suspended road and parcel floors now have explicit, saved clearance operations above them (up to 12 blocks), independent of foundation fill below. Authored content is preserved. Selected shallow retaining edges attach inside the pad with a consistent face; deep suspended columns retain structural beams and open space. These corrections apply before placement of new settlements; existing placed cities are not rebuilt.
+
+Profiles with enabled `planning.structuralSupports` may add:
+
+```json
+"ravineRoads": {
+  "mode": "bridge",
+  "minimumDepth": 4,
+  "maximumFillDepth": 32,
+  "maximumFillVolume": 20000,
+  "edgeClearance": 2,
+  "maximumDetour": 24,
+  "maximumRoutingAttempts": 2
+}
+```
+
+The block is optional; omission retains the legacy support policy. Presence enables the policy. `mode` is required: `fill` fills only the road footprint within depth/volume budgets (fluid or insufficient footing rejects it); `bridge` preserves the opening beneath supported spans; `follow_edge` reserves the opening and rebuilds the complete road, parcels, frontage, access and content together on final terrain. Strict follow_edge rejects a city if no acceptable layout fits; it never silently switches to a crossing. The demo selects bridge.
+
+Integer ranges: minimumDepth 4..16, maximumFillDepth 4..48, maximumFillVolume 1..100000, edgeClearance 0..8, maximumDetour 4..48, maximumRoutingAttempts 1..3. Defaults are shown above except edgeClearance defaults to 2. Total construction remains subject to the profile earthwork allowance. Fill accounting also covers gaps deeper than ordinary three-block preparation even when minimumDepth is higher.
+
+Follow_edge captures an immutable bounded final-terrain survey from already FULL chunks before placing any city blocks, then plans on one background worker (three admitted jobs). The complete survey reservation must be loaded together; it never forces chunks. Captured inputs and resolved operations survive reload. Debug command resolution is synchronous. Survey limits are 224x224 and 512 vertical blocks; attempts and detours are bounded. Opposed exposed banks and voids exposed by the planned corridor cut are considered; four-layer intact roofs and ordinary water crossings are preserved. This is conservative terrain inference, not stored cave identity. A detour may relocate the whole layout. Base-generator locate acceptance cannot guarantee final follow_edge acceptance.
+
+Use the matching new JAR and zoning_fixture ZIP before generating fresh settlements. Earlier saved resolved snapshots retain their recorded operations. Clearance or construction-limit failures reject before partial city placement.

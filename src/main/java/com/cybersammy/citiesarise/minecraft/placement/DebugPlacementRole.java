@@ -48,7 +48,8 @@ public enum DebugPlacementRole {
     SUSPENDED_CONTENT(44),
     STRUCTURAL_BEAM(45),
     STRUCTURAL_PIER(46),
-    STRUCTURAL_BRACE(47);
+    STRUCTURAL_BRACE(47),
+    TERRAIN_CLEARANCE(48);
 
     private final int serializedId;
 
@@ -61,7 +62,7 @@ public enum DebugPlacementRole {
     }
 
     public boolean suspended() {
-        return this==SUSPENDED_CONTENT || this==STRUCTURAL_BEAM || this==STRUCTURAL_PIER || this==STRUCTURAL_BRACE;
+        return this==SUSPENDED_CONTENT || this==STRUCTURAL_BEAM || this==STRUCTURAL_PIER || this==STRUCTURAL_BRACE || this==TERRAIN_CLEARANCE;
     }
 
     public boolean bridge() {
@@ -79,6 +80,7 @@ public enum DebugPlacementRole {
 
     int priority() {
         return switch (this) {
+            case TERRAIN_CLEARANCE -> -1;
             case SUPPORT_LINING -> 1;
             case BRIDGE_PIER, BRIDGE_STEP, BRIDGE_DECK, BRIDGE_RAIL, BRIDGE_ABUTMENT, BRIDGE_CLEARANCE -> 80;
             case SUSPENDED_CONTENT, STRUCTURAL_BEAM, STRUCTURAL_PIER, STRUCTURAL_BRACE, CONTENT_BLOCK -> 50;

@@ -11,18 +11,40 @@ public final class StructuralSupportPlacement {
     public record Resolution(Optional<DebugPlacementPlan> plan,String reason,int suspendedColumns,int supports) { }
     private StructuralSupportPlacement() { }
     public static Resolution resolveReady(net.minecraft.server.level.ServerLevel level,DebugPlacementPlan original,StructuralSupportBlueprint blueprint) {
+        if(blueprint.ravines().enabled() && blueprint.ravines().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE) {
+            if(blueprint.recipe()==null) return new Resolution(Optional.empty(),"MISSING_RAVINE_RECIPE",0,0);
+            var bounds=blueprint.recipe().bounds();
+            for(int z=Math.floorDiv(bounds.minZ(),16);z<=Math.floorDiv(bounds.maxZExclusive()-1,16);z++)
+                for(int x=Math.floorDiv(bounds.minX(),16);x<=Math.floorDiv(bounds.maxXExclusive()-1,16);x++)
+                    if(level.getChunkSource().getChunkNow(x,z)==null) return new Resolution(Optional.empty(),"WAITING_FOR_LOADED_TERRAIN",0,0);
+            return FinalTerrainReplanning.resolve(original,blueprint,FinalTerrainSnapshot.capture(level,bounds));
+        }
         for(var op:original.operations()) if(level.getChunkSource().getChunkNow(Math.floorDiv(op.point().x(),16),Math.floorDiv(op.point().z(),16))==null)
             return new Resolution(Optional.empty(),"WAITING_FOR_LOADED_TERRAIN",0,0);
         for(var e:blueprint.envelopes()) for(int z=Math.floorDiv(e.bounds().minZ(),16);z<=Math.floorDiv(e.bounds().maxZExclusive()-1,16);z++)
             for(int x=Math.floorDiv(e.bounds().minX(),16);x<=Math.floorDiv(e.bounds().maxXExclusive()-1,16);x++)
                 if(level.getChunkSource().getChunkNow(x,z)==null) return new Resolution(Optional.empty(),"WAITING_FOR_LOADED_TERRAIN",0,0);
-        return resolve(original,blueprint,(x,y,z)->PendingStructuralPlacement.solid(level,x,y,z));
+        return resolve(original,blueprint,new StructuralSupportPlanner.Ground() {
+            public boolean solid(int x,int y,int z) {return PendingStructuralPlacement.solid(level,x,y,z);}
+            public boolean fluid(int x,int y,int z) {return !level.getFluidState(new net.minecraft.core.BlockPos(x,y,z)).isEmpty();}
+        });
     }
     public static Resolution resolve(DebugPlacementPlan original,StructuralSupportBlueprint blueprint,StructuralSupportPlanner.Ground ground) {
-        var geometry=StructuralSupportPlanner.plan(blueprint.envelopes(),blueprint.settings(),ground);
+        boolean fill=blueprint.ravines().enabled() && blueprint.ravines().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FILL;
+        var fillEnvelopes=new ArrayList<>(blueprint.envelopes());
+        if(fill) for(var op:original.operations()) if(op.role()==DebugPlacementRole.BRIDGE_DECK && op.platformY().isPresent())
+            fillEnvelopes.add(new StructuralSupportPlanner.Envelope(op.sourceElementId(),
+                    new com.cybersammy.citiesarise.core.geometry.GridBounds(op.point(),new com.cybersammy.citiesarise.core.geometry.GridSize(1,1)),
+                    op.platformY().getAsInt()+op.verticalOffset(),StructuralSupportPlanner.Kind.ROAD));
+        var fillResult=fill?com.cybersammy.citiesarise.core.road.RavineFillPlanner.plan(fillEnvelopes,blueprint.ravines(),ground):
+                new com.cybersammy.citiesarise.core.road.RavineFillPlanner.Result(List.of(),"ACCEPTED");
+        if(!fillResult.accepted()) return new Resolution(Optional.empty(),fillResult.reason(),0,0);
+        var geometry=StructuralSupportPlanner.plan(blueprint.envelopes().stream().filter(e->!fill || e.kind()==StructuralSupportPlanner.Kind.PARCEL).toList(),blueprint.settings(),ground);
         if(!geometry.accepted()) return new Resolution(Optional.empty(),geometry.rejection().orElseThrow(),0,0);
         if(geometry.cells().size()>blueprint.constructionAllowance()) return new Resolution(Optional.empty(),"CONSTRUCTION_VOLUME_LIMIT",0,0);
-        original = FinalTerrainAprons.connected(original, blueprint, ground);
+        var suspendedPoints=new HashSet<GridPoint>();geometry.suspended().forEach(c->suspendedPoints.add(c.point()));
+        var junctions=FinalRetainingJunctions.apply(original,blueprint,suspendedPoints,ground);
+        original = FinalTerrainAprons.connected(junctions.plan(), blueprint, ground);
         var columns=new HashMap<GridPoint,StructuralSupportPlanner.Column>();geometry.suspended().forEach(c->columns.put(c.point(),c));
         var walkY=new HashMap<GridPoint,Integer>();var access=new HashSet<GridPoint>();
         for(var op:original.operations()) if(op.platformY().isPresent()) {
@@ -34,6 +56,7 @@ public final class StructuralSupportPlacement {
                 ? new StructuralSupportPlanner.Column(point,walkY.get(point),c.source(),c.kind()):c);
         var operations=new LinkedHashMap<String,DebugBlockPlacementOperation>();var provider=new VanillaDebugBlockMaterialProvider();
         for(var op:original.operations()) {
+            if(fill && op.role()==DebugPlacementRole.BRIDGE_CLEARANCE) continue;
             var column=columns.get(op.point());var resolved=op;
             if(column!=null && !op.role().bridge() && op.platformY().isPresent()) {
                 int y=op.platformY().orElseThrow()+op.verticalOffset();
@@ -70,7 +93,18 @@ public final class StructuralSupportPlacement {
             var op=new DebugBlockPlacementOperation(new GridPoint(p.x(),p.z()),0,role,cell.source(),OptionalInt.of(p.y()),material,0);
             if(operations.putIfAbsent(key(op),op)==null) addedSupports++;
         }
-        return new Resolution(Optional.of(new DebugPlacementPlan(new ArrayList<>(operations.values()))),"ACCEPTED",columns.size(),addedSupports);
+        int cleared=FinalTerrainClearance.add(operations,original,blueprint.envelopes(),ground,12);
+        if(cleared<0) return new Resolution(Optional.empty(),"CLEARANCE_HEIGHT_LIMIT",0,0);
+        for(var cell:fillResult.cells()) {
+            var p=cell.position();var op=new DebugBlockPlacementOperation(new GridPoint(p.x(),p.z()),0,DebugPlacementRole.SUSPENDED_CONTENT,
+                    cell.source().child("ravine-fill"),OptionalInt.of(p.y()),blueprint.materials().getOrDefault("FOUNDATION","minecraft:andesite"),0);
+            operations.putIfAbsent(key(op),op);
+        }
+        if(geometry.cells().size()+cleared+junctions.additionalCells()+fillResult.cells().size()>blueprint.constructionAllowance()) return new Resolution(Optional.empty(),"CONSTRUCTION_VOLUME_LIMIT",0,0);
+        // Removals run before authored content; their saved positions also participate in debug undo.
+        var ordered=new ArrayList<>(operations.values());
+        ordered.sort(Comparator.comparingInt(op->op.role()==DebugPlacementRole.TERRAIN_CLEARANCE?0:1));
+        return new Resolution(Optional.of(new DebugPlacementPlan(ordered)),"ACCEPTED",columns.size(),addedSupports);
     }
     private static boolean roadEdge(StructuralSupportBlueprint blueprint,int x,int z) {
         for(int[] delta:new int[][]{{1,0},{-1,0},{0,1},{0,-1}}) {

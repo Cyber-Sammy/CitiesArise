@@ -979,10 +979,94 @@ A composition may add optional `floorLayout` metadata. The existing bounded join
 
 `#` belongs to the floor and `.` is an intentional void. Rows must have equal width, maximum32x32, with one connected mask of at most1024 columns; floor height3..16. Every selected structural room has that height and stays inside the mask at the same elevation. Full mask coverage is required. Existing composition roots/attachments choose from the declared room/filler pools; all pool ids must exist. Fillers are explicitly authored corridor/service/unused-space modules, not automatically invented blocks. Room/filler pools are distinct, combined maximum128 ids. Optional per-id minimum/maximum counts are0..16; structural assembly retains its maximum16 modules/512 placement attempts. Room rotations are relative to the floor's orientation; omission allows all four.
 
-Up to32 fixed ports reserve exact type, position, face and dimensions. The floor entrance must be a walkable horizontal port; its plane is aligned to the prepared building entrance and rotates the entire floor mask. Horizontal fixed ports must face the outside of the mask, including concave edges; up/down ports sit at the floor boundary. A room overlapping a fixed port reservation must provide that exact port before it can be placed. Openings cannot straddle room boundaries unless every occupying module provides the matching whole port. Vertical ports are reserved for later floor connections and are not filled by another same-floor room. Non-walkable ports may represent windows; their author-defined type must match a module port. External module openings must face the mask exterior. Shapes and facade coordinates are data, not inferred from materials.
+Up to32 fixed ports reserve exact type, position, face and dimensions. A floor access anchor (`entrance`) must be a walkable horizontal port or a downward port. A horizontal anchor uses an exterior module joint and aligns/rotates the mask to the prepared building entrance. A downward anchor uses an internal module joint, starts circulation at arrival from below and solves in canonical floor orientation; the section building rotates as a whole. Upward access anchors are invalid. The first section always requires a horizontal exterior building entrance; an upper downward anchor must be the section's assigned `down` connection. Set `entranceJoint` to the matching root module joint id (for example `down`), `floorLayout.entrance` to the matching fixed floor port id, and omit any unwanted exterior entrance joint/opening from upper room geometry. Horizontal fixed ports must face the outside of the mask, including concave edges; up/down ports sit at the floor boundary. A room overlapping a fixed port reservation must provide that exact port before it can be placed. Openings cannot straddle room boundaries unless every occupying module provides the matching whole port. Vertical ports are reserved for later floor connections and are not filled by another same-floor room. Non-walkable ports may represent windows; their author-defined type must match a module port. External module openings must face the mask exterior. Shapes and facade coordinates are data, not inferred from materials.
 
 Final validation checks module clearance/support/routes and two-block walking/climbing connectivity from the entrance into every ordinary room, through declared doors, and to walkable fixed ports. Required upper stair openings must be clear and reachable from below; lower ports must be reachable at their opening. Nested furniture may not sever those paths. Optional capped joints do not become phantom circulation requirements. No solution or exhausted search rejects with a reason through the existing planning pipeline; no arbitrary prefab replacement or unlimited filler is introduced.
 
-The solver places rooms through their compatible typed joints; it does not search arbitrary disconnected room coordinates. Shared interfaces use ModuleBoundary rules, while conservative rectangular room-envelope overlap remains in force. The floor can be concave or contain holes; the building-slot and parcel outer reservations remain rectangular. Repeated floor sections, A-to-B transitions and arbitrary parcel shapes are later stages. Exact accepted voxels persist via existing placement snapshots and debug undo; old resolved cities are not rebuilt. Install matching new JAR and demo ZIP for new generation.
+The solver places rooms through their compatible typed joints; it does not search arbitrary disconnected room coordinates. Shared interfaces use ModuleBoundary rules, while conservative rectangular room-envelope overlap remains in force. The floor can be concave or contain holes; the building-slot and parcel outer reservations remain rectangular. Repeated floor sections and compatible A-to-B transitions are described below; arbitrary parcel shapes remain a later stage. Exact accepted voxels persist via existing placement snapshots and debug undo; old resolved cities are not rebuilt. Install matching new JAR and demo ZIP for new generation.
 
-Frozen final-terrain recipes now use format2 with interned module catalogs to avoid repeating the entire library for each composition. Format1 remains readable. Stored JSON remains limited to512Ki characters/64 parts; expanded recipe work is limited to2Mi characters,16 distinct module tables and1024 references, with the same checks on save/reload. Invalid references reject before placement. Recipe data stays self-contained and does not depend on a later datapack reload.
+Frozen final-terrain recipes use interned module catalogs to avoid repeating the entire library for each composition. Formats1 and2 remain readable; format3 extends this to prop dictionaries as described below. Stored JSON remains limited to512Ki characters/64 parts; expanded recipe work is limited to2Mi characters,16 distinct module tables and1024 references, with the same checks on save/reload. Invalid references reject before placement. Recipe data stays self-contained and does not depend on a later datapack reload.
+
+### Building sections and repeated floor layouts
+
+A composition may use `buildingSections` instead of a direct `floorLayout`. Each section references an existing floor composition, solves it once, then repeats the exact room/module identities, variants, local positions, rotations, connections and furnishings. Sections are ordered bottom to top; `floors` is a count, so A with3 floors followed by B with1 defines floors1..3 and4. Different sections receive independent deterministic layout seeds.
+
+```json
+"example:tower": {
+  "minimumModules": 7,
+  "maximumModules": 16,
+  "maximumHeight": 32,
+  "buildingSections": {
+    "bottomCap": "minecraft:stone_bricks",
+    "topCap": "minecraft:stone_bricks",
+    "sections": [
+      {
+        "id": "A", "floors": 3, "floor": "example:floor_a",
+        "down": "stairs_down", "up": "stairs_up",
+        "floorBoundary": {"type":"example:slab","accepts":["example:slab"],"priority":10},
+        "ceilingBoundary": {"type":"example:slab","accepts":["example:slab"],"priority":0}
+      },
+      {
+        "id": "B", "floors": 1, "floor": "example:floor_b",
+        "down": "stairs_down", "up": "stairs_up",
+        "floorBoundary": {"type":"example:slab","accepts":["example:slab"],"priority":10},
+        "ceilingBoundary": {"type":"example:slab","accepts":["example:slab"],"priority":0}
+      }
+    ]
+  }
+}
+```
+
+Each referenced floor has its own room pools and footprint. All section floors share the building's selection/tag, damage and air policies; mismatched policies reject at reload. `down`/`up` name exact walkable fixed floor ports. Connected/repeated floors need the corresponding ports; an unconnected terminal face may omit its id. Every declared vertical port must be assigned. Vertical port types and dimensions must match, and connections currently require continuous authored climbable columns, including headroom and any technical gap. Merely lining up empty openings is insufficient. The incoming floor is aligned to that connector before its room layout is solved. Room circulation is checked again after all neighboring slabs and caps are merged.
+
+`floorBoundary`/`ceilingBoundary` describe the complete occupied floor mask and use existing mutual type acceptance, priority, `retain`, `gap` and `gapCells` policies. Shared slabs require explicit cells on both sides; air/solid and inventory conflicts reject. Upper masks may narrow or shift only while remaining completely supported by the lower mask and inside the base envelope. Overhangs, widening and incompatible transitions reject; supply a compatible authored transition section instead. Rotation of the whole building follows its prepared entrance. Strict repetition currently also repeats furnishings; independent per-floor furnishing variation remains future work.
+
+If no terminal module is supplied, `bottomCap` and `topCap` close the first lower and final upper openings with declared supportive materials. These are direct namespaced block states, never an implicit filler or roof algorithm. Optional `basement` and `roof` fields reference authored modules. Each must have exactly one compatible internal vertical port with a matching boundary declaration, no unresolved required ports, and validated nested content/contracts. They participate in slab negotiation, collisions, circulation and budgets. A basement may extend at most16 blocks below the prepared entrance level; this is exact authored geometry and excavation, not an automatic cave or tunnel generator. Terminal modules currently retain their authored local orientation relative to the floor; the complete building then rotates together.
+
+Limits remain bounded: at most8 unique sections,16 total floors,16 structural modules including optional terminal modules,64 resolved modules including nested content,65536 final cells and128 blocks maximum above-ground height. Each distinct section floor uses the existing512-attempt room search and16384-visit circulation check. Recipe constraints can impose tighter limits. Building-slot and parcel reservations remain rectangular. Existing catalogs without `buildingSections` retain their assembly behavior. Final accepted voxels and provider data remain saved; resolved cities are not regenerated after pack changes.
+
+The zoning fixture uses `zoning:section_house` for landmark slots: one7x7 entrance floor, two identical7x7 upper floors A and one narrower5x7 floor B, a continuous ladder, shared slabs and one furnished desk/chest on every floor. Its above-ground height is17 blocks. Ordinary wooden cottages and two-floor workshops remain separate variants. Install matching JAR and datapack ZIP before generating new settlements.
+
+Frozen final-terrain recipe format3 additionally interns prop-rule module dictionaries in the same bounded tables as building compositions. Formats1 and2 remain readable, including old inline prop dictionaries. Stored512Ki-character/64-part and expanded2Mi-character limits remain unchanged; malformed references reject before publication. This change removes duplicate catalogs and keeps worker inputs independent of later resource reloads.
+
+### Compatible weighted room alternatives
+
+Modules may declare `layouts`, structural alternatives independent of their existing damage `variants`. A layout has a unique non-reserved `id`, positive integer `weight` (1..10000), optional sparse `cells`/`fills`/`template` patches, `closedJoints`, `addedJoints`, an optional replacement `contract`, optional replacement `boundaries`, and `choices`. When layouts are present, only those explicitly authored alternatives enter the search; add an unchanged named alternative if the base geometry is wanted too. Omitted layouts preserve the old assembly path.
+
+```json
+"layouts": [{
+  "id": "position_4", "weight": 10,
+  "cells": [
+    {"at":[1,2,0],"material":"wall"},
+    {"at":[1,3,0],"material":"glass"}
+  ],
+  "closedJoints": ["window"],
+  "addedJoints": [{"id":"window","type":"example:window","accepts":[],"at":[1,3,0],"face":"north","external":true}],
+  "choices": {"example:window_band":"position_4"}
+}]
+```
+
+Patches must restore an old opening as well as author the new one. A joint may be replaced at another position/face by closing its original id and adding its replacement. Doorways still require mutually compatible types/dimensions and exact physical alignment; external windows must face the floor-mask exterior. Windows and doors are explicit authored ports, not inferred from arbitrary glass or door blocks. A layout can override wall priorities/retained layers through `boundaries`; omission inherits them, and an explicit empty list clears them. Any affected route/clearance/support/mount contract must stay correct. An explicit `contract` replaces the inherited contract, so copy any desired mounts/routes into it.
+
+`choices` provides author-defined agreement groups. The domain is the union of a module's alternatives: main room alternatives1/2/3/4 and side room alternatives3/4 can meet only on3 or4 for a shared group. Common group values must agree on the connected room pair and other already placed rooms whose faces touch; several common groups must all agree. A missing group is unconstrained. Values are opaque labels; authors give matching alternatives the same label and author their actual coordinates in geometry/ports. Labels never bypass geometry, facade, priorities or circulation. Shared-wall and section-slab priority may not erase an explicitly declared exterior opening: changing its cells requires the winning side to declare the same exterior interface. A mandatory facade/window/stair reservation may further restrict that intersection to just3 or just4.
+
+Optional module `adjacency` rules give conditional preferences for a mated neighboring module:
+
+```json
+"adjacency": [
+  {"neighbor":"example:side","rotation":0,"weight":50},
+  {"neighbor":"example:side","rotation":1,"weight":20},
+  {"neighbor":"example:side","rotation":2,"weight":20},
+  {"neighbor":"example:side","rotation":3,"weight":10}
+]
+```
+
+`joint` and `neighborJoint` optionally restrict the named connection; omission matches any. `rotation` is the neighbor's relative quarter-turn (0..3) in this room's local frame. Optional `offset` is its bounding-envelope minimum in this room's authored local coordinates after shared-wall negotiation, so the demo's5-wide main room and3-wide side room share at offset[4,0,0]. Offsets are bounded to+-128. Rules for a named neighbor form an allowed pose set; no matching rule rejects that pairing. No rules for that neighbor leave it unconstrained. Both rooms' rule sets must permit the pose. Matching positive rule weights add; a matching zero weight vetoes it.
+
+These are relative weights among eligible candidates, not unconditional percentages of generated buildings. Candidate preference multiplies its layout weight and both rooms' applicable pose weights. Geometry, fixed ports, agreement groups and compatible boundaries filter candidates before their deterministic weighted ordering. The search backtracks when later packing, nested furnishing, circulation, headroom, support or shared-cell checks fail. It does not exhaustively enumerate every complete building or promise a global solution-frequency distribution; later failures and bounded search can affect final frequencies. For a single choice with four feasible equal-layout-weight poses,50/20/20/10 gives those relative probabilities; if only50 and20 remain, their ratio is50:20. Seed/configuration determines the result reproducibly.
+
+Limits:32 alternatives and64 adjacency rules per module,16 agreement groups per alternative, existing module/cell/catalog budgets, at most512 eligible candidates per search decision,4096 matched/root candidate evaluations and512 actual placement attempts per floor assembly. Oversized/unsatisfiable domains reject with diagnostics. Weighting never allows an invalid interface or unlimited search.
+
+The selected structural `layout` id is stored separately from the damage `variant`, exported for inspection, preserved through rotation/nested placement and frozen across repeated building-section floors. Sparse layout patches are applied to intact and authored damage geometry; procedural damage then runs against the selected layout's ports. Layout contract overrides take precedence over damage-variant/base contracts. Nested reservations also try alternative layouts if an earlier one obstructs a required route. Optional basement/roof alternatives must preserve their negotiated base connection port.
+
+The zoning fixture now authors four main-room window/door alternatives with weights50/20/20/10 and two side-room alternatives3/4. Their agreement group and shared-wall geometry permit only3/4, with conditional main-room ratio20:10. The same choice is frozen across the two upper A floors of landmark buildings. The narrower B section has its own authored alternatives. Both the latest JAR and datapack ZIP are required for new generation; previously saved resolved geometry stays unchanged.

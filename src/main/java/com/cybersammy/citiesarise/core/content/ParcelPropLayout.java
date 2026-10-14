@@ -57,7 +57,7 @@ record ParcelPropLayout(GridBounds parcel,GridBounds building,GridPoint entrance
             var extent=CompositionAssembler.rotatedSize(definitions.get(m.id()).size(),m.rotation());
             var a=CompositionAssembler.rotateCell(m.origin(),size,turn);
             var b=CompositionAssembler.rotateCell(m.origin().add(new Vec(extent.x()-1,extent.y()-1,extent.z()-1)),size,turn);
-            return new ResolvedComposition.PlacedModule(m.id(),m.variant(),new Vec(Math.min(a.x(),b.x()),m.origin().y(),Math.min(a.z(),b.z())),(m.rotation()+turn)%4);
+            return new ResolvedComposition.PlacedModule(m.id(),m.variant(),new Vec(Math.min(a.x(),b.x()),m.origin().y(),Math.min(a.z(),b.z())),(m.rotation()+turn)%4,m.layout());
         }).toList();
         return new ResolvedComposition(modules,cells,composition.connections(),composition.cappedJoints(),composition.damageDecisions());
     }

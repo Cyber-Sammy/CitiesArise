@@ -42,12 +42,21 @@ final class BoundaryAssembly {
     }
     static Optional<Join> negotiate(Placed source,ModuleDefinition module,ModuleBoundary boundary,Joint port,
             Vec aligned,int turn,String sourceOwner,String incomingOwner,String air) {
+        return negotiate(source,module,boundary,port,aligned,turn,sourceOwner,incomingOwner,air,null);
+    }
+    static Optional<Join> negotiate(Placed source,ModuleDefinition module,ModuleBoundary boundary,Joint port,
+            Vec aligned,int turn,String sourceOwner,String incomingOwner,String air,Set<com.cybersammy.citiesarise.core.geometry.GridPoint> incomingMask) {
         var a=source.definition();
         if(!a.matches(boundary) || a.gap()!=boundary.gap()) return Optional.empty();
         boolean shared=a.gap()==0 && !(a.retain() && boundary.retain());
         var n=ModuleBoundary.normal(source.joint().face());int offset=shared?-1:a.gap();
         Vec origin=aligned.add(new Vec(n.x()*offset,n.y()*offset,n.z()*offset));
         var incoming=placed(module,boundary,port,origin,turn);
+        if(incomingMask!=null) {
+            var layer=new HashSet<>(incoming.layer());
+            layer.removeIf(p->!incomingMask.contains(new com.cybersammy.citiesarise.core.geometry.GridPoint(p.x()-origin.x(),p.z()-origin.z())));
+            incoming=new Placed(incoming.definition(),Set.copyOf(layer),incoming.joint(),incoming.localJoint(),incoming.size(),incoming.origin(),incoming.rotation());
+        }
         var projected=new HashSet<Vec>();int distance=shared?0:1+a.gap();
         for(var p:source.layer()) projected.add(p.add(new Vec(n.x()*distance,n.y()*distance,n.z()*distance)));
         if(!projected.equals(incoming.layer())) return Optional.empty();
@@ -73,5 +82,11 @@ final class BoundaryAssembly {
             if(!join.incomingWins()) return true;
         }
         cells.put(value.position(),value);return true;
+    }
+    static boolean preservesFacade(PlacedCell old,PlacedCell value,Join join,Joint source,Joint incoming) {
+        if(old==null || join==null || !join.overlapAllowed(value.position()) || old.equals(value))return true;
+        var protectedPort=join.incomingWins()?source:incoming;var winner=join.incomingWins()?incoming:source;
+        return protectedPort==null || winner!=null && protectedPort.type().equals(winner.type()) && protectedPort.face()==winner.face()
+                && protectedPort.position().equals(winner.position()) && protectedPort.width()==winner.width() && protectedPort.height()==winner.height();
     }
 }

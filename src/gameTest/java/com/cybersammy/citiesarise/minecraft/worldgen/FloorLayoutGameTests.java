@@ -39,7 +39,10 @@ public final class FloorLayoutGameTests {
         for(var chunk:chunks){helper.getLevel().getChunk(chunk.x(),chunk.z());new WorldgenPlacementApplier().apply(helper.getLevel(),slices.slice(chunk));}
         var provider=new VanillaDebugBlockMaterialProvider();
         for(var op:plan.operations())helper.assertTrue(helper.getLevel().getBlockState(new BlockPos(op.point().x(),base.getY()+op.verticalOffset(),op.point().z())).equals(provider.blockState(op)),"Floor snapshot drift after reverse chunks");
-        helper.assertTrue(helper.getLevel().getBlockState(base.offset(3,1,4)).isAir(),"Room-to-room door closed");
+        var main=result.orElseThrow().modules().getFirst();var definition=settings.modules().get(main.id());
+        var doorway=definition.jointsFor(main.variant(),main.layout()).stream().filter(j->j.id().equals("east")).findFirst().orElseThrow();
+        var point=ModuleDefinition.jointCells(CompositionAssembler.rotate(doorway,definition.size(),main.rotation())).getFirst().add(main.origin());
+        helper.assertTrue(helper.getLevel().getBlockState(base.offset(point.x(),point.y(),point.z())).isAir(),"Selected room-to-room door closed");
         var chest=plan.operations().stream().filter(o->o.material().startsWith("minecraft:chest")).findFirst().orElseThrow();
         var entity=(net.minecraft.world.level.block.entity.ChestBlockEntity)helper.getLevel().getBlockEntity(new BlockPos(chest.point().x(),base.getY()+chest.verticalOffset(),chest.point().z()));
         helper.assertTrue(entity!=null && entity.getItem(0).getCount()==3,"Room interior inventory lost");

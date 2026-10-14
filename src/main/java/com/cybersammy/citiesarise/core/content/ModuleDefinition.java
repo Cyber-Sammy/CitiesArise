@@ -4,7 +4,11 @@ import java.util.*;
 
 /** All names, matching labels and materials are opaque author-defined data. */
 public record ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint> joints,
-        Set<String> tags, List<Variant> variants, Damage damage, ModuleContract contract, List<ModuleBoundary> boundaries) {
+        Set<String> tags, List<Variant> variants, Damage damage, ModuleContract contract, List<ModuleBoundary> boundaries,
+        List<RoomLayout> layouts,List<RoomAdjacency> adjacency) {
+    public ModuleDefinition(String id,Vec size,List<Cell> cells,List<Joint> joints,Set<String> tags,List<Variant> variants,Damage damage,ModuleContract contract,List<ModuleBoundary> boundaries) {
+        this(id,size,cells,joints,tags,variants,damage,contract,boundaries,List.of(),List.of());
+    }
     public ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint> joints,
             Set<String> tags, List<Variant> variants, Damage damage) {
         this(id,size,cells,joints,tags,variants,damage,ModuleContract.empty());
@@ -55,6 +59,8 @@ public record ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint
         public static Damage none() { return new Damage(false,0,Set.of(),List.of()); }
     }
     public ModuleDefinition {
+        layouts=layouts==null?List.of():List.copyOf(layouts);adjacency=adjacency==null?List.of():List.copyOf(adjacency);
+        if(layouts.size()>32 || adjacency.size()>64)throw new IllegalArgumentException("Room alternative/rule budget exceeded");
         boundaries=boundaries==null?List.of():List.copyOf(boundaries); // Older frozen profiles omit this field.
         if(boundaries.size()>32) throw new IllegalArgumentException("Too many module boundaries");
         var boundaryIds=new HashSet<String>();
@@ -82,13 +88,54 @@ public record ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint
         if(damage.optionalJoints.stream().anyMatch(j -> ids.contains(j.id))) throw new IllegalArgumentException("Damage opening must have a new joint identity");
         var effective=new ArrayList<Joint>(joints.stream().filter(j -> j.external() || !damage.closableJoints.contains(j.id)).toList());
         effective.addAll(damage.optionalJoints); checkJoints(effective,size);
+        var layoutIds=new HashSet<String>();
+        for(var layout:layouts) {
+            if(!layoutIds.add(layout.id()))throw new IllegalArgumentException("Duplicate room layout");
+            checkCells(layout.cells(),size);if(!ids.containsAll(layout.closedJoints()))throw new IllegalArgumentException("Unknown room layout closed joint");
+            var chosen=new ArrayList<>(joints.stream().filter(j->!layout.closedJoints().contains(j.id())).toList());chosen.addAll(layout.addedJoints());checkJoints(chosen,size);
+            for(var boundary:layout.boundaries()==null?boundaries:layout.boundaries())boundary.validate(size,chosen);
+            if(layout.boundaries()!=null && (layout.boundaries().size()>32 || layout.boundaries().stream().map(ModuleBoundary::joint).distinct().count()!=layout.boundaries().size()))throw new IllegalArgumentException("Invalid room layout boundaries");
+            layout.contract().ifPresent(c->c.validate(size));
+            for(var variant:variants) {
+                var ports=new ArrayList<>(joints.stream().filter(j->!variant.closedJoints().contains(j.id()) && !layout.closedJoints().contains(j.id())).toList());
+                ports.addAll(variant.addedJoints().stream().filter(j->!layout.closedJoints().contains(j.id())).toList());ports.addAll(layout.addedJoints());checkJoints(ports,size);
+            }
+        }
     }
     public ModuleContract contractFor(String variant) {
+        return contractFor(variant,"base");
+    }
+    public ModuleContract contractFor(String variant,String layout) {
+        var selected=layout(layout);if(selected.isPresent() && selected.orElseThrow().contract().isPresent())return selected.orElseThrow().contract().orElseThrow();
         return variants.stream().filter(v -> v.id().equals(variant)).findFirst().flatMap(Variant::contract).orElse(contract);
+    }
+    public Optional<RoomLayout> layout(String id) {return layouts.stream().filter(l->l.id().equals(id)).findFirst();}
+    public List<Joint> jointsFor(String variant,String layout) {
+        var damage=variants.stream().filter(v->v.id().equals(variant)).findFirst();var chosen=layout(layout);
+        var result=new ArrayList<>(joints.stream().filter(j->damage.isEmpty() || !damage.orElseThrow().closedJoints().contains(j.id())).toList());damage.ifPresent(v->result.addAll(v.addedJoints()));
+        chosen.ifPresent(l->{result.removeIf(j->l.closedJoints().contains(j.id()));result.addAll(l.addedJoints());});return List.copyOf(result);
+    }
+    public List<ModuleBoundary> boundariesFor(String layout) {return layout(layout).filter(l->l.boundaries()!=null).map(RoomLayout::boundaries).orElse(boundaries);}
+    public ModuleDefinition forLayout(String id) {
+        if(id.equals("base"))return this;
+        var l=layout(id).orElseThrow(()->new IllegalArgumentException("Unknown room layout: "+id));
+        var ports=jointsFor("intact",id);var portIds=new HashSet<String>();ports.forEach(j->portIds.add(j.id()));
+        var overrides=new HashSet<>(l.closedJoints());l.addedJoints().forEach(j->overrides.add(j.id()));
+        var alternatives=new ArrayList<Variant>();
+        for(var v:variants) {
+            var closed=new HashSet<>(v.closedJoints());closed.retainAll(portIds);closed.removeAll(overrides);
+            alternatives.add(new Variant(v.id(),v.severity(),patched(v.cells(),l.cells()),closed,v.addedJoints().stream().filter(j->!overrides.contains(j.id())).toList(),l.contract().isPresent()?l.contract():v.contract()));
+        }
+        var closable=new HashSet<>(damage.closableJoints());closable.retainAll(portIds);
+        return new ModuleDefinition(this.id,size,patched(cells,l.cells()),ports,tags,alternatives,
+                new Damage(damage.enabled(),damage.maxRemovedCells(),closable,damage.optionalJoints()),l.contract().orElse(contract),boundariesFor(id),List.of(),adjacency);
+    }
+    private static List<Cell> patched(List<Cell> base,List<Cell> patches) {
+        var map=new LinkedHashMap<Vec,Cell>();base.forEach(c->map.put(c.position(),c));patches.forEach(c->map.put(c.position(),c));return List.copyOf(map.values());
     }
     public List<ModuleContract> allContracts() {
         var result=new ArrayList<ModuleContract>(); result.add(contract);
-        variants.forEach(v -> v.contract().ifPresent(result::add)); return List.copyOf(result);
+        variants.forEach(v -> v.contract().ifPresent(result::add));layouts.forEach(l->l.contract().ifPresent(result::add));return List.copyOf(result);
     }
     private static void checkCells(List<Cell> cells, Vec size) {
         if(cells.size()>65536) throw new IllegalArgumentException("Module exceeds cell budget");

@@ -29,7 +29,7 @@ public final class NestedCompositionResolver {
         return search(structural,pending);
     }
     private void addPending(List<Pending> pending,PlacedModule owner,int depth) {
-        definitions.get(owner.id()).contractFor(owner.variant()).mounts().forEach(m -> pending.add(new Pending(owner,m,depth)));
+        definitions.get(owner.id()).contractFor(owner.variant(),owner.layout()).mounts().forEach(m -> pending.add(new Pending(owner,m,depth)));
     }
     private Optional<ResolvedComposition> search(ResolvedComposition state,List<Pending> pending) {
         if(state.modules().size()>80) { failure="Nested module count exceeded"; return Optional.empty(); }
@@ -48,11 +48,12 @@ public final class NestedCompositionResolver {
                 ModuleDefinition candidate=definitions.get(id);
                 if(candidate==null || !permitted.test(candidate) || !mount.permits(candidate)) continue;
                 for(int localRotation:mount.rotations()) {
-                    if(++attempts>512) break;
+                    if(attempts>=512) break;
                     var localSize=CompositionAssembler.rotatedSize(candidate.size(),localRotation);
                     if(localSize.x()>mount.size().x() || localSize.y()>mount.size().y() || localSize.z()>mount.size().z()) continue;
-                    var raw=CompositionAssembler.standalone(candidate,severity,air,seed^task.owner().origin().hashCode()^mount.id().hashCode());
-                    if(raw.isEmpty()) continue;
+                    for(var option:CompositionAssembler.standaloneAlternatives(candidate,null,severity,air,seed^task.owner().origin().hashCode()^mount.id().hashCode())) {
+                    if(++attempts>512){failure="Nested composition search budget exceeded";return Optional.empty();}
+                    var raw=Optional.of(option);
                     int turn=(task.owner().rotation()+localRotation)%4;
                     Vec origin=mountOrigin(task,definitions.get(task.owner().id()).size(),localSize);
                     Map<Vec,PlacedCell> cells=new LinkedHashMap<>(); state.cells().forEach(c -> cells.put(c.position(),c));
@@ -66,7 +67,7 @@ public final class NestedCompositionResolver {
                     }
                     if(!fits) continue;
                     var modules=new ArrayList<>(state.modules());
-                    var placed=new PlacedModule(id,raw.get().modules().getFirst().variant(),origin,turn); modules.add(placed);
+                    var selected=raw.get().modules().getFirst();var placed=new PlacedModule(id,selected.variant(),origin,turn,selected.layout()); modules.add(placed);
                     var connections=new ArrayList<>(state.connections());
                     String owner=task.owner().id()+"@"+task.owner().origin()+"/"+mount.id();
                     connections.add(owner+" => "+id);
@@ -75,6 +76,7 @@ public final class NestedCompositionResolver {
                     var nextPending=new ArrayList<>(remaining); addPending(nextPending,placed,task.depth()+1);
                     var result=search(new ResolvedComposition(modules,List.copyOf(cells.values()),connections,caps,damage),nextPending);
                     if(result.isPresent()) return result;
+                    }
                 }
             }
         }

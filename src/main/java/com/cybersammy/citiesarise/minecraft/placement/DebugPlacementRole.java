@@ -49,7 +49,8 @@ public enum DebugPlacementRole {
     STRUCTURAL_BEAM(45),
     STRUCTURAL_PIER(46),
     STRUCTURAL_BRACE(47),
-    TERRAIN_CLEARANCE(48);
+    TERRAIN_CLEARANCE(48),
+    PARCEL_FOUNDATION(49);
 
     private final int serializedId;
 
@@ -62,7 +63,7 @@ public enum DebugPlacementRole {
     }
 
     public boolean suspended() {
-        return this==SUSPENDED_CONTENT || this==STRUCTURAL_BEAM || this==STRUCTURAL_PIER || this==STRUCTURAL_BRACE || this==TERRAIN_CLEARANCE;
+        return this==SUSPENDED_CONTENT || this==STRUCTURAL_BEAM || this==STRUCTURAL_PIER || this==STRUCTURAL_BRACE || this==TERRAIN_CLEARANCE || this==PARCEL_FOUNDATION;
     }
 
     public boolean bridge() {
@@ -82,6 +83,7 @@ public enum DebugPlacementRole {
         return switch (this) {
             case TERRAIN_CLEARANCE -> -1;
             case SUPPORT_LINING -> 1;
+            case PARCEL_FOUNDATION -> 2;
             case BRIDGE_PIER, BRIDGE_STEP, BRIDGE_DECK, BRIDGE_RAIL, BRIDGE_ABUTMENT, BRIDGE_CLEARANCE -> 80;
             case SUSPENDED_CONTENT, STRUCTURAL_BEAM, STRUCTURAL_PIER, STRUCTURAL_BRACE, CONTENT_BLOCK -> 50;
             case OAK_HOUSE_WALL, STONE_HOUSE_WALL -> 40;

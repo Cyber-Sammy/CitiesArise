@@ -198,3 +198,37 @@ Integer ranges: minimumDepth 4..16, maximumFillDepth 4..48, maximumFillVolume 1.
 Follow_edge captures an immutable bounded final-terrain survey from already FULL chunks before placing any city blocks, then plans on one background worker (three admitted jobs). The complete survey reservation must be loaded together; it never forces chunks. Captured inputs and resolved operations survive reload. Debug command resolution is synchronous. Survey limits are 224x224 and 512 vertical blocks; attempts and detours are bounded. Opposed exposed banks and voids exposed by the planned corridor cut are considered; four-layer intact roofs and ordinary water crossings are preserved. This is conservative terrain inference, not stored cave identity. A detour may relocate the whole layout. Base-generator locate acceptance cannot guarantee final follow_edge acceptance.
 
 Use the matching new JAR and zoning_fixture ZIP before generating fresh settlements. Earlier saved resolved snapshots retain their recorded operations. Clearance or construction-limit failures reject before partial city placement.
+
+## Shared module walls and floor slabs
+
+Modules may declare optional `boundaries` attached to existing internal joints. Old catalogs without this metadata retain their original spacing and overlap rejection. The zoning demo now uses shared boundaries in `zoning:stack`: `ground` and `upper` share one inter-floor slab, reducing the two-floor envelope from 10 to 9 blocks. Removing the optional boundary declarations restores the original geometry.
+
+Example lower ceiling (the upper floor needs a matching `down`/`floor` declaration at Y=0):
+
+```json
+"boundaries": [{
+  "joint": "up",
+  "role": "ceiling",
+  "type": "example:slab",
+  "accepts": ["example:slab"],
+  "from": [0, 4, 0],
+  "to": [6, 4, 6],
+  "priority": 0,
+  "retain": false,
+  "gap": 0
+}]
+```
+
+Roles are wall/floor/ceiling. A declaration covers one outer block layer on its joint face; extents are inclusive local block coordinates, include the port and are at most 4096 cells. At most 32 unique joint declarations per module. Boundary type acceptance is mutual, in addition to normal joint compatibility; roles must be wall-to-wall or ceiling-to-floor. Both layers must align completely. Undeclared interior overlap remains invalid. The present rectangular envelope checks conservatively reject partial-face overlaps that occupy undeclared parts of the envelope.
+
+For a shared layer, priority (-1000..1000, default 0) selects its owner/material. Equal priorities use the lexically smaller placed module identity (module id plus stable assembly index). Air/passable versus solid conflicts and conflicting provider payloads reject instead of destroying an opening or block entity. Shared layers require explicit cells, including air. Final clearance/support/routes and connected ports are validated after nested furnishing.
+
+When both sides set `retain: true`, their surfaces remain separate, producing an intentional two-block separator. Otherwise gap=0 negotiates one shared layer. `gap` (0..8, default 0) must agree on both sides; a positive gap retains both surfaces and reserves that many air layers between them. Optional `gapCells` explicitly supplies the connector and supporting geometry, with `at` coordinates relative to that module's joint plane origin. Cells must lie in the boundary extrusion, duplicate positions are rejected, and conflicting declarations on the two sides reject. Vertical gaps currently require declared climbable cells through every connecting port column; horizontal gaps need a clear supported passage. Existing module support contracts still apply at the displaced elevation, so gap authors must provide the required supporting cells as well as the passage. Gap materials/provider data receive the same catalog/palette validation as module cells. Gap geometry is reserved against unrelated modules and other gaps. Module origins and total height change accordingly and remain subject to composition/slot budgets.
+
+These controls apply to explicitly mated modules; they do not yet pack rooms into arbitrary floor shapes, repeat section layouts or merge parcel fences. Mounts remain containment reservations, not independently negotiated shared surfaces. Exact accepted cell geometry is persisted through the existing placement snapshot and participates in debug undo. Use the updated JAR and demo ZIP for new buildings; previously resolved cities retain their saved operations.
+
+## Shallow parcel foundations
+
+`planning.structuralSupports.maximumShallowFoundationHeight` selects a closed foundation for a parcel raised a short distance above dry ground. It counts empty block layers below the pad (0..8, default 2 when omitted); the zoning demo sets 5. A foundation requires four contiguous solid footing blocks within maximumDepth, and no fluid between footing and pad. Thin roofs over cavities do not qualify unless that footing exists. Deeper/unsupported columns retain open beams, piers and braces. Road and bridge thresholds are unchanged. Mixed slopes can combine a shallow foundation with deep structural spans.
+
+The final foundation is explicit bounded geometry from ground to the pad, with visible continuous faces and no wood members in its shallow columns. Its material is `surfaces.PARCEL_FOUNDATION` in the content catalog, default stone bricks; the demo explicitly selects minecraft:stone_bricks. Foundation cells participate in structural and total construction budgets, saved snapshots and debug/worldgen placement. Roads, access and authored content are preserved. Older blueprints/frozen profiles without the height field use 2; existing resolved settlements are not retrofitted. Install matching JAR and ZIP before generating new settlements.

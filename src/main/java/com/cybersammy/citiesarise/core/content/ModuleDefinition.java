@@ -4,10 +4,14 @@ import java.util.*;
 
 /** All names, matching labels and materials are opaque author-defined data. */
 public record ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint> joints,
-        Set<String> tags, List<Variant> variants, Damage damage, ModuleContract contract) {
+        Set<String> tags, List<Variant> variants, Damage damage, ModuleContract contract, List<ModuleBoundary> boundaries) {
     public ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint> joints,
             Set<String> tags, List<Variant> variants, Damage damage) {
         this(id,size,cells,joints,tags,variants,damage,ModuleContract.empty());
+    }
+    public ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint> joints,
+            Set<String> tags, List<Variant> variants, Damage damage, ModuleContract contract) {
+        this(id,size,cells,joints,tags,variants,damage,contract,List.of());
     }
     public record Vec(int x, int y, int z) {
         public Vec add(Vec b) { return new Vec(Math.addExact(x,b.x), Math.addExact(y,b.y), Math.addExact(z,b.z)); }
@@ -51,6 +55,13 @@ public record ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint
         public static Damage none() { return new Damage(false,0,Set.of(),List.of()); }
     }
     public ModuleDefinition {
+        boundaries=boundaries==null?List.of():List.copyOf(boundaries); // Older frozen profiles omit this field.
+        if(boundaries.size()>32) throw new IllegalArgumentException("Too many module boundaries");
+        var boundaryIds=new HashSet<String>();
+        for(var boundary:boundaries) {
+            boundary.validate(size,joints);
+            if(!boundaryIds.add(boundary.joint())) throw new IllegalArgumentException("Duplicate boundary joint");
+        }
         requireText(id); Objects.requireNonNull(size); Objects.requireNonNull(damage);
         if(size.x<1 || size.y<1 || size.z<1 || size.x>64 || size.y>64 || size.z>64) throw new IllegalArgumentException("Module size must be 1..64");
         cells=List.copyOf(cells); joints=List.copyOf(joints); tags=Set.copyOf(tags); variants=List.copyOf(variants);

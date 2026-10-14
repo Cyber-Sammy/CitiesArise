@@ -36,7 +36,7 @@ public final class ContentCatalogParser {
             }
             JsonObject d=object(data,"damage");
             Damage damage=new Damage(bool(d,"enabled",false),integer(d,"maxRemovedCells",0),strings(d,"closableJoints"),joints(d,"optionalJoints"));
-            modules.put(entry.getKey(),new ModuleDefinition(entry.getKey(),size,cells(data,size),joints(data,"joints"),strings(data,"tags"),variants,damage,contract(object(data,"contract"))));
+            modules.put(entry.getKey(),new ModuleDefinition(entry.getKey(),size,cells(data,size),joints(data,"joints"),strings(data,"tags"),variants,damage,contract(object(data,"contract")),boundaries(data)));
         }
         for(var module:modules.values()) for(var c:module.allContracts()) for(var mount:c.mounts()) for(String id:mount.pool())
             if(!modules.containsKey(id)) throw new IllegalArgumentException("Unknown nested module: "+id);
@@ -75,6 +75,7 @@ public final class ContentCatalogParser {
         long payloadSize=0;
         for(var module:modules.values()) {
             var all=new ArrayList<Cell>(module.cells());
+            module.boundaries().forEach(b->all.addAll(b.gapCells()));
             module.variants().forEach(v -> all.addAll(v.cells()));
             for(var cell:all) {
                 validateCellData(cell,palettes);
@@ -83,6 +84,7 @@ public final class ContentCatalogParser {
             if(payloadSize>4_000_000) throw new IllegalArgumentException("Catalog exceeds provider data budget");
             var materials=new HashSet<String>();
             module.cells().forEach(c -> materials.add(c.material()));
+        module.boundaries().forEach(b->b.gapCells().forEach(c->materials.add(c.material())));
             module.joints().stream().filter(Joint::optional).forEach(j -> materials.add(j.capMaterial()));
             module.variants().forEach(v -> { v.cells().forEach(c -> materials.add(c.material())); v.addedJoints().stream().filter(Joint::optional).forEach(j -> materials.add(j.capMaterial())); });
             module.damage().optionalJoints().forEach(j -> materials.add(j.capMaterial()));
@@ -193,6 +195,7 @@ public final class ContentCatalogParser {
     public static void validatePalette(ModuleDefinition module,Map<String,String> palette) {
         Set<String> materials=new HashSet<>();
         module.cells().forEach(c -> materials.add(c.material()));
+        module.boundaries().forEach(b->b.gapCells().forEach(c->materials.add(c.material())));
         module.joints().stream().filter(Joint::optional).forEach(j -> materials.add(j.capMaterial()));
         module.variants().forEach(v -> { v.cells().forEach(c -> materials.add(c.material())); v.addedJoints().stream().filter(Joint::optional).forEach(j -> materials.add(j.capMaterial())); });
         module.damage().optionalJoints().forEach(j -> materials.add(j.capMaterial()));
@@ -253,6 +256,20 @@ public final class ContentCatalogParser {
         var states=cell.material().contains(":") ? List.of(cell.material()) : palettes.values().stream()
                 .filter(p -> p.containsKey(cell.material())).map(p -> p.get(cell.material())).distinct().toList();
         for(String state:states) resources.validateProviderData(state,cell.providerData());
+    }
+    private static List<ModuleBoundary> boundaries(JsonObject data) {
+        var result=new ArrayList<ModuleBoundary>();
+        for(var item:array(data,"boundaries")) {
+            var b=item.getAsJsonObject();var connector=new ArrayList<Cell>();
+            for(var value:array(b,"gapCells")) {
+                var c=value.getAsJsonObject();connector.add(new Cell(vec(c.getAsJsonArray("at")),string(c,"material"),false,
+                        c.has("blockEntity")?Map.of(com.cybersammy.citiesarise.minecraft.placement.TemplateBlockEntities.KEY,string(c,"blockEntity")):Map.of()));
+            }
+            result.add(new ModuleBoundary(string(b,"joint"),ModuleBoundary.Role.valueOf(string(b,"role").toUpperCase(Locale.ROOT)),
+                    string(b,"type"),strings(b,"accepts"),vec(b.getAsJsonArray("from")),vec(b.getAsJsonArray("to")),
+                    integer(b,"priority",0),bool(b,"retain",false),integer(b,"gap",0),connector));
+        }
+        return result;
     }
     private static List<Joint> joints(JsonObject parent,String key) {
         List<Joint> result=new ArrayList<>();

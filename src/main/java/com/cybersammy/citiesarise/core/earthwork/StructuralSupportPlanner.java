@@ -7,7 +7,7 @@ import java.util.*;
 /** Pure geometry over a bounded immutable final-terrain query. Never loads chunks or selects blocks. */
 public final class StructuralSupportPlanner {
     public enum Kind { PARCEL, ROAD, BRIDGE }
-    public enum Role { BEAM, PIER, BRACE, RAIL }
+    public enum Role { BEAM, PIER, BRACE, RAIL, FOUNDATION }
     public record Envelope(PlanElementId source, GridBounds bounds, int platformY, Kind kind) { }
     public record Position(int x,int y,int z) { }
     public record Cell(Position position, PlanElementId source, Role role, Kind kind) { }
@@ -44,9 +44,17 @@ public final class StructuralSupportPlanner {
             for(int z=b.minZ();z<b.maxZExclusive();z++) for(int x=b.minX();x<b.maxXExclusive();x++) {
                 var p=new GridPoint(x,z);int contact=contact(ground,p,envelope.platformY(),settings.maximumDepth());
                 contacts.put(p,contact);
-                if(contact!=Integer.MIN_VALUE && envelope.platformY()-contact<=3) anchors.add(p);
-                else gaps.add(p);
+                boolean shallow=contact!=Integer.MIN_VALUE && envelope.platformY()-contact<=
+                        (envelope.kind()==Kind.PARCEL?settings.maximumShallowFoundationHeight()+1:3);
+                if(shallow && envelope.kind()==Kind.PARCEL) {
+                    for(int y=contact+1;y<envelope.platformY();y++) if(ground.fluid(p.x(),y,p.z())) {shallow=false;break;}
+                }
+                if(shallow) {
+                    anchors.add(p);
+                    if(envelope.kind()==Kind.PARCEL) for(int y=contact+1;y<envelope.platformY();y++)put(cells,envelope,p,y,Role.FOUNDATION);
+                } else gaps.add(p);
             }
+            if(cells.size()>settings.maximumVolume()) return rejected("STRUCTURAL_VOLUME_LIMIT");
             if(gaps.isEmpty()) continue;
             // Rock-side corbels carry short projections even when the ravine floor is out of reach.
             for(var anchor:List.copyOf(anchors)) for(int[] direction:new int[][]{{1,0},{-1,0},{0,1},{0,-1}}) {

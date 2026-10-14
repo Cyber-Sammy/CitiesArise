@@ -248,7 +248,28 @@
             "bodyHeight": 2
           }
         ]
-      }
+      },
+      "boundaries": [
+        {
+          "joint": "up",
+          "role": "ceiling",
+          "type": "zoning:floor_slab",
+          "accepts": [
+            "zoning:floor_slab"
+          ],
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            6,
+            4,
+            6
+          ],
+          "priority": 0
+        }
+      ]
     },
     "zoning:upper": {
       "size": [
@@ -650,7 +671,28 @@
             "bodyHeight": 2
           }
         ]
-      }
+      },
+      "boundaries": [
+        {
+          "joint": "down",
+          "role": "floor",
+          "type": "zoning:floor_slab",
+          "accepts": [
+            "zoning:floor_slab"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            6,
+            0,
+            6
+          ],
+          "priority": 10
+        }
+      ]
     },
     "zoning:lamp": {
       "size": [
@@ -1087,7 +1129,7 @@
       "provider": "modules",
       "minimumSize": 7,
       "maximumSize": 32,
-      "height": 10,
+      "height": 9,
       "parameters": {
         "composition": "zoning:stack"
       }
@@ -1111,7 +1153,7 @@
       "provider": "modules",
       "minimumSize": 7,
       "maximumSize": 32,
-      "height": 10,
+      "height": 9,
       "parameters": {
         "composition": "zoning:stack"
       }
@@ -1149,7 +1191,8 @@
     "WORN_ROAD_SURFACE": "minecraft:cracked_deepslate_tiles",
     "STRUCTURAL_BEAM": "minecraft:stripped_oak_log[axis=x]",
     "STRUCTURAL_PIER": "minecraft:stripped_oak_log[axis=y]",
-    "STRUCTURAL_BRACE": "minecraft:stripped_oak_log[axis=x]"
+    "STRUCTURAL_BRACE": "minecraft:stripped_oak_log[axis=x]",
+    "PARCEL_FOUNDATION": "minecraft:stone_bricks"
   },
   "props": {
     "zoning:yard_lamp": {

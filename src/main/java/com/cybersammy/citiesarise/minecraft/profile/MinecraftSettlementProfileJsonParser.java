@@ -292,7 +292,7 @@ public final class MinecraftSettlementProfileJsonParser {
         return new com.cybersammy.citiesarise.core.earthwork.StructuralSupportSettings(
                 optionalBoolean(value,"enabled",false),optionalInt(value,"maximumDepth",defaults.maximumDepth()),
                 optionalInt(value,"maximumSpan",defaults.maximumSpan()),optionalInt(value,"pierSpacing",defaults.pierSpacing()),
-                optionalInt(value,"maximumVolume",defaults.maximumVolume()));
+                optionalInt(value,"maximumVolume",defaults.maximumVolume()),optionalInt(value,"maximumShallowFoundationHeight",defaults.maximumShallowFoundationHeight()));
     }
 
     private static TerrainResponsePolicy parseTerrainResponsePolicy(JsonObject profile) {

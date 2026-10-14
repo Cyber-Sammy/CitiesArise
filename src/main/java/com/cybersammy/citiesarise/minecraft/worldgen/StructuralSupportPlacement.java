@@ -79,6 +79,7 @@ public final class StructuralSupportPlacement {
                 if(cell.role()==StructuralSupportPlanner.Role.PIER && p.y()>=column.platformY()-1) continue;
             }
             var role=switch(cell.role()) {
+                case FOUNDATION -> DebugPlacementRole.PARCEL_FOUNDATION;
                 case BEAM -> DebugPlacementRole.STRUCTURAL_BEAM;
                 case PIER -> DebugPlacementRole.STRUCTURAL_PIER;
                 case BRACE -> DebugPlacementRole.STRUCTURAL_BRACE;
@@ -89,9 +90,15 @@ public final class StructuralSupportPlacement {
             String material=blueprint.materials().getOrDefault(role.name(),"minecraft:stripped_oak_log[axis=y]");
             if(cell.kind()!=StructuralSupportPlanner.Kind.PARCEL && cell.role()!=StructuralSupportPlanner.Role.RAIL)
                 material=blueprint.materials().getOrDefault("BRIDGE_PIER",material);
+            if(cell.role()==StructuralSupportPlanner.Role.FOUNDATION) material=blueprint.materials().getOrDefault("PARCEL_FOUNDATION","minecraft:stone_bricks");
             if(cell.role()==StructuralSupportPlanner.Role.RAIL) material=blueprint.materials().getOrDefault("BRIDGE_RAIL","minecraft:stone_brick_wall");
             var op=new DebugBlockPlacementOperation(new GridPoint(p.x(),p.z()),0,role,cell.source(),OptionalInt.of(p.y()),material,0);
-            if(operations.putIfAbsent(key(op),op)==null) addedSupports++;
+            var previous=operations.get(key(op));
+            if(cell.role()==StructuralSupportPlanner.Role.FOUNDATION && previous!=null
+                    && (previous.role()==DebugPlacementRole.TERRAIN_FILL || previous.role()==DebugPlacementRole.TERRAIN_SURFACE
+                        || previous.role()==DebugPlacementRole.TERRAIN_RETAINING_WALL || previous.role()==DebugPlacementRole.SUPPORT_LINING
+                        || previous.role()==DebugPlacementRole.FOUNDATION)) operations.put(key(op),op);
+            else if(operations.putIfAbsent(key(op),op)==null) addedSupports++;
         }
         int cleared=FinalTerrainClearance.add(operations,original,blueprint.envelopes(),ground,12);
         if(cleared<0) return new Resolution(Optional.empty(),"CLEARANCE_HEIGHT_LIMIT",0,0);

@@ -958,3 +958,31 @@ These controls apply to explicitly mated modules; they do not yet pack rooms int
 `planning.structuralSupports.maximumShallowFoundationHeight` selects a closed foundation for a parcel raised a short distance above dry ground. It counts empty block layers below the pad (0..8, default 2 when omitted); the zoning demo sets 5. A foundation requires four contiguous solid footing blocks within maximumDepth, and no fluid between footing and pad. Thin roofs over cavities do not qualify unless that footing exists. Deeper/unsupported columns retain open beams, piers and braces. Road and bridge thresholds are unchanged. Mixed slopes can combine a shallow foundation with deep structural spans.
 
 The final foundation is explicit bounded geometry from ground to the pad, with visible continuous faces and no wood members in its shallow columns. Its material is `surfaces.PARCEL_FOUNDATION` in the content catalog, default stone bricks; the demo explicitly selects minecraft:stone_bricks. Foundation cells participate in structural and total construction budgets, saved snapshots and debug/worldgen placement. Roads, access and authored content are preserved. Older blueprints/frozen profiles without the height field use 2; existing resolved settlements are not retrofitted. Install matching JAR and ZIP before generating new settlements.
+
+## Floors assembled from rooms
+
+A composition may add optional `floorLayout` metadata. The existing bounded joint assembler selects/rotates connected room modules inside an anchored floor mask, reconciles their declared shared walls, and validates coverage and circulation after nested furnishing. Without this field, legacy entire-floor compositions are unchanged. The zoning demo cottage now consists of zoning:room_main and zoning:room_side plus the nested home desk, with one shared wall. Its 7x7 footprint and five-block height still fit every existing demo parcel size; two-storey workshops retain their previous composition.
+
+```json
+"floorLayout": {
+  "height": 5,
+  "footprint": ["#######", "#######", "#######", "#######", "#######", "#######", "#######"],
+  "rooms": ["example:main", "example:side"],
+  "fillers": [],
+  "rotations": [0, 1, 2, 3],
+  "entrance": "entry",
+  "ports": [{"id": "entry", "type": "example:entrance", "at": [3, 1, 0], "face": "north", "width": 1, "height": 2, "walkable": true}],
+  "minimumCounts": {"example:main": 1, "example:side": 1},
+  "maximumCounts": {"example:main": 1, "example:side": 1}
+}
+```
+
+`#` belongs to the floor and `.` is an intentional void. Rows must have equal width, maximum32x32, with one connected mask of at most1024 columns; floor height3..16. Every selected structural room has that height and stays inside the mask at the same elevation. Full mask coverage is required. Existing composition roots/attachments choose from the declared room/filler pools; all pool ids must exist. Fillers are explicitly authored corridor/service/unused-space modules, not automatically invented blocks. Room/filler pools are distinct, combined maximum128 ids. Optional per-id minimum/maximum counts are0..16; structural assembly retains its maximum16 modules/512 placement attempts. Room rotations are relative to the floor's orientation; omission allows all four.
+
+Up to32 fixed ports reserve exact type, position, face and dimensions. The floor entrance must be a walkable horizontal port; its plane is aligned to the prepared building entrance and rotates the entire floor mask. Horizontal fixed ports must face the outside of the mask, including concave edges; up/down ports sit at the floor boundary. A room overlapping a fixed port reservation must provide that exact port before it can be placed. Openings cannot straddle room boundaries unless every occupying module provides the matching whole port. Vertical ports are reserved for later floor connections and are not filled by another same-floor room. Non-walkable ports may represent windows; their author-defined type must match a module port. External module openings must face the mask exterior. Shapes and facade coordinates are data, not inferred from materials.
+
+Final validation checks module clearance/support/routes and two-block walking/climbing connectivity from the entrance into every ordinary room, through declared doors, and to walkable fixed ports. Required upper stair openings must be clear and reachable from below; lower ports must be reachable at their opening. Nested furniture may not sever those paths. Optional capped joints do not become phantom circulation requirements. No solution or exhausted search rejects with a reason through the existing planning pipeline; no arbitrary prefab replacement or unlimited filler is introduced.
+
+The solver places rooms through their compatible typed joints; it does not search arbitrary disconnected room coordinates. Shared interfaces use ModuleBoundary rules, while conservative rectangular room-envelope overlap remains in force. The floor can be concave or contain holes; the building-slot and parcel outer reservations remain rectangular. Repeated floor sections, A-to-B transitions and arbitrary parcel shapes are later stages. Exact accepted voxels persist via existing placement snapshots and debug undo; old resolved cities are not rebuilt. Install matching new JAR and demo ZIP for new generation.
+
+Frozen final-terrain recipes now use format2 with interned module catalogs to avoid repeating the entire library for each composition. Format1 remains readable. Stored JSON remains limited to512Ki characters/64 parts; expanded recipe work is limited to2Mi characters,16 distinct module tables and1024 references, with the same checks on save/reload. Invalid references reject before placement. Recipe data stays self-contained and does not depend on a later datapack reload.

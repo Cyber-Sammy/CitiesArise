@@ -13,12 +13,15 @@ public final class CompositionAssembler {
     private record State(List<PlacedModule> modules, Map<Vec,PlacedCell> cells, List<OpenJoint> open,
             List<Bounds> bounds, List<String> connections, List<String> caps, List<String> damage, List<BoundaryAssembly.Join> joins) { }
     private int attempts;
+    private FloorLayoutFrame floor;
     private String failure="No compatible composition within slot bounds and search budget";
     public String failure() { return failure; }
 
     public Optional<ResolvedComposition> assemble(CompositionSettings settings, int width, int depth,
             Vec entrance, Face entranceFace, long seed) {
         attempts=0;
+        floor=settings.floorLayout()==null?null:new FloorLayoutFrame(settings.floorLayout(),entrance,entranceFace);
+        if(floor!=null && !floor.fitsSlot(width,depth,settings.maximumHeight())) {failure="Floor footprint does not fit building slot";return Optional.empty();}
         for(String id:ordered(settings.roots(),seed)) {
             ModuleDefinition module=settings.modules().get(id);
             if(!settings.permits(module)) continue;
@@ -46,6 +49,7 @@ public final class CompositionAssembler {
         if(attempts>=MAX_ATTEMPTS) return Optional.empty();
         if(state.open.isEmpty()) {
             if(state.modules.size()<settings.minimumModules()) return Optional.empty();
+            if(floor!=null) {var error=floor.coverage(state.modules,settings.modules());if(error.isPresent()){failure=error.get();return Optional.empty();}}
             var nested=new NestedCompositionResolver(settings.modules(),settings.materialRules(),settings::permits,
                     settings.airMaterial(),settings.damageSeverity(),seed);
             var result=nested.resolve(new ResolvedComposition(state.modules,List.copyOf(state.cells.values()),state.connections,state.caps,state.damage));
@@ -56,6 +60,10 @@ public final class CompositionAssembler {
                     var error=join.validate(finalCells,settings.materialRules(),settings.airMaterial());
                     if(error.isPresent()) {failure=error.get();return Optional.empty();}
                 }
+            }
+            if(result.isPresent() && floor!=null) {
+                var error=floor.validate(result.orElseThrow(),settings,state.modules.size());
+                if(error.isPresent()) {failure=error.get();return Optional.empty();}
             }
             return result;
         }
@@ -106,6 +114,7 @@ public final class CompositionAssembler {
                 negotiated=proposal.orElseThrow();origin=negotiated.origin();
             }
         }
+        if(floor!=null && (!floor.permits(effective.base,origin,turn,state.modules) || !floor.preservesFixedPorts(effective.base,effective.joints,origin,turn))) {failure="Room violates floor footprint, count, rotation or fixed port reservation";return null;}
         Vec size=rotatedSize(effective.base.size(),turn);
         if(origin.x()<0 || origin.y()<0 || origin.z()<0 || origin.x()+size.x()>width
                 || origin.z()+size.z()>depth || origin.y()+size.y()>settings.maximumHeight()) return null;
@@ -147,6 +156,8 @@ public final class CompositionAssembler {
         for(Joint original:effective.joints) {
             Joint joint=translate(rotate(original,effective.base.size(),turn),origin);
             if(original.id().equals(usedJoint)) continue;
+            if(floor!=null && original.external() && !floor.facade(joint)) {failure="Exterior floor opening faces another room";return null;}
+            if(floor!=null && floor.terminal(joint))continue;
             if(!original.external()) {
                 var declaration=effective.base.boundaries().stream().filter(b->b.joint().equals(original.id())).findFirst();
                 var boundary=declaration.map(b->BoundaryAssembly.placed(effective.base,b,original,moduleOrigin,turn)).orElse(null);

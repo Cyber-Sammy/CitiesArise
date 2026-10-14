@@ -4,12 +4,17 @@ import java.util.*;
 
 public record CompositionSettings(Map<String,ModuleDefinition> modules, List<String> roots, List<String> attachments,
         String entranceJoint, Set<String> requiredTags, Set<String> forbiddenTags, Set<String> exceptions,
-        int minimumModules, int maximumModules, int maximumHeight, int damageSeverity, String airMaterial, MaterialRules materialRules) {
+        int minimumModules, int maximumModules, int maximumHeight, int damageSeverity, String airMaterial, MaterialRules materialRules, FloorLayout floorLayout) {
     public CompositionSettings(Map<String,ModuleDefinition> modules,List<String> roots,List<String> attachments,
             String entranceJoint,Set<String> requiredTags,Set<String> forbiddenTags,Set<String> exceptions,
             int minimumModules,int maximumModules,int maximumHeight,int damageSeverity,String airMaterial) {
         this(modules,roots,attachments,entranceJoint,requiredTags,forbiddenTags,exceptions,
                 minimumModules,maximumModules,maximumHeight,damageSeverity,airMaterial,MaterialRules.empty());
+    }
+    public CompositionSettings(Map<String,ModuleDefinition> modules,List<String> roots,List<String> attachments,
+            String entranceJoint,Set<String> requiredTags,Set<String> forbiddenTags,Set<String> exceptions,
+            int minimumModules,int maximumModules,int maximumHeight,int damageSeverity,String airMaterial,MaterialRules rules) {
+        this(modules,roots,attachments,entranceJoint,requiredTags,forbiddenTags,exceptions,minimumModules,maximumModules,maximumHeight,damageSeverity,airMaterial,rules,null);
     }
     public CompositionSettings {
         modules=Map.copyOf(modules); roots=List.copyOf(roots); attachments=List.copyOf(attachments);
@@ -19,6 +24,7 @@ public record CompositionSettings(Map<String,ModuleDefinition> modules, List<Str
         if(minimumModules<1 || maximumModules<minimumModules || maximumModules>16 || maximumHeight<1 || maximumHeight>128
                 || damageSeverity<0 || damageSeverity>100) throw new IllegalArgumentException("Invalid composition budgets");
         if(entranceJoint==null || entranceJoint.isBlank() || airMaterial==null || airMaterial.isBlank()) throw new IllegalArgumentException("Missing entrance or air material");
+        if(floorLayout!=null)floorLayout.validateModules(modules,roots,attachments);
         for(String id:roots) if(!modules.containsKey(id)) throw new IllegalArgumentException("Unknown root: "+id);
         for(String id:attachments) if(!modules.containsKey(id)) throw new IllegalArgumentException("Unknown attachment: "+id);
         for(String id:exceptions) if(!modules.containsKey(id)) throw new IllegalArgumentException("Unknown exception module: "+id);

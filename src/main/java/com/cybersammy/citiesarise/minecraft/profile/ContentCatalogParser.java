@@ -45,7 +45,7 @@ public final class ContentCatalogParser {
             JsonObject c=entry.getValue().getAsJsonObject();
             compositions.put(entry.getKey(),new CompositionSettings(modules,list(c,"roots"),list(c,"attachments"),string(c,"entranceJoint"),
                     strings(c,"requiredTags"),strings(c,"forbiddenTags"),strings(c,"exceptions"),integer(c,"minimumModules",1),integer(c,"maximumModules",8),
-                    integer(c,"maximumHeight",64),integer(c,"damageSeverity",0),text(c,"airMaterial","minecraft:air"),materialRules));
+                    integer(c,"maximumHeight",64),integer(c,"damageSeverity",0),text(c,"airMaterial","minecraft:air"),materialRules,c.has("floorLayout")?floorLayout(object(c,"floorLayout")):null));
         }
         Map<String,BuildingAsset> assets=new LinkedHashMap<>();
         for(var entry:object(json,"assets").entrySet()) {
@@ -256,6 +256,22 @@ public final class ContentCatalogParser {
         var states=cell.material().contains(":") ? List.of(cell.material()) : palettes.values().stream()
                 .filter(p -> p.containsKey(cell.material())).map(p -> p.get(cell.material())).distinct().toList();
         for(String state:states) resources.validateProviderData(state,cell.providerData());
+    }
+    private static FloorLayout floorLayout(JsonObject data) {
+        var rows=new ArrayList<String>();for(var row:array(data,"footprint")) {if(!row.isJsonPrimitive() || !row.getAsJsonPrimitive().isString())throw new IllegalArgumentException("Floor footprint row must be a string");rows.add(row.getAsString());}if(rows.isEmpty())throw new IllegalArgumentException("Empty floor footprint");
+        int width=rows.getFirst().length();if(width<1 || width>32 || rows.size()>32)throw new IllegalArgumentException("Floor footprint exceeds budget");var mask=new ArrayList<com.cybersammy.citiesarise.core.geometry.GridPoint>();
+        for(int z=0;z<rows.size();z++) {
+            if(rows.get(z).length()!=width)throw new IllegalArgumentException("Floor footprint rows differ in width");
+            for(int x=0;x<width;x++) {char c=rows.get(z).charAt(x);if(c=='#')mask.add(new com.cybersammy.citiesarise.core.geometry.GridPoint(x,z));else if(c!='.')throw new IllegalArgumentException("Unknown floor footprint marker");}
+        }
+        var ports=new ArrayList<FloorLayout.Port>();
+        for(var item:array(data,"ports")) {var p=item.getAsJsonObject();ports.add(new FloorLayout.Port(string(p,"id"),string(p,"type"),vec(p.getAsJsonArray("at")),
+                Face.valueOf(string(p,"face").toUpperCase(Locale.ROOT)),integer(p,"width",1),integer(p,"height",1),bool(p,"walkable",true)));}
+        var rotations=new ArrayList<Integer>();for(var r:array(data,"rotations"))rotations.add(r.getAsBigDecimal().intValueExact());
+        if(rotations.isEmpty())rotations.addAll(List.of(0,1,2,3));
+        var minima=new LinkedHashMap<String,Integer>();object(data,"minimumCounts").entrySet().forEach(e->minima.put(e.getKey(),integer(object(data,"minimumCounts"),e.getKey(),0)));
+        var maxima=new LinkedHashMap<String,Integer>();object(data,"maximumCounts").entrySet().forEach(e->maxima.put(e.getKey(),integer(object(data,"maximumCounts"),e.getKey(),16)));
+        return new FloorLayout(new Vec(width,integer(data,"height",5),rows.size()),mask,list(data,"rooms"),list(data,"fillers"),rotations,ports,string(data,"entrance"),minima,maxima);
     }
     private static List<ModuleBoundary> boundaries(JsonObject data) {
         var result=new ArrayList<ModuleBoundary>();

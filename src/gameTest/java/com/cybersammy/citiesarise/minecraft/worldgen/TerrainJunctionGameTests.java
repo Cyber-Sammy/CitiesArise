@@ -147,6 +147,15 @@ public final class TerrainJunctionGameTests {
         var recipe=new FinalTerrainPlanningRecipe(profile,new GridBounds(new GridPoint(0,0),profile.surveySize()),-7420792274355308750L,"test:frozen-city");
         var restored=FinalTerrainPlanningRecipe.load(recipe.save());
         helper.assertTrue(restored.equals(recipe),"Frozen profile/catalog or exact long seed changed");
+        var invalid=recipe.save();var invalidChunks=invalid.getList("Json",8);var invalidBody=new StringBuilder();
+        for(int i=0;i<invalidChunks.size();i++)invalidBody.append(invalidChunks.getString(i));
+        var invalidTree=com.google.gson.JsonParser.parseString(invalidBody.toString());
+        helper.assertTrue(corruptModuleReference(invalidTree),"Frozen recipe did not intern module catalogs");
+        var invalidText=invalidTree.toString();var invalidParts=new net.minecraft.nbt.ListTag();
+        for(int i=0;i<invalidText.length();i+=8192)invalidParts.add(net.minecraft.nbt.StringTag.valueOf(invalidText.substring(i,Math.min(i+8192,invalidText.length()))));
+        invalid.put("Json",invalidParts);boolean rejected=false;
+        try {FinalTerrainPlanningRecipe.load(invalid);}catch(IllegalArgumentException expected){rejected=true;}
+        helper.assertTrue(rejected,"Invalid module table reference accepted");
         // Simulate a pre-boundary frozen recipe: older records omit the newly optional module field.
         var legacy=recipe.save();var chunks=legacy.getList("Json",8);var body=new StringBuilder();
         for(int i=0;i<chunks.size();i++)body.append(chunks.getString(i));
@@ -155,6 +164,7 @@ public final class TerrainJunctionGameTests {
         for(int i=0;i<encoded.length();i+=8192)parts.add(net.minecraft.nbt.StringTag.valueOf(encoded.substring(i,Math.min(i+8192,encoded.length()))));
         legacy.put("Json",parts);var oldRecipe=FinalTerrainPlanningRecipe.load(legacy);
         helper.assertTrue(oldRecipe.profile().structuralSupports().maximumShallowFoundationHeight()==2,"Older frozen foundation policy changed");
+        helper.assertTrue(oldRecipe.profile().suburbPlanningSettings().buildings().compositions().values().stream().allMatch(c->c.floorLayout()==null),"Older floor recipes did not retain legacy assembly");
         helper.assertTrue(oldRecipe.profile().suburbPlanningSettings().buildings().compositions().values().stream()
                 .allMatch(c->c.modules().values().stream().allMatch(m->m.boundaries().isEmpty())),"Older module recipes did not default to legacy boundaries");
         helper.succeed();
@@ -176,7 +186,7 @@ public final class TerrainJunctionGameTests {
     }
     private static void removeBoundaryFields(com.google.gson.JsonElement tree) {
         if(tree.isJsonObject()) {
-            tree.getAsJsonObject().remove("boundaries");tree.getAsJsonObject().remove("maximumShallowFoundationHeight");tree.getAsJsonObject().entrySet().forEach(e->removeBoundaryFields(e.getValue()));
+            tree.getAsJsonObject().remove("floorLayout");tree.getAsJsonObject().remove("boundaries");tree.getAsJsonObject().remove("maximumShallowFoundationHeight");tree.getAsJsonObject().entrySet().forEach(e->removeBoundaryFields(e.getValue()));
         } else if(tree.isJsonArray())tree.getAsJsonArray().forEach(TerrainJunctionGameTests::removeBoundaryFields);
     }
 
@@ -201,6 +211,14 @@ public final class TerrainJunctionGameTests {
         var loaded=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();place(level,loaded);
         for(int dx=0;dx<4;dx++)for(int z=0;z<4;z++)for(int y=65;y<70;y++)helper.assertTrue(level.getBlockState(new BlockPos(x+dx,y,z)).is(Blocks.POLISHED_ANDESITE),"Foundation gap or wrong palette");
         helper.succeed();
+    }
+
+    private static boolean corruptModuleReference(com.google.gson.JsonElement tree) {
+        if(tree.isJsonObject()) {
+            if(tree.getAsJsonObject().has("moduleTable")){tree.getAsJsonObject().addProperty("moduleTable",999);return true;}
+            for(var e:tree.getAsJsonObject().entrySet())if(corruptModuleReference(e.getValue()))return true;
+        } else if(tree.isJsonArray())for(var e:tree.getAsJsonArray())if(corruptModuleReference(e))return true;
+        return false;
     }
 
 }

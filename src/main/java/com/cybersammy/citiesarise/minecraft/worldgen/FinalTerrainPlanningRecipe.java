@@ -34,18 +34,59 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
         new com.cybersammy.citiesarise.core.model.PlanElementId(settlementId);
     }
     CompoundTag save() {
-        var tag=new CompoundTag();tag.putInt("Version",1);var list=new ListTag();String text=JSON.toJson(this);
+        var tree=JSON.toJsonTree(this);
+        if(tree.toString().length()>2097152)throw new IllegalArgumentException("Expanded final terrain recipe too large");
+        var tables=new com.google.gson.JsonArray();var indices=new java.util.HashMap<com.google.gson.JsonElement,Integer>();
+        intern(tree,tables,indices,0);
+        var packed=new com.google.gson.JsonObject();packed.add("recipe",tree);packed.add("moduleTables",tables);
+        var tag=new CompoundTag();tag.putInt("Version",2);var list=new ListTag();String text=packed.toString();
         if(text.length()>524288) throw new IllegalArgumentException("Final terrain recipe too large");
+        expand(tree.deepCopy(),tables,new long[]{0,text.length()},0); // Save and reload enforce identical expansion budgets.
         for(int i=0;i<text.length();i+=8192) list.add(StringTag.valueOf(text.substring(i,Math.min(i+8192,text.length()))));
         tag.put("Json",list);return tag;
     }
+    private static boolean composition(com.google.gson.JsonObject value) {return value.has("roots") && value.get("roots").isJsonArray() && value.has("attachments") && value.get("attachments").isJsonArray()
+            && value.has("entranceJoint") && value.get("entranceJoint").isJsonPrimitive() && value.getAsJsonPrimitive("entranceJoint").isString();}
+    private static void intern(com.google.gson.JsonElement tree,com.google.gson.JsonArray tables,
+            java.util.Map<com.google.gson.JsonElement,Integer> indices,int depth) {
+        if(depth>128)throw new IllegalArgumentException("Final recipe nesting limit");
+        if(tree.isJsonObject()) {
+            var object=tree.getAsJsonObject();
+            if(composition(object) && object.has("modules")) {
+                var modules=object.remove("modules");Integer index=indices.get(modules);
+                if(index==null) {if(tables.size()>=16)throw new IllegalArgumentException("Too many final recipe module tables");index=tables.size();indices.put(modules,index);tables.add(modules);}
+                object.addProperty("moduleTable",index);
+            }
+            object.entrySet().forEach(e->intern(e.getValue(),tables,indices,depth+1));
+        } else if(tree.isJsonArray())tree.getAsJsonArray().forEach(e->intern(e,tables,indices,depth+1));
+    }
+    private static void expand(com.google.gson.JsonElement tree,com.google.gson.JsonArray tables,long[] budget,int depth) {
+        if(depth>128)throw new IllegalArgumentException("Final recipe nesting limit");
+        if(tree.isJsonObject()) {
+            var object=tree.getAsJsonObject();
+            if(composition(object)) {
+                if(!object.has("moduleTable") || object.has("modules"))throw new IllegalArgumentException("Invalid final recipe module reference");
+                int index=object.remove("moduleTable").getAsBigDecimal().intValueExact();
+                if(index<0 || index>=tables.size() || !tables.get(index).isJsonObject())throw new IllegalArgumentException("Unknown final recipe module table");
+                if(++budget[0]>1024)throw new IllegalArgumentException("Final recipe reference limit");
+                budget[1]+=tables.get(index).toString().length();if(budget[1]>2097152)throw new IllegalArgumentException("Expanded final terrain recipe too large");
+                object.add("modules",tables.get(index));
+            }
+            object.entrySet().stream().filter(e->!e.getKey().equals("modules")).forEach(e->expand(e.getValue(),tables,budget,depth+1));
+        } else if(tree.isJsonArray())tree.getAsJsonArray().forEach(e->expand(e,tables,budget,depth+1));
+    }
     static FinalTerrainPlanningRecipe load(CompoundTag tag) {
-        if(tag.getInt("Version")!=1) throw new IllegalArgumentException("Unknown final terrain recipe");
-        var parts=tag.getList("Json",Tag.TAG_STRING);if(parts.size()>64) throw new IllegalArgumentException("Final terrain recipe too large");
+        int version=tag.getInt("Version");if(version!=1 && version!=2) throw new IllegalArgumentException("Unknown final terrain recipe");
+        var parts=tag.getList("Json",Tag.TAG_STRING);if(parts.isEmpty() || parts.size()>64) throw new IllegalArgumentException("Final terrain recipe too large");
         var text=new StringBuilder();for(var part:parts) {
             if(part.getAsString().length()>8192) throw new IllegalArgumentException("Final terrain recipe part too large");
             text.append(part.getAsString());
         }
-        return JSON.fromJson(text.toString(),FinalTerrainPlanningRecipe.class);
+        if(version==1)return JSON.fromJson(text.toString(),FinalTerrainPlanningRecipe.class);
+        var packed=com.google.gson.JsonParser.parseString(text.toString()).getAsJsonObject();
+        if(!packed.has("recipe") || !packed.has("moduleTables"))throw new IllegalArgumentException("Incomplete final terrain recipe");
+        var tables=packed.getAsJsonArray("moduleTables");if(tables.size()>16)throw new IllegalArgumentException("Too many final recipe module tables");
+        var tree=packed.get("recipe");expand(tree,tables,new long[]{0,text.length()},0);
+        return JSON.fromJson(tree,FinalTerrainPlanningRecipe.class);
     }
 }

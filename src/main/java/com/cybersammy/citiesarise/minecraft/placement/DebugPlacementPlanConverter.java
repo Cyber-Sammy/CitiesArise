@@ -51,7 +51,7 @@ public final class DebugPlacementPlanConverter {
     public DebugPlacementPlan convert(SettlementPlan plan,ResolvedSettlementContent content) {
         content.validateAgainst(plan);
         Objects.requireNonNull(plan, "plan");
-        return ParcelBoundaryPlacement.add(withSurfaceTemplates(withBridges(convert(plan, content, Map.of()), plan,content),plan,content),content.boundaries());
+        return ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(convert(plan, content, Map.of()), plan,content),plan,content),content),content.boundaries());
     }
 
     private DebugPlacementPlan convert(
@@ -69,7 +69,9 @@ public final class DebugPlacementPlanConverter {
             String material=cell.material().contains(":") ? cell.material() : prop.materials().get(cell.material());
             if(material==null) throw new IllegalArgumentException("Unknown prop material: "+cell.material());
             addOperation(new DebugBlockPlacementOperation(new GridPoint(point.x(),point.z()),point.y(),
-                    DebugPlacementRole.CONTENT_BLOCK,prop.source(),OptionalInt.of(prop.platformY()),material,cell.rotation(),"",cell.providerData()),operationsByPosition);
+                    content.parcels().containsKey(prop.source()) && !content.parcels().get(prop.source()).outdoor().layout().isEmpty()
+                            ?DebugPlacementRole.PARCEL_PROP:DebugPlacementRole.CONTENT_BLOCK,
+                    prop.source(),OptionalInt.of(prop.platformY()),material,cell.rotation(),"",cell.providerData()),operationsByPosition);
         }
 
         Map<PlanElementId, Integer> platformElevations = platformElevations(plan);
@@ -96,8 +98,8 @@ public final class DebugPlacementPlanConverter {
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
-        return ParcelBoundaryPlacement.add(withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
-                .map(operation -> withMaterial(operation,content)).toList()), plan,content),plan,content),content.boundaries());
+        return ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
+                .map(operation -> withMaterial(operation,content)).toList()), plan,content),plan,content),content),content.boundaries());
     }
 
     private DebugPlacementPlan withBridges(DebugPlacementPlan placement, SettlementPlan plan,ResolvedSettlementContent content) {

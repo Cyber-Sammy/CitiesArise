@@ -1128,3 +1128,27 @@ When placing a room, the assembler checks declared facing boundaries against eve
 Every overlapped voxel must belong to a negotiated layer for **each** overlapped module. Undeclared, incompatible, partial or misaligned intersections reject the candidate. Shared layers preserve aperture passability, facade declarations and provider payloads. At an intersection of several planes, the highest incident declared boundary priority owns the cell; equal priorities use the stable module owner id. This gives one consistent owner at the corridor/partition junction. Explicitly retained walls still occupy separate layers and need a floor layout and connector offsets that accommodate those layers. The assembler does not silently resize an authored footprint or infer shareable walls from matching block materials.
 
 The demonstration compresses the rectangle to11x7 and the Gamma house to11x10 by sharing the previously duplicated wall rows. The number of rooms, room interiors, floor counts, stairs and parcel sizes are retained. New side contacts use priority10 for living rooms and20 for workrooms; each room still reaches the corridor. The two upper rectangular floors continue to reuse one solved layout. Only newly generated buildings use the updated recipes; stored resolved buildings retain their old geometry.
+
+
+## Outdoor layout variants
+
+Add optional `outdoorLayouts` to a `parcelRules` binding. All referenced prop rules must also occur in that binding's `props`; their normal front/back/side/entrance anchors continue to apply.
+
+```json
+"outdoorLayouts": [{
+  "id": "example:garden", "weight": 3,
+  "zones": [
+    {"id":"decor", "kind":"CONTENT", "minX":0, "minZ":0, "maxX":100, "maxZ":100,
+     "props":["zoning:home_planter", "zoning:garden_bench"]},
+    {"id":"walk", "kind":"PATH", "minX":40, "minZ":0, "maxX":60, "maxZ":25,
+     "material":"minecraft:dirt_path"},
+    {"id":"passage", "kind":"FREE", "minX":0, "minZ":0, "maxX":8, "maxZ":100}
+  ]
+}]
+```
+
+Coordinates are integer percentages in the parcel's entrance-oriented frame: local +Z runs from front to rear, +X from left to right. Both endpoints scale down with integer floor; upper bounds are exclusive. For a20-block width,40..60 selects columns8..11. A narrow zone can disappear on a small plot. Define at most8 unique layouts, weights1..1000, and at most16 unique zones each. CONTENT zones cannot overlap each other. FREE and PATH intentionally mask CONTENT. Overlapping PATH zones must agree on material. PATH requires a validated walking material; other zone kinds must omit it. Free/path space is reserved before every prop rule. A prop's entire rotated footprint must fit an allowed zone, remain on uniform prepared ground and respect existing circulation and clearance; small/narrow yards can omit optional furniture or sheds.
+
+Only flat path components connected to an existing building approach are placed. Protected free gate/access strips may connect paths, while their existing surfaces remain unchanged. Fences, building slots, roads, bridges, disconnected strips, missing prepared ground and height steps are excluded. This feature does not terraform or make a new staircase/bridge. A FREE zone reserves space against generated decoration; use PATH when a paved walking surface and explicit two-block headroom are needed.
+
+The seed, parcel identity and binding identity choose a variant once. Content/debug export records its id, occupied areas, free-column count and exact path cells. Placement snapshots preserve exact geometry and provider inventories across reload and chunk order; no live datapack lookup chooses a new variant for an already resolved piece. Old bindings with no outdoorLayouts keep legacy props. Missing access suppresses optional zoned decoration. Maximum4096 columns per authored yard and combined60000 free/path cells per settlement; existing prop/module/search/structural and persistence limits are retained. Prop dictionaries are shared during parsing so additional prop rules do not consume one frozen module table each.

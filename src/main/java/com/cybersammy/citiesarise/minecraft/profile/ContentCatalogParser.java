@@ -165,6 +165,12 @@ public final class ContentCatalogParser {
                     integer(p,"maxCount",1),integer(p,"chance",100),integer(p,"clearance",0)));
         }
         if(props.size()>16) throw new IllegalArgumentException("Too many prop rules");
+        // One shared reachable prop dictionary keeps richer catalogs within the existing frozen-table budget.
+        var propDefinitions=new LinkedHashMap<String,ModuleDefinition>();
+        props.forEach(p -> propDefinitions.putAll(p.definitions()));
+        var sharedPropDefinitions=Map.copyOf(propDefinitions);
+        props=props.stream().map(p -> new PropRule(p.id(),p.anchor(),p.pool(),p.materials(),p.requiredTags(),p.forbiddenTags(),
+                p.inset(),p.spacing(),p.severity(),p.airMaterial(),sharedPropDefinitions,p.materialRules(),p.maxCount(),p.chance(),p.clearance())).toList();
         Map<String,SurfaceTemplate> templates=parseSurfaceTemplates(json,false);
         List<ParcelContentRule> parcelRules=new ArrayList<>();
         for(var element:ZoningJsonParser.array(json,"parcelRules",64)) {
@@ -173,7 +179,7 @@ public final class ContentCatalogParser {
             for(var material:localSurfaces.values()) { resources.validateMaterial(material); resources.validateWalkingSurface(material); }
             parcelRules.add(new ParcelContentRule(string(rule,"id"),
                     rule.has("match")?ZoningJsonParser.metadata(ZoningJsonParser.object(rule.get("match"))):com.cybersammy.citiesarise.core.model.MetadataSelector.ANY,
-                    localSurfaces,parseSurfaceTemplates(rule,true),parcelPropIds(rule)));
+                    localSurfaces,parseSurfaceTemplates(rule,true),parcelPropIds(rule),outdoorLayouts(rule)));
         }
         if(parcelRules.stream().map(ParcelContentRule::id).distinct().count()!=parcelRules.size()) throw new IllegalArgumentException("Duplicate parcel binding ids");
         for(var rule:parcelRules) for(String id:rule.props()) {
@@ -198,6 +204,25 @@ public final class ContentCatalogParser {
             ids.add(item.getAsString());
         }
         return List.copyOf(ids);
+    }
+    private List<ParcelOutdoorLayout> outdoorLayouts(JsonObject rule) {
+        try { return parseOutdoorLayouts(rule); }
+        catch(ArithmeticException error) { throw new IllegalArgumentException("Outdoor layout coordinates and weights must be integers",error); }
+    }
+    private List<ParcelOutdoorLayout> parseOutdoorLayouts(JsonObject rule) {
+        var layouts=new ArrayList<ParcelOutdoorLayout>();
+        for(var item:ZoningJsonParser.array(rule,"outdoorLayouts",8)) {
+            var layout=ZoningJsonParser.object(item);var zones=new ArrayList<ParcelOutdoorLayout.Zone>();
+            for(var element:ZoningJsonParser.array(layout,"zones",16)) {
+                var zone=ZoningJsonParser.object(element);
+                String material=text(zone,"material","");
+                if(!material.isEmpty()) {resources.validateMaterial(material);resources.validateWalkingSurface(material);}
+                zones.add(new ParcelOutdoorLayout.Zone(string(zone,"id"),ParcelOutdoorLayout.Kind.valueOf(string(zone,"kind")),
+                        integer(zone,"minX",0),integer(zone,"minZ",0),integer(zone,"maxX",100),integer(zone,"maxZ",100),material,parcelPropIds(zone)));
+            }
+            layouts.add(new ParcelOutdoorLayout(string(layout,"id"),integer(layout,"weight",1),zones));
+        }
+        return List.copyOf(layouts);
     }
     private Map<String,SurfaceTemplate> parseSurfaceTemplates(JsonObject json,boolean parcel) {
         long payloadSize=0;

@@ -81,6 +81,8 @@ final class SurfacePropPlanner {
                     for(int z=0;z<size.z();z++) for(int x=0;x<size.x();x++) {
                         GridPoint point=new GridPoint(origin.x()+x,origin.z()+z); footprint.add(point);
                         if(occupied.contains(point) || !height.equals(heights.get(point)) || (anchor.bounds!=null && !anchor.bounds.contains(point))) fits=false;
+                        var binding=parcels.get(anchor.source);
+                        if(binding!=null && !binding.outdoor().permits(rule.id(),point)) fits=false;
                         if(anchor.layout!=null) {
                             if(!anchor.layout.permits(anchor.layout.local(point),rule)) fits=false;
                             for(int dz=-rule.clearance();dz<=rule.clearance();dz++) for(int dx=-rule.clearance();dx<=rule.clearance();dx++)
@@ -97,7 +99,12 @@ final class SurfacePropPlanner {
                     var resolved=turn==0?composition.get():ParcelPropLayout.rotate(composition.get(),module.size(),turn,rule.definitions());
                     result.add(new ResolvedProp(rule.id(),anchor.source,new Vec(origin.x(),1,origin.z()),height,resolved,rule.materials()));
                     accepted.merge(anchor.source,1,Integer::sum);
-                    occupied.addAll(footprint); break;
+                    occupied.addAll(footprint);
+                    var binding=parcels.get(anchor.source);
+                    if(binding!=null && !binding.outdoor().layout().isEmpty()) for(var point:footprint)
+                        for(int dz=-rule.clearance();dz<=rule.clearance();dz++) for(int dx=-rule.clearance();dx<=rule.clearance();dx++)
+                            occupied.add(new GridPoint(point.x()+dx,point.z()+dz));
+                    break;
                 }
             }
         }

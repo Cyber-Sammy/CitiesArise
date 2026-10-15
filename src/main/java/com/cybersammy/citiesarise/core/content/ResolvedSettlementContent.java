@@ -42,6 +42,14 @@ public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buil
         plan.roadGraph().bridges().forEach(b -> ids.add(b.id()));
         var parcelIds=plan.parcels().stream().map(Parcel::id).collect(java.util.stream.Collectors.toSet());
         if(!parcelIds.containsAll(parcels.keySet())) throw new IllegalArgumentException("Unknown parcel content source");
+        for(var parcel:plan.parcels()) {
+            var local=parcels.get(parcel.id());if(local==null) continue;
+            if(local.outdoor().areas().stream().anyMatch(a -> !parcel.bounds().contains(a.bounds().origin())
+                    || !parcel.bounds().contains(new com.cybersammy.citiesarise.core.geometry.GridPoint(a.bounds().maxXExclusive()-1,a.bounds().maxZExclusive()-1)))
+                    || local.outdoor().free().stream().anyMatch(p -> !parcel.bounds().contains(p))
+                    || local.outdoor().paths().stream().anyMatch(p -> !parcel.bounds().contains(p.point())))
+                throw new IllegalArgumentException("Outdoor layout exceeds parcel bounds");
+        }
         for(var edge:boundaries.edges()) if(!parcelIds.containsAll(edge.owners())) throw new IllegalArgumentException("Unknown fence owner");
         for(var cell:boundaries.fences()) if(!parcelIds.contains(cell.source())) throw new IllegalArgumentException("Unknown fence source");
         for(var cell:boundaries.alleys()) if(!plan.id().equals(cell.source())) throw new IllegalArgumentException("Unknown alley source");

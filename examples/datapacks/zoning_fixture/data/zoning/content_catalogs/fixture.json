@@ -4283,6 +4283,4913 @@
           "weight": 100
         }
       ]
+    },
+    "variety:lounge": {
+      "size": [
+        2,
+        1,
+        1
+      ],
+      "tags": [
+        "zoning:interior",
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            0,
+            0
+          ],
+          "material": "minecraft:oak_stairs[facing=south]"
+        },
+        {
+          "from": [
+            1,
+            0,
+            0
+          ],
+          "to": [
+            1,
+            0,
+            0
+          ],
+          "material": "minecraft:bookshelf"
+        }
+      ]
+    },
+    "variety:left_living": {
+      "size": [
+        5,
+        5,
+        4
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            4,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            4,
+            3,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            4,
+            1,
+            1
+          ],
+          "to": [
+            4,
+            3,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            4,
+            1,
+            1
+          ],
+          "to": [
+            4,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            2,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "glass"
+        }
+      ],
+      "joints": [
+        {
+          "id": "corridor",
+          "type": "variety:left_in",
+          "at": [
+            5,
+            1,
+            1
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:left_out"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "window",
+          "type": "variety:window",
+          "at": [
+            0,
+            2,
+            1
+          ],
+          "face": "west",
+          "accepts": [],
+          "external": true,
+          "height": 1
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "corridor_to_room",
+            "from": [
+              3,
+              1,
+              1
+            ],
+            "to": [
+              1,
+              1,
+              2
+            ],
+            "bodyHeight": 2
+          }
+        ],
+        "mounts": [
+          {
+            "id": "furnishing",
+            "at": [
+              1,
+              1,
+              1
+            ],
+            "size": [
+              2,
+              1,
+              1
+            ],
+            "pool": [
+              "variety:lounge"
+            ],
+            "requiredTags": [
+              "zoning:interior"
+            ]
+          }
+        ]
+      },
+      "boundaries": [
+        {
+          "joint": "corridor",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            4,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "corridor",
+            "window"
+          ],
+          "addedJoints": [
+            {
+              "id": "corridor",
+              "type": "variety:left_in",
+              "at": [
+                5,
+                1,
+                1
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:left_out"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "window",
+              "type": "variety:window",
+              "at": [
+                0,
+                2,
+                1
+              ],
+              "face": "west",
+              "accepts": [],
+              "external": true,
+              "height": 1
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                4,
+                1,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                4,
+                1,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                2,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                2,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "glass"
+            }
+          ],
+          "contract": {
+            "routes": [
+              {
+                "id": "corridor_to_room",
+                "from": [
+                  3,
+                  1,
+                  1
+                ],
+                "to": [
+                  1,
+                  1,
+                  2
+                ],
+                "bodyHeight": 2
+              }
+            ],
+            "mounts": [
+              {
+                "id": "furnishing",
+                "at": [
+                  1,
+                  1,
+                  1
+                ],
+                "size": [
+                  2,
+                  1,
+                  1
+                ],
+                "pool": [
+                  "variety:lounge"
+                ],
+                "requiredTags": [
+                  "zoning:interior"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "corridor",
+            "window"
+          ],
+          "addedJoints": [
+            {
+              "id": "corridor",
+              "type": "variety:left_in",
+              "at": [
+                5,
+                1,
+                2
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:left_out"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "window",
+              "type": "variety:window",
+              "at": [
+                0,
+                2,
+                2
+              ],
+              "face": "west",
+              "accepts": [],
+              "external": true,
+              "height": 1
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                4,
+                1,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                4,
+                1,
+                2
+              ],
+              "to": [
+                4,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                2,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                2,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "glass"
+            }
+          ],
+          "contract": {
+            "routes": [
+              {
+                "id": "corridor_to_room",
+                "from": [
+                  3,
+                  1,
+                  2
+                ],
+                "to": [
+                  1,
+                  1,
+                  2
+                ],
+                "bodyHeight": 2
+              }
+            ],
+            "mounts": [
+              {
+                "id": "furnishing",
+                "at": [
+                  1,
+                  1,
+                  1
+                ],
+                "size": [
+                  2,
+                  1,
+                  1
+                ],
+                "pool": [
+                  "variety:lounge"
+                ],
+                "requiredTags": [
+                  "zoning:interior"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "variety:left_work": {
+      "size": [
+        5,
+        5,
+        4
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            4,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            4,
+            3,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            4,
+            1,
+            1
+          ],
+          "to": [
+            4,
+            3,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            4,
+            1,
+            1
+          ],
+          "to": [
+            4,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            2,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "glass"
+        }
+      ],
+      "joints": [
+        {
+          "id": "corridor",
+          "type": "variety:left_in",
+          "at": [
+            5,
+            1,
+            1
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:left_out"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "window",
+          "type": "variety:window",
+          "at": [
+            0,
+            2,
+            1
+          ],
+          "face": "west",
+          "accepts": [],
+          "external": true,
+          "height": 1
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "corridor_to_room",
+            "from": [
+              3,
+              1,
+              1
+            ],
+            "to": [
+              1,
+              1,
+              2
+            ],
+            "bodyHeight": 2
+          }
+        ],
+        "mounts": [
+          {
+            "id": "furnishing",
+            "at": [
+              1,
+              1,
+              1
+            ],
+            "size": [
+              2,
+              1,
+              1
+            ],
+            "pool": [
+              "zoning:desk"
+            ],
+            "requiredTags": [
+              "zoning:interior"
+            ]
+          }
+        ]
+      },
+      "boundaries": [
+        {
+          "joint": "corridor",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            4,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "corridor",
+            "window"
+          ],
+          "addedJoints": [
+            {
+              "id": "corridor",
+              "type": "variety:left_in",
+              "at": [
+                5,
+                1,
+                1
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:left_out"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "window",
+              "type": "variety:window",
+              "at": [
+                0,
+                2,
+                1
+              ],
+              "face": "west",
+              "accepts": [],
+              "external": true,
+              "height": 1
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                4,
+                1,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                4,
+                1,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                2,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                2,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "glass"
+            }
+          ],
+          "contract": {
+            "routes": [
+              {
+                "id": "corridor_to_room",
+                "from": [
+                  3,
+                  1,
+                  1
+                ],
+                "to": [
+                  1,
+                  1,
+                  2
+                ],
+                "bodyHeight": 2
+              }
+            ],
+            "mounts": [
+              {
+                "id": "furnishing",
+                "at": [
+                  1,
+                  1,
+                  1
+                ],
+                "size": [
+                  2,
+                  1,
+                  1
+                ],
+                "pool": [
+                  "zoning:desk"
+                ],
+                "requiredTags": [
+                  "zoning:interior"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "corridor",
+            "window"
+          ],
+          "addedJoints": [
+            {
+              "id": "corridor",
+              "type": "variety:left_in",
+              "at": [
+                5,
+                1,
+                2
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:left_out"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "window",
+              "type": "variety:window",
+              "at": [
+                0,
+                2,
+                2
+              ],
+              "face": "west",
+              "accepts": [],
+              "external": true,
+              "height": 1
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                4,
+                1,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                4,
+                1,
+                2
+              ],
+              "to": [
+                4,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                2,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                2,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "glass"
+            }
+          ],
+          "contract": {
+            "routes": [
+              {
+                "id": "corridor_to_room",
+                "from": [
+                  3,
+                  1,
+                  2
+                ],
+                "to": [
+                  1,
+                  1,
+                  2
+                ],
+                "bodyHeight": 2
+              }
+            ],
+            "mounts": [
+              {
+                "id": "furnishing",
+                "at": [
+                  1,
+                  1,
+                  1
+                ],
+                "size": [
+                  2,
+                  1,
+                  1
+                ],
+                "pool": [
+                  "zoning:desk"
+                ],
+                "requiredTags": [
+                  "zoning:interior"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "variety:right_living": {
+      "size": [
+        5,
+        5,
+        4
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            4,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            4,
+            3,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            4,
+            1,
+            1
+          ],
+          "to": [
+            4,
+            3,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            4,
+            2,
+            1
+          ],
+          "to": [
+            4,
+            2,
+            1
+          ],
+          "material": "glass"
+        }
+      ],
+      "joints": [
+        {
+          "id": "corridor",
+          "type": "variety:right_in",
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:right_out"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "window",
+          "type": "variety:window",
+          "at": [
+            5,
+            2,
+            1
+          ],
+          "face": "east",
+          "accepts": [],
+          "external": true,
+          "height": 1
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "corridor_to_room",
+            "from": [
+              1,
+              1,
+              1
+            ],
+            "to": [
+              3,
+              1,
+              2
+            ],
+            "bodyHeight": 2
+          }
+        ],
+        "mounts": [
+          {
+            "id": "furnishing",
+            "at": [
+              2,
+              1,
+              1
+            ],
+            "size": [
+              2,
+              1,
+              1
+            ],
+            "pool": [
+              "variety:lounge"
+            ],
+            "requiredTags": [
+              "zoning:interior"
+            ]
+          }
+        ]
+      },
+      "boundaries": [
+        {
+          "joint": "corridor",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            4,
+            3
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "corridor",
+            "window"
+          ],
+          "addedJoints": [
+            {
+              "id": "corridor",
+              "type": "variety:right_in",
+              "at": [
+                0,
+                1,
+                1
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:right_out"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "window",
+              "type": "variety:window",
+              "at": [
+                5,
+                2,
+                1
+              ],
+              "face": "east",
+              "accepts": [],
+              "external": true,
+              "height": 1
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                4,
+                2,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                4,
+                2,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "glass"
+            }
+          ],
+          "contract": {
+            "routes": [
+              {
+                "id": "corridor_to_room",
+                "from": [
+                  1,
+                  1,
+                  1
+                ],
+                "to": [
+                  3,
+                  1,
+                  2
+                ],
+                "bodyHeight": 2
+              }
+            ],
+            "mounts": [
+              {
+                "id": "furnishing",
+                "at": [
+                  2,
+                  1,
+                  1
+                ],
+                "size": [
+                  2,
+                  1,
+                  1
+                ],
+                "pool": [
+                  "variety:lounge"
+                ],
+                "requiredTags": [
+                  "zoning:interior"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "corridor",
+            "window"
+          ],
+          "addedJoints": [
+            {
+              "id": "corridor",
+              "type": "variety:right_in",
+              "at": [
+                0,
+                1,
+                2
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:right_out"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "window",
+              "type": "variety:window",
+              "at": [
+                5,
+                2,
+                2
+              ],
+              "face": "east",
+              "accepts": [],
+              "external": true,
+              "height": 1
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                4,
+                2,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                4,
+                2,
+                2
+              ],
+              "to": [
+                4,
+                2,
+                2
+              ],
+              "material": "glass"
+            }
+          ],
+          "contract": {
+            "routes": [
+              {
+                "id": "corridor_to_room",
+                "from": [
+                  1,
+                  1,
+                  2
+                ],
+                "to": [
+                  3,
+                  1,
+                  2
+                ],
+                "bodyHeight": 2
+              }
+            ],
+            "mounts": [
+              {
+                "id": "furnishing",
+                "at": [
+                  2,
+                  1,
+                  1
+                ],
+                "size": [
+                  2,
+                  1,
+                  1
+                ],
+                "pool": [
+                  "variety:lounge"
+                ],
+                "requiredTags": [
+                  "zoning:interior"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "variety:right_work": {
+      "size": [
+        5,
+        5,
+        4
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            4,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            4,
+            3,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            4,
+            1,
+            1
+          ],
+          "to": [
+            4,
+            3,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            4,
+            2,
+            1
+          ],
+          "to": [
+            4,
+            2,
+            1
+          ],
+          "material": "glass"
+        }
+      ],
+      "joints": [
+        {
+          "id": "corridor",
+          "type": "variety:right_in",
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:right_out"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "window",
+          "type": "variety:window",
+          "at": [
+            5,
+            2,
+            1
+          ],
+          "face": "east",
+          "accepts": [],
+          "external": true,
+          "height": 1
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "corridor_to_room",
+            "from": [
+              1,
+              1,
+              1
+            ],
+            "to": [
+              3,
+              1,
+              2
+            ],
+            "bodyHeight": 2
+          }
+        ],
+        "mounts": [
+          {
+            "id": "furnishing",
+            "at": [
+              2,
+              1,
+              1
+            ],
+            "size": [
+              2,
+              1,
+              1
+            ],
+            "pool": [
+              "zoning:desk"
+            ],
+            "requiredTags": [
+              "zoning:interior"
+            ]
+          }
+        ]
+      },
+      "boundaries": [
+        {
+          "joint": "corridor",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            4,
+            3
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "corridor",
+            "window"
+          ],
+          "addedJoints": [
+            {
+              "id": "corridor",
+              "type": "variety:right_in",
+              "at": [
+                0,
+                1,
+                1
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:right_out"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "window",
+              "type": "variety:window",
+              "at": [
+                5,
+                2,
+                1
+              ],
+              "face": "east",
+              "accepts": [],
+              "external": true,
+              "height": 1
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                4,
+                2,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                4,
+                2,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "glass"
+            }
+          ],
+          "contract": {
+            "routes": [
+              {
+                "id": "corridor_to_room",
+                "from": [
+                  1,
+                  1,
+                  1
+                ],
+                "to": [
+                  3,
+                  1,
+                  2
+                ],
+                "bodyHeight": 2
+              }
+            ],
+            "mounts": [
+              {
+                "id": "furnishing",
+                "at": [
+                  2,
+                  1,
+                  1
+                ],
+                "size": [
+                  2,
+                  1,
+                  1
+                ],
+                "pool": [
+                  "zoning:desk"
+                ],
+                "requiredTags": [
+                  "zoning:interior"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "corridor",
+            "window"
+          ],
+          "addedJoints": [
+            {
+              "id": "corridor",
+              "type": "variety:right_in",
+              "at": [
+                0,
+                1,
+                2
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:right_out"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "window",
+              "type": "variety:window",
+              "at": [
+                5,
+                2,
+                2
+              ],
+              "face": "east",
+              "accepts": [],
+              "external": true,
+              "height": 1
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                4,
+                2,
+                1
+              ],
+              "to": [
+                4,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                4,
+                2,
+                2
+              ],
+              "to": [
+                4,
+                2,
+                2
+              ],
+              "material": "glass"
+            }
+          ],
+          "contract": {
+            "routes": [
+              {
+                "id": "corridor_to_room",
+                "from": [
+                  1,
+                  1,
+                  2
+                ],
+                "to": [
+                  3,
+                  1,
+                  2
+                ],
+                "bodyHeight": 2
+              }
+            ],
+            "mounts": [
+              {
+                "id": "furnishing",
+                "at": [
+                  2,
+                  1,
+                  1
+                ],
+                "size": [
+                  2,
+                  1,
+                  1
+                ],
+                "pool": [
+                  "zoning:desk"
+                ],
+                "requiredTags": [
+                  "zoning:interior"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "variety:rectangle_ground": {
+      "size": [
+        3,
+        5,
+        8
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            7
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            0,
+            7
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            7
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            7
+          ],
+          "to": [
+            2,
+            3,
+            7
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            6
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            3,
+            6
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            0,
+            2,
+            5
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            5
+          ],
+          "to": [
+            2,
+            2,
+            5
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            1,
+            0,
+            3
+          ],
+          "to": [
+            1,
+            4,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            1,
+            1,
+            0
+          ],
+          "to": [
+            1,
+            2,
+            0
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "joints": [
+        {
+          "id": "left_0",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_1",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            5
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_0",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            1
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_1",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            5
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            0,
+            3
+          ],
+          "face": "down",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "up",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            5,
+            3
+          ],
+          "face": "up",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "entrance",
+          "type": "zoning:entrance",
+          "at": [
+            1,
+            1,
+            0
+          ],
+          "face": "north",
+          "accepts": [],
+          "external": true,
+          "height": 2
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "left_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "left_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            4
+          ],
+          "to": [
+            0,
+            4,
+            7
+          ]
+        },
+        {
+          "joint": "right_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "right_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            4
+          ],
+          "to": [
+            2,
+            4,
+            7
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "right_0",
+            "right_1"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                1
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                5
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                1
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                5
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                5
+              ],
+              "to": [
+                2,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                5
+              ],
+              "to": [
+                2,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "right_0",
+            "right_1"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                2
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                6
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                2
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                6
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                6
+              ],
+              "to": [
+                0,
+                2,
+                6
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                2
+              ],
+              "to": [
+                2,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                5
+              ],
+              "to": [
+                2,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                6
+              ],
+              "to": [
+                2,
+                2,
+                6
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "hall",
+            "from": [
+              1,
+              1,
+              1
+            ],
+            "to": [
+              1,
+              1,
+              6
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "variety:rectangle_upper": {
+      "size": [
+        3,
+        5,
+        8
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            7
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            0,
+            7
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            7
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            7
+          ],
+          "to": [
+            2,
+            3,
+            7
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            6
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            3,
+            6
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            0,
+            2,
+            5
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            5
+          ],
+          "to": [
+            2,
+            2,
+            5
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            1,
+            0,
+            3
+          ],
+          "to": [
+            1,
+            4,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        }
+      ],
+      "joints": [
+        {
+          "id": "left_0",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_1",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            5
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_0",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            1
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_1",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            5
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            0,
+            3
+          ],
+          "face": "down",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "up",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            5,
+            3
+          ],
+          "face": "up",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "left_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "left_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            4
+          ],
+          "to": [
+            0,
+            4,
+            7
+          ]
+        },
+        {
+          "joint": "right_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "right_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            4
+          ],
+          "to": [
+            2,
+            4,
+            7
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "right_0",
+            "right_1"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                1
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                5
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                1
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                5
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                5
+              ],
+              "to": [
+                2,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                5
+              ],
+              "to": [
+                2,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "right_0",
+            "right_1"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                2
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                6
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                2
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                6
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                6
+              ],
+              "to": [
+                0,
+                2,
+                6
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                2
+              ],
+              "to": [
+                2,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                5
+              ],
+              "to": [
+                2,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                6
+              ],
+              "to": [
+                2,
+                2,
+                6
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "hall",
+            "from": [
+              1,
+              1,
+              1
+            ],
+            "to": [
+              1,
+              1,
+              6
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "variety:gamma_ground": {
+      "size": [
+        3,
+        5,
+        12
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            11
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            0,
+            11
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            11
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            11
+          ],
+          "to": [
+            2,
+            3,
+            11
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            10
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            3,
+            10
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            0,
+            2,
+            5
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            9
+          ],
+          "to": [
+            0,
+            2,
+            9
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            1,
+            0,
+            3
+          ],
+          "to": [
+            1,
+            4,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            1,
+            1,
+            0
+          ],
+          "to": [
+            1,
+            2,
+            0
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "joints": [
+        {
+          "id": "left_0",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_1",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            5
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_2",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            9
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_0",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            1
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            0,
+            3
+          ],
+          "face": "down",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "up",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            5,
+            3
+          ],
+          "face": "up",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "entrance",
+          "type": "zoning:entrance",
+          "at": [
+            1,
+            1,
+            0
+          ],
+          "face": "north",
+          "accepts": [],
+          "external": true,
+          "height": 2
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "left_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "left_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            4
+          ],
+          "to": [
+            0,
+            4,
+            7
+          ]
+        },
+        {
+          "joint": "left_2",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            8
+          ],
+          "to": [
+            0,
+            4,
+            11
+          ]
+        },
+        {
+          "joint": "right_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            3
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "right_0"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                1
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                5
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                9
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                1
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                9
+              ],
+              "to": [
+                0,
+                2,
+                9
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                9
+              ],
+              "to": [
+                0,
+                2,
+                9
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "right_0"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                2
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                6
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                10
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                2
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                6
+              ],
+              "to": [
+                0,
+                2,
+                6
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                9
+              ],
+              "to": [
+                0,
+                2,
+                9
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                2
+              ],
+              "to": [
+                2,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "hall",
+            "from": [
+              1,
+              1,
+              1
+            ],
+            "to": [
+              1,
+              1,
+              10
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "variety:gamma_upper": {
+      "size": [
+        3,
+        5,
+        12
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            11
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            0,
+            11
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            11
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            11
+          ],
+          "to": [
+            2,
+            3,
+            11
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            10
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            3,
+            10
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            0,
+            2,
+            5
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            9
+          ],
+          "to": [
+            0,
+            2,
+            9
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            1,
+            0,
+            3
+          ],
+          "to": [
+            1,
+            4,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        }
+      ],
+      "joints": [
+        {
+          "id": "left_0",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_1",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            5
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_2",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            9
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_0",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            1
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            0,
+            3
+          ],
+          "face": "down",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "up",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            5,
+            3
+          ],
+          "face": "up",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "left_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "left_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            4
+          ],
+          "to": [
+            0,
+            4,
+            7
+          ]
+        },
+        {
+          "joint": "left_2",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            8
+          ],
+          "to": [
+            0,
+            4,
+            11
+          ]
+        },
+        {
+          "joint": "right_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            3
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "right_0"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                1
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                5
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                9
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                1
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                9
+              ],
+              "to": [
+                0,
+                2,
+                9
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                9
+              ],
+              "to": [
+                0,
+                2,
+                9
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "right_0"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                2
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                6
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                10
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                2
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                6
+              ],
+              "to": [
+                0,
+                2,
+                6
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                9
+              ],
+              "to": [
+                0,
+                2,
+                9
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                2
+              ],
+              "to": [
+                2,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "hall",
+            "from": [
+              1,
+              1,
+              1
+            ],
+            "to": [
+              1,
+              1,
+              10
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
     }
   },
   "compositions": {
@@ -4651,6 +9558,456 @@
           "zoning:section_ground": 1
         }
       }
+    },
+    "variety:rectangle_floor_ground": {
+      "roots": [
+        "variety:rectangle_ground"
+      ],
+      "attachments": [
+        "variety:left_living",
+        "variety:left_work",
+        "variety:right_living",
+        "variety:right_work"
+      ],
+      "entranceJoint": "entrance",
+      "requiredTags": [
+        "zoning:style"
+      ],
+      "minimumModules": 5,
+      "maximumModules": 5,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########"
+        ],
+        "rooms": [
+          "variety:rectangle_ground",
+          "variety:left_living",
+          "variety:left_work",
+          "variety:right_living",
+          "variety:right_work"
+        ],
+        "rotations": [
+          0
+        ],
+        "entrance": "entry",
+        "ports": [
+          {
+            "id": "entry",
+            "type": "zoning:entrance",
+            "at": [
+              5,
+              1,
+              0
+            ],
+            "face": "north",
+            "height": 2,
+            "walkable": true
+          },
+          {
+            "id": "down",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              0,
+              3
+            ],
+            "face": "down",
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              5,
+              3
+            ],
+            "face": "up",
+            "walkable": true
+          }
+        ],
+        "minimumCounts": {
+          "variety:rectangle_ground": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 1
+        },
+        "maximumCounts": {
+          "variety:rectangle_ground": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 2,
+          "variety:right_living": 2,
+          "variety:right_work": 2
+        }
+      }
+    },
+    "variety:rectangle_floor_upper": {
+      "roots": [
+        "variety:rectangle_upper"
+      ],
+      "attachments": [
+        "variety:left_living",
+        "variety:left_work",
+        "variety:right_living",
+        "variety:right_work"
+      ],
+      "entranceJoint": "down",
+      "requiredTags": [
+        "zoning:style"
+      ],
+      "minimumModules": 5,
+      "maximumModules": 5,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########"
+        ],
+        "rooms": [
+          "variety:rectangle_upper",
+          "variety:left_living",
+          "variety:left_work",
+          "variety:right_living",
+          "variety:right_work"
+        ],
+        "rotations": [
+          0
+        ],
+        "entrance": "down",
+        "ports": [
+          {
+            "id": "down",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              0,
+              3
+            ],
+            "face": "down",
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              5,
+              3
+            ],
+            "face": "up",
+            "walkable": true
+          }
+        ],
+        "minimumCounts": {
+          "variety:rectangle_upper": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 1
+        },
+        "maximumCounts": {
+          "variety:rectangle_upper": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 2,
+          "variety:right_living": 2,
+          "variety:right_work": 2
+        }
+      }
+    },
+    "variety:rectangle_house": {
+      "minimumModules": 15,
+      "maximumModules": 15,
+      "maximumHeight": 13,
+      "buildingSections": {
+        "bottomCap": "minecraft:stone_bricks",
+        "topCap": "minecraft:stone_bricks",
+        "sections": [
+          {
+            "id": "ground",
+            "floors": 1,
+            "floor": "variety:rectangle_floor_ground",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 0
+            }
+          },
+          {
+            "id": "upper",
+            "floors": 2,
+            "floor": "variety:rectangle_floor_upper",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 0
+            }
+          }
+        ]
+      }
+    },
+    "variety:gamma_floor_ground": {
+      "roots": [
+        "variety:gamma_ground"
+      ],
+      "attachments": [
+        "variety:left_living",
+        "variety:left_work",
+        "variety:right_living",
+        "variety:right_work"
+      ],
+      "entranceJoint": "entrance",
+      "requiredTags": [
+        "zoning:style"
+      ],
+      "minimumModules": 5,
+      "maximumModules": 5,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######...."
+        ],
+        "rooms": [
+          "variety:gamma_ground",
+          "variety:left_living",
+          "variety:left_work",
+          "variety:right_living",
+          "variety:right_work"
+        ],
+        "rotations": [
+          0
+        ],
+        "entrance": "entry",
+        "ports": [
+          {
+            "id": "entry",
+            "type": "zoning:entrance",
+            "at": [
+              5,
+              1,
+              0
+            ],
+            "face": "north",
+            "height": 2,
+            "walkable": true
+          },
+          {
+            "id": "down",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              0,
+              3
+            ],
+            "face": "down",
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              5,
+              3
+            ],
+            "face": "up",
+            "walkable": true
+          }
+        ],
+        "minimumCounts": {
+          "variety:gamma_ground": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 1
+        },
+        "maximumCounts": {
+          "variety:gamma_ground": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 2,
+          "variety:right_living": 2,
+          "variety:right_work": 2
+        }
+      }
+    },
+    "variety:gamma_floor_upper": {
+      "roots": [
+        "variety:gamma_upper"
+      ],
+      "attachments": [
+        "variety:left_living",
+        "variety:left_work",
+        "variety:right_living",
+        "variety:right_work"
+      ],
+      "entranceJoint": "down",
+      "requiredTags": [
+        "zoning:style"
+      ],
+      "minimumModules": 5,
+      "maximumModules": 5,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######...."
+        ],
+        "rooms": [
+          "variety:gamma_upper",
+          "variety:left_living",
+          "variety:left_work",
+          "variety:right_living",
+          "variety:right_work"
+        ],
+        "rotations": [
+          0
+        ],
+        "entrance": "down",
+        "ports": [
+          {
+            "id": "down",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              0,
+              3
+            ],
+            "face": "down",
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              5,
+              3
+            ],
+            "face": "up",
+            "walkable": true
+          }
+        ],
+        "minimumCounts": {
+          "variety:gamma_upper": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 1
+        },
+        "maximumCounts": {
+          "variety:gamma_upper": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 2,
+          "variety:right_living": 2,
+          "variety:right_work": 2
+        }
+      }
+    },
+    "variety:gamma_house": {
+      "minimumModules": 10,
+      "maximumModules": 10,
+      "maximumHeight": 9,
+      "buildingSections": {
+        "bottomCap": "minecraft:stone_bricks",
+        "topCap": "minecraft:stone_bricks",
+        "sections": [
+          {
+            "id": "ground",
+            "floors": 1,
+            "floor": "variety:gamma_floor_ground",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 0
+            }
+          },
+          {
+            "id": "upper",
+            "floors": 1,
+            "floor": "variety:gamma_floor_upper",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 0
+            }
+          }
+        ]
+      }
     }
   },
   "assets": {
@@ -4694,6 +10051,24 @@
       "height": 17,
       "parameters": {
         "composition": "zoning:section_house"
+      }
+    },
+    "variety:rectangle_house": {
+      "provider": "modules",
+      "minimumSize": 12,
+      "maximumSize": 64,
+      "height": 13,
+      "parameters": {
+        "composition": "variety:rectangle_house"
+      }
+    },
+    "variety:gamma_house": {
+      "provider": "modules",
+      "minimumSize": 12,
+      "maximumSize": 64,
+      "height": 9,
+      "parameters": {
+        "composition": "variety:gamma_house"
       }
     }
   },

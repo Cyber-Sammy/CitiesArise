@@ -130,7 +130,15 @@
           "pool": [
             {
               "asset": "zoning:cottage",
-              "weight": 1
+              "weight": 2
+            },
+            {
+              "asset": "variety:rectangle_house",
+              "weight": 3
+            },
+            {
+              "asset": "variety:gamma_house",
+              "weight": 3
             }
           ],
           "palettes": [

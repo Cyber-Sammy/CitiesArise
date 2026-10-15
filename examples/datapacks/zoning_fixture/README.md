@@ -346,3 +346,16 @@ The selected structural `layout` id is stored separately from the damage `varian
 The zoning fixture now authors four main-room window/door alternatives with weights50/20/20/10 and two side-room alternatives3/4. Their agreement group and shared-wall geometry permit only3/4, with conditional main-room ratio20:10. The same choice is frozen across the two upper A floors of landmark buildings. The narrower B section has its own authored alternatives. Both the latest JAR and datapack ZIP are required for new generation; previously saved resolved geometry stays unchanged.
 
 The brick section modules include a continuous wall pillar behind the ladder, including shared floor layers. Climbable route validation does not infer side attachments: authors must supply ladder backing in their module geometry. The fixture tests verify backing across all four rotations and actual Minecraft ladder survival after reverse chunk placement.
+
+## Larger room-built examples
+
+The homes binding now mixes the existing small cottage with two larger recipes when the slot is large enough:
+
+- `variety:rectangle_house`: an 11x8 footprint and three floors (13 blocks high). The two upper floors reuse their exact solved layout and furnishings.
+- `variety:gamma_house`: an 11x12 G-shaped footprint and two floors (9 blocks high). Its concave corner is outside the building mask and receives no building/slab cells.
+
+Each floor has five structural modules: a staircase corridor plus four living/work rooms. The left wing includes both living and work rooms; eligible positions and the right-wing mix vary deterministically with the seed. Two authored door/window alternatives agree with the corridor through `variety:door_band`. Corridor-to-room boundaries share a single wall layer. Adjacent rooms along each wing retain their separate end walls; those pairs do not negotiate a shared boundary. All upper floors arrive through an internal downward connector, and every ladder has wall backing. Living rooms have a seat/bookcase module; work rooms reuse the furnished crafting desk and chest. This stage does not introduce beds, NPC behavior or arbitrary freeform room shapes.
+
+The larger assets require a slot of at least12 blocks in both dimensions, fitting existing20x20 spacious parcels with building margin4. Parcel sizes, spacing and roads are unchanged. The homes pool uses relative weights2/3/3 for cottage/rectangle/G; size eligibility and bounded assembly constrain the final distribution. Small homes, workshops and landmarks remain available. Limits stay16 structural modules per building,64 resolved modules and65,536 cells; the rectangle uses15 structural modules.
+
+Composition and prop recipes retain only reachable module definitions, including all nested contract alternatives and adjacency references; the global content catalog remains complete. Frozen recipe version4 stores each module definition once and uses bounded references for the per-recipe dictionaries. Versions1–3 remain readable. The stored512KiB and expanded2MiB recipe budgets,16 dictionaries and existing composition limits remain unchanged; definition references have additional1024-entry bounds.

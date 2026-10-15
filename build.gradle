@@ -56,6 +56,8 @@ neoForge {
             gameDirectory = file('build/planning-benchmark/runtime')
             systemProperty 'neoforge.enabledGameTestNamespaces', 'cities_arise_planning_benchmark'
             systemProperty 'citiesarise.benchmarkLabel', providers.gradleProperty('planningBenchmarkLabel').getOrElse('current')
+            systemProperty 'citiesarise.benchmarkCompareBaseline', providers.gradleProperty('planningBenchmarkCompareBaseline').getOrElse('true')
+            systemProperty 'citiesarise.benchmarkDatapack', providers.gradleProperty('planningBenchmarkDatapack').getOrElse('../../../examples/datapacks/zoning_fixture/data')
         }
 
         data {
@@ -128,6 +130,7 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
+    inputs.dir('examples/datapacks')
 }
 
 publishing {

@@ -24,7 +24,13 @@ public final class BuildingSectionsGameTests {
         for(int i=0;i<text.length();i+=8192)list.add(net.minecraft.nbt.StringTag.valueOf(text.substring(i,Math.min(i+8192,text.length()))));tag.put("Json",list);return tag;
     }
     private static JsonObject unpacked(CompoundTag tag) {
-        var text=new StringBuilder();var list=tag.getList("Json",8);for(int i=0;i<list.size();i++)text.append(list.getString(i));return JsonParser.parseString(text.toString()).getAsJsonObject();
+        var text=new StringBuilder();var list=tag.getList("Json",8);for(int i=0;i<list.size();i++)text.append(list.getString(i));var result=JsonParser.parseString(text.toString()).getAsJsonObject();
+        if(tag.getInt("Version")==4) {
+            var definitions=result.remove("moduleDefinitions").getAsJsonArray();
+            for(var table:result.getAsJsonArray("moduleTables"))for(var entry:new ArrayList<>(table.getAsJsonObject().entrySet()))
+                table.getAsJsonObject().add(entry.getKey(),definitions.get(entry.getValue().getAsInt()).deepCopy());
+        }
+        return result;
     }
     @GameTest(template="empty",timeoutTicks=100)
     public static void repeatedSectionsKeepStairsInventoriesAndShapeAfterFrozenReloadAndReverseChunks(GameTestHelper helper) throws Exception {
@@ -89,6 +95,7 @@ public final class BuildingSectionsGameTests {
                 com.cybersammy.citiesarise.core.planning.suburb.SuburbPlanningSettings.defaults().withBuildings(buildings),
                 com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy.defaults(),com.cybersammy.citiesarise.core.earthwork.StructuralSupportSettings.disabled());
         var recipe=new FinalTerrainPlanningRecipe(profile,new GridBounds(new GridPoint(0,0),profile.surveySize()),42,"test:old-props");
+        helper.assertTrue(recipe.equals(FinalTerrainPlanningRecipe.load(packed(unpacked(recipe.save()),3))),"Version3 inline module tables changed");
         var tree=unpacked(recipe.save());var object=tree.getAsJsonObject("recipe").getAsJsonObject("profile").getAsJsonObject("suburbPlanningSettings").getAsJsonObject("buildings").getAsJsonArray("props").get(0).getAsJsonObject();
         int index=object.remove("definitionTable").getAsInt();object.add("definitions",tree.getAsJsonArray("moduleTables").get(index));
         helper.assertTrue(recipe.equals(FinalTerrainPlanningRecipe.load(packed(tree,2))),"Version2 inline prop catalogs changed");

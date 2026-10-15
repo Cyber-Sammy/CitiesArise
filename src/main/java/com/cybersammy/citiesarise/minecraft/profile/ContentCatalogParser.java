@@ -58,9 +58,12 @@ public final class ContentCatalogParser {
         for(var entry:object(json,"compositions").entrySet()) {
             JsonObject c=entry.getValue().getAsJsonObject();
             if(c.has("buildingSections"))continue;
-            compositions.put(entry.getKey(),new CompositionSettings(modules,list(c,"roots"),list(c,"attachments"),string(c,"entranceJoint"),
+            var referenced=new LinkedHashSet<String>();referenced.addAll(list(c,"roots"));referenced.addAll(list(c,"attachments"));referenced.addAll(list(c,"exceptions"));
+            var layout=c.has("floorLayout")?floorLayout(object(c,"floorLayout")):null;
+            if(layout!=null){referenced.addAll(layout.rooms());referenced.addAll(layout.fillers());}
+            compositions.put(entry.getKey(),new CompositionSettings(reachableModules(modules,referenced),list(c,"roots"),list(c,"attachments"),string(c,"entranceJoint"),
                     strings(c,"requiredTags"),strings(c,"forbiddenTags"),strings(c,"exceptions"),integer(c,"minimumModules",1),integer(c,"maximumModules",8),
-                    integer(c,"maximumHeight",64),integer(c,"damageSeverity",0),text(c,"airMaterial","minecraft:air"),materialRules,c.has("floorLayout")?floorLayout(object(c,"floorLayout")):null));
+                    integer(c,"maximumHeight",64),integer(c,"damageSeverity",0),text(c,"airMaterial","minecraft:air"),materialRules,layout));
         }
         for(var entry:object(json,"compositions").entrySet()) {
             var c=entry.getValue().getAsJsonObject();if(!c.has("buildingSections"))continue;
@@ -82,7 +85,9 @@ public final class ContentCatalogParser {
             resources.validateMaterial(recipe.bottomCap());resources.validateMaterial(recipe.topCap());
             if(!materialRules.supportive().contains(recipe.bottomCap()) || !materialRules.supportive().contains(recipe.topCap()))
                 throw new IllegalArgumentException("Building terminal caps must be supportive");
-            compositions.put(entry.getKey(),new CompositionSettings(modules,first.roots(),first.attachments(),first.entranceJoint(),first.requiredTags(),first.forbiddenTags(),first.exceptions(),
+            var referenced=new LinkedHashSet<>(recipe.moduleIds());referenced.addAll(first.exceptions());
+            for(var section:sections){referenced.addAll(section.recipe().layout().rooms());referenced.addAll(section.recipe().layout().fillers());}
+            compositions.put(entry.getKey(),new CompositionSettings(reachableModules(modules,referenced),first.roots(),first.attachments(),first.entranceJoint(),first.requiredTags(),first.forbiddenTags(),first.exceptions(),
                     integer(c,"minimumModules",1),integer(c,"maximumModules",16),integer(c,"maximumHeight",64),first.damageSeverity(),first.airMaterial(),materialRules,null,recipe));
         }
         Map<String,BuildingAsset> assets=new LinkedHashMap<>();
@@ -155,7 +160,8 @@ public final class ContentCatalogParser {
             }
             String air=text(p,"airMaterial","minecraft:air"); resources.validateMaterial(air);
             props.add(new PropRule(entry.getKey(),string(p,"anchor"),pool,palette,strings(p,"requiredTags"),
-                    strings(p,"forbiddenTags"),integer(p,"inset",1),integer(p,"spacing",8),integer(p,"damageSeverity",0),air,modules,materialRules,
+                    strings(p,"forbiddenTags"),integer(p,"inset",1),integer(p,"spacing",8),integer(p,"damageSeverity",0),air,
+                    reachableModules(modules,pool.stream().map(ModuleDefinition::id).toList()),materialRules,
                     integer(p,"maxCount",1),integer(p,"chance",100),integer(p,"clearance",0)));
         }
         if(props.size()>16) throw new IllegalArgumentException("Too many prop rules");
@@ -382,6 +388,18 @@ public final class ContentCatalogParser {
         }
         if(values.size()!=new HashSet<>(values).size()) throw new IllegalArgumentException("Duplicate values: "+key);
         return List.copyOf(values);
+    }
+    /** Freeze only reachable definitions, including every alternative's nested mounts and adjacency references. */
+    private static Map<String,ModuleDefinition> reachableModules(Map<String,ModuleDefinition> catalog,Collection<String> roots) {
+        var result=new LinkedHashMap<String,ModuleDefinition>();var queue=new ArrayDeque<String>(roots);
+        while(!queue.isEmpty()) {
+            String id=queue.removeFirst();if(result.containsKey(id))continue;
+            var module=catalog.get(id);if(module==null)throw new IllegalArgumentException("Unknown composition module: "+id);
+            result.put(id,module);
+            for(var contract:module.allContracts())for(var mount:contract.mounts())queue.addAll(mount.pool());
+            module.adjacency().forEach(rule->queue.addLast(rule.neighbor()));
+        }
+        return Map.copyOf(result);
     }
     private static Set<String> strings(JsonObject json,String key) { return Set.copyOf(list(json,key)); }
     private static Map<String,String> stringMap(JsonObject json) {

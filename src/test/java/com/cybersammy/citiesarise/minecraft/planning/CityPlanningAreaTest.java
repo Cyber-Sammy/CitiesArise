@@ -24,7 +24,17 @@ class CityPlanningAreaTest {
         }
         assertEquals(new SettlementRegion(-1,-1).surveyBounds(new GridSize(120,72)),
                 CityPlanningArea.bounds(new SettlementRegion(-1,-1),new GridSize(120,72)));
-        assertThrows(IllegalArgumentException.class,()->CityPlanningArea.bounds(new SettlementRegion(0,0),new GridSize(225,224)));
+        assertThrows(IllegalArgumentException.class,()->CityPlanningArea.bounds(new SettlementRegion(0,0),new GridSize(241,240)));
+    }
+    @Test void residentialSurveyExpansionStillFitsVanillaReferencesAndDisjointAnchors() {
+        var size=new GridSize(240,240);
+        for(int x=-4;x<=4;x+=2)for(int z=-4;z<=4;z+=2) {
+            var anchor=new SettlementRegion(x,z);var bounds=CityPlanningArea.bounds(anchor,size);
+            assertTrue(CityPlanningArea.reachable(anchor,size,x*8,z*8));
+            assertFalse(bounds.intersects(CityPlanningArea.bounds(new SettlementRegion(x+2,z),size)));
+            for(var p:List.of(bounds.origin(),new GridPoint(bounds.maxXExclusive()-1,bounds.maxZExclusive()-1)))
+                assertEquals(anchor,CityPlanningArea.regionAt(p.x(),p.z(),size));
+        }
     }
     @Test void terrainWindowsPreserveCompleteMapAndExactChecksAcrossSeams() {
         var calls=new ArrayList<GridBounds>();var exactCalls=new HashSet<GridPoint>();

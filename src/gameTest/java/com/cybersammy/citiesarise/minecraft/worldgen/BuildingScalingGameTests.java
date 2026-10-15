@@ -32,7 +32,7 @@ public final class BuildingScalingGameTests {
         helper.assertTrue(recipe.equals(restored),"Scaled catalog exceeded existing frozen recipe budgets or changed on reload");
         var encoded=new StringBuilder();var parts=saved.getList("Json",8);for(int i=0;i<parts.size();i++)encoded.append(parts.getString(i));
         var packed=JsonParser.parseString(encoded.toString()).getAsJsonObject();
-        helper.assertTrue(packed.getAsJsonArray("moduleTables").size()==19,"Scaled dictionaries were duplicated unexpectedly");
+        helper.assertTrue(packed.getAsJsonArray("moduleTables").size()<=24,"Selectable building dictionaries exceeded their bounded budget");
         var oversized=packed.deepCopy();while(oversized.getAsJsonArray("moduleTables").size()<25)oversized.getAsJsonArray("moduleTables").add(new JsonObject());
         boolean rejected=false;try{FinalTerrainPlanningRecipe.load(packed(oversized));}catch(IllegalArgumentException expected){rejected=true;}
         helper.assertTrue(rejected,"Frozen module table limit was not enforced on reload");

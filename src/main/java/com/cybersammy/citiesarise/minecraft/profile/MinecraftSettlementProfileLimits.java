@@ -17,8 +17,8 @@ public record MinecraftSettlementProfileLimits(
         long maxEarthworkVolume
 ) {
     private static final MinecraftSettlementProfileLimits DEFAULTS = new MinecraftSettlementProfileLimits(
-            224,
-            224,
+            com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.MAX_SIZE,
+            com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.MAX_SIZE,
             16,
             8.0,
             128,

@@ -41,6 +41,9 @@ class DistrictParcelSizeAcceptanceTest {
             }
         }
         assertTrue(sizes.size()>1,"Flat city should demonstrate several parcel sizes");
+        assertTrue(sizes.contains("residential:large"),"Flat city must demonstrate actual full-size parcels");
+        assertTrue(result.content().buildings().values().stream().anyMatch(b->b.asset().id().equals("residential:apartment_block")),
+                "Large plot must resolve its complete apartment block");
         assertTrue(new com.cybersammy.citiesarise.core.validation.PlanValidator().validate(city).isEmpty());
         assertTrue(new com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator().validate(city,result.terrainPreparationPlan().orElseThrow()).isEmpty());
         result.content().validateAgainst(city);
@@ -55,6 +58,8 @@ class DistrictParcelSizeAcceptanceTest {
             int margin=size.marginOr(settings.buildingMargin());
             var slotSize=new GridSize(size.width()-2*margin,size.depth()-2*margin);
             for(var rule:buildings.rules()) {
+                var selectedSize=rule.match().properties().find(new PlanPropertyKey("parcel_size"));
+                if(selectedSize.isPresent() && !selectedSize.orElseThrow().equals(size.id()))continue;
                 assertTrue(rule.pool().stream().anyMatch(entry -> entry.asset().fits(slotSize)),
                         size.id()+" leaves "+slotSize+" and cannot fit "+rule.id());
             }

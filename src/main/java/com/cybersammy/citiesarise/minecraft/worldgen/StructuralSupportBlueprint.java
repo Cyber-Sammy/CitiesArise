@@ -1,5 +1,7 @@
 package com.cybersammy.citiesarise.minecraft.worldgen;
 
+import com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea;
+
 import com.cybersammy.citiesarise.core.earthwork.*;
 import com.cybersammy.citiesarise.core.geometry.*;
 import com.cybersammy.citiesarise.core.model.*;
@@ -81,7 +83,7 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
         for(var item:tag.getList("Envelopes",Tag.TAG_COMPOUND)) {
             if(list.size()>=4096) throw new IllegalArgumentException("Too many structural envelopes");
             var row=(CompoundTag)item;var b=row.getIntArray("Bounds");
-            if(b.length!=5 || b[2]<1 || b[2]>224 || b[3]<1 || b[3]>224) throw new IllegalArgumentException("Invalid structural envelope");
+            if(b.length!=5 || b[2]<1 || b[2]>CityPlanningArea.MAX_SIZE || b[3]<1 || b[3]>CityPlanningArea.MAX_SIZE) throw new IllegalArgumentException("Invalid structural envelope");
             list.add(new StructuralSupportPlanner.Envelope(new PlanElementId(row.getString("Source")),
                     new GridBounds(new GridPoint(b[0],b[1]),new GridSize(b[2],b[3])),b[4],StructuralSupportPlanner.Kind.valueOf(row.getString("Kind"))));
         }

@@ -1,5 +1,7 @@
 package com.cybersammy.citiesarise.minecraft.worldgen;
 
+import com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea;
+
 import com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner;
 import com.cybersammy.citiesarise.core.geometry.*;
 import com.cybersammy.citiesarise.core.terrain.*;
@@ -19,7 +21,7 @@ final class FinalTerrainSnapshot implements StructuralSupportPlanner.Ground {
     private final TerrainSurvey survey;
     private FinalTerrainSnapshot(GridBounds bounds,int minY,int height,long[] solids,long[] fluids,int[] tops,int[] biomes) {
         int area=Math.multiplyExact(bounds.size().width(),bounds.size().depth());
-        if(area>50176 || height<1 || height>512 || tops.length!=area || biomes.length!=area
+        if(area>CityPlanningArea.MAX_AREA || height<1 || height>512 || tops.length!=area || biomes.length!=area
                 || solids.length!=(area*height+63)/64 || fluids.length!=solids.length) throw new IllegalArgumentException("Invalid captured terrain size");
         this.bounds=bounds;this.minY=minY;this.height=height;this.solids=solids.clone();this.fluids=fluids.clone();
         this.tops=tops.clone();this.biomes=biomes.clone();
@@ -36,7 +38,7 @@ final class FinalTerrainSnapshot implements StructuralSupportPlanner.Ground {
     static FinalTerrainSnapshot capture(ServerLevel level,GridBounds bounds) {
         if(!level.getServer().isSameThread()) throw new IllegalStateException("Final terrain capture requires server thread");
         int min=level.getMinBuildHeight(),height=level.getHeight(),area=bounds.size().width()*bounds.size().depth();
-        if(bounds.size().width()>224 || bounds.size().depth()>224 || area>50176 || height>512 || height<1)
+        if(bounds.size().width()>CityPlanningArea.MAX_SIZE || bounds.size().depth()>CityPlanningArea.MAX_SIZE || area>CityPlanningArea.MAX_AREA || height>512 || height<1)
             throw new IllegalArgumentException("Final terrain capture exceeds bounded dimensions");
         long[] solids=new long[(area*height+63)/64],fluids=new long[solids.length];int[] tops=new int[area],biomes=new int[area];
         var position=new BlockPos.MutableBlockPos();
@@ -73,7 +75,7 @@ final class FinalTerrainSnapshot implements StructuralSupportPlanner.Ground {
     }
     static FinalTerrainSnapshot load(CompoundTag tag) {
         if(tag.getInt("Version")!=1) throw new IllegalArgumentException("Unknown final terrain snapshot");
-        var b=tag.getIntArray("Bounds");if(b.length!=4 || b[2]<1 || b[2]>224 || b[3]<1 || b[3]>224) throw new IllegalArgumentException("Invalid final terrain bounds");
+        var b=tag.getIntArray("Bounds");if(b.length!=4 || b[2]<1 || b[2]>CityPlanningArea.MAX_SIZE || b[3]<1 || b[3]>CityPlanningArea.MAX_SIZE) throw new IllegalArgumentException("Invalid final terrain bounds");
         return new FinalTerrainSnapshot(new GridBounds(new GridPoint(b[0],b[1]),new GridSize(b[2],b[3])),tag.getInt("Min"),tag.getInt("Height"),
                 tag.getLongArray("Solids"),tag.getLongArray("Fluids"),tag.getIntArray("Tops"),tag.getIntArray("Biomes"));
     }

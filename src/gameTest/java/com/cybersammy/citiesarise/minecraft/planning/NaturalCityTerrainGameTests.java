@@ -100,6 +100,18 @@ public final class NaturalCityTerrainGameTests {
         // Keep the reported CA48 cut-bank regression at its original 16x18 parcel geometry.
         fixture.getAsJsonObject("planning").getAsJsonObject("districts").remove("parcelSizes");
         if(legacyShoulders) {
+            // Reproduce the reported old cut-bank recipe, including its original survey
+            // and grading preferences. The current mixed-size profile is tested separately.
+            fixture.getAsJsonObject("survey").addProperty("width",224);
+            fixture.getAsJsonObject("survey").addProperty("depth",224);
+            var planning=fixture.getAsJsonObject("planning");
+            planning.addProperty("maxElevationRange",10);
+            planning.addProperty("preferredMaxCutDepth",3);
+            planning.addProperty("preferredMaxFillDepth",3);
+            planning.addProperty("maxCutDepth",8);
+            planning.addProperty("maxFillDepth",10);
+            planning.addProperty("maxEarthworkVolume",80000);
+            planning.getAsJsonObject("districts").addProperty("parcelSizeFallback",false);
             fixture.getAsJsonObject("planning").getAsJsonObject("terrainTransitions").addProperty("parcelShoulderRadius",3);
             fixture.getAsJsonObject("planning").getAsJsonObject("terrainTransitions").addProperty("fillSlopeRadius",0);
             fixture.getAsJsonObject("planning").getAsJsonObject("districts").getAsJsonObject("zoning").getAsJsonArray("rules").remove(1);

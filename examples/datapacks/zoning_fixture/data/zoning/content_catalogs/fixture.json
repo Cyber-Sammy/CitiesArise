@@ -4479,6 +4479,34 @@
           "accepts": [],
           "external": true,
           "height": 1
+        },
+        {
+          "id": "side_north",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "at": [
+            2,
+            2,
+            0
+          ],
+          "face": "north",
+          "external": false
+        },
+        {
+          "id": "side_south",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "at": [
+            2,
+            2,
+            4
+          ],
+          "face": "south",
+          "external": false
         }
       ],
       "contract": {
@@ -4538,6 +4566,46 @@
             4,
             3
           ]
+        },
+        {
+          "joint": "side_north",
+          "role": "wall",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            0
+          ],
+          "priority": 10,
+          "passage": false
+        },
+        {
+          "joint": "side_south",
+          "role": "wall",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "from": [
+            0,
+            0,
+            3
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "priority": 10,
+          "passage": false
         }
       ],
       "layouts": [
@@ -4967,6 +5035,34 @@
           "accepts": [],
           "external": true,
           "height": 1
+        },
+        {
+          "id": "side_north",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "at": [
+            2,
+            2,
+            0
+          ],
+          "face": "north",
+          "external": false
+        },
+        {
+          "id": "side_south",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "at": [
+            2,
+            2,
+            4
+          ],
+          "face": "south",
+          "external": false
         }
       ],
       "contract": {
@@ -5026,6 +5122,46 @@
             4,
             3
           ]
+        },
+        {
+          "joint": "side_north",
+          "role": "wall",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            0
+          ],
+          "priority": 20,
+          "passage": false
+        },
+        {
+          "joint": "side_south",
+          "role": "wall",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "from": [
+            0,
+            0,
+            3
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "priority": 20,
+          "passage": false
         }
       ],
       "layouts": [
@@ -5455,6 +5591,34 @@
           "accepts": [],
           "external": true,
           "height": 1
+        },
+        {
+          "id": "side_north",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "at": [
+            2,
+            2,
+            0
+          ],
+          "face": "north",
+          "external": false
+        },
+        {
+          "id": "side_south",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "at": [
+            2,
+            2,
+            4
+          ],
+          "face": "south",
+          "external": false
         }
       ],
       "contract": {
@@ -5514,6 +5678,46 @@
             4,
             3
           ]
+        },
+        {
+          "joint": "side_north",
+          "role": "wall",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            0
+          ],
+          "priority": 10,
+          "passage": false
+        },
+        {
+          "joint": "side_south",
+          "role": "wall",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "from": [
+            0,
+            0,
+            3
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "priority": 10,
+          "passage": false
         }
       ],
       "layouts": [
@@ -5943,6 +6147,34 @@
           "accepts": [],
           "external": true,
           "height": 1
+        },
+        {
+          "id": "side_north",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "at": [
+            2,
+            2,
+            0
+          ],
+          "face": "north",
+          "external": false
+        },
+        {
+          "id": "side_south",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "at": [
+            2,
+            2,
+            4
+          ],
+          "face": "south",
+          "external": false
         }
       ],
       "contract": {
@@ -6002,6 +6234,46 @@
             4,
             3
           ]
+        },
+        {
+          "joint": "side_north",
+          "role": "wall",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            0
+          ],
+          "priority": 20,
+          "passage": false
+        },
+        {
+          "joint": "side_south",
+          "role": "wall",
+          "type": "variety:partition",
+          "accepts": [
+            "variety:partition"
+          ],
+          "from": [
+            0,
+            0,
+            3
+          ],
+          "to": [
+            4,
+            4,
+            3
+          ],
+          "priority": 20,
+          "passage": false
         }
       ],
       "layouts": [
@@ -6279,7 +6551,7 @@
       "size": [
         3,
         5,
-        8
+        7
       ],
       "tags": [
         "zoning:style"
@@ -6294,7 +6566,7 @@
           "to": [
             2,
             4,
-            7
+            6
           ],
           "material": "minecraft:air"
         },
@@ -6307,67 +6579,41 @@
           "to": [
             2,
             0,
-            7
-          ],
-          "material": "floor"
-        },
-        {
-          "from": [
-            0,
-            4,
-            0
-          ],
-          "to": [
-            2,
-            4,
-            7
-          ],
-          "material": "floor"
-        },
-        {
-          "from": [
-            0,
-            1,
-            0
-          ],
-          "to": [
-            2,
-            3,
-            0
-          ],
-          "material": "wall"
-        },
-        {
-          "from": [
-            0,
-            1,
-            7
-          ],
-          "to": [
-            2,
-            3,
-            7
-          ],
-          "material": "wall"
-        },
-        {
-          "from": [
-            0,
-            1,
-            1
-          ],
-          "to": [
-            0,
-            3,
             6
           ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            6
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
           "material": "wall"
         },
         {
           "from": [
-            2,
+            0,
             1,
-            1
+            6
           ],
           "to": [
             2,
@@ -6384,6 +6630,32 @@
           ],
           "to": [
             0,
+            3,
+            5
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            3,
+            5
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
             2,
             1
           ],
@@ -6393,12 +6665,12 @@
           "from": [
             0,
             1,
-            5
+            4
           ],
           "to": [
             0,
             2,
-            5
+            4
           ],
           "material": "minecraft:air"
         },
@@ -6419,12 +6691,12 @@
           "from": [
             2,
             1,
-            5
+            4
           ],
           "to": [
             2,
             2,
-            5
+            4
           ],
           "material": "minecraft:air"
         },
@@ -6477,7 +6749,7 @@
           "at": [
             0,
             1,
-            5
+            4
           ],
           "face": "west",
           "accepts": [
@@ -6507,7 +6779,7 @@
           "at": [
             3,
             1,
-            5
+            4
           ],
           "face": "east",
           "accepts": [
@@ -6589,12 +6861,12 @@
           "from": [
             0,
             0,
-            4
+            3
           ],
           "to": [
             0,
             4,
-            7
+            6
           ]
         },
         {
@@ -6625,12 +6897,12 @@
           "from": [
             2,
             0,
-            4
+            3
           ],
           "to": [
             2,
             4,
-            7
+            6
           ]
         }
       ],
@@ -6669,7 +6941,7 @@
               "at": [
                 0,
                 1,
-                5
+                4
               ],
               "face": "west",
               "accepts": [
@@ -6699,7 +6971,7 @@
               "at": [
                 3,
                 1,
-                5
+                4
               ],
               "face": "east",
               "accepts": [
@@ -6740,12 +7012,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -6753,12 +7025,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "minecraft:air"
             },
@@ -6792,12 +7064,12 @@
               "from": [
                 2,
                 1,
-                5
+                4
               ],
               "to": [
                 2,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -6805,12 +7077,12 @@
               "from": [
                 2,
                 1,
-                5
+                4
               ],
               "to": [
                 2,
                 2,
-                5
+                4
               ],
               "material": "minecraft:air"
             }
@@ -6850,7 +7122,7 @@
               "at": [
                 0,
                 1,
-                6
+                5
               ],
               "face": "west",
               "accepts": [
@@ -6880,7 +7152,7 @@
               "at": [
                 3,
                 1,
-                6
+                5
               ],
               "face": "east",
               "accepts": [
@@ -6921,12 +7193,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -6934,12 +7206,12 @@
               "from": [
                 0,
                 1,
-                6
+                5
               ],
               "to": [
                 0,
                 2,
-                6
+                5
               ],
               "material": "minecraft:air"
             },
@@ -6973,12 +7245,12 @@
               "from": [
                 2,
                 1,
-                5
+                4
               ],
               "to": [
                 2,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -6986,12 +7258,12 @@
               "from": [
                 2,
                 1,
-                6
+                5
               ],
               "to": [
                 2,
                 2,
-                6
+                5
               ],
               "material": "minecraft:air"
             }
@@ -7010,7 +7282,7 @@
             "to": [
               1,
               1,
-              6
+              5
             ],
             "bodyHeight": 2
           }
@@ -7021,7 +7293,7 @@
       "size": [
         3,
         5,
-        8
+        7
       ],
       "tags": [
         "zoning:style"
@@ -7036,7 +7308,7 @@
           "to": [
             2,
             4,
-            7
+            6
           ],
           "material": "minecraft:air"
         },
@@ -7049,67 +7321,41 @@
           "to": [
             2,
             0,
-            7
-          ],
-          "material": "floor"
-        },
-        {
-          "from": [
-            0,
-            4,
-            0
-          ],
-          "to": [
-            2,
-            4,
-            7
-          ],
-          "material": "floor"
-        },
-        {
-          "from": [
-            0,
-            1,
-            0
-          ],
-          "to": [
-            2,
-            3,
-            0
-          ],
-          "material": "wall"
-        },
-        {
-          "from": [
-            0,
-            1,
-            7
-          ],
-          "to": [
-            2,
-            3,
-            7
-          ],
-          "material": "wall"
-        },
-        {
-          "from": [
-            0,
-            1,
-            1
-          ],
-          "to": [
-            0,
-            3,
             6
           ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            6
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
           "material": "wall"
         },
         {
           "from": [
-            2,
+            0,
             1,
-            1
+            6
           ],
           "to": [
             2,
@@ -7126,6 +7372,32 @@
           ],
           "to": [
             0,
+            3,
+            5
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            3,
+            5
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
             2,
             1
           ],
@@ -7135,12 +7407,12 @@
           "from": [
             0,
             1,
-            5
+            4
           ],
           "to": [
             0,
             2,
-            5
+            4
           ],
           "material": "minecraft:air"
         },
@@ -7161,12 +7433,12 @@
           "from": [
             2,
             1,
-            5
+            4
           ],
           "to": [
             2,
             2,
-            5
+            4
           ],
           "material": "minecraft:air"
         },
@@ -7206,7 +7478,7 @@
           "at": [
             0,
             1,
-            5
+            4
           ],
           "face": "west",
           "accepts": [
@@ -7236,7 +7508,7 @@
           "at": [
             3,
             1,
-            5
+            4
           ],
           "face": "east",
           "accepts": [
@@ -7305,12 +7577,12 @@
           "from": [
             0,
             0,
-            4
+            3
           ],
           "to": [
             0,
             4,
-            7
+            6
           ]
         },
         {
@@ -7341,12 +7613,12 @@
           "from": [
             2,
             0,
-            4
+            3
           ],
           "to": [
             2,
             4,
-            7
+            6
           ]
         }
       ],
@@ -7385,7 +7657,7 @@
               "at": [
                 0,
                 1,
-                5
+                4
               ],
               "face": "west",
               "accepts": [
@@ -7415,7 +7687,7 @@
               "at": [
                 3,
                 1,
-                5
+                4
               ],
               "face": "east",
               "accepts": [
@@ -7456,12 +7728,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -7469,12 +7741,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "minecraft:air"
             },
@@ -7508,12 +7780,12 @@
               "from": [
                 2,
                 1,
-                5
+                4
               ],
               "to": [
                 2,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -7521,12 +7793,12 @@
               "from": [
                 2,
                 1,
-                5
+                4
               ],
               "to": [
                 2,
                 2,
-                5
+                4
               ],
               "material": "minecraft:air"
             }
@@ -7566,7 +7838,7 @@
               "at": [
                 0,
                 1,
-                6
+                5
               ],
               "face": "west",
               "accepts": [
@@ -7596,7 +7868,7 @@
               "at": [
                 3,
                 1,
-                6
+                5
               ],
               "face": "east",
               "accepts": [
@@ -7637,12 +7909,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -7650,12 +7922,12 @@
               "from": [
                 0,
                 1,
-                6
+                5
               ],
               "to": [
                 0,
                 2,
-                6
+                5
               ],
               "material": "minecraft:air"
             },
@@ -7689,12 +7961,12 @@
               "from": [
                 2,
                 1,
-                5
+                4
               ],
               "to": [
                 2,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -7702,12 +7974,12 @@
               "from": [
                 2,
                 1,
-                6
+                5
               ],
               "to": [
                 2,
                 2,
-                6
+                5
               ],
               "material": "minecraft:air"
             }
@@ -7726,7 +7998,7 @@
             "to": [
               1,
               1,
-              6
+              5
             ],
             "bodyHeight": 2
           }
@@ -7737,7 +8009,7 @@
       "size": [
         3,
         5,
-        12
+        10
       ],
       "tags": [
         "zoning:style"
@@ -7752,7 +8024,7 @@
           "to": [
             2,
             4,
-            11
+            9
           ],
           "material": "minecraft:air"
         },
@@ -7765,7 +8037,7 @@
           "to": [
             2,
             0,
-            11
+            9
           ],
           "material": "floor"
         },
@@ -7778,7 +8050,7 @@
           "to": [
             2,
             4,
-            11
+            9
           ],
           "material": "floor"
         },
@@ -7799,12 +8071,12 @@
           "from": [
             0,
             1,
-            11
+            9
           ],
           "to": [
             2,
             3,
-            11
+            9
           ],
           "material": "wall"
         },
@@ -7817,7 +8089,7 @@
           "to": [
             0,
             3,
-            10
+            8
           ],
           "material": "wall"
         },
@@ -7830,7 +8102,7 @@
           "to": [
             2,
             3,
-            10
+            8
           ],
           "material": "wall"
         },
@@ -7851,12 +8123,12 @@
           "from": [
             0,
             1,
-            5
+            4
           ],
           "to": [
             0,
             2,
-            5
+            4
           ],
           "material": "minecraft:air"
         },
@@ -7864,12 +8136,12 @@
           "from": [
             0,
             1,
-            9
+            7
           ],
           "to": [
             0,
             2,
-            9
+            7
           ],
           "material": "minecraft:air"
         },
@@ -7935,7 +8207,7 @@
           "at": [
             0,
             1,
-            5
+            4
           ],
           "face": "west",
           "accepts": [
@@ -7950,7 +8222,7 @@
           "at": [
             0,
             1,
-            9
+            7
           ],
           "face": "west",
           "accepts": [
@@ -8047,12 +8319,12 @@
           "from": [
             0,
             0,
-            4
+            3
           ],
           "to": [
             0,
             4,
-            7
+            6
           ]
         },
         {
@@ -8065,12 +8337,12 @@
           "from": [
             0,
             0,
-            8
+            6
           ],
           "to": [
             0,
             4,
-            11
+            9
           ]
         },
         {
@@ -8127,7 +8399,7 @@
               "at": [
                 0,
                 1,
-                5
+                4
               ],
               "face": "west",
               "accepts": [
@@ -8142,7 +8414,7 @@
               "at": [
                 0,
                 1,
-                9
+                7
               ],
               "face": "west",
               "accepts": [
@@ -8198,12 +8470,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -8211,12 +8483,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "minecraft:air"
             },
@@ -8224,12 +8496,12 @@
               "from": [
                 0,
                 1,
-                9
+                7
               ],
               "to": [
                 0,
                 2,
-                9
+                7
               ],
               "material": "wall"
             },
@@ -8237,12 +8509,12 @@
               "from": [
                 0,
                 1,
-                9
+                7
               ],
               "to": [
                 0,
                 2,
-                9
+                7
               ],
               "material": "minecraft:air"
             },
@@ -8308,7 +8580,7 @@
               "at": [
                 0,
                 1,
-                6
+                5
               ],
               "face": "west",
               "accepts": [
@@ -8323,7 +8595,7 @@
               "at": [
                 0,
                 1,
-                10
+                8
               ],
               "face": "west",
               "accepts": [
@@ -8379,12 +8651,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -8392,12 +8664,12 @@
               "from": [
                 0,
                 1,
-                6
+                5
               ],
               "to": [
                 0,
                 2,
-                6
+                5
               ],
               "material": "minecraft:air"
             },
@@ -8405,12 +8677,12 @@
               "from": [
                 0,
                 1,
-                9
+                7
               ],
               "to": [
                 0,
                 2,
-                9
+                7
               ],
               "material": "wall"
             },
@@ -8418,12 +8690,12 @@
               "from": [
                 0,
                 1,
-                10
+                8
               ],
               "to": [
                 0,
                 2,
-                10
+                8
               ],
               "material": "minecraft:air"
             },
@@ -8468,7 +8740,7 @@
             "to": [
               1,
               1,
-              10
+              8
             ],
             "bodyHeight": 2
           }
@@ -8479,7 +8751,7 @@
       "size": [
         3,
         5,
-        12
+        10
       ],
       "tags": [
         "zoning:style"
@@ -8494,7 +8766,7 @@
           "to": [
             2,
             4,
-            11
+            9
           ],
           "material": "minecraft:air"
         },
@@ -8507,7 +8779,7 @@
           "to": [
             2,
             0,
-            11
+            9
           ],
           "material": "floor"
         },
@@ -8520,7 +8792,7 @@
           "to": [
             2,
             4,
-            11
+            9
           ],
           "material": "floor"
         },
@@ -8541,12 +8813,12 @@
           "from": [
             0,
             1,
-            11
+            9
           ],
           "to": [
             2,
             3,
-            11
+            9
           ],
           "material": "wall"
         },
@@ -8559,7 +8831,7 @@
           "to": [
             0,
             3,
-            10
+            8
           ],
           "material": "wall"
         },
@@ -8572,7 +8844,7 @@
           "to": [
             2,
             3,
-            10
+            8
           ],
           "material": "wall"
         },
@@ -8593,12 +8865,12 @@
           "from": [
             0,
             1,
-            5
+            4
           ],
           "to": [
             0,
             2,
-            5
+            4
           ],
           "material": "minecraft:air"
         },
@@ -8606,12 +8878,12 @@
           "from": [
             0,
             1,
-            9
+            7
           ],
           "to": [
             0,
             2,
-            9
+            7
           ],
           "material": "minecraft:air"
         },
@@ -8664,7 +8936,7 @@
           "at": [
             0,
             1,
-            5
+            4
           ],
           "face": "west",
           "accepts": [
@@ -8679,7 +8951,7 @@
           "at": [
             0,
             1,
-            9
+            7
           ],
           "face": "west",
           "accepts": [
@@ -8763,12 +9035,12 @@
           "from": [
             0,
             0,
-            4
+            3
           ],
           "to": [
             0,
             4,
-            7
+            6
           ]
         },
         {
@@ -8781,12 +9053,12 @@
           "from": [
             0,
             0,
-            8
+            6
           ],
           "to": [
             0,
             4,
-            11
+            9
           ]
         },
         {
@@ -8843,7 +9115,7 @@
               "at": [
                 0,
                 1,
-                5
+                4
               ],
               "face": "west",
               "accepts": [
@@ -8858,7 +9130,7 @@
               "at": [
                 0,
                 1,
-                9
+                7
               ],
               "face": "west",
               "accepts": [
@@ -8914,12 +9186,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -8927,12 +9199,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "minecraft:air"
             },
@@ -8940,12 +9212,12 @@
               "from": [
                 0,
                 1,
-                9
+                7
               ],
               "to": [
                 0,
                 2,
-                9
+                7
               ],
               "material": "wall"
             },
@@ -8953,12 +9225,12 @@
               "from": [
                 0,
                 1,
-                9
+                7
               ],
               "to": [
                 0,
                 2,
-                9
+                7
               ],
               "material": "minecraft:air"
             },
@@ -9024,7 +9296,7 @@
               "at": [
                 0,
                 1,
-                6
+                5
               ],
               "face": "west",
               "accepts": [
@@ -9039,7 +9311,7 @@
               "at": [
                 0,
                 1,
-                10
+                8
               ],
               "face": "west",
               "accepts": [
@@ -9095,12 +9367,12 @@
               "from": [
                 0,
                 1,
-                5
+                4
               ],
               "to": [
                 0,
                 2,
-                5
+                4
               ],
               "material": "wall"
             },
@@ -9108,12 +9380,12 @@
               "from": [
                 0,
                 1,
-                6
+                5
               ],
               "to": [
                 0,
                 2,
-                6
+                5
               ],
               "material": "minecraft:air"
             },
@@ -9121,12 +9393,12 @@
               "from": [
                 0,
                 1,
-                9
+                7
               ],
               "to": [
                 0,
                 2,
-                9
+                7
               ],
               "material": "wall"
             },
@@ -9134,12 +9406,12 @@
               "from": [
                 0,
                 1,
-                10
+                8
               ],
               "to": [
                 0,
                 2,
-                10
+                8
               ],
               "material": "minecraft:air"
             },
@@ -9184,7 +9456,7 @@
             "to": [
               1,
               1,
-              10
+              8
             ],
             "bodyHeight": 2
           }
@@ -9585,7 +9857,6 @@
           "###########",
           "###########",
           "###########",
-          "###########",
           "###########"
         ],
         "rooms": [
@@ -9669,7 +9940,6 @@
       "floorLayout": {
         "height": 5,
         "footprint": [
-          "###########",
           "###########",
           "###########",
           "###########",
@@ -9809,8 +10079,6 @@
           "#######....",
           "#######....",
           "#######....",
-          "#######....",
-          "#######....",
           "#######...."
         ],
         "rooms": [
@@ -9898,8 +10166,6 @@
           "###########",
           "###########",
           "###########",
-          "#######....",
-          "#######....",
           "#######....",
           "#######....",
           "#######....",

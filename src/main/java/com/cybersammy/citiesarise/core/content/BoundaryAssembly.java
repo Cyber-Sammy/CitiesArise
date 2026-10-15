@@ -11,8 +11,9 @@ final class BoundaryAssembly {
                 List<PlacedCell> connector, String decision) {
         Vec origin() {return incoming.origin();}
         boolean overlapAllowed(Vec p) {return shared && source.layer().contains(p) && incoming.layer().contains(p);}
+        Join withWinner(boolean incomingWins) {return new Join(source,incoming,shared,incomingWins,gapSpace,connector,decision);}
         Optional<String> validate(Map<Vec,PlacedCell> cells,MaterialRules rules,String air) {
-            for(var port:List.of(source.joint(),incoming.joint())) for(var p:ModuleDefinition.jointCells(port)) {
+            for(var port:source.definition().passage()?List.of(source.joint(),incoming.joint()):List.<Joint>of()) for(var p:ModuleDefinition.jointCells(port)) {
                 var c=cells.get(p);
                 if(c==null || !rules.isPassable(c.material(),air)) return Optional.of("Boundary closes required port: "+port.id());
             }

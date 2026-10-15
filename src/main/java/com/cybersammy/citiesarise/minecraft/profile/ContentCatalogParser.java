@@ -345,7 +345,7 @@ public final class ContentCatalogParser {
             }
             result.add(new ModuleBoundary(string(b,"joint"),ModuleBoundary.Role.valueOf(string(b,"role").toUpperCase(Locale.ROOT)),
                     string(b,"type"),strings(b,"accepts"),vec(b.getAsJsonArray("from")),vec(b.getAsJsonArray("to")),
-                    integer(b,"priority",0),bool(b,"retain",false),integer(b,"gap",0),connector));
+                    integer(b,"priority",0),bool(b,"retain",false),integer(b,"gap",0),connector,bool(b,"passage",true)));
         }
         return result;
     }

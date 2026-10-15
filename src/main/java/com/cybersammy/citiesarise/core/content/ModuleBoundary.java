@@ -5,14 +5,20 @@ import java.util.*;
 
 /** An author-declared mating layer; compatibility precedes priority and never permits interior overlap. */
 public record ModuleBoundary(String joint, Role role, String type, Set<String> accepts,
-        Vec from, Vec to, int priority, boolean retain, int gap, List<Cell> gapCells) {
+        Vec from, Vec to, int priority, boolean retain, int gap, List<Cell> gapCells, Boolean passage) {
+    public ModuleBoundary(String joint,Role role,String type,Set<String> accepts,Vec from,Vec to,int priority,
+            boolean retain,int gap,List<Cell> gapCells) {
+        this(joint,role,type,accepts,from,to,priority,retain,gap,gapCells,true);
+    }
     public enum Role { WALL, FLOOR, CEILING }
     public ModuleBoundary {
+        passage=passage==null?true:passage;
         Objects.requireNonNull(joint);Objects.requireNonNull(role);Objects.requireNonNull(type);
         Objects.requireNonNull(from);Objects.requireNonNull(to);
         accepts=Set.copyOf(accepts);gapCells=List.copyOf(gapCells);
         if(joint.isBlank() || type.isBlank() || accepts.isEmpty() || priority < -1000 || priority > 1000
-                || gap<0 || gap>8 || gapCells.size()>4096 || (gap==0 && !gapCells.isEmpty()))
+                || gap<0 || gap>8 || gapCells.size()>4096 || (gap==0 && !gapCells.isEmpty())
+                || (!passage && (role!=Role.WALL || gap!=0)))
             throw new IllegalArgumentException("Invalid module boundary: "+joint);
     }
     void validate(Vec size,List<Joint> joints) {
@@ -50,7 +56,7 @@ public record ModuleBoundary(String joint, Role role, String type, Set<String> a
         return result;
     }
     public boolean matches(ModuleBoundary other) {
-        return accepts.contains(other.type) && other.accepts.contains(type)
+        return passage.equals(other.passage) && accepts.contains(other.type) && other.accepts.contains(type)
                 && ((role==Role.WALL && other.role==Role.WALL)
                     || (role==Role.FLOOR && other.role==Role.CEILING) || (role==Role.CEILING && other.role==Role.FLOOR));
     }

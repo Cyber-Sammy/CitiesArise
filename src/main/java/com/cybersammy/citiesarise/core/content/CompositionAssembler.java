@@ -12,19 +12,26 @@ public final class CompositionAssembler {
     }
     private record OpenJoint(String owner, Joint joint, int rotation, BoundaryAssembly.Placed boundary) { }
     private record Bounds(Vec minimum, Vec size) { }
+    private record Authority(int priority,String owner) {
+        boolean beats(Authority other) {return priority>other.priority || priority==other.priority && owner.compareTo(other.owner)<0;}
+    }
+    private record Contact(int index,String sourceJoint,String incomingJoint,BoundaryAssembly.Join join) { }
     private record State(List<PlacedModule> modules, Map<Vec,PlacedCell> cells, List<OpenJoint> open,
-            List<Bounds> bounds, List<String> connections, List<String> caps, List<String> damage, List<BoundaryAssembly.Join> joins,List<Effective> selected) { }
+            List<Bounds> bounds, List<String> connections, List<String> caps, List<String> damage, List<BoundaryAssembly.Join> joins,List<Effective> selected,Map<Vec,Authority> authorities) { }
     private record Candidate(Effective effective,Vec origin,int rotation,String joint,double weight,String key) { }
     private int attempts;
     private FloorLayoutFrame floor;
     private boolean weighted;
     private int enumerated;
+    private int boundaryChecks;
+    private static final int MAX_BOUNDARY_CHECKS=65536;
     private String failure="No compatible composition within slot bounds and search budget";
     public String failure() { return failure; }
 
     public Optional<ResolvedComposition> assemble(CompositionSettings settings, int width, int depth,
             Vec entrance, Face entranceFace, long seed) {
         attempts=0;
+        boundaryChecks=0;
         failure="No compatible composition within slot bounds and search budget";
         if(settings.buildingSections()!=null) {
             var assembler=new BuildingSectionAssembler();var result=assembler.assemble(settings,width,depth,entrance,entranceFace,seed);
@@ -41,7 +48,7 @@ public final class CompositionAssembler {
             for(int turn=0;turn<4;turn++) {
                 int rotation=turn;
                 Optional<Joint> entry=effective.joints.stream().filter(j -> j.id().equals(settings.entranceJoint())).findFirst();
-                if(entry.isEmpty()) continue;
+                if(entry.isEmpty() || contactOnly(effective,settings.entranceJoint())) continue;
                 Joint joint=rotate(entry.get(),module.size(),rotation);
                 if(joint.face()!=entranceFace) continue;
                 Vec origin=entrance.subtract(joint.position());
@@ -57,7 +64,7 @@ public final class CompositionAssembler {
         return Optional.empty();
     }
 
-    private static State empty(){return new State(List.of(),Map.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of());}
+    private static State empty(){return new State(List.of(),Map.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),Map.of());}
     private Optional<ResolvedComposition> weightedRoots(CompositionSettings cfg,int width,int depth,Vec entrance,Face face,long seed) {
         failure="No compatible room layouts, agreement choices or placement rules within search budget";
         var candidates=new ArrayList<Candidate>();var state=empty();
@@ -65,7 +72,7 @@ public final class CompositionAssembler {
             var module=cfg.modules().get(id);if(!cfg.permits(module))continue;
             for(var e:options(module,cfg.damageSeverity(),cfg.airMaterial(),seed))for(int turn=0;turn<4;turn++) {
                 if(++enumerated>4096){failure="Room candidate enumeration budget exceeded";return Optional.empty();}
-                var entry=e.joints.stream().filter(j->j.id().equals(cfg.entranceJoint())).findFirst();if(entry.isEmpty())continue;
+                var entry=e.joints.stream().filter(j->j.id().equals(cfg.entranceJoint())).findFirst();if(entry.isEmpty() || contactOnly(e,cfg.entranceJoint()))continue;
                 var joint=rotate(entry.orElseThrow(),module.size(),turn);if(joint.face()!=face)continue;var at=entrance.subtract(joint.position());
                 if(fits(e,at,turn,state,cfg,width,depth))candidates.add(new Candidate(e,at,turn,null,e.weight,id+"/"+e.layout+"/"+turn));
                 if(candidates.size()>512){failure="Room candidate count exceeded";return Optional.empty();}
@@ -84,7 +91,7 @@ public final class CompositionAssembler {
         for(var id:cfg.attachments().stream().distinct().sorted().toList()) {
             var module=cfg.modules().get(id);if(!cfg.permits(module))continue;
             for(var e:options(module,cfg.damageSeverity(),cfg.airMaterial(),seed+state.modules.size()*31L))for(int turn=0;turn<4;turn++)for(var j:e.joints) {
-                if(j.external())continue;var rotated=rotate(j,module.size(),turn);if(!target.joint.matches(rotated))continue;
+                if(j.external() || contactOnly(e,j.id()))continue;var rotated=rotate(j,module.size(),turn);if(!target.joint.matches(rotated))continue;
                 if(++enumerated>4096){failure="Room candidate enumeration budget exceeded";return null;}
                 var aligned=target.joint.position().subtract(rotated.position());var at=aligned;
                 var declaration=e.base.boundaries().stream().filter(b->b.joint().equals(j.id())).findFirst();
@@ -102,7 +109,18 @@ public final class CompositionAssembler {
                 for(int i=0;i<state.modules.size();i++)if(i!=ownerIndex && adjacent(state.bounds.get(i),new Bounds(at,rotatedSize(e.base.size(),turn)))
                         && !RoomLayout.agrees(state.selected.get(i).choices,e.choices)){compatible=false;break;}
                 if(!compatible)continue;
-                result.add(new Candidate(e,aligned,turn,j.id(),e.weight*a*b,id+"/"+e.layout+"/"+turn+"/"+j.id()));
+                var extra=contacts(state,e,at,turn,id+"#"+state.modules.size(),target,j.id(),null,cfg);
+                if(extra==null) {if(boundaryChecks>MAX_BOUNDARY_CHECKS)return null;continue;}
+                double secondary=1;
+                for(var contact:extra) {
+                    var previous=state.modules.get(contact.index);var peer=state.selected.get(contact.index);
+                    double forward=poseWeight(peer.base,e.base,contact.sourceJoint,contact.incomingJoint,previous,pose);
+                    double backward=poseWeight(e.base,peer.base,contact.incomingJoint,contact.sourceJoint,pose,previous);
+                    if(forward<=0 || backward<=0 || !RoomLayout.agrees(peer.choices,e.choices)) {compatible=false;break;}
+                    secondary*=forward*backward;
+                }
+                if(!compatible || !Double.isFinite(secondary) || secondary<=0)continue;
+                result.add(new Candidate(e,aligned,turn,j.id(),e.weight*a*b*secondary,id+"/"+e.layout+"/"+turn+"/"+j.id()));
                 if(result.size()>512){failure="Room candidate count exceeded";return null;}
             }
         }
@@ -145,7 +163,7 @@ public final class CompositionAssembler {
     }
 
     private Optional<ResolvedComposition> search(State state, CompositionSettings settings, int width, int depth, long seed) {
-        if(attempts>=MAX_ATTEMPTS) return Optional.empty();
+        if(attempts>=MAX_ATTEMPTS || boundaryChecks>MAX_BOUNDARY_CHECKS) return Optional.empty();
         if(state.open.isEmpty()) {
             if(state.modules.size()<settings.minimumModules()) return Optional.empty();
             if(floor!=null) {var error=floor.coverage(state.modules,settings.modules());if(error.isPresent()){failure=error.get();return Optional.empty();}}
@@ -183,7 +201,7 @@ public final class CompositionAssembler {
                 Effective effective=effective(module,settings.damageSeverity(),settings.airMaterial(),seed+state.modules.size()*31L);
                 for(int turn=0;turn<4;turn++) {
                     for(Joint original:effective.joints) {
-                        if(original.external()) continue;
+                        if(original.external() || contactOnly(effective,original.id())) continue;
                         Joint joint=rotate(original,module.size(),turn);
                         if(!target.joint.matches(joint)) continue;
                         Vec origin=target.joint.position().subtract(joint.position());
@@ -205,7 +223,9 @@ public final class CompositionAssembler {
         }
         var caps=new ArrayList<>(state.caps); caps.add(target.owner+"/"+target.joint.id());
         var open=new ArrayList<>(state.open); open.remove(target);
-        return search(new State(state.modules,cells,open,state.bounds,state.connections,caps,state.damage,state.joins,state.selected),settings,width,depth,seed);
+        var authorities=new HashMap<>(state.authorities);
+        for(var point:ModuleDefinition.jointCells(target.joint))authorities.putIfAbsent(point,new Authority(-1001,target.owner));
+        return search(new State(state.modules,cells,open,state.bounds,state.connections,caps,state.damage,state.joins,state.selected,authorities),settings,width,depth,seed);
     }
 
     private State place(State state, Effective effective, Vec origin, int turn, OpenJoint target, String usedJoint,
@@ -228,52 +248,81 @@ public final class CompositionAssembler {
         if(origin.x()<0 || origin.y()<0 || origin.z()<0 || origin.x()+size.x()>width
                 || origin.z()+size.z()>depth || origin.y()+size.y()>settings.maximumHeight()) return null;
         Bounds bound=new Bounds(origin,size);
-        for(int i=0;i<state.bounds.size();i++) if(overlaps(state.bounds.get(i),bound)) {
-            var previous=state.bounds.get(i);var m=state.modules.get(i);
-            if(negotiated==null || !target.owner.equals(m.id()+"#"+i)) return null;
-            for(int z=Math.max(previous.minimum.z(),origin.z());z<Math.min(previous.minimum.z()+previous.size.z(),origin.z()+size.z());z++)
-                for(int y=Math.max(previous.minimum.y(),origin.y());y<Math.min(previous.minimum.y()+previous.size.y(),origin.y()+size.y());y++)
-                    for(int x=Math.max(previous.minimum.x(),origin.x());x<Math.min(previous.minimum.x()+previous.size.x(),origin.x()+size.x());x++)
-                        if(!negotiated.overlapAllowed(new Vec(x,y,z))) return null;
-        }
-        if(negotiated!=null) for(var p:negotiated.gapSpace()) {
-            if(p.x()<0 || p.z()<0 || p.y()<0 || p.x()>=width || p.z()>=depth || p.y()>=settings.maximumHeight()) return null;
-            for(var previous:state.bounds) if(ModuleDefinition.inside(p.subtract(previous.minimum),previous.size)) return null;
-            if(state.cells.containsKey(p)) return null;
-        }
-        var cells=new LinkedHashMap<>(state.cells);
-        if(negotiated!=null && negotiated.shared()) {
-            var declared=new HashSet<Vec>();
-            for(var c:effective.cells)declared.add(rotateCell(c.position(),effective.base.size(),turn).add(origin));
-            if(!declared.containsAll(negotiated.incoming().layer()) || !cells.keySet().containsAll(negotiated.source().layer())) {
-                failure="Shared boundary requires explicit cells including air across its complete layer";return null;
+        var contacts=contacts(state,effective,origin,turn,owner,target,usedJoint,negotiated,settings);
+        if(contacts==null) {if(boundaryChecks<=MAX_BOUNDARY_CHECKS)failure="Facing neighbor boundaries are incompatible or misaligned";return null;}
+        for(var contact:contacts) {
+            var previous=state.modules.get(contact.index);var source=state.selected.get(contact.index);
+            var incomingPose=new PlacedModule(effective.base.id(),effective.variant,origin,turn,effective.layout);
+            if(!RoomLayout.agrees(source.choices,effective.choices)
+                    || poseWeight(source.base,effective.base,contact.sourceJoint,contact.incomingJoint,previous,incomingPose)<=0
+                    || poseWeight(effective.base,source.base,contact.incomingJoint,contact.sourceJoint,incomingPose,previous)<=0) {
+                failure="Neighbor boundary violates room agreement or adjacency rules";return null;
             }
         }
-        Map<Vec,Joint> sourceInterfaces=Map.of(),incomingInterfaces=Map.of();
-        if(negotiated!=null && negotiated.shared()) {
-            int index=Integer.parseInt(target.owner.substring(target.owner.lastIndexOf('#')+1));
-            var source=state.modules.get(index);sourceInterfaces=externalInterfaces(state.selected.get(index),source.origin(),source.rotation());
-            incomingInterfaces=externalInterfaces(effective,origin,turn);
+        for(int i=0;i<state.bounds.size();i++) if(overlaps(state.bounds.get(i),bound)) {
+            var previous=state.bounds.get(i);int index=i;
+            var allowed=contacts.stream().filter(c->c.index==index).map(Contact::join).toList();
+            for(int z=Math.max(previous.minimum.z(),origin.z());z<Math.min(previous.minimum.z()+previous.size.z(),origin.z()+size.z());z++)
+                for(int y=Math.max(previous.minimum.y(),origin.y());y<Math.min(previous.minimum.y()+previous.size.y(),origin.y()+size.y());y++)
+                    for(int x=Math.max(previous.minimum.x(),origin.x());x<Math.min(previous.minimum.x()+previous.size.x(),origin.x()+size.x());x++) {
+                        var point=new Vec(x,y,z);
+                        if(allowed.stream().noneMatch(j->j.overlapAllowed(point))) {
+                            failure="Room overlap lacks a matching declared neighbor boundary";return null;
+                        }
+                    }
         }
+        for(var contact:contacts) for(var point:contact.join.gapSpace()) {
+            if(point.x()<0 || point.z()<0 || point.y()<0 || point.x()>=width || point.z()>=depth || point.y()>=settings.maximumHeight()) return null;
+            for(var previous:state.bounds) if(ModuleDefinition.inside(point.subtract(previous.minimum),previous.size)) return null;
+            if(state.cells.containsKey(point)) return null;
+        }
+        var cells=new LinkedHashMap<>(state.cells);var authorities=new HashMap<>(state.authorities);
+        var declared=new HashSet<Vec>();for(var cell:effective.cells)declared.add(rotateCell(cell.position(),effective.base.size(),turn).add(origin));
+        for(var contact:contacts) if(contact.join.shared()
+                && (!declared.containsAll(contact.join.incoming().layer()) || !cells.keySet().containsAll(contact.join.source().layer()))) {
+            failure="Shared boundary requires explicit cells including air across its complete layer";return null;
+        }
+        var incomingInterfaces=externalInterfaces(effective,origin,turn);
+        var sourceInterfaces=new HashMap<Integer,Map<Vec,Joint>>();
+        for(var contact:contacts) {
+            var previous=state.modules.get(contact.index);
+            sourceInterfaces.put(contact.index,externalInterfaces(state.selected.get(contact.index),previous.origin(),previous.rotation()));
+        }
+        var priorities=new HashMap<Vec,Integer>();
+        for(var boundary:effective.base.boundaries()) for(var point:boundary.points(effective.base.size(),origin,turn))
+            priorities.merge(point,boundary.priority(),Math::max);
         for(Cell cell:effective.cells) {
             Vec point=rotateCell(cell.position(),effective.base.size(),turn).add(origin);
             var value=new PlacedCell(point,cell.material(),turn,cell.providerData());var old=cells.get(point);
-            if(!BoundaryAssembly.preservesFacade(old,value,negotiated,sourceInterfaces.get(point),incomingInterfaces.get(point)))
-                {failure="Shared wall priority would erase a declared facade opening";return null;}
-            if(!BoundaryAssembly.merge(cells,value,negotiated,settings.materialRules(),settings.airMaterial())) {
+            var authority=new Authority(priorities.getOrDefault(point,-1001),owner);
+            boolean incomingWins=old==null || authority.beats(authorities.get(point));
+            BoundaryAssembly.Join mating=null;
+            for(var contact:contacts) if(contact.join.overlapAllowed(point)) {
+                var join=contact.join.withWinner(incomingWins);mating=join;
+                if(!BoundaryAssembly.preservesFacade(old,value,join,sourceInterfaces.get(contact.index).get(point),incomingInterfaces.get(point))) {
+                    failure="Shared wall priority would erase a declared facade opening";return null;
+                }
+            }
+            if(!BoundaryAssembly.merge(cells,value,mating,settings.materialRules(),settings.airMaterial())) {
                 failure="Shared boundary conflicts with an opening or provider payload";return null;
             }
+            if(incomingWins)authorities.put(point,authority);
         }
-        if(negotiated!=null) {
-            for(var p:negotiated.gapSpace())cells.put(p,new PlacedCell(p,settings.airMaterial(),0));
-            negotiated.connector().forEach(c->cells.put(c.position(),c));
+        for(var contact:contacts) {
+            for(var point:contact.join.gapSpace()) {cells.put(point,new PlacedCell(point,settings.airMaterial(),0));authorities.put(point,new Authority(-1001,owner));}
+            contact.join.connector().forEach(c->{cells.put(c.position(),c);authorities.put(c.position(),new Authority(-1001,owner));});
         }
         var open=new ArrayList<>(state.open);
         if(target!=null) open.remove(target);
+        for(var contact:contacts) {
+            String sourceOwner=state.modules.get(contact.index).id()+"#"+contact.index;
+            open.removeIf(j->j.owner.equals(sourceOwner) && j.joint.id().equals(contact.sourceJoint));
+        }
         Vec moduleOrigin=origin;
         for(Joint original:effective.joints) {
             Joint joint=translate(rotate(original,effective.base.size(),turn),origin);
-            if(original.id().equals(usedJoint)) continue;
+            if(original.id().equals(usedJoint) || contactOnly(effective,original.id())
+                    || contacts.stream().anyMatch(c->c.incomingJoint.equals(original.id()))) continue;
             if(floor!=null && original.external() && !floor.facade(joint)) {failure="Exterior floor opening faces another room";return null;}
             if(floor!=null && floor.terminal(joint))continue;
             if(!original.external()) {
@@ -289,9 +338,48 @@ public final class CompositionAssembler {
         if(!effective.layout.equals("base"))connections.add("layout:"+owner+"="+effective.layout);
         var damage=new ArrayList<>(state.damage); effective.damage.forEach(d -> damage.add(owner+":"+d));
         var joins=new ArrayList<>(state.joins);
-        if(negotiated!=null) {joins.add(negotiated);connections.add(negotiated.decision());}
+        for(var contact:contacts) {joins.add(contact.join);connections.add(contact.join.decision());}
         var selected=new ArrayList<>(state.selected);selected.add(effective);
-        return new State(modules,cells,open,bounds,connections,state.caps,damage,joins,selected);
+        return new State(modules,cells,open,bounds,connections,state.caps,damage,joins,selected,authorities);
+    }
+    private static boolean contactOnly(Effective effective,String joint) {
+        return effective.base.boundaries().stream().anyMatch(b->b.joint().equals(joint) && !b.passage());
+    }
+    private List<Contact> contacts(State state,Effective incoming,Vec origin,int turn,String owner,
+            OpenJoint target,String usedJoint,BoundaryAssembly.Join primary,CompositionSettings settings) {
+        var result=new ArrayList<Contact>();
+        if(primary!=null)result.add(new Contact(Integer.parseInt(target.owner.substring(target.owner.lastIndexOf('#')+1)),
+                target.joint.id(),usedJoint,primary));
+        for(int i=0;i<state.modules.size();i++) {
+            var pose=state.modules.get(i);var source=state.selected.get(i);String sourceOwner=pose.id()+"#"+i;
+            if(!adjacent(state.bounds.get(i),new Bounds(origin,rotatedSize(incoming.base.size(),turn)))) continue;
+            for(var a:source.base.boundaries()) {
+                if(target!=null && target.owner.equals(sourceOwner) && a.joint().equals(target.joint.id()))continue;
+                if(a.passage() && state.open.stream().noneMatch(j->j.owner.equals(sourceOwner) && j.joint.id().equals(a.joint())))continue;
+                var sourcePort=source.joints.stream().filter(j->j.id().equals(a.joint())).findFirst();if(sourcePort.isEmpty())continue;
+                var placed=BoundaryAssembly.placed(source.base,a,sourcePort.orElseThrow(),pose.origin(),pose.rotation());
+                for(var b:incoming.base.boundaries()) {
+                    if(++boundaryChecks>MAX_BOUNDARY_CHECKS) {failure="Neighbor boundary search budget exceeded";return null;}
+                    if(b.joint().equals(usedJoint))continue;
+                    var port=incoming.joints.stream().filter(j->j.id().equals(b.joint())).findFirst();if(port.isEmpty())continue;
+                    var rotated=rotate(port.orElseThrow(),incoming.base.size(),turn);
+                    var physical=BoundaryAssembly.placed(incoming.base,b,port.orElseThrow(),origin,turn);
+                    if(!facing(placed,physical))continue;
+                    if(!placed.joint().matches(rotated))return null;
+                    var aligned=placed.joint().position().subtract(rotated.position());
+                    var proposed=BoundaryAssembly.negotiate(placed,incoming.base,b,port.orElseThrow(),aligned,turn,sourceOwner,owner,settings.airMaterial());
+                    if(proposed.isEmpty() || !proposed.orElseThrow().origin().equals(origin))return null;
+                    result.add(new Contact(i,a.joint(),b.joint(),proposed.orElseThrow()));
+                }
+            }
+        }
+        return result;
+    }
+    private static boolean facing(BoundaryAssembly.Placed a,BoundaryAssembly.Placed b) {
+        if(a.joint().face().opposite()!=b.joint().face())return false;
+        if(a.layer().equals(b.layer()))return true;
+        var shifted=new HashSet<Vec>();var normal=ModuleBoundary.normal(a.joint().face());
+        for(var point:a.layer())shifted.add(point.add(normal));return shifted.equals(b.layer());
     }
     private static Map<Vec,Joint> externalInterfaces(Effective e,Vec at,int turn) {
         var result=new HashMap<Vec,Joint>();for(var j:e.joints)if(j.external()) {
@@ -320,11 +408,11 @@ public final class CompositionAssembler {
     }
     private static Optional<ResolvedComposition> standalone(Effective effective,String connectedJoint,String airMaterial) {
         if(connectedJoint!=null && effective.joints.stream().noneMatch(j->j.id().equals(connectedJoint)))return Optional.empty();
-        if(effective.joints.stream().anyMatch(j -> !j.optional() && !j.external() && !j.id().equals(connectedJoint))) return Optional.empty();
+        if(effective.joints.stream().anyMatch(j -> !j.optional() && !j.external() && !j.id().equals(connectedJoint) && !contactOnly(effective,j.id()))) return Optional.empty();
         Map<Vec,PlacedCell> cells=new LinkedHashMap<>();
         effective.cells.forEach(c -> cells.put(c.position(),new PlacedCell(c.position(),c.material(),0,c.providerData())));
         List<String> caps=new ArrayList<>();
-        for(Joint joint:effective.joints) if(joint.optional() && !joint.external() && !joint.id().equals(connectedJoint)) {
+        for(Joint joint:effective.joints) if(joint.optional() && !joint.external() && !joint.id().equals(connectedJoint) && !contactOnly(effective,joint.id())) {
             caps.add(joint.id()); for(Vec point:ModuleDefinition.jointCells(joint)) cells.put(point,new PlacedCell(point,joint.capMaterial(),0));
         }
         return Optional.of(new ResolvedComposition(List.of(new PlacedModule(effective.base.id(),effective.variant,new Vec(0,0,0),0,effective.layout)),

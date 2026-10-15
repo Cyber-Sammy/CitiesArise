@@ -68,6 +68,7 @@ final class FloorLayoutFrame {
             module.damage().optionalJoints().stream().filter(j->result.damageDecisions().contains(owner+":opened:"+j.id())).forEach(joints::add);
             var walkPoints=new ArrayList<Vec>();
             for(var j:joints) {
+                if(module.boundariesFor(m.layout()).stream().anyMatch(b->b.joint().equals(j.id()) && !b.passage())) continue;
                 var q=CompositionAssembler.translate(CompositionAssembler.rotate(j,module.size(),m.rotation()),m.origin());actualPorts.add(q);
                 if(q.external() && !facade(q))return Optional.of("Exterior floor opening faces another room");
                 boolean declaredWalk=ports.stream().anyMatch(p->p.walkable() && p.type().equals(q.type()) && p.at().equals(q.position()) && p.face()==q.face());

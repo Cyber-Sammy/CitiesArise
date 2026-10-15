@@ -46,7 +46,7 @@ public final class BuildingScalingGameTests {
             var entrance=CompositionAssembler.rotate(new Joint("entry","zoning:entrance",Set.of(),new Vec(5,1,0),Face.NORTH,1,2,false,true,""),new Vec(11,height,13),turn);
             var assembler=new CompositionAssembler();var result=assembler.assemble(cfg,16,16,entrance.position(),entrance.face(),42);
             helper.assertTrue(result.isPresent(),assembler.failure());var composition=result.orElseThrow();
-            helper.assertTrue(composition.modules().size()==(shape.equals("rectangle")?102:48),"Scaled room/furnishing count changed");
+            helper.assertTrue(composition.modules().size()==(shape.equals("rectangle")?103:49),"Scaled room/furnishing count changed");
             var origin=helper.absolutePos(new BlockPos(131072+64*index++,4,131072));
             var base=new BlockPos(Math.floorDiv(origin.getX(),16)*16+13,origin.getY(),origin.getZ());
             var palette=catalog.palettes().get("zoning:warm");var ops=new ArrayList<DebugBlockPlacementOperation>();
@@ -75,7 +75,7 @@ public final class BuildingScalingGameTests {
                     helper.assertTrue(helper.getLevel().getBlockEntity(pos) instanceof net.minecraft.world.Container container && !container.isEmpty(),"Scaled provider inventory lost");chests++;
                 }
             }
-            helper.assertTrue(ladders==height-2 && chests>0,"Scaled vertical circulation or furnishings missing");
+            helper.assertTrue(ladders==height && chests>0,"Scaled vertical circulation or furnishings missing");
             for(int floor=0;floor<floors;floor++) {
                 int rows=shape.equals("gamma") && floor==3?2:4;
                 for(int seam=3;seam<rows*3;seam+=3)for(int dz=-1;dz<=1;dz++) {

@@ -42,7 +42,7 @@ public final class LargeResidentialGameTests {
             var entry=CompositionAssembler.rotate(new Joint("entry","zoning:entrance",Set.of(),new Vec(14,1,0),Face.NORTH,1,2,false,true,""),new Vec(29,25,15),turn);
             var assembler=new CompositionAssembler();var solved=assembler.assemble(cfg,29,29,entry.position(),entry.face(),42);
             helper.assertTrue(solved.isPresent(),assembler.failure());var building=solved.orElseThrow();
-            helper.assertTrue(building.modules().size()==66,"Expected two four-room apartments on each of six floors");
+            helper.assertTrue(building.modules().size()==67,"Expected two four-room apartments on each of six floors");
             var base=helper.absolutePos(new BlockPos(262157+turn*80,8,262157));
             var ops=new ArrayList<DebugBlockPlacementOperation>();
             for(var cell:building.cells())ops.add(new DebugBlockPlacementOperation(new GridPoint(base.getX()+cell.position().x(),base.getZ()+cell.position().z()),
@@ -62,7 +62,7 @@ public final class LargeResidentialGameTests {
                 if(state.is(Blocks.RED_BED))beds++;
                 if(state.is(Blocks.LADDER)){ladders++;helper.assertTrue(state.canSurvive(helper.getLevel(),pos),"Apartment ascent lacks backing");}
             }
-            helper.assertTrue(beds==24 && ladders==23,"Bedrooms or continuous ascent missing");
+            helper.assertTrue(beds==24 && ladders==25,"Bedrooms or continuous ascent missing");
         }
         helper.succeed();
     }

@@ -53,7 +53,7 @@ public final class ParcelContentGameTests {
         var slices=new DebugPlacementChunkProjector().partition(loaded);
         var chunks=new ArrayList<>(loaded.operations().stream().map(o -> PlacementChunk.containing(o.point())).distinct().toList());Collections.reverse(chunks);
         for(var chunk:chunks) new WorldgenPlacementApplier().apply(helper.getLevel(),slices.slice(chunk));
-        helper.assertTrue(helper.getLevel().getBlockState(origin).is(Blocks.DIRT_PATH),"Home border lost");
+        helper.assertTrue(helper.getLevel().getBlockState(origin).is(Blocks.STONE_BRICKS),"Stable home border lost");
         helper.assertTrue(helper.getLevel().getBlockState(origin.offset(16,2,0)).is(Blocks.POLISHED_ANDESITE),"Workshop border lost");
         helper.assertTrue(helper.getLevel().getBlockState(origin.offset(1,2,1)).is(Blocks.OAK_LEAVES),"Home planter lost");
         helper.assertTrue(helper.getLevel().getBlockState(origin.offset(17,5,1)).is(Blocks.LANTERN),"Workshop lamp lost or wrong platform");

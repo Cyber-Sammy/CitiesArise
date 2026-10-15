@@ -195,8 +195,8 @@ public final class TerrainJunctionGameTests {
                 object.addProperty("entranceJoint","entrance");
             if(object.has("id") && object.has("cells") && object.has("joints")
                     && (java.util.Set.of("zoning:section_main","zoning:section_narrow").contains(object.get("id").getAsString())
-                    || object.get("id").getAsString().startsWith("variety:") && object.get("id").getAsString().endsWith("_upper"))) {
-                int entryX=object.get("id").getAsString().startsWith("variety:")?1:3;
+                    || (object.get("id").getAsString().startsWith("variety:") || object.get("id").getAsString().startsWith("scaling:")) && object.get("id").getAsString().endsWith("_upper"))) {
+                int entryX=java.util.Set.of("zoning:section_main","zoning:section_narrow").contains(object.get("id").getAsString())?3:1;
                 var entrance=com.google.gson.JsonParser.parseString("{\"id\":\"entrance\",\"type\":\"zoning:entrance\",\"accepts\":[],\"position\":{\"x\":3,\"y\":1,\"z\":0},\"face\":\"NORTH\",\"width\":1,\"height\":2,\"optional\":false,\"external\":true,\"capMaterial\":\"\"}").getAsJsonObject();
                 entrance.getAsJsonObject("position").addProperty("x",entryX);object.getAsJsonArray("joints").add(entrance);
                 for(var item:object.getAsJsonArray("cells")) {
@@ -209,6 +209,12 @@ public final class TerrainJunctionGameTests {
     }
     private static void removeBoundaryFields(com.google.gson.JsonElement tree) {
         if(tree.isJsonObject()) {
+            var object=tree.getAsJsonObject();
+            // This synthetic pre-sections fixture must also remove modern aggregate budgets.
+            object.remove("maximumResolvedModules");
+            if(object.has("roots") && object.has("maximumModules") && object.get("maximumModules").getAsInt()>16) {
+                object.addProperty("minimumModules",16);object.addProperty("maximumModules",16);
+            }
             tree.getAsJsonObject().remove("layouts");tree.getAsJsonObject().remove("adjacency");tree.getAsJsonObject().remove("buildingSections");tree.getAsJsonObject().remove("floorLayout");tree.getAsJsonObject().remove("boundaries");tree.getAsJsonObject().remove("maximumShallowFoundationHeight");tree.getAsJsonObject().entrySet().forEach(e->removeBoundaryFields(e.getValue()));
         } else if(tree.isJsonArray())tree.getAsJsonArray().forEach(TerrainJunctionGameTests::removeBoundaryFields);
     }

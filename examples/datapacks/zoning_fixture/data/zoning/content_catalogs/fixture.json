@@ -9659,6 +9659,4482 @@
       "damage": {
         "enabled": false
       }
+    },
+    "scaling:rectangle_ground": {
+      "size": [
+        3,
+        5,
+        13
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            12
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            0,
+            12
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            12
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            12
+          ],
+          "to": [
+            2,
+            3,
+            12
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            11
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            3,
+            11
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            1,
+            0,
+            3
+          ],
+          "to": [
+            1,
+            4,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            0,
+            2,
+            4
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            7
+          ],
+          "to": [
+            0,
+            2,
+            7
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            10
+          ],
+          "to": [
+            0,
+            2,
+            10
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            4
+          ],
+          "to": [
+            2,
+            2,
+            4
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            7
+          ],
+          "to": [
+            2,
+            2,
+            7
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            10
+          ],
+          "to": [
+            2,
+            2,
+            10
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            1,
+            1,
+            0
+          ],
+          "to": [
+            1,
+            2,
+            0
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "joints": [
+        {
+          "id": "left_0",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_1",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            4
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_2",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            7
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_3",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            10
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_0",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            1
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_1",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            4
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_2",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            7
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_3",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            10
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            0,
+            3
+          ],
+          "face": "down",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "up",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            5,
+            3
+          ],
+          "face": "up",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "entrance",
+          "type": "zoning:entrance",
+          "at": [
+            1,
+            1,
+            0
+          ],
+          "face": "north",
+          "accepts": [],
+          "external": true,
+          "height": 2
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "left_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "left_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            3
+          ],
+          "to": [
+            0,
+            4,
+            6
+          ]
+        },
+        {
+          "joint": "left_2",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            6
+          ],
+          "to": [
+            0,
+            4,
+            9
+          ]
+        },
+        {
+          "joint": "left_3",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            9
+          ],
+          "to": [
+            0,
+            4,
+            12
+          ]
+        },
+        {
+          "joint": "right_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "right_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            3
+          ],
+          "to": [
+            2,
+            4,
+            6
+          ]
+        },
+        {
+          "joint": "right_2",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            6
+          ],
+          "to": [
+            2,
+            4,
+            9
+          ]
+        },
+        {
+          "joint": "right_3",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            9
+          ],
+          "to": [
+            2,
+            4,
+            12
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "left_3",
+            "right_0",
+            "right_1",
+            "right_2",
+            "right_3"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                1
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                4
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                7
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_3",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                10
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                1
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                4
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_2",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                7
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_3",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                10
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                7
+              ],
+              "to": [
+                2,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                7
+              ],
+              "to": [
+                2,
+                2,
+                7
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                10
+              ],
+              "to": [
+                2,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                10
+              ],
+              "to": [
+                2,
+                2,
+                10
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "left_3",
+            "right_0",
+            "right_1",
+            "right_2",
+            "right_3"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                2
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                5
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                8
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_3",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                11
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                2
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                5
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_2",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                8
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_3",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                11
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                8
+              ],
+              "to": [
+                0,
+                2,
+                8
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                11
+              ],
+              "to": [
+                0,
+                2,
+                11
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                2
+              ],
+              "to": [
+                2,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                5
+              ],
+              "to": [
+                2,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                7
+              ],
+              "to": [
+                2,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                8
+              ],
+              "to": [
+                2,
+                2,
+                8
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                10
+              ],
+              "to": [
+                2,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                11
+              ],
+              "to": [
+                2,
+                2,
+                11
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "hall",
+            "from": [
+              1,
+              1,
+              1
+            ],
+            "to": [
+              1,
+              1,
+              11
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "scaling:rectangle_upper": {
+      "size": [
+        3,
+        5,
+        13
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            12
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            0,
+            12
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            12
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            12
+          ],
+          "to": [
+            2,
+            3,
+            12
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            11
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            3,
+            11
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            1,
+            0,
+            3
+          ],
+          "to": [
+            1,
+            4,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            0,
+            2,
+            4
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            7
+          ],
+          "to": [
+            0,
+            2,
+            7
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            10
+          ],
+          "to": [
+            0,
+            2,
+            10
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            4
+          ],
+          "to": [
+            2,
+            2,
+            4
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            7
+          ],
+          "to": [
+            2,
+            2,
+            7
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            10
+          ],
+          "to": [
+            2,
+            2,
+            10
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "joints": [
+        {
+          "id": "left_0",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_1",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            4
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_2",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            7
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_3",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            10
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_0",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            1
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_1",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            4
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_2",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            7
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_3",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            10
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            0,
+            3
+          ],
+          "face": "down",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "up",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            5,
+            3
+          ],
+          "face": "up",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "left_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "left_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            3
+          ],
+          "to": [
+            0,
+            4,
+            6
+          ]
+        },
+        {
+          "joint": "left_2",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            6
+          ],
+          "to": [
+            0,
+            4,
+            9
+          ]
+        },
+        {
+          "joint": "left_3",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            9
+          ],
+          "to": [
+            0,
+            4,
+            12
+          ]
+        },
+        {
+          "joint": "right_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "right_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            3
+          ],
+          "to": [
+            2,
+            4,
+            6
+          ]
+        },
+        {
+          "joint": "right_2",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            6
+          ],
+          "to": [
+            2,
+            4,
+            9
+          ]
+        },
+        {
+          "joint": "right_3",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            9
+          ],
+          "to": [
+            2,
+            4,
+            12
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "left_3",
+            "right_0",
+            "right_1",
+            "right_2",
+            "right_3"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                1
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                4
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                7
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_3",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                10
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                1
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                4
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_2",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                7
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_3",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                10
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                7
+              ],
+              "to": [
+                2,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                7
+              ],
+              "to": [
+                2,
+                2,
+                7
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                10
+              ],
+              "to": [
+                2,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                10
+              ],
+              "to": [
+                2,
+                2,
+                10
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "left_3",
+            "right_0",
+            "right_1",
+            "right_2",
+            "right_3"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                2
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                5
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                8
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_3",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                11
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                2
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                5
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_2",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                8
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_3",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                11
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                8
+              ],
+              "to": [
+                0,
+                2,
+                8
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                11
+              ],
+              "to": [
+                0,
+                2,
+                11
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                2
+              ],
+              "to": [
+                2,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                5
+              ],
+              "to": [
+                2,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                7
+              ],
+              "to": [
+                2,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                8
+              ],
+              "to": [
+                2,
+                2,
+                8
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                10
+              ],
+              "to": [
+                2,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                11
+              ],
+              "to": [
+                2,
+                2,
+                11
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "hall",
+            "from": [
+              1,
+              1,
+              1
+            ],
+            "to": [
+              1,
+              1,
+              11
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "scaling:gamma_ground": {
+      "size": [
+        3,
+        5,
+        13
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            12
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            0,
+            12
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            12
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            12
+          ],
+          "to": [
+            2,
+            3,
+            12
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            11
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            3,
+            11
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            1,
+            0,
+            3
+          ],
+          "to": [
+            1,
+            4,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            0,
+            2,
+            4
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            7
+          ],
+          "to": [
+            0,
+            2,
+            7
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            10
+          ],
+          "to": [
+            0,
+            2,
+            10
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            4
+          ],
+          "to": [
+            2,
+            2,
+            4
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            1,
+            1,
+            0
+          ],
+          "to": [
+            1,
+            2,
+            0
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "joints": [
+        {
+          "id": "left_0",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_1",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            4
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_2",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            7
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_3",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            10
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_0",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            1
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_1",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            4
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            0,
+            3
+          ],
+          "face": "down",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "up",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            5,
+            3
+          ],
+          "face": "up",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "entrance",
+          "type": "zoning:entrance",
+          "at": [
+            1,
+            1,
+            0
+          ],
+          "face": "north",
+          "accepts": [],
+          "external": true,
+          "height": 2
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "left_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "left_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            3
+          ],
+          "to": [
+            0,
+            4,
+            6
+          ]
+        },
+        {
+          "joint": "left_2",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            6
+          ],
+          "to": [
+            0,
+            4,
+            9
+          ]
+        },
+        {
+          "joint": "left_3",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            9
+          ],
+          "to": [
+            0,
+            4,
+            12
+          ]
+        },
+        {
+          "joint": "right_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "right_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            3
+          ],
+          "to": [
+            2,
+            4,
+            6
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "left_3",
+            "right_0",
+            "right_1"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                1
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                4
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                7
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_3",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                10
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                1
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                4
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "left_3",
+            "right_0",
+            "right_1"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                2
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                5
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                8
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_3",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                11
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                2
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                5
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                8
+              ],
+              "to": [
+                0,
+                2,
+                8
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                11
+              ],
+              "to": [
+                0,
+                2,
+                11
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                2
+              ],
+              "to": [
+                2,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                5
+              ],
+              "to": [
+                2,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "hall",
+            "from": [
+              1,
+              1,
+              1
+            ],
+            "to": [
+              1,
+              1,
+              11
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "scaling:gamma_upper": {
+      "size": [
+        3,
+        5,
+        13
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            12
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            0,
+            12
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            12
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            12
+          ],
+          "to": [
+            2,
+            3,
+            12
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            11
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            3,
+            11
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            1,
+            0,
+            3
+          ],
+          "to": [
+            1,
+            4,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            0,
+            2,
+            4
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            7
+          ],
+          "to": [
+            0,
+            2,
+            7
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            10
+          ],
+          "to": [
+            0,
+            2,
+            10
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            1
+          ],
+          "to": [
+            2,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            4
+          ],
+          "to": [
+            2,
+            2,
+            4
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "joints": [
+        {
+          "id": "left_0",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_1",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            4
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_2",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            7
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "left_3",
+          "type": "variety:left_out",
+          "at": [
+            0,
+            1,
+            10
+          ],
+          "face": "west",
+          "accepts": [
+            "variety:left_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_0",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            1
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "right_1",
+          "type": "variety:right_out",
+          "at": [
+            3,
+            1,
+            4
+          ],
+          "face": "east",
+          "accepts": [
+            "variety:right_in"
+          ],
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            0,
+            3
+          ],
+          "face": "down",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "up",
+          "type": "variety:stairs",
+          "at": [
+            1,
+            5,
+            3
+          ],
+          "face": "up",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "external": false,
+          "height": 1
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "left_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            0,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "left_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            3
+          ],
+          "to": [
+            0,
+            4,
+            6
+          ]
+        },
+        {
+          "joint": "left_2",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            6
+          ],
+          "to": [
+            0,
+            4,
+            9
+          ]
+        },
+        {
+          "joint": "left_3",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            0,
+            0,
+            9
+          ],
+          "to": [
+            0,
+            4,
+            12
+          ]
+        },
+        {
+          "joint": "right_0",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            4,
+            3
+          ]
+        },
+        {
+          "joint": "right_1",
+          "role": "wall",
+          "type": "variety:room_wall",
+          "accepts": [
+            "variety:room_wall"
+          ],
+          "from": [
+            2,
+            0,
+            3
+          ],
+          "to": [
+            2,
+            4,
+            6
+          ]
+        }
+      ],
+      "layouts": [
+        {
+          "id": "door_2",
+          "weight": 3,
+          "choices": {
+            "variety:door_band": "2"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "left_3",
+            "right_0",
+            "right_1"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                1
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                4
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                7
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_3",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                10
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                1
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                4
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        },
+        {
+          "id": "door_3",
+          "weight": 2,
+          "choices": {
+            "variety:door_band": "3"
+          },
+          "closedJoints": [
+            "left_0",
+            "left_1",
+            "left_2",
+            "left_3",
+            "right_0",
+            "right_1"
+          ],
+          "addedJoints": [
+            {
+              "id": "left_0",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                2
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_1",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                5
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_2",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                8
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "left_3",
+              "type": "variety:left_out",
+              "at": [
+                0,
+                1,
+                11
+              ],
+              "face": "west",
+              "accepts": [
+                "variety:left_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_0",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                2
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            },
+            {
+              "id": "right_1",
+              "type": "variety:right_out",
+              "at": [
+                3,
+                1,
+                5
+              ],
+              "face": "east",
+              "accepts": [
+                "variety:right_in"
+              ],
+              "external": false,
+              "height": 2
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                0,
+                1,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                8
+              ],
+              "to": [
+                0,
+                2,
+                8
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                0,
+                1,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                0,
+                1,
+                11
+              ],
+              "to": [
+                0,
+                2,
+                11
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                1
+              ],
+              "to": [
+                2,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                2
+              ],
+              "to": [
+                2,
+                2,
+                2
+              ],
+              "material": "minecraft:air"
+            },
+            {
+              "from": [
+                2,
+                1,
+                4
+              ],
+              "to": [
+                2,
+                2,
+                4
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                2,
+                1,
+                5
+              ],
+              "to": [
+                2,
+                2,
+                5
+              ],
+              "material": "minecraft:air"
+            }
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "hall",
+            "from": [
+              1,
+              1,
+              1
+            ],
+            "to": [
+              1,
+              1,
+              11
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
     }
   },
   "compositions": {
@@ -10471,6 +14947,490 @@
           }
         ]
       }
+    },
+    "scaling:rectangle_floor_ground": {
+      "roots": [
+        "scaling:rectangle_ground"
+      ],
+      "attachments": [
+        "variety:left_living",
+        "variety:left_work",
+        "variety:right_living",
+        "variety:right_work"
+      ],
+      "entranceJoint": "entrance",
+      "requiredTags": [
+        "zoning:style"
+      ],
+      "minimumModules": 9,
+      "maximumModules": 9,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########"
+        ],
+        "rooms": [
+          "scaling:rectangle_ground",
+          "variety:left_living",
+          "variety:left_work",
+          "variety:right_living",
+          "variety:right_work"
+        ],
+        "rotations": [
+          0
+        ],
+        "entrance": "entry",
+        "ports": [
+          {
+            "id": "entry",
+            "type": "zoning:entrance",
+            "at": [
+              5,
+              1,
+              0
+            ],
+            "face": "north",
+            "height": 2,
+            "walkable": true
+          },
+          {
+            "id": "down",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              0,
+              3
+            ],
+            "face": "down",
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              5,
+              3
+            ],
+            "face": "up",
+            "walkable": true
+          }
+        ],
+        "minimumCounts": {
+          "scaling:rectangle_ground": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 1
+        },
+        "maximumCounts": {
+          "scaling:rectangle_ground": 1,
+          "variety:left_living": 4,
+          "variety:left_work": 4,
+          "variety:right_living": 4,
+          "variety:right_work": 4
+        }
+      }
+    },
+    "scaling:rectangle_floor_upper": {
+      "roots": [
+        "scaling:rectangle_upper"
+      ],
+      "attachments": [
+        "variety:left_living",
+        "variety:left_work",
+        "variety:right_living",
+        "variety:right_work"
+      ],
+      "entranceJoint": "down",
+      "requiredTags": [
+        "zoning:style"
+      ],
+      "minimumModules": 9,
+      "maximumModules": 9,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########"
+        ],
+        "rooms": [
+          "scaling:rectangle_upper",
+          "variety:left_living",
+          "variety:left_work",
+          "variety:right_living",
+          "variety:right_work"
+        ],
+        "rotations": [
+          0
+        ],
+        "entrance": "down",
+        "ports": [
+          {
+            "id": "down",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              0,
+              3
+            ],
+            "face": "down",
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              5,
+              3
+            ],
+            "face": "up",
+            "walkable": true
+          }
+        ],
+        "minimumCounts": {
+          "scaling:rectangle_upper": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 1
+        },
+        "maximumCounts": {
+          "scaling:rectangle_upper": 1,
+          "variety:left_living": 4,
+          "variety:left_work": 4,
+          "variety:right_living": 4,
+          "variety:right_work": 4
+        }
+      }
+    },
+    "scaling:rectangle_house": {
+      "minimumModules": 54,
+      "maximumModules": 54,
+      "maximumHeight": 25,
+      "buildingSections": {
+        "bottomCap": "minecraft:stone_bricks",
+        "topCap": "minecraft:stone_bricks",
+        "sections": [
+          {
+            "id": "ground",
+            "floors": 1,
+            "floor": "scaling:rectangle_floor_ground",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 0
+            }
+          },
+          {
+            "id": "upper",
+            "floors": 5,
+            "floor": "scaling:rectangle_floor_upper",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 0
+            }
+          }
+        ]
+      },
+      "maximumResolvedModules": 128
+    },
+    "scaling:gamma_floor_ground": {
+      "roots": [
+        "scaling:gamma_ground"
+      ],
+      "attachments": [
+        "variety:left_living",
+        "variety:left_work",
+        "variety:right_living",
+        "variety:right_work"
+      ],
+      "entranceJoint": "entrance",
+      "requiredTags": [
+        "zoning:style"
+      ],
+      "minimumModules": 7,
+      "maximumModules": 7,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######...."
+        ],
+        "rooms": [
+          "scaling:gamma_ground",
+          "variety:left_living",
+          "variety:left_work",
+          "variety:right_living",
+          "variety:right_work"
+        ],
+        "rotations": [
+          0
+        ],
+        "entrance": "entry",
+        "ports": [
+          {
+            "id": "entry",
+            "type": "zoning:entrance",
+            "at": [
+              5,
+              1,
+              0
+            ],
+            "face": "north",
+            "height": 2,
+            "walkable": true
+          },
+          {
+            "id": "down",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              0,
+              3
+            ],
+            "face": "down",
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              5,
+              3
+            ],
+            "face": "up",
+            "walkable": true
+          }
+        ],
+        "minimumCounts": {
+          "scaling:gamma_ground": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 1
+        },
+        "maximumCounts": {
+          "scaling:gamma_ground": 1,
+          "variety:left_living": 4,
+          "variety:left_work": 4,
+          "variety:right_living": 2,
+          "variety:right_work": 2
+        }
+      }
+    },
+    "scaling:gamma_floor_upper": {
+      "roots": [
+        "scaling:gamma_upper"
+      ],
+      "attachments": [
+        "variety:left_living",
+        "variety:left_work",
+        "variety:right_living",
+        "variety:right_work"
+      ],
+      "entranceJoint": "down",
+      "requiredTags": [
+        "zoning:style"
+      ],
+      "minimumModules": 7,
+      "maximumModules": 7,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "###########",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######....",
+          "#######...."
+        ],
+        "rooms": [
+          "scaling:gamma_upper",
+          "variety:left_living",
+          "variety:left_work",
+          "variety:right_living",
+          "variety:right_work"
+        ],
+        "rotations": [
+          0
+        ],
+        "entrance": "down",
+        "ports": [
+          {
+            "id": "down",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              0,
+              3
+            ],
+            "face": "down",
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "variety:stairs",
+            "at": [
+              5,
+              5,
+              3
+            ],
+            "face": "up",
+            "walkable": true
+          }
+        ],
+        "minimumCounts": {
+          "scaling:gamma_upper": 1,
+          "variety:left_living": 1,
+          "variety:left_work": 1
+        },
+        "maximumCounts": {
+          "scaling:gamma_upper": 1,
+          "variety:left_living": 4,
+          "variety:left_work": 4,
+          "variety:right_living": 2,
+          "variety:right_work": 2
+        }
+      }
+    },
+    "scaling:gamma_house": {
+      "minimumModules": 26,
+      "maximumModules": 26,
+      "maximumHeight": 17,
+      "buildingSections": {
+        "bottomCap": "minecraft:stone_bricks",
+        "topCap": "minecraft:stone_bricks",
+        "sections": [
+          {
+            "id": "ground",
+            "floors": 1,
+            "floor": "scaling:gamma_floor_ground",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 0
+            }
+          },
+          {
+            "id": "upper",
+            "floors": 2,
+            "floor": "scaling:gamma_floor_upper",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 0
+            }
+          },
+          {
+            "id": "crown",
+            "floors": 1,
+            "floor": "variety:rectangle_floor_upper",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "variety:slab",
+              "accepts": [
+                "variety:slab"
+              ],
+              "priority": 0
+            }
+          }
+        ]
+      }
     }
   },
   "assets": {
@@ -10532,6 +15492,24 @@
       "height": 9,
       "parameters": {
         "composition": "variety:gamma_house"
+      }
+    },
+    "scaling:rectangle_house": {
+      "provider": "modules",
+      "minimumSize": 13,
+      "maximumSize": 64,
+      "height": 25,
+      "parameters": {
+        "composition": "scaling:rectangle_house"
+      }
+    },
+    "scaling:gamma_house": {
+      "provider": "modules",
+      "minimumSize": 13,
+      "maximumSize": 64,
+      "height": 17,
+      "parameters": {
+        "composition": "scaling:gamma_house"
       }
     }
   },
@@ -10751,7 +15729,7 @@
         }
       },
       "surfaces": {
-        "PARCEL_BOUNDARY": "minecraft:dirt_path"
+        "PARCEL_BOUNDARY": "minecraft:stone_bricks"
       },
       "surfaceTemplates": {
         "PARCEL_YARD": {

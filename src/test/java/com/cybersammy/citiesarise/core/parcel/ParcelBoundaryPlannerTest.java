@@ -103,4 +103,39 @@ class ParcelBoundaryPlannerTest {
         assertFalse(ParcelLayoutSettings.conflict(left,new GridBounds(new GridPoint(Integer.MIN_VALUE+8,0),new GridSize(6,6)),2));
         assertThrows(IllegalArgumentException.class,()->new ParcelLayoutSettings(9,0,"x",1,"",Map.of(),List.of(),ParcelLayoutSettings.IncompatiblePolicy.SEPARATE));
     }
+
+    @Test void roadFrontageKeepsFencesAndOnlyBuildingAccessWidensIntoAGate() {
+        var config=settings(0,0,3,ParcelLayoutSettings.IncompatiblePolicy.SEPARATE,settings().styles().get("other"));
+        for(boolean vertical:List.of(false,true)) for(int width:new int[]{2,3}) {
+            int edge=width-width/2;
+            var a=new RoadNode(new PlanElementId("test:a"),new GridPoint(0,0),Set.of(),PlanProperties.empty());
+            var b=new RoadNode(new PlanElementId("test:b"),vertical?new GridPoint(0,10):new GridPoint(10,0),Set.of(),PlanProperties.empty());
+            var road=new RoadSegment(new PlanElementId("test:road"),a.id(),b.id(),width,Set.of(),PlanProperties.empty());
+            var parcel=vertical?parcel("test:p",edge,2):parcel("test:p",2,edge);
+            var plan=new SettlementPlan(CITY,new RoadGraph(List.of(a,b),List.of(road)),List.of(parcel),List.of(),Set.of(),PlanProperties.empty());
+            var gate=vertical?new GridPoint(edge,4):new GridPoint(4,edge);
+            var result=ParcelBoundaryPlanner.plan(plan,ground(p->64,Set.of(gate)),config);
+            for(int along=2;along<8;along++) {
+                var point=vertical?new GridPoint(edge,along):new GridPoint(along,edge);
+                boolean expectedFence=along<3 || along>5;
+                assertEquals(expectedFence,result.fences().stream().anyMatch(c->c.point().equals(point)),
+                        "Frontage at "+point+", width="+width+", vertical="+vertical);
+            }
+            var corridor=AxisAlignedGridCorridor.bounds(a.point(),b.point(),width);
+            assertTrue(result.fences().stream().noneMatch(c->corridor.contains(c.point())),"Fence obstructs road");
+        }
+    }
+
+    @Test void roadEndpointsDoNotReserveAnUnbuiltSquareCap() {
+        var a=new RoadNode(new PlanElementId("test:a"),new GridPoint(0,0),Set.of(),PlanProperties.empty());
+        var b=new RoadNode(new PlanElementId("test:b"),new GridPoint(10,0),Set.of(),PlanProperties.empty());
+        var road=new RoadSegment(new PlanElementId("test:r"),a.id(),b.id(),3,Set.of(),PlanProperties.empty());
+        var parcel=parcel("test:p",11,-1);
+        var plan=new SettlementPlan(CITY,new RoadGraph(List.of(a,b),List.of(road)),List.of(parcel),List.of(),Set.of(),PlanProperties.empty());
+        var result=ParcelBoundaryPlanner.plan(plan,ground(p->64,Set.of()),settings());
+        for(int z=-1;z<5;z++) {
+            var point=new GridPoint(11,z);
+            assertTrue(result.fences().stream().anyMatch(c->c.point().equals(point)),"Unbuilt road cap removed fence at "+point);
+        }
+    }
 }

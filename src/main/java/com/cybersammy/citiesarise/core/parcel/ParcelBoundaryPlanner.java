@@ -17,17 +17,19 @@ public final class ParcelBoundaryPlanner {
     public static ParcelBoundaryPlan plan(SettlementPlan plan,TerrainPreparationPlan preparation,ParcelLayoutSettings settings) {
         if(settings.styles().isEmpty() && settings.maximumAlleyWidth()==0) return ParcelBoundaryPlan.EMPTY;
         Map<GridPoint,Integer> heights=new HashMap<>(); Set<GridPoint> network=new HashSet<>(),blocked=new HashSet<>();
+        Set<GridPoint> accesses=new HashSet<>();
         for(var c:preparation.columns()) {
             heights.put(c.point(),c.targetElevation());
             if(c.type()==TerrainPreparationColumnType.BUILDING_ACCESS || c.type()==TerrainPreparationColumnType.BUILDING_ACCESS_STEP
                     || c.type()==TerrainPreparationColumnType.ROAD_TRANSITION_STEP) network.add(c.point());
+            if(c.type()==TerrainPreparationColumnType.BUILDING_ACCESS || c.type()==TerrainPreparationColumnType.BUILDING_ACCESS_STEP)
+                accesses.add(c.point());
             if(c.type()==TerrainPreparationColumnType.RETAINING_WALL) blocked.add(c.point());
         }
         var nodes=new HashMap<PlanElementId,RoadNode>(); plan.roadGraph().nodes().forEach(n -> nodes.put(n.id(),n));
         for(var r:plan.roadGraph().segments()) {
-            var a=nodes.get(r.startNodeId()).point(); var b=nodes.get(r.endNodeId()).point(); int half=r.width()/2;
-            rectangle(network,Math.min(a.x(),b.x())-half,Math.min(a.z(),b.z())-half,
-                    Math.max(a.x(),b.x())+half+1,Math.max(a.z(),b.z())+half+1);
+            var a=nodes.get(r.startNodeId()).point(); var b=nodes.get(r.endNodeId()).point();
+            rectangle(network,AxisAlignedGridCorridor.bounds(a,b,r.width()));
         }
         for(var b:plan.roadGraph().bridges()) rectangle(blocked,b.bounds());
         for(var b:plan.buildingSlots()) rectangle(blocked,b.bounds());
@@ -36,9 +38,9 @@ public final class ParcelBoundaryPlanner {
         var alleyPoints=alleys(plan,settings,heights,network,alleyBlocked);
         Set<GridPoint> protectedPoints=new HashSet<>(blocked); protectedPoints.addAll(network);
         // Reserve walking headroom and the entire gate width before choosing props or fences.
-        Set<GridPoint> openings=new HashSet<>(network);
         int radius=settings.gateWidth()/2;
-        for(var p:List.copyOf(openings)) for(int dz=-radius;dz<=radius;dz++) for(int dx=-radius;dx<=radius;dx++) {
+        // Gate width expands building access only, never the complete road frontage.
+        for(var p:accesses) for(int dz=-radius;dz<=radius;dz++) for(int dx=-radius;dx<=radius;dx++) {
             long x=(long)p.x()+dx,z=(long)p.z()+dz;
             if(x>=Integer.MIN_VALUE && x<=Integer.MAX_VALUE && z>=Integer.MIN_VALUE && z<=Integer.MAX_VALUE)
                 protectedPoints.add(new GridPoint((int)x,(int)z));

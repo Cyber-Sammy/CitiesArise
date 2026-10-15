@@ -58,6 +58,7 @@ public final class ContentCatalogParser {
         for(var entry:object(json,"compositions").entrySet()) {
             JsonObject c=entry.getValue().getAsJsonObject();
             if(c.has("buildingSections"))continue;
+            if(c.has("maximumResolvedModules"))throw new IllegalArgumentException("Resolved module budget requires building sections");
             var referenced=new LinkedHashSet<String>();referenced.addAll(list(c,"roots"));referenced.addAll(list(c,"attachments"));referenced.addAll(list(c,"exceptions"));
             var layout=c.has("floorLayout")?floorLayout(object(c,"floorLayout")):null;
             if(layout!=null){referenced.addAll(layout.rooms());referenced.addAll(layout.fillers());}
@@ -88,7 +89,8 @@ public final class ContentCatalogParser {
             var referenced=new LinkedHashSet<>(recipe.moduleIds());referenced.addAll(first.exceptions());
             for(var section:sections){referenced.addAll(section.recipe().layout().rooms());referenced.addAll(section.recipe().layout().fillers());}
             compositions.put(entry.getKey(),new CompositionSettings(reachableModules(modules,referenced),first.roots(),first.attachments(),first.entranceJoint(),first.requiredTags(),first.forbiddenTags(),first.exceptions(),
-                    integer(c,"minimumModules",1),integer(c,"maximumModules",16),integer(c,"maximumHeight",64),first.damageSeverity(),first.airMaterial(),materialRules,null,recipe));
+                    integer(c,"minimumModules",1),integer(c,"maximumModules",16),integer(c,"maximumHeight",64),first.damageSeverity(),first.airMaterial(),materialRules,null,recipe,
+                    integer(c,"maximumResolvedModules",64)));
         }
         Map<String,BuildingAsset> assets=new LinkedHashMap<>();
         for(var entry:object(json,"assets").entrySet()) {

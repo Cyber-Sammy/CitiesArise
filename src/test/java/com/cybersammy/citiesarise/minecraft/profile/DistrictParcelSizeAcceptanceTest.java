@@ -35,6 +35,9 @@ class DistrictParcelSizeAcceptanceTest {
                 assertEquals(size.width()*size.depth(),parcel.bounds().size().width()*parcel.bounds().size().depth());
                 assertTrue((parcel.bounds().size().width()==size.width() && parcel.bounds().size().depth()==size.depth())
                         || (parcel.bounds().size().width()==size.depth() && parcel.bounds().size().depth()==size.width()));
+                int margin=size.marginOr(profile.suburbPlanningSettings().buildingMargin());
+                var slot=city.buildingSlots().stream().filter(s->s.parcelId().equals(parcel.id())).findFirst().orElseThrow();
+                assertEquals((size.width()-2*margin)*(size.depth()-2*margin),slot.bounds().size().width()*slot.bounds().size().depth());
             }
         }
         assertTrue(sizes.size()>1,"Flat city should demonstrate several parcel sizes");
@@ -49,13 +52,33 @@ class DistrictParcelSizeAcceptanceTest {
         var settings=parse(json()).suburbPlanningSettings();
         var buildings=settings.buildings();
         for(var size:settings.districts().parcelSizes()) {
-            var slotSize=new GridSize(size.width()-2*settings.buildingMargin(),size.depth()-2*settings.buildingMargin());
+            int margin=size.marginOr(settings.buildingMargin());
+            var slotSize=new GridSize(size.width()-2*margin,size.depth()-2*margin);
             for(var rule:buildings.rules()) {
                 assertTrue(rule.pool().stream().anyMatch(entry -> entry.asset().fits(slotSize)),
                         size.id()+" leaves "+slotSize+" and cannot fit "+rule.id());
             }
             assertTrue(buildings.pool().stream().anyMatch(entry -> entry.asset().fits(slotSize)),size.id());
         }
+    }
+    @Test void optionalPerSizeMarginEnlargesOnlyTheSelectedBuildingSlotAndPreservesLegacyDefaults() throws Exception {
+        var settings=parse(json()).suburbPlanningSettings();
+        var spacious=settings.districts().parcelSizes().stream().filter(s->s.id().equals("zoning:spacious")).findFirst().orElseThrow();
+        assertEquals(4,settings.buildingMargin());assertEquals(3,settings.withParcelSize(spacious).forDistrict(1).buildingMargin());
+        assertEquals(settings.parcelLayout(),settings.withParcelSize(spacious).parcelLayout());
+        assertEquals("3",spacious.properties().find(new PlanPropertyKey("building_margin")).orElseThrow());
+        var old=new com.google.gson.Gson().fromJson("{\"id\":\"old\",\"width\":20,\"depth\":20}",DistrictParcelSize.class);
+        assertEquals(new DistrictParcelSize("old",20,20),old);assertEquals(4,old.marginOr(4));
+        assertTrue(old.properties().find(new PlanPropertyKey("building_margin")).isEmpty());
+        assertEquals(4,settings.withParcelSize(old).buildingMargin());
+    }
+    @Test void perSizeMarginRejectsInvalidNumbersAndEmptyBuildingSlots() throws Exception {
+        for(String number:List.of("-1","9","1.5","\"3\"")) {
+            var data=json();data.getAsJsonObject("planning").getAsJsonObject("districts").getAsJsonArray("parcelSizes").get(0).getAsJsonObject()
+                    .add("buildingMargin",JsonParser.parseString(number));
+            assertThrows(IllegalArgumentException.class,()->parse(data),number);
+        }
+        assertThrows(IllegalArgumentException.class,()->new DistrictParcelSize("bad",4,4,2));
     }
     @Test void assignmentIsStableOnRetriesAndPackReorderingAndCyclesAcrossRegions() {
         var sizes=List.of(new DistrictParcelSize("a",14,16),new DistrictParcelSize("b",16,18),new DistrictParcelSize("c",20,20));

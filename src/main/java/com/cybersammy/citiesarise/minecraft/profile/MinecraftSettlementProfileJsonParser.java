@@ -50,7 +50,7 @@ public final class MinecraftSettlementProfileJsonParser {
         SettlementProfile profile = new SettlementProfile(
                 id,
                 parseSurveySize(survey),
-                parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning, resources)).withDistricts(parseDistricts(planning)),
+                parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning, resources)).withDistricts(parseDistricts(planning)).withParcelLayout(ParcelLayoutJsonParser.parse(planning,resources)),
                 parseTerrainResponsePolicy(json),
                 parseStructuralSupports(planning),
                 parseRavineRoads(planning)
@@ -411,7 +411,7 @@ public final class MinecraftSettlementProfileJsonParser {
         };
     }
 
-    private static int optionalInt(JsonObject parent, String name, int defaultValue) {
+    static int optionalInt(JsonObject parent, String name, int defaultValue) {
         if (!parent.has(name)) {
             return defaultValue;
         }
@@ -432,7 +432,7 @@ public final class MinecraftSettlementProfileJsonParser {
         return requiredDouble(parent, name);
     }
 
-    private static boolean optionalBoolean(JsonObject parent, String name, boolean defaultValue) {
+    static boolean optionalBoolean(JsonObject parent, String name, boolean defaultValue) {
         if (!parent.has(name)) {
             return defaultValue;
         }

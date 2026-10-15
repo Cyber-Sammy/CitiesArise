@@ -92,6 +92,21 @@ public final class SettlementPlanJsonExporter {
             json.stringField("damage",String.join("; ",prop.composition().damageDecisions())); json.endObject();
         })));
         json.arrayField("surfaceTemplates", () -> content.surfaceTemplates().keySet().stream().sorted().forEach(json::arrayStringValue));
+        if(!content.boundaries().edges().isEmpty()) json.objectField("boundaries", () -> {
+            json.numberField("fenceCells",content.boundaries().fences().size());
+            json.arrayField("edges", () -> content.boundaries().edges().forEach(edge -> json.arrayValue(() -> {
+                json.beginObject();json.stringField("id",edge.id());json.stringField("axis",edge.alongX()?"X":"Z");
+                json.numberField("line",edge.line());json.numberField("start",edge.start());json.numberField("endExclusive",edge.endExclusive());
+                json.stringField("shared",Boolean.toString(edge.shared()));
+                json.arrayField("owners", () -> edge.owners().forEach(id -> json.arrayStringValue(id.value())));
+                json.arrayField("openings", () -> edge.openings().stream().sorted(Comparator.comparingInt(GridPoint::z).thenComparingInt(GridPoint::x))
+                        .forEach(point -> json.arrayValue(() -> {json.beginObject();writePoint(json,point);json.endObject();})));
+                json.endObject();
+            })));
+            json.arrayField("alleys", () -> content.boundaries().alleys().forEach(cell -> json.arrayValue(() -> {
+                json.beginObject();json.numberField("x",cell.point().x());json.numberField("y",cell.y());json.numberField("z",cell.point().z());json.endObject();
+            })));
+        });
         json.endObject(); return json.toString();
     }
 

@@ -16,13 +16,17 @@ final class SurfacePropPlanner {
     }
     static List<ResolvedProp> plan(SettlementPlan plan,TerrainPreparationPlan preparation,List<PropRule> rules,long seed,
             Map<PlanElementId,ResolvedParcelContent> parcels) {
+        return plan(plan,preparation,rules,seed,parcels,Set.of());
+    }
+    static List<ResolvedProp> plan(SettlementPlan plan,TerrainPreparationPlan preparation,List<PropRule> rules,long seed,
+            Map<PlanElementId,ResolvedParcelContent> parcels,Set<GridPoint> reservations) {
         Map<GridPoint,Integer> heights=new HashMap<>(); Set<GridPoint> access=new HashSet<>();
         for(var column:preparation.columns()) {
             heights.put(column.point(),column.targetElevation());
             if(column.type()==TerrainPreparationColumnType.BUILDING_ACCESS || column.type()==TerrainPreparationColumnType.BUILDING_ACCESS_STEP
                     || column.type()==TerrainPreparationColumnType.ROAD_TRANSITION_STEP) access.add(column.point());
         }
-        Set<GridPoint> occupied=new HashSet<>(access);
+        Set<GridPoint> occupied=new HashSet<>(access); occupied.addAll(reservations);
         for(var slot:plan.buildingSlots()) for(int z=slot.bounds().minZ();z<slot.bounds().maxZExclusive();z++)
             for(int x=slot.bounds().minX();x<slot.bounds().maxXExclusive();x++) occupied.add(new GridPoint(x,z));
         // Never place decoration within the actual traveled road corridors.

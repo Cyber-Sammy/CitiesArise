@@ -1,5 +1,7 @@
 # Cities Arise
 
+Parcel boundaries are configured through `planning.parcelLayout`: independent spacing, reserved road-connected alleys, compatible shared fences and explicit separate-boundary policy. Gates reserve open passages before props. The zoning fixture enables wood fences for homes and stone walls for workshops; [its authoring guide](examples/datapacks/zoning_fixture/AUTHORING_GUIDE.md#parcel-spacing-and-fences) describes the options. These changes apply to newly generated settlements and require the matching JAR and datapack.
+
 For pack installation, resource layout, directed joints, floor/room contracts,
 variants and current road-content limitations, see the
 [datapack authoring guide](examples/datapacks/composition_fixture/AUTHORING_GUIDE.md).

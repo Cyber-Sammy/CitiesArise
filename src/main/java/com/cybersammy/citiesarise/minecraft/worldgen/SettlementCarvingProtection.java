@@ -48,7 +48,7 @@ public final class SettlementCarvingProtection {
         void include(DebugChunkPlacementPlan plan) {
             for (var operation : plan.operations()) {
                 // Lining decorates the existing protected envelope; it must never deepen that envelope.
-                if (operation.role() == com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.SUPPORT_LINING || operation.role().suspended()) continue;
+                if (operation.role() == com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.SUPPORT_LINING || operation.role().substrateIndependent()) continue;
                 if (operation.role().bridge() && operation.role() != com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.BRIDGE_ABUTMENT
                         && operation.role() != com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.BRIDGE_PIER) continue;
                 if (operation.platformY().isEmpty()) continue;

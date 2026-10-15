@@ -21,8 +21,24 @@ public record SuburbPlanningSettings(
         long maxEarthworkVolume,
         TerrainTransitionSettings terrainTransitions,
         BuildingContentSettings buildings,
-        DistrictPlanningSettings districts
+        DistrictPlanningSettings districts,
+        com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings parcelLayout
 ) {
+    public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, DevelopmentCapacity parcelCapacity,
+            int parcelWidth, int parcelDepth, int buildingMargin, int maxElevationRange,
+            int preferredMaxCutDepth, int preferredMaxFillDepth, int maxCutDepth, int maxFillDepth,
+            int maxBuildingFoundationDepth, long maxEarthworkVolume, TerrainTransitionSettings terrainTransitions,
+            BuildingContentSettings buildings, DistrictPlanningSettings districts) {
+        this(roadWidth,maxBuildableSlope,parcelCapacity,parcelWidth,parcelDepth,buildingMargin,maxElevationRange,
+                preferredMaxCutDepth,preferredMaxFillDepth,maxCutDepth,maxFillDepth,maxBuildingFoundationDepth,
+                maxEarthworkVolume,terrainTransitions,buildings,districts,
+                com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings.disabled());
+    }
+    public SuburbPlanningSettings withParcelLayout(com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings value) {
+        return new SuburbPlanningSettings(roadWidth,maxBuildableSlope,parcelCapacity,parcelWidth,parcelDepth,buildingMargin,
+                maxElevationRange,preferredMaxCutDepth,preferredMaxFillDepth,maxCutDepth,maxFillDepth,maxBuildingFoundationDepth,
+                maxEarthworkVolume,terrainTransitions,buildings,districts,value);
+    }
     public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, DevelopmentCapacity parcelCapacity,
             int parcelWidth, int parcelDepth, int buildingMargin, int maxElevationRange,
             int preferredMaxCutDepth, int preferredMaxFillDepth, int maxCutDepth, int maxFillDepth,
@@ -36,18 +52,18 @@ public record SuburbPlanningSettings(
     public SuburbPlanningSettings withDistricts(DistrictPlanningSettings value) {
         return new SuburbPlanningSettings(roadWidth, maxBuildableSlope, parcelCapacity, parcelWidth, parcelDepth,
                 buildingMargin, maxElevationRange, preferredMaxCutDepth, preferredMaxFillDepth, maxCutDepth,
-                maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, buildings, value);
+                maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, buildings, value, parcelLayout);
     }
 
     public SuburbPlanningSettings withParcelSize(DistrictParcelSize size) {
         return new SuburbPlanningSettings(roadWidth,maxBuildableSlope,parcelCapacity,size.width(),size.depth(),buildingMargin,
                 maxElevationRange,preferredMaxCutDepth,preferredMaxFillDepth,maxCutDepth,maxFillDepth,maxBuildingFoundationDepth,
-                maxEarthworkVolume,terrainTransitions,buildings,districts);
+                maxEarthworkVolume,terrainTransitions,buildings,districts,parcelLayout);
     }
     public SuburbPlanningSettings forDistrict(int target) {
         return new SuburbPlanningSettings(roadWidth, maxBuildableSlope, new DevelopmentCapacity(1, target, target),
                 parcelWidth, parcelDepth, buildingMargin, maxElevationRange, preferredMaxCutDepth, preferredMaxFillDepth,
-                maxCutDepth, maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, buildings);
+                maxCutDepth, maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, buildings, DistrictPlanningSettings.single(), parcelLayout);
     }
     public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, DevelopmentCapacity parcelCapacity,
             int parcelWidth, int parcelDepth, int buildingMargin, int maxElevationRange,
@@ -61,7 +77,7 @@ public record SuburbPlanningSettings(
     public SuburbPlanningSettings withBuildings(BuildingContentSettings content) {
         return new SuburbPlanningSettings(roadWidth, maxBuildableSlope, parcelCapacity, parcelWidth, parcelDepth,
                 buildingMargin, maxElevationRange, preferredMaxCutDepth, preferredMaxFillDepth, maxCutDepth,
-                maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, content, districts);
+                maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, content, districts, parcelLayout);
     }
 
     public static final int DEFAULT_ROAD_WIDTH = 3;
@@ -301,6 +317,7 @@ public record SuburbPlanningSettings(
     }
 
     public SuburbPlanningSettings {
+        if(parcelLayout==null) parcelLayout=com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings.disabled();
         requirePositive(roadWidth, "roadWidth");
         requireFiniteNonNegative(maxBuildableSlope, "maxBuildableSlope");
         parcelCapacity = Objects.requireNonNull(parcelCapacity, "parcelCapacity");
@@ -383,7 +400,8 @@ public record SuburbPlanningSettings(
                 maxEarthworkVolume,
                 transitions,
                 buildings,
-                districts
+                districts,
+                parcelLayout
         );
     }
 

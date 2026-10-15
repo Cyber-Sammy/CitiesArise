@@ -196,6 +196,48 @@
       "edgeClearance": 2,
       "maximumDetour": 24,
       "maximumRoutingAttempts": 2
+    },
+    "parcelLayout": {
+      "minimumSpacing": 0,
+      "maximumAlleyWidth": 3,
+      "alleyMaterial": "minecraft:stone_bricks",
+      "gateWidth": 3,
+      "defaultStyle": "wood",
+      "incompatiblePolicy": "separate",
+      "styles": [
+        {
+          "id": "wood",
+          "type": "wood",
+          "accepts": [
+            "wood"
+          ],
+          "material": "minecraft:oak_fence",
+          "height": 1,
+          "priority": 0,
+          "share": true
+        },
+        {
+          "id": "masonry",
+          "type": "masonry",
+          "accepts": [
+            "masonry"
+          ],
+          "material": "minecraft:cobblestone_wall",
+          "height": 1,
+          "priority": 10,
+          "share": true
+        }
+      ],
+      "rules": [
+        {
+          "match": {
+            "properties": {
+              "zoning:purpose": "workshops"
+            }
+          },
+          "style": "masonry"
+        }
+      ]
     }
   },
   "terrainPolicy": {

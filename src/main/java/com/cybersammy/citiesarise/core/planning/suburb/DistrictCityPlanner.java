@@ -158,6 +158,9 @@ final class DistrictCityPlanner {
             zones.addAll(elevation.zones()); transitions.addAll(elevation.transitions());
             districts.add(new DistrictPlan(p.id(), local.region().bounds(), p.parcels().stream().map(Parcel::id).toList(), local.region().footprint(),Set.of(),local.size().map(DistrictParcelSize::properties).orElse(PlanProperties.empty())));
         }
+        for(int a=0;a<parcels.size();a++) for(int b=a+1;b<parcels.size();b++)
+            if(com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings.conflict(parcels.get(a).bounds(),parcels.get(b).bounds(),
+                    request.settings().parcelLayout().minimumSpacing())) return Optional.empty();
         // Re-select crossings city-wide: local shortcuts must not spend the budget before district connections.
         var bare = new SettlementPlan(request.settlementId(), new RoadGraph(nodes, segments), parcels, buildings,
                 Set.of(), PlanProperties.empty(), districts);
@@ -210,7 +213,7 @@ final class DistrictCityPlanner {
                 // Retained district entrances and authored modules must still fit the combined plan.
                 try {
                     com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(proposedPlan,
-                            candidatePreparation.plan().orElseThrow(), request.seed(), request.settings().buildings());
+                            candidatePreparation.plan().orElseThrow(), request.seed(), request.settings().buildings(), request.settings().parcelLayout());
                 } catch (IllegalArgumentException incompatibleContent) {
                     continue;
                 }
@@ -237,7 +240,7 @@ final class DistrictCityPlanner {
         com.cybersammy.citiesarise.core.content.ResolvedSettlementContent content;
         try {
             content = com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(bridged, prep,
-                    request.seed(), request.settings().buildings());
+                    request.seed(), request.settings().buildings(), request.settings().parcelLayout());
         } catch (IllegalArgumentException incompatibleContent) {
             return Optional.empty();
         }

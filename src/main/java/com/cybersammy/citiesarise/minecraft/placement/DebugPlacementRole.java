@@ -50,7 +50,10 @@ public enum DebugPlacementRole {
     STRUCTURAL_PIER(46),
     STRUCTURAL_BRACE(47),
     TERRAIN_CLEARANCE(48),
-    PARCEL_FOUNDATION(49);
+    PARCEL_FOUNDATION(49),
+    PARCEL_FENCE(50),
+    PARCEL_ALLEY(51),
+    PARCEL_ALLEY_CLEARANCE(52);
 
     private final int serializedId;
 
@@ -64,6 +67,11 @@ public enum DebugPlacementRole {
 
     public boolean suspended() {
         return this==SUSPENDED_CONTENT || this==STRUCTURAL_BEAM || this==STRUCTURAL_PIER || this==STRUCTURAL_BRACE || this==TERRAIN_CLEARANCE || this==PARCEL_FOUNDATION;
+    }
+
+    /** Exact boundary decoration must never start another substrate preparation pass. */
+    public boolean substrateIndependent() {
+        return suspended() || this==PARCEL_FENCE || this==PARCEL_ALLEY || this==PARCEL_ALLEY_CLEARANCE;
     }
 
     public boolean bridge() {
@@ -81,6 +89,9 @@ public enum DebugPlacementRole {
 
     int priority() {
         return switch (this) {
+            case PARCEL_FENCE -> 55;
+            case PARCEL_ALLEY -> 62;
+            case PARCEL_ALLEY_CLEARANCE -> 56;
             case TERRAIN_CLEARANCE -> -1;
             case SUPPORT_LINING -> 1;
             case PARCEL_FOUNDATION -> 2;

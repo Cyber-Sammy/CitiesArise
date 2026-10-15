@@ -44,7 +44,7 @@ public final class DebugPlacementApplier {
         }
 
         Map<GridPoint,DebugBlockPlacementOperation> fillPolicies=new LinkedHashMap<>();
-        for(var operation:placementPlan.operations()) if(!operation.role().bridge() && !operation.role().suspended() && operation.role()!=DebugPlacementRole.SUPPORT_LINING && !operation.fillMaterial().isEmpty() && operation.platformY().isPresent()) {
+        for(var operation:placementPlan.operations()) if(!operation.role().bridge() && !operation.role().substrateIndependent() && operation.role()!=DebugPlacementRole.SUPPORT_LINING && !operation.fillMaterial().isEmpty() && operation.platformY().isPresent()) {
             if(operation.role()==DebugPlacementRole.TERRAIN_SURFACE) fillPolicies.put(operation.point(),operation);
             else fillPolicies.putIfAbsent(operation.point(),operation);
         }

@@ -31,6 +31,22 @@ final class FrontageParcelAllocatorTest {
     private static final SuburbPlanningSettings SETTINGS = SuburbPlanningSettings.defaults();
     private final FrontageParcelAllocator allocator = new FrontageParcelAllocator();
 
+    @Test void spacingIsIndependentFromBuildingInsetAndSurvivesSettingsCopies() {
+        var layout=new com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings(3,0,"minecraft:stone_bricks",1,"",
+                java.util.Map.of(),List.of(),com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings.IncompatiblePolicy.SEPARATE);
+        var settings=SETTINGS.withParcelLayout(layout);
+        assertEquals(SETTINGS.buildingMargin(),settings.buildingMargin());
+        assertEquals(layout,settings.withBuildings(settings.buildings()).parcelLayout());
+        assertEquals(layout,settings.withTerrainTransitions(settings.terrainTransitions()).parcelLayout());
+        assertEquals(layout,settings.withDistricts(settings.districts()).parcelLayout());
+        assertEquals(layout,settings.forDistrict(4).parcelLayout());
+        var district=bounds(0,0,40,30);
+        var result=allocator.allocate(horizontalRoad(0,15,39,3),district,flatSurvey(district),settings,42L,6,Optional.empty());
+        assertEquals(6,result.size());
+        for(int i=0;i<result.size();i++) for(int j=i+1;j<result.size();j++)
+            assertFalse(com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings.conflict(result.get(i),result.get(j),3));
+    }
+
     @Test
     void allocatesDeterministicNonOverlappingParcelsAlongRoadFrontage() {
         GridBounds district = bounds(0, 0, 40, 30);

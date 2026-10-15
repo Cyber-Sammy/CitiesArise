@@ -67,7 +67,7 @@ final class WorldgenChunkPlacement {
         Set<GridPoint> ordinary = new HashSet<>();
         for (var operation : plan.operations()) {
             if (operation.role() == DebugPlacementRole.SUPPORT_LINING) continue;
-            if (operation.role().bridge() || operation.role().suspended()) suspended.add(operation.point());
+            if (operation.role().bridge() || operation.role().substrateIndependent()) suspended.add(operation.point());
             else for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++)
                 ordinary.add(new GridPoint(operation.point().x() + dx, operation.point().z() + dz));
         }
@@ -103,7 +103,7 @@ final class WorldgenChunkPlacement {
     private static Map<GridPoint, PlatformPreparation> platformPreparations(DebugChunkPlacementPlan plan) {
         Map<GridPoint, PlatformPreparation> preparations = new LinkedHashMap<>();
         for (DebugBlockPlacementOperation operation : plan.operations()) {
-            if (operation.platformY().isEmpty() || operation.role().bridge() || operation.role().suspended() || operation.role() == DebugPlacementRole.SUPPORT_LINING) {
+            if (operation.platformY().isEmpty() || operation.role().bridge() || operation.role().substrateIndependent() || operation.role() == DebugPlacementRole.SUPPORT_LINING) {
                 continue;
             }
             int platformY = operation.platformY().getAsInt();

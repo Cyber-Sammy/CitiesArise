@@ -105,17 +105,17 @@ final class FrontageParcelAllocator {
                 seed,
                 topology
         );
-        return selectCompatibleParcels(candidates, capacity)
+        return selectCompatibleParcels(candidates, capacity, settings.parcelLayout().minimumSpacing())
                 .orElseGet(List::of);
     }
 
     private static Optional<List<GridBounds>> selectCompatibleParcels(
             List<ParcelCandidate> candidates,
-            int capacity
+            int capacity, int gap
     ) {
         SelectionSearch search = new SelectionSearch(MAX_SELECTION_SEARCH_NODES);
         SelectionCandidates selectionCandidates = new SelectionCandidates(candidates);
-        return selectCompatibleParcels(selectionCandidates, capacity, 0, new ArrayList<>(), search);
+        return selectCompatibleParcels(selectionCandidates, capacity, 0, new ArrayList<>(), search, gap);
     }
 
     private static Optional<List<GridBounds>> selectCompatibleParcels(
@@ -123,7 +123,7 @@ final class FrontageParcelAllocator {
             int capacity,
             int startIndex,
             List<GridBounds> selected,
-            SelectionSearch search
+            SelectionSearch search, int gap
     ) {
         if (!search.visit()) {
             return Optional.empty();
@@ -132,14 +132,14 @@ final class FrontageParcelAllocator {
             return Optional.of(List.copyOf(selected));
         }
         int required = capacity - selected.size();
-        if (compatibleCapacityUpperBound(candidates, startIndex, selected) < required) {
+        if (compatibleCapacityUpperBound(candidates, startIndex, selected, gap) < required) {
             return Optional.empty();
         }
 
         int finalStart = candidates.size() - required;
         for (int index = startIndex; index <= finalStart; index++) {
             GridBounds candidate = candidates.get(index).bounds();
-            if (intersectsAny(candidate, selected)) {
+            if (parcelConflict(candidate, selected, gap)) {
                 continue;
             }
             selected.add(candidate);
@@ -148,7 +148,7 @@ final class FrontageParcelAllocator {
                     capacity,
                     index + 1,
                     selected,
-                    search
+                    search, gap
             );
             selected.removeLast();
             if (result.isPresent()) {
@@ -164,17 +164,17 @@ final class FrontageParcelAllocator {
     private static int compatibleCapacityUpperBound(
             SelectionCandidates candidates,
             int startIndex,
-            List<GridBounds> selected
+            List<GridBounds> selected, int gap
     ) {
         int capacity = 0;
         for (Map.Entry<FrontageKey, List<Integer>> entry : candidates.indicesByFrontage().entrySet()) {
-            int previousMaximum = Integer.MIN_VALUE;
+            long previousMaximum = Long.MIN_VALUE;
             for (int index : entry.getValue()) {
                 if (index < startIndex) {
                     continue;
                 }
                 GridBounds bounds = candidates.get(index).bounds();
-                if (intersectsAny(bounds, selected)) {
+                if (parcelConflict(bounds, selected, gap)) {
                     continue;
                 }
                 int minimum = axisMinimum(bounds, entry.getKey().side());
@@ -182,7 +182,7 @@ final class FrontageParcelAllocator {
                     continue;
                 }
                 capacity++;
-                previousMaximum = axisMaximum(bounds, entry.getKey().side());
+                previousMaximum = (long)axisMaximum(bounds, entry.getKey().side())+gap;
             }
         }
         return capacity;
@@ -336,6 +336,9 @@ final class FrontageParcelAllocator {
         return (int) Math.min(Integer.MAX_VALUE, result);
     }
 
+    private static boolean parcelConflict(GridBounds bounds,List<GridBounds> others,int gap) {
+        return others.stream().anyMatch(other -> com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings.conflict(bounds,other,gap));
+    }
     private static boolean intersectsAny(GridBounds bounds, List<GridBounds> others) {
         for (GridBounds other : others) {
             if (bounds.intersects(other)) {

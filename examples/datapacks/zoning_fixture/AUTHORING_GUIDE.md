@@ -1083,3 +1083,30 @@ Each floor has five structural modules: a staircase corridor plus four living/wo
 The larger assets require a slot of at least12 blocks in both dimensions, fitting existing20x20 spacious parcels with building margin4. Parcel sizes, spacing and roads are unchanged. The homes pool uses relative weights2/3/3 for cottage/rectangle/G; size eligibility and bounded assembly constrain the final distribution. Small homes, workshops and landmarks remain available. Limits stay16 structural modules per building,64 resolved modules and65,536 cells; the rectangle uses15 structural modules.
 
 Composition and prop recipes retain only reachable module definitions, including all nested contract alternatives and adjacency references; the global content catalog remains complete. Frozen recipe version4 stores each module definition once and uses bounded references for the per-recipe dictionaries. Versions1–3 remain readable. The stored512KiB and expanded2MiB recipe budgets,16 dictionaries and existing composition limits remain unchanged; definition references have additional1024-entry bounds.
+# Parcel spacing and fences
+
+Add `parcelLayout` under `planning` in the settlement profile. Omitting it preserves old behavior.
+
+```json
+"parcelLayout": {
+  "minimumSpacing": 2,
+  "maximumAlleyWidth": 3,
+  "alleyMaterial": "minecraft:stone_bricks",
+  "gateWidth": 3,
+  "defaultStyle": "wood",
+  "incompatiblePolicy": "separate",
+  "styles": [
+    {"id":"wood", "type":"wood", "accepts":["wood"],
+     "material":"minecraft:oak_fence", "height":1, "priority":0, "share":true}
+  ],
+  "rules": [
+    {"match":{"properties":{"zoning:purpose":"homes"}}, "style":"wood"}
+  ]
+}
+```
+
+`minimumSpacing` (0–8) counts free columns between parcel rectangles, independently of `buildingMargin`. Zero permits touching plots. Positive spacing participates in bounded allocation and is checked across districts; a site unable to fit the requested capacity can be rejected. The demo uses zero to preserve its accepted city footprint. `maximumAlleyWidth` (0–8, zero disables) permits paved gaps with short approaches to existing roads/access. Alleys require existing prepared columns with no cut/fill, avoid buildings, retaining walls and bridges, and keep only connected parts with neighbor elevation changes at most one block. Unsupported, steep or disconnected parts stay unchanged. This stage does not excavate new routes or fill ravines to make alleys fit. Walking clearance is two blocks.
+
+Up to 16 styles and 32 first-match metadata rules select the fence. Empty defaultStyle leaves unmatched parcels unfenced. A fence style has an author-owned `type`, a mutual `accepts` set (up to 16 types), `height` 1–3, `priority` -1000–1000 and `share` (default true). Defaults: height 1, priority 0. Sharing requires both permissions, mutual acceptance, equal fence height and equal prepared ground elevation. Priority chooses the material only after compatibility; stable owner id breaks ties. The shared physical row lies inside the north/west owner. At incompatible or differently elevated boundaries, `separate` keeps both rows and `reject` rejects the candidate content. Materials are ordinary validated Minecraft block states; the adapter freezes fence/wall connections from the complete plan.
+
+`gateWidth` must be odd, 1–5. It widens reserved entrances and gives alley-side contact runs bounded openings. Gates currently mean open passages, without gate block animation. Fences and props cannot occupy roads, prepared entrances, building footprints, bridges or reserved passages. Fence height must suit the intended access clearance. There is no post-hoc chunk-local fence matching. The exported content lists coordinate edge ids, owners, shared decisions, openings and alley elevations; saved operations preserve identities, owner ids and connection masks through reload/chunk ordering. Old profiles and old frozen recipes default to disabled boundaries; existing resolved cities retain their geometry.

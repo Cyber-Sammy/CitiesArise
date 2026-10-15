@@ -8,7 +8,13 @@ import java.util.*;
 public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buildings,
         Map<String, String> placementMaterials, List<ResolvedProp> props,
         Map<String, SurfaceTemplate> surfaceTemplates, Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection> selections,
-        Map<PlanElementId,ResolvedParcelContent> parcels) {
+        Map<PlanElementId,ResolvedParcelContent> parcels, com.cybersammy.citiesarise.core.parcel.ParcelBoundaryPlan boundaries) {
+    public ResolvedSettlementContent(Map<PlanElementId,BuildingContent> buildings,Map<String,String> materials,
+            List<ResolvedProp> props,Map<String,SurfaceTemplate> templates,
+            Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection> selections,
+            Map<PlanElementId,ResolvedParcelContent> parcels) {
+        this(buildings,materials,props,templates,selections,parcels,com.cybersammy.citiesarise.core.parcel.ParcelBoundaryPlan.EMPTY);
+    }
     public ResolvedSettlementContent(Map<PlanElementId,BuildingContent> buildings,Map<String,String> materials,
             List<ResolvedProp> props,Map<String,SurfaceTemplate> templates,
             Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection> selections) {
@@ -20,6 +26,7 @@ public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buil
     }
     public static final ResolvedSettlementContent EMPTY = new ResolvedSettlementContent(Map.of(), Map.of(), List.of(), Map.of());
     public ResolvedSettlementContent {
+        java.util.Objects.requireNonNull(boundaries);
         parcels = Map.copyOf(parcels);
         selections = Map.copyOf(selections);
         buildings = Map.copyOf(buildings);
@@ -35,6 +42,9 @@ public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buil
         plan.roadGraph().bridges().forEach(b -> ids.add(b.id()));
         var parcelIds=plan.parcels().stream().map(Parcel::id).collect(java.util.stream.Collectors.toSet());
         if(!parcelIds.containsAll(parcels.keySet())) throw new IllegalArgumentException("Unknown parcel content source");
+        for(var edge:boundaries.edges()) if(!parcelIds.containsAll(edge.owners())) throw new IllegalArgumentException("Unknown fence owner");
+        for(var cell:boundaries.fences()) if(!parcelIds.contains(cell.source())) throw new IllegalArgumentException("Unknown fence source");
+        for(var cell:boundaries.alleys()) if(!plan.id().equals(cell.source())) throw new IllegalArgumentException("Unknown alley source");
         var slots = new HashMap<PlanElementId, BuildingSlot>();
         plan.buildingSlots().forEach(slot -> { slots.put(slot.id(), slot); ids.add(slot.id()); });
         if(!slots.keySet().containsAll(selections.keySet())) throw new IllegalArgumentException("Unknown selection slot");

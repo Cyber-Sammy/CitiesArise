@@ -51,7 +51,7 @@ public final class DebugPlacementPlanConverter {
     public DebugPlacementPlan convert(SettlementPlan plan,ResolvedSettlementContent content) {
         content.validateAgainst(plan);
         Objects.requireNonNull(plan, "plan");
-        return withSurfaceTemplates(withBridges(convert(plan, content, Map.of()), plan,content),plan,content);
+        return ParcelBoundaryPlacement.add(withSurfaceTemplates(withBridges(convert(plan, content, Map.of()), plan,content),plan,content),content.boundaries());
     }
 
     private DebugPlacementPlan convert(
@@ -96,8 +96,8 @@ public final class DebugPlacementPlanConverter {
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
-        return withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
-                .map(operation -> withMaterial(operation,content)).toList()), plan,content),plan,content);
+        return ParcelBoundaryPlacement.add(withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
+                .map(operation -> withMaterial(operation,content)).toList()), plan,content),plan,content),content.boundaries());
     }
 
     private DebugPlacementPlan withBridges(DebugPlacementPlan placement, SettlementPlan plan,ResolvedSettlementContent content) {

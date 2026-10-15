@@ -152,7 +152,7 @@ public final class SuburbPlanner {
         try {
             if (!compactDistrict) plan = SettlementZoningPlanner.apply(plan,request.seed(),request.settings().districts().zoning());
             var content=com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
-                    plan, preparationPlan, request.seed(), request.settings().buildings());
+                    plan, preparationPlan, request.seed(), request.settings().buildings(), request.settings().parcelLayout());
             return SuburbPlanningResult.success(plan, preparationPlan, siteAssessment).withContent(content);
         } catch (IllegalArgumentException exception) {
             return SuburbPlanningResult.invalid(List.of(PlanValidationError.forElement(

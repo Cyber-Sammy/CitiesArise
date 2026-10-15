@@ -6,8 +6,9 @@ import com.cybersammy.citiesarise.minecraft.terrain.MinecraftVegetationClassifie
 public interface DebugBlockMaterialProvider {
     BlockState blockState(DebugPlacementRole role);
     default BlockState blockState(DebugBlockPlacementOperation operation) {
-        return operation.material().isEmpty() ? blockState(operation.role())
+        var state=operation.material().isEmpty() ? blockState(operation.role())
                 : MinecraftContentMaterials.resolve(operation.material(),operation.rotation());
+        return operation.role()==DebugPlacementRole.PARCEL_FENCE?MinecraftContentMaterials.fenceConnections(state,operation.providerData().get("cities_arise:fence_connections")):state;
     }
 
     default boolean needsVegetationProtection(DebugBlockPlacementOperation operation) {

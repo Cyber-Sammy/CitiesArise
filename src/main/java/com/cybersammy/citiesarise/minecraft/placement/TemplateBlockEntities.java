@@ -28,8 +28,9 @@ public final class TemplateBlockEntities {
 
     public static CompoundTag decode(Map<String,String> data) {
         com.cybersammy.citiesarise.core.content.ProviderData.copy(data);
-        if (data.keySet().stream().anyMatch(key -> !KEY.equals(key)))
+        if (data.keySet().stream().anyMatch(key -> !KEY.equals(key) && !ParcelBoundaryData.KEYS.contains(key)))
             throw new IllegalArgumentException("Unsupported Minecraft provider data");
+        ParcelBoundaryData.validate(data);
         if (!data.containsKey(KEY)) return new CompoundTag();
         String text=data.get(KEY);
         int depth=0; char quote=0; boolean escaped=false;
@@ -57,7 +58,7 @@ public final class TemplateBlockEntities {
 
     private static CompoundTag validatedTag(BlockState state, Map<String,String> data) {
         var tag = decode(data);
-        if (data.isEmpty()) return tag;
+        if (!data.containsKey(KEY)) return tag;
         if (!(state.getBlock() instanceof EntityBlock factory))
             throw new IllegalArgumentException("Block entity data requires an entity block");
         var entity = factory.newBlockEntity(BlockPos.ZERO,state);
@@ -71,6 +72,8 @@ public final class TemplateBlockEntities {
         if (data.isEmpty() && !state.hasBlockEntity() && !level.getBlockState(pos).hasBlockEntity())
             return level.setBlock(pos,state,2);
         var tag=validatedTag(state,data);
+        if (!data.containsKey(KEY) && !state.hasBlockEntity() && !level.getBlockState(pos).hasBlockEntity())
+            return level.setBlock(pos,state,2);
         if(tag.contains("LootTable") && !tag.contains("LootTableSeed"))
             tag.putLong("LootTableSeed",net.minecraft.world.level.levelgen.RandomSupport.mixStafford13(level.getSeed() ^ pos.asLong()));
         return write(level,pos,state,tag,2);

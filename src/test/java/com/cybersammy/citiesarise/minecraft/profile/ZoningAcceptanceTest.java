@@ -39,6 +39,11 @@ class ZoningAcceptanceTest {
         assertTrue(result.successful(),result.toString());
         assertEquals(result,SuburbPlanner.defaults().plan(request));
         var plan=result.plan().orElseThrow();var content=result.content();
+        assertFalse(content.boundaries().fences().isEmpty());
+        for(var prop:content.props()) for(var cell:prop.composition().cells()) {
+            var p=prop.origin().add(cell.position());
+            assertFalse(content.boundaries().reserved().contains(new GridPoint(p.x(),p.z())),"Prop blocks a fence, gate or alley");
+        }
         assertTrue(plan.districts().size()>1);
         assertEquals(plan.buildingSlots().size(),content.selections().size());
         assertTrue(content.selections().values().stream().allMatch(d -> !d.rule().equals("default")));
@@ -51,7 +56,7 @@ class ZoningAcceptanceTest {
         var original=request.settings().buildings();var palettes=new LinkedHashMap<String,Map<String,String>>();
         original.paletteDefinitions().forEach((id,values) -> {var copy=new LinkedHashMap<>(values);copy.put("wall","minecraft:gold_block");palettes.put(id,copy);});
         var replacement=new BuildingContentSettings(original.pool(),original.palettes(),original.fallback(),palettes,original.compositions(),original.surfaces(),original.props(),original.surfaceTemplates(),original.rules(),original.parcelRules());
-        var rebound=SettlementContentComposer.compose(plan,result.terrainPreparationPlan().orElseThrow(),42,replacement);
+        var rebound=SettlementContentComposer.compose(plan,result.terrainPreparationPlan().orElseThrow(),42,replacement,request.settings().parcelLayout());
         assertEquals(content.selections(),rebound.selections()); assertNotEquals(content.buildings(),rebound.buildings());
         var replanned=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(request.settlementId(),survey,42,request.settings().withBuildings(replacement),request.terrainResponsePolicy()));
         assertTrue(replanned.successful(),replanned.toString());assertEquals(result.plan(),replanned.plan());assertEquals(result.terrainPreparationPlan(),replanned.terrainPreparationPlan());assertEquals(rebound,replanned.content());

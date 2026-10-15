@@ -8,6 +8,12 @@ import java.util.*;
 public final class SettlementContentComposer {
     private SettlementContentComposer() { }
     public static ResolvedSettlementContent compose(SettlementPlan plan,TerrainPreparationPlan preparation,long seed,com.cybersammy.citiesarise.core.building.BuildingContentSettings settings) {
+        return compose(plan,preparation,seed,settings,com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings.disabled());
+    }
+    public static ResolvedSettlementContent compose(SettlementPlan plan,TerrainPreparationPlan preparation,long seed,
+            com.cybersammy.citiesarise.core.building.BuildingContentSettings settings,
+            com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings layout) {
+        var boundaries=com.cybersammy.citiesarise.core.parcel.ParcelBoundaryPlanner.plan(plan,preparation,layout);
         Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingContent> buildings=new LinkedHashMap<>();
         var context=new com.cybersammy.citiesarise.core.building.BuildingSelectionContext(plan);
         var decisions=new LinkedHashMap<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection>();
@@ -35,13 +41,13 @@ public final class SettlementContentComposer {
             settings.parcelRules().stream().filter(r -> r.match().matches(metadata.tags(),metadata.properties())).findFirst()
                     .ifPresent(r -> parcels.put(parcel.id(),new ResolvedParcelContent(r.id(),metadata,r.surfaces(),r.surfaceTemplates(),r.props())));
         }
-        var props=SurfacePropPlanner.plan(plan,preparation,settings.props(),seed,parcels).stream().filter(prop ->
+        var props=SurfacePropPlanner.plan(plan,preparation,settings.props(),seed,parcels,boundaries.reserved()).stream().filter(prop ->
                 prop.composition().cells().stream().noneMatch(cell -> {
                     var world=prop.origin().add(cell.position());
                     return plan.roadGraph().bridges().stream().anyMatch(b -> b.bounds().contains(
                             new com.cybersammy.citiesarise.core.geometry.GridPoint(world.x(),world.z())));
                 })).toList();
-        var result=new ResolvedSettlementContent(buildings,settings.surfaces(),props,settings.surfaceTemplates(),decisions,parcels);
+        var result=new ResolvedSettlementContent(buildings,settings.surfaces(),props,settings.surfaceTemplates(),decisions,parcels,boundaries);
         result.validateAgainst(plan);
         return result;
     }

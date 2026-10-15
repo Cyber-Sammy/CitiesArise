@@ -21,6 +21,21 @@ import org.junit.jupiter.api.Test;
 
 final class MinecraftSettlementProfileJsonParserTest {
     private final MinecraftSettlementProfileJsonParser parser = new MinecraftSettlementProfileJsonParser();
+    @Test void parcelBoundariesAreOptInBoundedAndValidateStyleReferences() {
+        var data=validJson();
+        assertEquals(com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings.disabled(),parser.parse(id(),data).suburbPlanningSettings().parcelLayout());
+        var layout=JsonParser.parseString("""
+                {"minimumSpacing":2,"maximumAlleyWidth":2,"gateWidth":3,"defaultStyle":"wood",
+                 "styles":[{"id":"wood","type":"wood","accepts":["wood"],"material":"minecraft:oak_fence"}],
+                 "rules":[{"match":{"properties":{"test:purpose":"homes"}},"style":"wood"}]}
+                """).getAsJsonObject();
+        data.getAsJsonObject("planning").add("parcelLayout",layout);
+        var settings=parser.parse(id(),data).suburbPlanningSettings().parcelLayout();
+        assertEquals(2,settings.minimumSpacing());assertEquals(3,settings.gateWidth());assertTrue(settings.styles().get("wood").share());
+        layout.addProperty("gateWidth",2);assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+        layout.addProperty("gateWidth",3);layout.addProperty("minimumSpacing",9);assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+        layout.addProperty("minimumSpacing",2);layout.addProperty("defaultStyle","missing");assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+    }
     @Test void ravineModesAreOptInBoundedAndRequireFinalTerrainSupport() {
         var data=validJson();assertTrue(!parser.parse(id(),data).ravineRoads().enabled());
         data.getAsJsonObject("planning").add("ravineRoads",JsonParser.parseString("{\"mode\":\"follow_edge\",\"maximumDetour\":24}"));

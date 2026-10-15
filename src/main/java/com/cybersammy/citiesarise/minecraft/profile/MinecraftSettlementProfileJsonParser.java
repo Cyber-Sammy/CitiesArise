@@ -162,7 +162,8 @@ public final class MinecraftSettlementProfileJsonParser {
         var sizes=new java.util.ArrayList<com.cybersammy.citiesarise.core.planning.suburb.DistrictParcelSize>();
         for(var item:ZoningJsonParser.array(value,"parcelSizes",8)) {
             var size=ZoningJsonParser.object(item);
-            sizes.add(new com.cybersammy.citiesarise.core.planning.suburb.DistrictParcelSize(ZoningJsonParser.string(size,"id"),requiredInt(size,"width"),requiredInt(size,"depth")));
+            sizes.add(new com.cybersammy.citiesarise.core.planning.suburb.DistrictParcelSize(ZoningJsonParser.string(size,"id"),requiredInt(size,"width"),requiredInt(size,"depth"),
+                    size.has("buildingMargin")?requiredInt(size,"buildingMargin"):null));
         }
         return new com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings(
                 optionalInt(value, "maxCount", 4), optionalInt(value, "targetParcels", 4), optionalInt(value, "maxConnectionAttempts", 8), ZoningJsonParser.parse(value),sizes);

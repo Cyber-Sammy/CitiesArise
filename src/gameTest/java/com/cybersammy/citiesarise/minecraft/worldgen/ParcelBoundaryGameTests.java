@@ -20,6 +20,64 @@ import net.neoforged.neoforge.gametest.*;
 @GameTestHolder("cities_arise")
 @PrefixGameTestTemplate(false)
 public final class ParcelBoundaryGameTests {
+    @GameTest(template="empty",timeoutTicks=100)
+    public static void roadFrontageKeepsFencesOnStableHomeBorder(GameTestHelper helper) {
+        var catalog=new ContentCatalogParser(ContentResources.of(helper.getLevel().getServer().getResourceManager())).load("zoning:fixture");
+        var empty=catalog.assets().get("zoning:empty");
+        var settings=new com.cybersammy.citiesarise.core.building.BuildingContentSettings(
+                List.of(new com.cybersammy.citiesarise.core.building.BuildingContentSettings.Entry(empty,1)),
+                List.of("zoning:palette"),empty,catalog.palettes(),catalog.compositions(),catalog.surfaces(),List.of(),
+                catalog.surfaceTemplates(),List.of(),catalog.parcelRules().stream()
+                        .map(r->new ParcelContentRule(r.id(),r.match(),r.surfaces(),r.surfaceTemplates(),List.of())).toList());
+        var origin=helper.absolutePos(new BlockPos(8191,12,8191));int x=origin.getX(),z=origin.getZ(),y=origin.getY();
+        var city=new PlanElementId("test:frontage");var owner=new PlanElementId("test:home");
+        var properties=MetadataSelector.overlay(PlanProperties.of(PlanPropertyKeys.PLATFORM_Y,Integer.toString(y)),
+                PlanProperties.of(new PlanPropertyKey("zoning:purpose"),"homes"));
+        var parcel=new Parcel(owner,new GridBounds(new GridPoint(x,z+2),new GridSize(8,8)),Set.of(),properties);
+        var a=new RoadNode(new PlanElementId("test:a"),new GridPoint(x-1,z),Set.of(),properties);
+        var b=new RoadNode(new PlanElementId("test:b"),new GridPoint(x+9,z),Set.of(),properties);
+        var road=new RoadSegment(new PlanElementId("test:r"),a.id(),b.id(),3,Set.of(),properties);
+        var plan=new SettlementPlan(city,new RoadGraph(List.of(a,b),List.of(road)),List.of(parcel),List.of(),Set.of(),PlanProperties.empty());
+        var gate=new GridPoint(x+4,z+2);var columns=new ArrayList<TerrainPreparationColumn>();
+        var roadBounds=AxisAlignedGridCorridor.bounds(a.point(),b.point(),road.width());
+        for(int dz=-1;dz<10;dz++)for(int dx=-1;dx<10;dx++) {
+            var p=new GridPoint(x+dx,z+dz);
+            if(!parcel.bounds().contains(p) && !roadBounds.contains(p))continue;
+            columns.add(new TerrainPreparationColumn(p,parcel.bounds().contains(p)?owner:road.id(),y,0,0,
+                    p.equals(gate)?TerrainPreparationColumnType.BUILDING_ACCESS:TerrainPreparationColumnType.PLATFORM));
+            helper.getLevel().setBlock(new BlockPos(p.x(),y-1,p.z()),Blocks.STONE.defaultBlockState(),2);
+        }
+        var zones=List.of(new ElevationZone(owner,ElevationZoneType.PARCEL_PAD,parcel.bounds(),y),
+                new ElevationZone(road.id(),ElevationZoneType.ROAD_SEGMENT,roadBounds,y));
+        var prep=TerrainPreparationPlan.of(new RegionalElevationPlan(zones,List.of()),zones.stream()
+                .map(zone->new TerrainPreparationArea(zone.sourceElementId(),zone.bounds(),y,0,0)).toList(),columns);
+        var wood=new ParcelLayoutSettings.FenceStyle("wood",Set.of("wood"),"minecraft:oak_fence",1,0,true);
+        var layout=new ParcelLayoutSettings(0,0,"minecraft:stone_bricks",3,"wood",Map.of("wood",wood),List.of(),
+                ParcelLayoutSettings.IncompatiblePolicy.SEPARATE);
+        var content=SettlementContentComposer.compose(plan,prep,42,settings,layout);
+        // The synthetic access above reserves a gate without adding a building/transition.
+        // Place the prepared flat surfaces at their exact elevations independently.
+        var flatPrep=TerrainPreparationPlan.of(prep.elevationPlan(),prep.areas(),columns.stream()
+                .map(c->new TerrainPreparationColumn(c.point(),c.sourceElementId(),c.targetElevation(),0,0)).toList());
+        var placement=new DebugPlacementPlanConverter().convert(plan,flatPrep,content);
+        var tag=new CompoundTag();SuburbStructurePlacementSnapshot.from(placement).save(tag);
+        var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();
+        var chunks=new ArrayList<>(restored.operations().stream().map(o->PlacementChunk.containing(o.point())).distinct().toList());
+        Collections.reverse(chunks);var index=new DebugPlacementChunkProjector().partition(restored);
+        for(var chunk:chunks)helper.getLevel().getChunk(chunk.x(),chunk.z());
+        for(var chunk:chunks)new WorldgenPlacementApplier().apply(helper.getLevel(),index.slice(chunk));
+        helper.runAfterDelay(5,()->{
+            for(int dx=0;dx<8;dx++) {
+                var pos=new BlockPos(x+dx,y,z+2);
+                helper.assertTrue(helper.getLevel().getBlockState(pos.above()).is(Blocks.OAK_FENCE)==(dx<3 || dx>5),
+                        "Road frontage fence or gate lost at "+pos);
+                if(dx<3 || dx>5)helper.assertTrue(helper.getLevel().getBlockState(pos).is(Blocks.STONE_BRICKS),
+                        "Fence border changed at "+pos+": "+helper.getLevel().getBlockState(pos));
+            }
+            helper.succeed();
+        });
+    }
+
     @GameTest(template="empty",timeoutTicks=200)
     public static void sharedBoundariesGatesAndAlleysSurviveFrozenRecipeAndReverseChunks(GameTestHelper helper) throws Exception {
         var root=Path.of("../examples/datapacks/zoning_fixture/data");

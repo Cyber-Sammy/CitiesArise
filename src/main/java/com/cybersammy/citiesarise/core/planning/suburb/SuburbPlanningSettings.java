@@ -56,7 +56,7 @@ public record SuburbPlanningSettings(
     }
 
     public SuburbPlanningSettings withParcelSize(DistrictParcelSize size) {
-        return new SuburbPlanningSettings(roadWidth,maxBuildableSlope,parcelCapacity,size.width(),size.depth(),buildingMargin,
+        return new SuburbPlanningSettings(roadWidth,maxBuildableSlope,parcelCapacity,size.width(),size.depth(),size.marginOr(buildingMargin),
                 maxElevationRange,preferredMaxCutDepth,preferredMaxFillDepth,maxCutDepth,maxFillDepth,maxBuildingFoundationDepth,
                 maxEarthworkVolume,terrainTransitions,buildings,districts,parcelLayout);
     }
@@ -347,8 +347,9 @@ public record SuburbPlanningSettings(
         );
         requireBuildingFitsParcel(parcelWidth, parcelDepth, buildingMargin);
         for(var size:districts.parcelSizes()) {
-            requireBuildingFitsParcel(size.width(),size.depth(),buildingMargin);
-            if(!buildings.fallback().fits(new GridSize(buildingSize(size.width(),buildingMargin),buildingSize(size.depth(),buildingMargin))))
+            int margin=size.marginOr(buildingMargin);
+            requireBuildingFitsParcel(size.width(),size.depth(),margin);
+            if(!buildings.fallback().fits(new GridSize(buildingSize(size.width(),margin),buildingSize(size.depth(),margin))))
                 throw new IllegalArgumentException("Building fallback does not fit parcel size: "+size.id());
         }
     }

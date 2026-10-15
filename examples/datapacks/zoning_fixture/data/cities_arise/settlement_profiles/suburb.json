@@ -70,7 +70,8 @@
         {
           "id": "zoning:spacious",
           "width": 20,
-          "depth": 20
+          "depth": 20,
+          "buildingMargin": 3
         }
       ]
     },
@@ -117,6 +118,34 @@
           ],
           "palettes": [
             "zoning:landmark"
+          ],
+          "fallback": "zoning:empty"
+        },
+        {
+          "id": "scaling:homes",
+          "match": {
+            "properties": {
+              "zoning:purpose": "homes",
+              "parcel_size": "zoning:spacious",
+              "building_margin": "3"
+            }
+          },
+          "pool": [
+            {
+              "asset": "scaling:rectangle_house",
+              "weight": 3
+            },
+            {
+              "asset": "scaling:gamma_house",
+              "weight": 3
+            },
+            {
+              "asset": "zoning:cottage",
+              "weight": 1
+            }
+          ],
+          "palettes": [
+            "zoning:warm"
           ],
           "fallback": "zoning:empty"
         },

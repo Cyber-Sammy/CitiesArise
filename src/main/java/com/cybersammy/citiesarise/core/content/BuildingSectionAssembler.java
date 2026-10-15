@@ -50,7 +50,7 @@ final class BuildingSectionAssembler {
                     plan=translate(solved.orElseThrow(),new Vec(0,origin.y(),0));frozen=plan;frozenFrame=frame;
                 } else plan=translate(frozen,frame.origin.subtract(frozenFrame.origin));
                 int count=(int)plan.modules().stream().filter(m->f.layout().rooms().contains(m.id()) || f.layout().fillers().contains(m.id())).count();
-                structural+=count;if(structural>cfg.maximumModules() || plan.modules().size()+floors.stream().mapToInt(p->p.plan().modules().size()).sum()>64)
+                structural+=count;if(structural>cfg.maximumModules() || plan.modules().size()+floors.stream().mapToInt(p->p.plan().modules().size()).sum()>cfg.maximumResolvedModules())
                     return reject("Building structural or nested module budget exceeded");
                 if(join!=null && join.shared()) {
                     var declared=new HashSet<Vec>();plan.cells().forEach(c->declared.add(c.position()));
@@ -96,7 +96,7 @@ final class BuildingSectionAssembler {
             connections.add("section:"+floor.owner()+"; strict=true; origin="+floor.frame().origin);
         }
         for(var terminal:terminals){modules.addAll(terminal.modules());connections.addAll(terminal.connections());caps.addAll(terminal.cappedJoints());damage.addAll(terminal.damageDecisions());}
-        if(modules.size()>64 || cells.size()>65536)return reject("Building nested module or cell budget exceeded");
+        if(modules.size()>cfg.maximumResolvedModules() || cells.size()>65536)return reject("Building nested module or cell budget exceeded");
         joins.forEach(j->connections.add(j.decision()));
         if(cells.keySet().stream().anyMatch(p->p.y()+world.origin.y()>=cfg.maximumHeight() || p.y()+world.origin.y()< -16))
             return reject("Final building exceeds height or basement depth budget");

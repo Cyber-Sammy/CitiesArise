@@ -7,6 +7,7 @@ import net.minecraft.nbt.*;
 
 /** Versioned, self-contained immutable profile/content inputs; no live reload/resource dependency. */
 public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bounds,long seed,String settlementId) {
+    private static final int MAX_MODULE_TABLES=24;
     private static final Gson JSON=new com.google.gson.GsonBuilder().enableComplexMapKeySerialization().serializeNulls()
             .registerTypeAdapterFactory(new OptionalCodec()).create();
     private static final class OptionalCodec implements com.google.gson.TypeAdapterFactory {
@@ -98,7 +99,7 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
             String field=composition(object)?"modules":prop(object)?"definitions":null;
             if(field!=null && object.has(field)) {
                 var modules=object.remove(field);Integer index=indices.get(modules);
-                if(index==null) {if(tables.size()>=16)throw new IllegalArgumentException("Too many final recipe module tables");index=tables.size();indices.put(modules,index);tables.add(modules);}
+                if(index==null) {if(tables.size()>=MAX_MODULE_TABLES)throw new IllegalArgumentException("Too many final recipe module tables");index=tables.size();indices.put(modules,index);tables.add(modules);}
                 object.addProperty(field.equals("modules")?"moduleTable":"definitionTable",index);
             }
             object.entrySet().forEach(e->intern(e.getValue(),tables,indices,depth+1));
@@ -131,7 +132,7 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
         if(version==1)return JSON.fromJson(text.toString(),FinalTerrainPlanningRecipe.class);
         var packed=com.google.gson.JsonParser.parseString(text.toString()).getAsJsonObject();
         if(!packed.has("recipe") || !packed.has("moduleTables"))throw new IllegalArgumentException("Incomplete final terrain recipe");
-        var tables=packed.getAsJsonArray("moduleTables");if(tables.size()>16)throw new IllegalArgumentException("Too many final recipe module tables");
+        var tables=packed.getAsJsonArray("moduleTables");if(tables.size()>MAX_MODULE_TABLES)throw new IllegalArgumentException("Too many final recipe module tables");
         if(version==4) {
             if(!packed.has("moduleDefinitions") || !packed.get("moduleDefinitions").isJsonArray())throw new IllegalArgumentException("Missing final recipe definitions");
             tables=definitionTables(tables,packed.getAsJsonArray("moduleDefinitions"));

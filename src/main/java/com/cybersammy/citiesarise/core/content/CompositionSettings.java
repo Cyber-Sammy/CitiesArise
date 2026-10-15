@@ -4,7 +4,15 @@ import java.util.*;
 
 public record CompositionSettings(Map<String,ModuleDefinition> modules, List<String> roots, List<String> attachments,
         String entranceJoint, Set<String> requiredTags, Set<String> forbiddenTags, Set<String> exceptions,
-        int minimumModules, int maximumModules, int maximumHeight, int damageSeverity, String airMaterial, MaterialRules materialRules, FloorLayout floorLayout, BuildingSections buildingSections) {
+        int minimumModules, int maximumModules, int maximumHeight, int damageSeverity, String airMaterial, MaterialRules materialRules, FloorLayout floorLayout, BuildingSections buildingSections,
+        Integer maximumResolvedModules) {
+    public CompositionSettings(Map<String,ModuleDefinition> modules,List<String> roots,List<String> attachments,
+            String entranceJoint,Set<String> requiredTags,Set<String> forbiddenTags,Set<String> exceptions,
+            int minimumModules,int maximumModules,int maximumHeight,int damageSeverity,String airMaterial,MaterialRules rules,
+            FloorLayout layout,BuildingSections sections) {
+        this(modules,roots,attachments,entranceJoint,requiredTags,forbiddenTags,exceptions,minimumModules,maximumModules,maximumHeight,
+                damageSeverity,airMaterial,rules,layout,sections,null);
+    }
     public CompositionSettings(Map<String,ModuleDefinition> modules,List<String> roots,List<String> attachments,
             String entranceJoint,Set<String> requiredTags,Set<String> forbiddenTags,Set<String> exceptions,
             int minimumModules,int maximumModules,int maximumHeight,int damageSeverity,String airMaterial,MaterialRules rules,FloorLayout floor) {
@@ -27,7 +35,10 @@ public record CompositionSettings(Map<String,ModuleDefinition> modules, List<Str
         for(var module:modules.values())for(var rule:module.adjacency())if(!modules.containsKey(rule.neighbor()))throw new IllegalArgumentException("Unknown room adjacency neighbor");
         requiredTags=Set.copyOf(requiredTags); forbiddenTags=Set.copyOf(forbiddenTags); exceptions=Set.copyOf(exceptions);
         if(modules.size()>256 || roots.isEmpty() || roots.size()>64 || attachments.size()>128) throw new IllegalArgumentException("Invalid composition catalog size");
-        if(minimumModules<1 || maximumModules<minimumModules || maximumModules>16 || maximumHeight<1 || maximumHeight>128
+        maximumResolvedModules=maximumResolvedModules==null?64:maximumResolvedModules;
+        if(maximumResolvedModules<1 || maximumResolvedModules>128 || (buildingSections==null && maximumResolvedModules!=64))
+            throw new IllegalArgumentException("Invalid resolved building module budget");
+        if(minimumModules<1 || maximumModules<minimumModules || maximumModules>(buildingSections==null?16:64) || maximumHeight<1 || maximumHeight>128
                 || damageSeverity<0 || damageSeverity>100) throw new IllegalArgumentException("Invalid composition budgets");
         if(entranceJoint==null || entranceJoint.isBlank() || airMaterial==null || airMaterial.isBlank()) throw new IllegalArgumentException("Missing entrance or air material");
         if(floorLayout!=null)floorLayout.validateModules(modules,roots,attachments);

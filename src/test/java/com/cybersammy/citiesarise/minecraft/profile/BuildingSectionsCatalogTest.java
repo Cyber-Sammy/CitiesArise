@@ -16,7 +16,7 @@ class BuildingSectionsCatalogTest {
         for(int turn=0;turn<4;turn++) {
             var entry=CompositionAssembler.rotate(new Joint("entry","zoning:entrance",Set.of(),new Vec(3,1,0),Face.NORTH,1,2,false,true,""),new Vec(7,17,7),turn);
             var assembler=new CompositionAssembler();var result=assembler.assemble(cfg,7,7,entry.position(),entry.face(),42);
-            assertTrue(result.isPresent(),assembler.failure());var p=result.orElseThrow();assertEquals(777,p.cells().size());
+            assertTrue(result.isPresent(),assembler.failure());var p=result.orElseThrow();var roof=p.modules().getLast();assertEquals(768+cfg.modules().get(roof.id()).forLayout(roof.layout()).cells().size(),p.cells().size());
             var cells=new HashMap<Vec,String>();p.cells().forEach(c->cells.put(c.position(),c.material()));
             var backing=CompositionAssembler.rotateCell(new Vec(2,0,4),new Vec(7,17,7),turn)
                     .subtract(CompositionAssembler.rotateCell(new Vec(1,0,4),new Vec(7,17,7),turn));
@@ -30,7 +30,7 @@ class BuildingSectionsCatalogTest {
                 assertEquals(y<3?"minecraft:air":"wall",cells.get(at),"Only the ground floor has an exterior entrance");
             }
             assertEquals(1,p.modules().stream().filter(m->m.id().equals("zoning:section_narrow")).count());
-            assertEquals(16,p.cells().stream().mapToInt(c->c.position().y()).max().orElseThrow());
+            assertEquals(20,p.cells().stream().mapToInt(c->c.position().y()).max().orElseThrow());
             assertEquals(p,new CompositionAssembler().assemble(cfg,7,7,entry.position(),entry.face(),42).orElseThrow());
         }
     }

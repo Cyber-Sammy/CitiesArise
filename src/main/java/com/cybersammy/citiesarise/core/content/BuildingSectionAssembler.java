@@ -139,6 +139,9 @@ final class BuildingSectionAssembler {
                 || origin.y()+module.size().y()>cfg.maximumHeight() || origin.y()< -16)return reject("Terminal module exceeds building envelope or basement depth16");
         var nested=new NestedCompositionResolver(cfg.modules(),cfg.materialRules(),cfg::permits,cfg.airMaterial(),cfg.damageSeverity(),seed^id.hashCode());
         var resolved=nested.resolve(raw.orElseThrow());if(resolved.isEmpty())return reject(nested.failure());var plan=translate(resolved.orElseThrow(),origin);
+        if(above && plan.cells().stream().anyMatch(c->!floor.frame().mask.contains(
+                new com.cybersammy.citiesarise.core.geometry.GridPoint(c.position().x(),c.position().z()))))
+            return reject("Roof content is outside supported top-floor footprint");
         if(join.shared()) {
             var declared=new HashSet<Vec>();plan.cells().forEach(c->declared.add(c.position()));
             if(!declared.containsAll(join.incoming().layer()) || !cells.keySet().containsAll(join.source().layer()))return reject("Terminal shared boundary needs explicit cells");

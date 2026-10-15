@@ -27,9 +27,9 @@ class BuildingScalingTest {
         var cfg=cfg("rectangle");
         for(int turn=0;turn<4;turn++) {
             var plan=solve(cfg,turn,42);
-            assertEquals(102,plan.modules().size());assertEquals(48,plan.modules().stream().filter(m->m.id().matches("variety:(left|right)_(living|work)")).count());
+            assertEquals(103,plan.modules().size());assertEquals(48,plan.modules().stream().filter(m->m.id().matches("variety:(left|right)_(living|work)")).count());
             assertEquals(36,plan.connections().stream().filter(s->s.contains("/side_south ->") || s.contains("/side_north ->")).count());
-            assertEquals(24,plan.cells().stream().mapToInt(c->c.position().y()).max().orElseThrow());
+            assertEquals(28,plan.cells().stream().mapToInt(c->c.position().y()).max().orElseThrow());
             assertEquals(plan.cells().size(),plan.cells().stream().map(PlacedCell::position).distinct().count());
             assertTrue(plan.cells().size()<65536);
             assertEquals(plan,solve(cfg,turn,42));
@@ -45,7 +45,7 @@ class BuildingScalingTest {
         var rectangle=solve(cfg("rectangle"),0,31);
         for(int floor=2;floor<6;floor++) assertEquals(interior(rectangle,1),interior(rectangle,floor));
         var gamma=solve(cfg("gamma"),0,31);
-        assertEquals(48,gamma.modules().size());assertEquals(22,gamma.modules().stream().filter(m->m.id().matches("variety:(left|right)_(living|work)")).count());
+        assertEquals(49,gamma.modules().size());assertEquals(22,gamma.modules().stream().filter(m->m.id().matches("variety:(left|right)_(living|work)")).count());
         assertEquals(interior(gamma,1),interior(gamma,2));
         assertTrue(gamma.cells().stream().noneMatch(c->c.position().x()>=7 && c.position().z()>=7));
         assertTrue(gamma.cells().stream().noneMatch(c->c.position().y()>12 && c.position().z()>=7));

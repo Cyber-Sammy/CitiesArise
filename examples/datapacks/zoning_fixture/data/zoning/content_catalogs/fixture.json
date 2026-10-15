@@ -16237,6 +16237,4789 @@
           }
         ]
       }
+    },
+    "roofs:zoning_section_house": {
+      "size": [
+        5,
+        5,
+        7
+      ],
+      "tags": [
+        "zoning:style",
+        "roofs:terminal"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            3
+          ],
+          "to": [
+            2,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            0,
+            4
+          ],
+          "to": [
+            0,
+            0,
+            4
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            1,
+            0,
+            4
+          ],
+          "to": [
+            1,
+            0,
+            4
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            2,
+            0,
+            4
+          ],
+          "to": [
+            2,
+            0,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            0,
+            5
+          ],
+          "to": [
+            2,
+            0,
+            5
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            4,
+            1,
+            0
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            4,
+            1,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            2
+          ],
+          "to": [
+            1,
+            1,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            3,
+            1,
+            2
+          ],
+          "to": [
+            4,
+            1,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            2,
+            1,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            3,
+            1,
+            3
+          ],
+          "to": [
+            4,
+            1,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            0,
+            1,
+            4
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            1,
+            1,
+            4
+          ],
+          "to": [
+            1,
+            1,
+            4
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            2,
+            1,
+            4
+          ],
+          "to": [
+            2,
+            1,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            3,
+            1,
+            4
+          ],
+          "to": [
+            4,
+            1,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            2,
+            1,
+            5
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            3,
+            1,
+            5
+          ],
+          "to": [
+            4,
+            1,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            6
+          ],
+          "to": [
+            4,
+            1,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            1
+          ],
+          "to": [
+            3,
+            2,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            2
+          ],
+          "to": [
+            3,
+            2,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            3
+          ],
+          "to": [
+            2,
+            2,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            3,
+            2,
+            3
+          ],
+          "to": [
+            3,
+            2,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            4
+          ],
+          "to": [
+            1,
+            2,
+            4
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            2,
+            4
+          ],
+          "to": [
+            2,
+            2,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            3,
+            2,
+            4
+          ],
+          "to": [
+            3,
+            2,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            5
+          ],
+          "to": [
+            2,
+            2,
+            5
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            3,
+            2,
+            5
+          ],
+          "to": [
+            3,
+            2,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            2
+          ],
+          "to": [
+            2,
+            3,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            3,
+            3
+          ],
+          "to": [
+            2,
+            3,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            3,
+            4
+          ],
+          "to": [
+            2,
+            3,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            3,
+            5
+          ],
+          "to": [
+            2,
+            3,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            4,
+            4
+          ],
+          "to": [
+            1,
+            4,
+            4
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "pitched",
+          "weight": 1,
+          "fills": []
+        },
+        {
+          "id": "ridge",
+          "weight": 1,
+          "fills": [
+            {
+              "from": [
+                2,
+                4,
+                2
+              ],
+              "to": [
+                2,
+                4,
+                2
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                2,
+                4,
+                3
+              ],
+              "to": [
+                2,
+                4,
+                3
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                2,
+                4,
+                4
+              ],
+              "to": [
+                2,
+                4,
+                4
+              ],
+              "material": "minecraft:stone_brick_slab"
+            }
+          ]
+        }
+      ],
+      "joints": [
+        {
+          "id": "down",
+          "type": "zoning:section_stairs",
+          "accepts": [
+            "zoning:section_stairs"
+          ],
+          "at": [
+            1,
+            0,
+            4
+          ],
+          "face": "down"
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "down",
+          "role": "floor",
+          "type": "zoning:section_slab",
+          "accepts": [
+            "zoning:section_slab"
+          ],
+          "priority": 10,
+          "from": [
+            0,
+            0,
+            3
+          ],
+          "to": [
+            2,
+            0,
+            5
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "roof_landing",
+            "from": [
+              1,
+              1,
+              4
+            ],
+            "to": [
+              0,
+              1,
+              4
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "roofs:variety_rectangle_house": {
+      "size": [
+        11,
+        5,
+        7
+      ],
+      "tags": [
+        "zoning:style",
+        "roofs:terminal"
+      ],
+      "fills": [
+        {
+          "from": [
+            4,
+            0,
+            2
+          ],
+          "to": [
+            6,
+            0,
+            2
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            4,
+            0,
+            3
+          ],
+          "to": [
+            4,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            5,
+            0,
+            3
+          ],
+          "to": [
+            5,
+            0,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            6,
+            0,
+            3
+          ],
+          "to": [
+            6,
+            0,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            4,
+            0,
+            4
+          ],
+          "to": [
+            6,
+            0,
+            4
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            10,
+            1,
+            0
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            10,
+            1,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            2
+          ],
+          "to": [
+            1,
+            1,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            2
+          ],
+          "to": [
+            6,
+            1,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            9,
+            1,
+            2
+          ],
+          "to": [
+            10,
+            1,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            1,
+            1,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            3
+          ],
+          "to": [
+            4,
+            1,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            5,
+            1,
+            3
+          ],
+          "to": [
+            5,
+            1,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            6,
+            1,
+            3
+          ],
+          "to": [
+            6,
+            1,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            9,
+            1,
+            3
+          ],
+          "to": [
+            10,
+            1,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            1,
+            1,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            4
+          ],
+          "to": [
+            6,
+            1,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            9,
+            1,
+            4
+          ],
+          "to": [
+            10,
+            1,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            10,
+            1,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            6
+          ],
+          "to": [
+            10,
+            1,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            1
+          ],
+          "to": [
+            9,
+            2,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            2
+          ],
+          "to": [
+            3,
+            2,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            2
+          ],
+          "to": [
+            6,
+            2,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            2,
+            2
+          ],
+          "to": [
+            9,
+            2,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            3
+          ],
+          "to": [
+            3,
+            2,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            3
+          ],
+          "to": [
+            5,
+            2,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            6,
+            2,
+            3
+          ],
+          "to": [
+            6,
+            2,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            2,
+            3
+          ],
+          "to": [
+            9,
+            2,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            4
+          ],
+          "to": [
+            3,
+            2,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            4
+          ],
+          "to": [
+            6,
+            2,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            2,
+            4
+          ],
+          "to": [
+            9,
+            2,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            5
+          ],
+          "to": [
+            9,
+            2,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            2
+          ],
+          "to": [
+            8,
+            3,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            3
+          ],
+          "to": [
+            8,
+            3,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            4
+          ],
+          "to": [
+            8,
+            3,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            5,
+            4,
+            3
+          ],
+          "to": [
+            5,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "pitched",
+          "weight": 1,
+          "fills": []
+        },
+        {
+          "id": "ridge",
+          "weight": 1,
+          "fills": [
+            {
+              "from": [
+                5,
+                4,
+                2
+              ],
+              "to": [
+                5,
+                4,
+                2
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                3
+              ],
+              "to": [
+                5,
+                4,
+                3
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                4
+              ],
+              "to": [
+                5,
+                4,
+                4
+              ],
+              "material": "minecraft:stone_brick_slab"
+            }
+          ]
+        }
+      ],
+      "joints": [
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "at": [
+            5,
+            0,
+            3
+          ],
+          "face": "down"
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "down",
+          "role": "floor",
+          "type": "variety:slab",
+          "accepts": [
+            "variety:slab"
+          ],
+          "priority": 10,
+          "from": [
+            4,
+            0,
+            2
+          ],
+          "to": [
+            6,
+            0,
+            4
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "roof_landing",
+            "from": [
+              5,
+              1,
+              3
+            ],
+            "to": [
+              4,
+              1,
+              3
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "roofs:variety_gamma_house": {
+      "size": [
+        11,
+        5,
+        10
+      ],
+      "tags": [
+        "zoning:style",
+        "roofs:terminal"
+      ],
+      "fills": [
+        {
+          "from": [
+            4,
+            0,
+            2
+          ],
+          "to": [
+            6,
+            0,
+            2
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            4,
+            0,
+            3
+          ],
+          "to": [
+            4,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            5,
+            0,
+            3
+          ],
+          "to": [
+            5,
+            0,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            6,
+            0,
+            3
+          ],
+          "to": [
+            6,
+            0,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            4,
+            0,
+            4
+          ],
+          "to": [
+            6,
+            0,
+            4
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            10,
+            1,
+            0
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            10,
+            1,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            2
+          ],
+          "to": [
+            1,
+            1,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            2
+          ],
+          "to": [
+            6,
+            1,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            1,
+            2
+          ],
+          "to": [
+            10,
+            1,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            1,
+            1,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            3
+          ],
+          "to": [
+            4,
+            1,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            5,
+            1,
+            3
+          ],
+          "to": [
+            5,
+            1,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            6,
+            1,
+            3
+          ],
+          "to": [
+            6,
+            1,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            1,
+            3
+          ],
+          "to": [
+            10,
+            1,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            1,
+            1,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            4
+          ],
+          "to": [
+            6,
+            1,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            1,
+            1,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            5,
+            1,
+            5
+          ],
+          "to": [
+            6,
+            1,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            6
+          ],
+          "to": [
+            1,
+            1,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            5,
+            1,
+            6
+          ],
+          "to": [
+            6,
+            1,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            7
+          ],
+          "to": [
+            1,
+            1,
+            7
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            5,
+            1,
+            7
+          ],
+          "to": [
+            6,
+            1,
+            7
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            8
+          ],
+          "to": [
+            6,
+            1,
+            8
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            9
+          ],
+          "to": [
+            6,
+            1,
+            9
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            1
+          ],
+          "to": [
+            9,
+            2,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            2
+          ],
+          "to": [
+            3,
+            2,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            2
+          ],
+          "to": [
+            6,
+            2,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            2,
+            2
+          ],
+          "to": [
+            9,
+            2,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            3
+          ],
+          "to": [
+            3,
+            2,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            3
+          ],
+          "to": [
+            5,
+            2,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            6,
+            2,
+            3
+          ],
+          "to": [
+            6,
+            2,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            1,
+            2,
+            4
+          ],
+          "to": [
+            3,
+            2,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            4
+          ],
+          "to": [
+            6,
+            2,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            1,
+            2,
+            5
+          ],
+          "to": [
+            5,
+            2,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            6
+          ],
+          "to": [
+            5,
+            2,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            7
+          ],
+          "to": [
+            5,
+            2,
+            7
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            8
+          ],
+          "to": [
+            5,
+            2,
+            8
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            2
+          ],
+          "to": [
+            6,
+            3,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            3
+          ],
+          "to": [
+            6,
+            3,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            4
+          ],
+          "to": [
+            6,
+            3,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            5
+          ],
+          "to": [
+            4,
+            3,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            6
+          ],
+          "to": [
+            4,
+            3,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            7
+          ],
+          "to": [
+            4,
+            3,
+            7
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            5,
+            4,
+            3
+          ],
+          "to": [
+            5,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "pitched",
+          "weight": 1,
+          "fills": []
+        },
+        {
+          "id": "ridge",
+          "weight": 1,
+          "fills": [
+            {
+              "from": [
+                5,
+                4,
+                2
+              ],
+              "to": [
+                5,
+                4,
+                2
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                3
+              ],
+              "to": [
+                5,
+                4,
+                3
+              ],
+              "material": "minecraft:stone_brick_slab"
+            }
+          ]
+        }
+      ],
+      "joints": [
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "at": [
+            5,
+            0,
+            3
+          ],
+          "face": "down"
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "down",
+          "role": "floor",
+          "type": "variety:slab",
+          "accepts": [
+            "variety:slab"
+          ],
+          "priority": 10,
+          "from": [
+            4,
+            0,
+            2
+          ],
+          "to": [
+            6,
+            0,
+            4
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "roof_landing",
+            "from": [
+              5,
+              1,
+              3
+            ],
+            "to": [
+              4,
+              1,
+              3
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "roofs:scaling_rectangle_house": {
+      "size": [
+        11,
+        5,
+        13
+      ],
+      "tags": [
+        "zoning:style",
+        "roofs:terminal"
+      ],
+      "fills": [
+        {
+          "from": [
+            4,
+            0,
+            2
+          ],
+          "to": [
+            6,
+            0,
+            2
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            4,
+            0,
+            3
+          ],
+          "to": [
+            4,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            5,
+            0,
+            3
+          ],
+          "to": [
+            5,
+            0,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            6,
+            0,
+            3
+          ],
+          "to": [
+            6,
+            0,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            4,
+            0,
+            4
+          ],
+          "to": [
+            6,
+            0,
+            4
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            10,
+            1,
+            0
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            10,
+            1,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            2
+          ],
+          "to": [
+            1,
+            1,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            2
+          ],
+          "to": [
+            6,
+            1,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            9,
+            1,
+            2
+          ],
+          "to": [
+            10,
+            1,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            1,
+            1,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            3
+          ],
+          "to": [
+            4,
+            1,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            5,
+            1,
+            3
+          ],
+          "to": [
+            5,
+            1,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            6,
+            1,
+            3
+          ],
+          "to": [
+            6,
+            1,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            9,
+            1,
+            3
+          ],
+          "to": [
+            10,
+            1,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            1,
+            1,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            4
+          ],
+          "to": [
+            6,
+            1,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            9,
+            1,
+            4
+          ],
+          "to": [
+            10,
+            1,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            1,
+            1,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            9,
+            1,
+            5
+          ],
+          "to": [
+            10,
+            1,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            6
+          ],
+          "to": [
+            1,
+            1,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            9,
+            1,
+            6
+          ],
+          "to": [
+            10,
+            1,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            7
+          ],
+          "to": [
+            1,
+            1,
+            7
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            9,
+            1,
+            7
+          ],
+          "to": [
+            10,
+            1,
+            7
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            8
+          ],
+          "to": [
+            1,
+            1,
+            8
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            9,
+            1,
+            8
+          ],
+          "to": [
+            10,
+            1,
+            8
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            9
+          ],
+          "to": [
+            1,
+            1,
+            9
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            9,
+            1,
+            9
+          ],
+          "to": [
+            10,
+            1,
+            9
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            10
+          ],
+          "to": [
+            1,
+            1,
+            10
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            9,
+            1,
+            10
+          ],
+          "to": [
+            10,
+            1,
+            10
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            11
+          ],
+          "to": [
+            10,
+            1,
+            11
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            12
+          ],
+          "to": [
+            10,
+            1,
+            12
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            1
+          ],
+          "to": [
+            9,
+            2,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            2
+          ],
+          "to": [
+            3,
+            2,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            2
+          ],
+          "to": [
+            6,
+            2,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            2,
+            2
+          ],
+          "to": [
+            9,
+            2,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            3
+          ],
+          "to": [
+            3,
+            2,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            3
+          ],
+          "to": [
+            5,
+            2,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            6,
+            2,
+            3
+          ],
+          "to": [
+            6,
+            2,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            2,
+            3
+          ],
+          "to": [
+            9,
+            2,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            4
+          ],
+          "to": [
+            3,
+            2,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            4
+          ],
+          "to": [
+            6,
+            2,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            2,
+            4
+          ],
+          "to": [
+            9,
+            2,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            5
+          ],
+          "to": [
+            9,
+            2,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            6
+          ],
+          "to": [
+            9,
+            2,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            7
+          ],
+          "to": [
+            9,
+            2,
+            7
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            8
+          ],
+          "to": [
+            9,
+            2,
+            8
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            9
+          ],
+          "to": [
+            9,
+            2,
+            9
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            10
+          ],
+          "to": [
+            9,
+            2,
+            10
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            11
+          ],
+          "to": [
+            9,
+            2,
+            11
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            2
+          ],
+          "to": [
+            8,
+            3,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            3
+          ],
+          "to": [
+            8,
+            3,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            4
+          ],
+          "to": [
+            8,
+            3,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            5
+          ],
+          "to": [
+            8,
+            3,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            6
+          ],
+          "to": [
+            8,
+            3,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            7
+          ],
+          "to": [
+            8,
+            3,
+            7
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            8
+          ],
+          "to": [
+            8,
+            3,
+            8
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            9
+          ],
+          "to": [
+            8,
+            3,
+            9
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            10
+          ],
+          "to": [
+            8,
+            3,
+            10
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            5,
+            4,
+            3
+          ],
+          "to": [
+            5,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "pitched",
+          "weight": 1,
+          "fills": []
+        },
+        {
+          "id": "ridge",
+          "weight": 1,
+          "fills": [
+            {
+              "from": [
+                5,
+                4,
+                2
+              ],
+              "to": [
+                5,
+                4,
+                2
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                3
+              ],
+              "to": [
+                5,
+                4,
+                3
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                4
+              ],
+              "to": [
+                5,
+                4,
+                4
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                5
+              ],
+              "to": [
+                5,
+                4,
+                5
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                6
+              ],
+              "to": [
+                5,
+                4,
+                6
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                7
+              ],
+              "to": [
+                5,
+                4,
+                7
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                8
+              ],
+              "to": [
+                5,
+                4,
+                8
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                9
+              ],
+              "to": [
+                5,
+                4,
+                9
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                10
+              ],
+              "to": [
+                5,
+                4,
+                10
+              ],
+              "material": "minecraft:stone_brick_slab"
+            }
+          ]
+        }
+      ],
+      "joints": [
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "at": [
+            5,
+            0,
+            3
+          ],
+          "face": "down"
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "down",
+          "role": "floor",
+          "type": "variety:slab",
+          "accepts": [
+            "variety:slab"
+          ],
+          "priority": 10,
+          "from": [
+            4,
+            0,
+            2
+          ],
+          "to": [
+            6,
+            0,
+            4
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "roof_landing",
+            "from": [
+              5,
+              1,
+              3
+            ],
+            "to": [
+              4,
+              1,
+              3
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "roofs:scaling_gamma_house": {
+      "size": [
+        11,
+        5,
+        7
+      ],
+      "tags": [
+        "zoning:style",
+        "roofs:terminal"
+      ],
+      "fills": [
+        {
+          "from": [
+            4,
+            0,
+            2
+          ],
+          "to": [
+            6,
+            0,
+            2
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            4,
+            0,
+            3
+          ],
+          "to": [
+            4,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            5,
+            0,
+            3
+          ],
+          "to": [
+            5,
+            0,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            6,
+            0,
+            3
+          ],
+          "to": [
+            6,
+            0,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            4,
+            0,
+            4
+          ],
+          "to": [
+            6,
+            0,
+            4
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            10,
+            1,
+            0
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            10,
+            1,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            2
+          ],
+          "to": [
+            1,
+            1,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            2
+          ],
+          "to": [
+            6,
+            1,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            9,
+            1,
+            2
+          ],
+          "to": [
+            10,
+            1,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            1,
+            1,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            3
+          ],
+          "to": [
+            4,
+            1,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            5,
+            1,
+            3
+          ],
+          "to": [
+            5,
+            1,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            6,
+            1,
+            3
+          ],
+          "to": [
+            6,
+            1,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            9,
+            1,
+            3
+          ],
+          "to": [
+            10,
+            1,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            1,
+            1,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            1,
+            4
+          ],
+          "to": [
+            6,
+            1,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            9,
+            1,
+            4
+          ],
+          "to": [
+            10,
+            1,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            10,
+            1,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            6
+          ],
+          "to": [
+            10,
+            1,
+            6
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            1
+          ],
+          "to": [
+            9,
+            2,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            2
+          ],
+          "to": [
+            3,
+            2,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            2
+          ],
+          "to": [
+            6,
+            2,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            2,
+            2
+          ],
+          "to": [
+            9,
+            2,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            3
+          ],
+          "to": [
+            3,
+            2,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            3
+          ],
+          "to": [
+            5,
+            2,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            6,
+            2,
+            3
+          ],
+          "to": [
+            6,
+            2,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            2,
+            3
+          ],
+          "to": [
+            9,
+            2,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            4
+          ],
+          "to": [
+            3,
+            2,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            4,
+            2,
+            4
+          ],
+          "to": [
+            6,
+            2,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            2,
+            4
+          ],
+          "to": [
+            9,
+            2,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            1,
+            2,
+            5
+          ],
+          "to": [
+            9,
+            2,
+            5
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            2
+          ],
+          "to": [
+            8,
+            3,
+            2
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            3
+          ],
+          "to": [
+            8,
+            3,
+            3
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            2,
+            3,
+            4
+          ],
+          "to": [
+            8,
+            3,
+            4
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "from": [
+            5,
+            4,
+            3
+          ],
+          "to": [
+            5,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "pitched",
+          "weight": 1,
+          "fills": []
+        },
+        {
+          "id": "ridge",
+          "weight": 1,
+          "fills": [
+            {
+              "from": [
+                5,
+                4,
+                2
+              ],
+              "to": [
+                5,
+                4,
+                2
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                3
+              ],
+              "to": [
+                5,
+                4,
+                3
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                5,
+                4,
+                4
+              ],
+              "to": [
+                5,
+                4,
+                4
+              ],
+              "material": "minecraft:stone_brick_slab"
+            }
+          ]
+        }
+      ],
+      "joints": [
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "at": [
+            5,
+            0,
+            3
+          ],
+          "face": "down"
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "down",
+          "role": "floor",
+          "type": "variety:slab",
+          "accepts": [
+            "variety:slab"
+          ],
+          "priority": 10,
+          "from": [
+            4,
+            0,
+            2
+          ],
+          "to": [
+            6,
+            0,
+            4
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "roof_landing",
+            "from": [
+              5,
+              1,
+              3
+            ],
+            "to": [
+              4,
+              1,
+              3
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "roofs:residential_apartment_block": {
+      "size": [
+        29,
+        5,
+        15
+      ],
+      "tags": [
+        "zoning:style",
+        "roofs:terminal"
+      ],
+      "fills": [
+        {
+          "from": [
+            14,
+            0,
+            2
+          ],
+          "to": [
+            16,
+            0,
+            2
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            14,
+            0,
+            3
+          ],
+          "to": [
+            14,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            15,
+            0,
+            3
+          ],
+          "to": [
+            15,
+            0,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            16,
+            0,
+            3
+          ],
+          "to": [
+            16,
+            0,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            14,
+            0,
+            4
+          ],
+          "to": [
+            16,
+            0,
+            4
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            28,
+            1,
+            0
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            1,
+            1
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            1,
+            1
+          ],
+          "to": [
+            28,
+            1,
+            1
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            2
+          ],
+          "to": [
+            0,
+            1,
+            2
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            14,
+            1,
+            2
+          ],
+          "to": [
+            16,
+            1,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            28,
+            1,
+            2
+          ],
+          "to": [
+            28,
+            1,
+            2
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            0,
+            1,
+            3
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            14,
+            1,
+            3
+          ],
+          "to": [
+            14,
+            1,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            15,
+            1,
+            3
+          ],
+          "to": [
+            15,
+            1,
+            3
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            16,
+            1,
+            3
+          ],
+          "to": [
+            16,
+            1,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            28,
+            1,
+            3
+          ],
+          "to": [
+            28,
+            1,
+            3
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            0,
+            1,
+            4
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            14,
+            1,
+            4
+          ],
+          "to": [
+            16,
+            1,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            28,
+            1,
+            4
+          ],
+          "to": [
+            28,
+            1,
+            4
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            0,
+            1,
+            5
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            1,
+            5
+          ],
+          "to": [
+            28,
+            1,
+            5
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            6
+          ],
+          "to": [
+            0,
+            1,
+            6
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            1,
+            6
+          ],
+          "to": [
+            28,
+            1,
+            6
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            7
+          ],
+          "to": [
+            0,
+            1,
+            7
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            1,
+            7
+          ],
+          "to": [
+            28,
+            1,
+            7
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            8
+          ],
+          "to": [
+            0,
+            1,
+            8
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            1,
+            8
+          ],
+          "to": [
+            28,
+            1,
+            8
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            9
+          ],
+          "to": [
+            0,
+            1,
+            9
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            1,
+            9
+          ],
+          "to": [
+            28,
+            1,
+            9
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            10
+          ],
+          "to": [
+            0,
+            1,
+            10
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            1,
+            10
+          ],
+          "to": [
+            28,
+            1,
+            10
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            11
+          ],
+          "to": [
+            0,
+            1,
+            11
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            1,
+            11
+          ],
+          "to": [
+            28,
+            1,
+            11
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            12
+          ],
+          "to": [
+            0,
+            1,
+            12
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            1,
+            12
+          ],
+          "to": [
+            28,
+            1,
+            12
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            13
+          ],
+          "to": [
+            0,
+            1,
+            13
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            1,
+            13
+          ],
+          "to": [
+            28,
+            1,
+            13
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            1,
+            14
+          ],
+          "to": [
+            28,
+            1,
+            14
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            0
+          ],
+          "to": [
+            28,
+            2,
+            0
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            1
+          ],
+          "to": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            2,
+            1
+          ],
+          "to": [
+            28,
+            2,
+            1
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            2
+          ],
+          "to": [
+            0,
+            2,
+            2
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            14,
+            2,
+            2
+          ],
+          "to": [
+            16,
+            2,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            28,
+            2,
+            2
+          ],
+          "to": [
+            28,
+            2,
+            2
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            3
+          ],
+          "to": [
+            0,
+            2,
+            3
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            14,
+            2,
+            3
+          ],
+          "to": [
+            15,
+            2,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            16,
+            2,
+            3
+          ],
+          "to": [
+            16,
+            2,
+            3
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            28,
+            2,
+            3
+          ],
+          "to": [
+            28,
+            2,
+            3
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            4
+          ],
+          "to": [
+            0,
+            2,
+            4
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            14,
+            2,
+            4
+          ],
+          "to": [
+            16,
+            2,
+            4
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            28,
+            2,
+            4
+          ],
+          "to": [
+            28,
+            2,
+            4
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            5
+          ],
+          "to": [
+            0,
+            2,
+            5
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            2,
+            5
+          ],
+          "to": [
+            28,
+            2,
+            5
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            6
+          ],
+          "to": [
+            0,
+            2,
+            6
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            2,
+            6
+          ],
+          "to": [
+            28,
+            2,
+            6
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            7
+          ],
+          "to": [
+            0,
+            2,
+            7
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            2,
+            7
+          ],
+          "to": [
+            28,
+            2,
+            7
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            8
+          ],
+          "to": [
+            0,
+            2,
+            8
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            2,
+            8
+          ],
+          "to": [
+            28,
+            2,
+            8
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            9
+          ],
+          "to": [
+            0,
+            2,
+            9
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            2,
+            9
+          ],
+          "to": [
+            28,
+            2,
+            9
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            10
+          ],
+          "to": [
+            0,
+            2,
+            10
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            2,
+            10
+          ],
+          "to": [
+            28,
+            2,
+            10
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            11
+          ],
+          "to": [
+            0,
+            2,
+            11
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            2,
+            11
+          ],
+          "to": [
+            28,
+            2,
+            11
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            12
+          ],
+          "to": [
+            0,
+            2,
+            12
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            2,
+            12
+          ],
+          "to": [
+            28,
+            2,
+            12
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            13
+          ],
+          "to": [
+            0,
+            2,
+            13
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            28,
+            2,
+            13
+          ],
+          "to": [
+            28,
+            2,
+            13
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            0,
+            2,
+            14
+          ],
+          "to": [
+            28,
+            2,
+            14
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            14,
+            3,
+            2
+          ],
+          "to": [
+            16,
+            3,
+            2
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            14,
+            3,
+            3
+          ],
+          "to": [
+            16,
+            3,
+            3
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            14,
+            3,
+            4
+          ],
+          "to": [
+            16,
+            3,
+            4
+          ],
+          "material": "minecraft:stone_bricks"
+        },
+        {
+          "from": [
+            15,
+            4,
+            3
+          ],
+          "to": [
+            15,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        }
+      ],
+      "layouts": [
+        {
+          "id": "terrace",
+          "weight": 1,
+          "fills": []
+        },
+        {
+          "id": "parapet",
+          "weight": 1,
+          "fills": [
+            {
+              "from": [
+                0,
+                2,
+                0
+              ],
+              "to": [
+                28,
+                2,
+                0
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                1
+              ],
+              "to": [
+                0,
+                2,
+                1
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                1
+              ],
+              "to": [
+                28,
+                2,
+                1
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                2
+              ],
+              "to": [
+                0,
+                2,
+                2
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                2
+              ],
+              "to": [
+                28,
+                2,
+                2
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                3
+              ],
+              "to": [
+                0,
+                2,
+                3
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                3
+              ],
+              "to": [
+                28,
+                2,
+                3
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                4
+              ],
+              "to": [
+                0,
+                2,
+                4
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                4
+              ],
+              "to": [
+                28,
+                2,
+                4
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                5
+              ],
+              "to": [
+                0,
+                2,
+                5
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                5
+              ],
+              "to": [
+                28,
+                2,
+                5
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                6
+              ],
+              "to": [
+                0,
+                2,
+                6
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                6
+              ],
+              "to": [
+                28,
+                2,
+                6
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                7
+              ],
+              "to": [
+                0,
+                2,
+                7
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                7
+              ],
+              "to": [
+                28,
+                2,
+                7
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                8
+              ],
+              "to": [
+                0,
+                2,
+                8
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                8
+              ],
+              "to": [
+                28,
+                2,
+                8
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                9
+              ],
+              "to": [
+                0,
+                2,
+                9
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                9
+              ],
+              "to": [
+                28,
+                2,
+                9
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                10
+              ],
+              "to": [
+                0,
+                2,
+                10
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                10
+              ],
+              "to": [
+                28,
+                2,
+                10
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                11
+              ],
+              "to": [
+                0,
+                2,
+                11
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                11
+              ],
+              "to": [
+                28,
+                2,
+                11
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                12
+              ],
+              "to": [
+                0,
+                2,
+                12
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                12
+              ],
+              "to": [
+                28,
+                2,
+                12
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                13
+              ],
+              "to": [
+                0,
+                2,
+                13
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                28,
+                2,
+                13
+              ],
+              "to": [
+                28,
+                2,
+                13
+              ],
+              "material": "minecraft:stone_brick_slab"
+            },
+            {
+              "from": [
+                0,
+                2,
+                14
+              ],
+              "to": [
+                28,
+                2,
+                14
+              ],
+              "material": "minecraft:stone_brick_slab"
+            }
+          ]
+        }
+      ],
+      "joints": [
+        {
+          "id": "down",
+          "type": "variety:stairs",
+          "accepts": [
+            "variety:stairs"
+          ],
+          "at": [
+            15,
+            0,
+            3
+          ],
+          "face": "down"
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "down",
+          "role": "floor",
+          "type": "variety:slab",
+          "accepts": [
+            "variety:slab"
+          ],
+          "priority": 10,
+          "from": [
+            14,
+            0,
+            2
+          ],
+          "to": [
+            16,
+            0,
+            4
+          ]
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "roof_landing",
+            "from": [
+              15,
+              1,
+              3
+            ],
+            "to": [
+              14,
+              1,
+              3
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
     }
   },
   "compositions": {
@@ -16451,9 +21234,9 @@
       }
     },
     "zoning:section_house": {
-      "minimumModules": 7,
-      "maximumModules": 7,
-      "maximumHeight": 17,
+      "minimumModules": 8,
+      "maximumModules": 8,
+      "maximumHeight": 21,
       "buildingSections": {
         "sections": [
           {
@@ -16521,7 +21304,8 @@
           }
         ],
         "bottomCap": "minecraft:stone_bricks",
-        "topCap": "minecraft:stone_bricks"
+        "topCap": "minecraft:stone_bricks",
+        "roof": "roofs:zoning_section_house"
       }
     },
     "zoning:section_floor_ground": {
@@ -16773,9 +21557,9 @@
       }
     },
     "variety:rectangle_house": {
-      "minimumModules": 15,
-      "maximumModules": 15,
-      "maximumHeight": 13,
+      "minimumModules": 16,
+      "maximumModules": 16,
+      "maximumHeight": 17,
       "buildingSections": {
         "bottomCap": "minecraft:stone_bricks",
         "topCap": "minecraft:stone_bricks",
@@ -16822,7 +21606,8 @@
               "priority": 0
             }
           }
-        ]
+        ],
+        "roof": "roofs:variety_rectangle_house"
       }
     },
     "variety:gamma_floor_ground": {
@@ -16998,9 +21783,9 @@
       }
     },
     "variety:gamma_house": {
-      "minimumModules": 10,
-      "maximumModules": 10,
-      "maximumHeight": 9,
+      "minimumModules": 11,
+      "maximumModules": 11,
+      "maximumHeight": 13,
       "buildingSections": {
         "bottomCap": "minecraft:stone_bricks",
         "topCap": "minecraft:stone_bricks",
@@ -17047,7 +21832,8 @@
               "priority": 0
             }
           }
-        ]
+        ],
+        "roof": "roofs:variety_gamma_house"
       }
     },
     "scaling:rectangle_floor_ground": {
@@ -17229,9 +22015,9 @@
       }
     },
     "scaling:rectangle_house": {
-      "minimumModules": 54,
-      "maximumModules": 54,
-      "maximumHeight": 25,
+      "minimumModules": 55,
+      "maximumModules": 55,
+      "maximumHeight": 29,
       "buildingSections": {
         "bottomCap": "minecraft:stone_bricks",
         "topCap": "minecraft:stone_bricks",
@@ -17278,7 +22064,8 @@
               "priority": 0
             }
           }
-        ]
+        ],
+        "roof": "roofs:scaling_rectangle_house"
       },
       "maximumResolvedModules": 128
     },
@@ -17461,9 +22248,9 @@
       }
     },
     "scaling:gamma_house": {
-      "minimumModules": 26,
-      "maximumModules": 26,
-      "maximumHeight": 17,
+      "minimumModules": 27,
+      "maximumModules": 27,
+      "maximumHeight": 21,
       "buildingSections": {
         "bottomCap": "minecraft:stone_bricks",
         "topCap": "minecraft:stone_bricks",
@@ -17531,7 +22318,8 @@
               "priority": 0
             }
           }
-        ]
+        ],
+        "roof": "roofs:scaling_gamma_house"
       }
     },
     "residential:floor_ground": {
@@ -17705,9 +22493,9 @@
       }
     },
     "residential:apartment_block": {
-      "minimumModules": 18,
-      "maximumModules": 18,
-      "maximumHeight": 25,
+      "minimumModules": 19,
+      "maximumModules": 19,
+      "maximumHeight": 29,
       "buildingSections": {
         "bottomCap": "minecraft:stone_bricks",
         "topCap": "minecraft:stone_bricks",
@@ -17754,7 +22542,8 @@
               "priority": 0
             }
           }
-        ]
+        ],
+        "roof": "roofs:residential_apartment_block"
       },
       "maximumResolvedModules": 128
     }
@@ -17797,7 +22586,7 @@
       "provider": "modules",
       "minimumSize": 7,
       "maximumSize": 32,
-      "height": 17,
+      "height": 21,
       "parameters": {
         "composition": "zoning:section_house"
       }
@@ -17806,7 +22595,7 @@
       "provider": "modules",
       "minimumSize": 12,
       "maximumSize": 64,
-      "height": 13,
+      "height": 17,
       "parameters": {
         "composition": "variety:rectangle_house"
       }
@@ -17815,7 +22604,7 @@
       "provider": "modules",
       "minimumSize": 12,
       "maximumSize": 64,
-      "height": 9,
+      "height": 13,
       "parameters": {
         "composition": "variety:gamma_house"
       }
@@ -17824,7 +22613,7 @@
       "provider": "modules",
       "minimumSize": 13,
       "maximumSize": 64,
-      "height": 25,
+      "height": 29,
       "parameters": {
         "composition": "scaling:rectangle_house"
       }
@@ -17833,7 +22622,7 @@
       "provider": "modules",
       "minimumSize": 13,
       "maximumSize": 64,
-      "height": 17,
+      "height": 21,
       "parameters": {
         "composition": "scaling:gamma_house"
       }
@@ -17842,7 +22631,7 @@
       "provider": "modules",
       "minimumSize": 29,
       "maximumSize": 64,
-      "height": 25,
+      "height": 29,
       "parameters": {
         "composition": "residential:apartment_block"
       }

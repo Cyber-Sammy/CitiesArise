@@ -1156,14 +1156,14 @@ The seed, parcel identity and binding identity choose a variant once. Content/de
 
 ## Scaling section buildings and selected slots
 
-`scaling:rectangle_house` has six8-room floors,54 structural modules,102 resolved modules including furnishings, footprint11x13 and height25. Ground assembly is separate from five strictly repeated upper floors. `scaling:gamma_house` has four floors: a6-room concave ground floor, two repeated6-room upper floors, and one compatible4-room rectangular crown. It uses26 structural/48 resolved modules and height17. Both use existing room modules and single-layer shared walls. Their assets require at least13x13 semantic slots in any orientation. These are verified examples, not arbitrary combinations of all maximum limits.
+`scaling:rectangle_house` has six8-room floors,55 structural modules,103 resolved modules including furnishings, footprint11x13 and height29 including the roof. Ground assembly is separate from five strictly repeated upper floors. `scaling:gamma_house` has four floors: a6-room concave ground floor, two repeated6-room upper floors, and one compatible4-room rectangular crown. It uses27 structural/49 resolved modules and height21 including the roof. Both use existing room modules and single-layer shared walls. Their assets require at least13x13 semantic slots in any orientation. These are verified examples, not arbitrary combinations of all maximum limits.
 
 For a `buildingSections` composition, `maximumModules` is the whole-building structural budget (up to64); `maximumResolvedModules` is the whole-building count including nested furniture (default64, up to128). A floor composition and section floor still have at most16 structural modules; their search/neighbor/circulation limits are unchanged. `maximumResolvedModules` is rejected on standalone floor compositions. Recipes must explicitly opt into higher aggregate limits. Six floors of the old five-module floor alone already require30 structural modules, so raising only the floor count was insufficient.
 
 ```json
 "scaling:rectangle_house": {
-  "minimumModules": 54, "maximumModules": 54,
-  "maximumResolvedModules": 128, "maximumHeight": 25
+  "minimumModules": 55, "maximumModules": 55,
+  "maximumResolvedModules": 128, "maximumHeight": 29
 }
 ```
 
@@ -1183,7 +1183,7 @@ The demo home boundary uses stone bricks as stable fence footing. Minecraft dirt
 
 ## Full-size residential buildings
 
-The fixture includes `residential:apartment_block`: a 29x15 footprint, six floors and a total height of25 blocks, with two four-room apartments per floor. Each of the12 apartments contains independently mounted living, bedroom, kitchen and bathroom interior modules. Room reservations are4x3x6; an owned partition row leaves4x5 usable floor space. The shared hall has three clear columns and a continuously backed ladder between floors. Conventional stair flights are not implemented by this example. Upper section geometry and interiors repeat exactly.
+The fixture includes `residential:apartment_block`: a 29x15 footprint, six floors and a total height of29 blocks including its roof, with two four-room apartments per floor. Each of the12 apartments contains independently mounted living, bedroom, kitchen and bathroom interior modules. Room reservations are4x3x6; an owned partition row leaves4x5 usable floor space. The shared hall has three clear columns and a continuously backed ladder between floors. Conventional stair flights are not implemented by this example. Upper section geometry and interiors repeat exactly.
 
 Apartments reuse generic nested modules, rather than adding an apartment-only runtime generator: the apartment shell owns its shared walls and slabs, interior modules own their contents and the perpendicular room partition. Disjoint mount reservations cannot overwrite shell walls. Existing floor interfaces negotiate the apartment/hall wall into one layer. Ordinary floor recipes still compose rooms directly; apartment grouping is optional.
 
@@ -1194,3 +1194,13 @@ The profile now surveys240x240 instead of224x224. Expanded city anchors retain t
 `planning.districts.parcelSizeFallback` is an optional boolean, defaultfalse. When enabled, district seeding may merge one pair of complete adjacent seed rectangles for an authored larger plot, while retaining smaller neighboring districts. If the preferred local size still fails, at most three strictly smaller authored sizes are tried through the existing bounded local planner. Actual accepted size metadata drives content selection; a smaller fallback never receives the oversized building. Disabling this option preserves the original partition/size policy.
 
 Profiles retain only composition recipes referenced by their building pools and rule fallbacks; complete section floor contracts remain embedded and the source catalog remains available to authors. Larger profiles may store up to1Mi characters in128 parts; the expanded2Mi-character,24-table and1024-reference limits remain. Older frozen recipes remain readable. `scripts/generate_residential_fixture.py` rebuilds only the residential module recipes and profile changes deterministically.
+
+## Roof authoring contract
+
+Use the existing optional `buildingSections.roof` module id. The fixture generator supplies six footprint-specific modules with equal-weight `layouts` (structural alternatives, not damage variants). Store common cells in module `fills` and only changed cells in layout patches. The selected layout and all resulting cells are frozen with the building. Compatible alternatives must preserve the base downward joint, type, dimensions and anchor. Every selectable variant must be valid; an incompatible choice rejects the building with a diagnostic.
+
+A roof has one matching internal downward joint and an explicit FLOOR boundary atY0. It uses the final section ceiling type and normal shared-slab priority negotiation. The fixture declares a3x3 mating slab around the stair head, sharing only this patch with the ceiling. The existing top-floor ceiling supplies the remaining deck. Every cell in the declared mating patch must have explicit geometry, including the ladder. Sparse concave modules omit cells outside the mask at every height. All resolved roof cells, including nested content and explicit air, must project onto the actual top mask; intentional overhangs are outside this stage. A narrower crown uses its own footprint and staircase anchor rather than the ground-floor outline.
+
+Keep a continuous climbable connection across the ceiling and at least one cell above it, explicit side backing, two-block landing headroom and a declared route to that landing. Both alternatives in the fixture share this access. Roof cells are sparse exterior geometry; access clearance is explicit, while unrelated exterior air is omitted. A roof adds one structural module plus any nested modules; count it in `minimumModules`, `maximumModules`, `maximumResolvedModules` and the asset/composition height. Existing caps remain unchanged. A five-layer roof sharingY0 adds four blocks, not five or a second ceiling. The apartment example now has19 structural/67 resolved modules and height29.
+
+Run residential/floor generators first and `scripts/generate_roof_fixture.py` last. The roof generator is idempotent. Optional missing roof fields still use the old supportive top cap; old frozen profiles and saved placement do not acquire new roofs automatically. Test all weighted alternatives, rotations, rejected boundaries, concave voids, saved recipes and reversed chunk placement before distribution.

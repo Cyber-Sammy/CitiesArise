@@ -67,7 +67,7 @@ public final class BuildingLayoutVarietyGameTests {
                     helper.assertTrue(chest!=null && !chest.isEmpty(),"Workroom inventory lost");inventories++;
                 }
             }
-            helper.assertTrue(ladders==height-2 && inventories>0,"Ladder route or workroom furnishing missing");
+            helper.assertTrue(ladders==height && inventories>0,"Ladder route or workroom furnishing missing");
             for(int floor=0;floor<(shape.equals("rectangle")?3:2);floor++)for(int seam:shape.equals("rectangle")?new int[]{3}:new int[]{3,6}) {
                 for(int dz:new int[]{-1,0,1}) {
                     var point=CompositionAssembler.rotateCell(new Vec(3,floor*4+2,seam+dz),new Vec(11,height,depth),turn);

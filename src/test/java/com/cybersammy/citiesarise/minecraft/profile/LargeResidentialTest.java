@@ -25,7 +25,7 @@ class LargeResidentialTest {
         var cfg=settings();
         for(int turn=0;turn<4;turn++) {
             var result=solve(cfg,turn);
-            assertEquals(66,result.modules().size());
+            assertEquals(67,result.modules().size());
             assertEquals(12,result.modules().stream().filter(m->m.id().startsWith("residential:apartment_")).count());
             assertEquals(48,result.modules().stream().filter(m->m.id().startsWith("residential:room_")).count());
             assertEquals(result.cells().size(),result.cells().stream().map(PlacedCell::position).distinct().count());

@@ -671,13 +671,13 @@ the settings above; omission keeps legacy exact-bank/no-pier behavior.
 
 ## Expanded city profile
 
-The example now sets survey 224 x 224, districts {maxCount:8, targetParcels:6,
+The example now sets survey 240 x 240, districts {maxCount:8, targetParcels:6,
 maxConnectionAttempts:8}, city minimum/target/maximum parcels 12/32/40 and
 maxEarthworkVolume 80000. Parcel targets are best effort within terrain and
 connection limits; a flat acceptance fixture yields six districts and 32 parcels.
 Content definitions and compatibility rules remain entirely in this pack.
 
-Adapter survey limits are 224 per axis. A survey larger than 128 on either axis
+Adapter survey limits are 240 per axis. A survey larger than 128 on either axis
 requires maxCount >= 4 and reserves a 256-block city cell. Keep the supplied
 structure-set placement for expanded cities: displaced start chunks that cannot
 reach the entire reservation through vanilla structure references are skipped.
@@ -921,7 +921,7 @@ The block is optional; omission retains the legacy support policy. Presence enab
 
 Integer ranges: minimumDepth 4..16, maximumFillDepth 4..48, maximumFillVolume 1..100000, edgeClearance 0..8, maximumDetour 4..48, maximumRoutingAttempts 1..3. Defaults are shown above except edgeClearance defaults to 2. Total construction remains subject to the profile earthwork allowance. Fill accounting also covers gaps deeper than ordinary three-block preparation even when minimumDepth is higher.
 
-Follow_edge captures an immutable bounded final-terrain survey from already FULL chunks before placing any city blocks, then plans on one background worker (three admitted jobs). The complete survey reservation must be loaded together; it never forces chunks. Captured inputs and resolved operations survive reload. Debug command resolution is synchronous. Survey limits are 224x224 and 512 vertical blocks; attempts and detours are bounded. Opposed exposed banks and voids exposed by the planned corridor cut are considered; four-layer intact roofs and ordinary water crossings are preserved. This is conservative terrain inference, not stored cave identity. A detour may relocate the whole layout. Base-generator locate acceptance cannot guarantee final follow_edge acceptance.
+Follow_edge captures an immutable bounded final-terrain survey from already FULL chunks before placing any city blocks, then plans on one background worker (three admitted jobs). The complete survey reservation must be loaded together; it never forces chunks. Captured inputs and resolved operations survive reload. Debug command resolution is synchronous. Survey limits are 240x240 and 512 vertical blocks; attempts and detours are bounded. Opposed exposed banks and voids exposed by the planned corridor cut are considered; four-layer intact roofs and ordinary water crossings are preserved. This is conservative terrain inference, not stored cave identity. A detour may relocate the whole layout. Base-generator locate acceptance cannot guarantee final follow_edge acceptance.
 
 Use the matching new JAR and zoning_fixture ZIP before generating fresh settlements. Earlier saved resolved snapshots retain their recorded operations. Clearance or construction-limit failures reject before partial city placement.
 
@@ -985,7 +985,7 @@ Final validation checks module clearance/support/routes and two-block walking/cl
 
 The solver places rooms through their compatible typed joints; it does not search arbitrary disconnected room coordinates. Shared interfaces use ModuleBoundary rules, while conservative rectangular room-envelope overlap remains in force. The floor can be concave or contain holes; the building-slot and parcel outer reservations remain rectangular. Repeated floor sections and compatible A-to-B transitions are described below; arbitrary parcel shapes remain a later stage. Exact accepted voxels persist via existing placement snapshots and debug undo; old resolved cities are not rebuilt. Install matching new JAR and demo ZIP for new generation.
 
-Frozen final-terrain recipes use interned module catalogs to avoid repeating the entire library for each composition. Formats1 and2 remain readable; format3 extends this to prop dictionaries as described below. Stored JSON remains limited to512Ki characters/64 parts; expanded recipe work is limited to2Mi characters,24 distinct module tables and1024 references, with the same checks on save/reload. Invalid references reject before placement. Recipe data stays self-contained and does not depend on a later datapack reload.
+Frozen final-terrain recipes use interned module catalogs to avoid repeating the entire library for each composition. Formats1 and2 remain readable; format3 extends this to prop dictionaries as described below. Stored JSON remains limited to1Mi characters/128 parts; expanded recipe work is limited to2Mi characters,24 distinct module tables and1024 references, with the same checks on save/reload. Invalid references reject before placement. Recipe data stays self-contained and does not depend on a later datapack reload.
 
 ### Building sections and repeated floor layouts
 
@@ -1027,7 +1027,7 @@ Limits remain bounded: at most8 unique sections,16 total floors,16 structural mo
 
 The zoning fixture uses `zoning:section_house` for landmark slots: one7x7 entrance floor, two identical7x7 upper floors A and one narrower5x7 floor B, a continuous ladder, shared slabs and one furnished desk/chest on every floor. Its above-ground height is17 blocks. Ordinary wooden cottages and two-floor workshops remain separate variants. Install matching JAR and datapack ZIP before generating new settlements.
 
-Frozen final-terrain recipe format3 additionally interns prop-rule module dictionaries in the same bounded tables as building compositions. Formats1 and2 remain readable, including old inline prop dictionaries. Stored512Ki-character/64-part and expanded2Mi-character limits remain unchanged; malformed references reject before publication. This change removes duplicate catalogs and keeps worker inputs independent of later resource reloads.
+Frozen final-terrain recipe format3 additionally interns prop-rule module dictionaries in the same bounded tables as building compositions. Formats1 and2 remain readable, including old inline prop dictionaries. Stored1Mi-character/128-part and expanded2Mi-character limits remain unchanged; malformed references reject before publication. This change removes duplicate catalogs and keeps worker inputs independent of later resource reloads.
 
 ### Compatible weighted room alternatives
 
@@ -1082,7 +1082,7 @@ Each floor has five structural modules: a staircase corridor plus four living/wo
 
 The larger assets require a slot of at least12 blocks in both dimensions, fitting existing20x20 spacious parcels with building margin4. Parcel sizes, spacing and roads are unchanged. The homes pool uses relative weights2/3/3 for cottage/rectangle/G; size eligibility and bounded assembly constrain the final distribution. Small homes, workshops and landmarks remain available. These original examples keep their authored15/10 structural-module budgets and64 resolved-module defaults; larger optional section buildings are described below.
 
-Composition and prop recipes retain only reachable module definitions, including all nested contract alternatives and adjacency references; the global content catalog remains complete. Frozen recipe version4 stores each module definition once and uses bounded references for the per-recipe dictionaries. Versions1–3 remain readable. The stored512KiB and expanded2MiB recipe budgets,16 dictionaries and existing composition limits remain unchanged; definition references have additional1024-entry bounds.
+Composition and prop recipes retain only reachable module definitions, including all nested contract alternatives and adjacency references; the global content catalog remains complete. Frozen recipe version4 stores each module definition once and uses bounded references for the per-recipe dictionaries. Versions1–3 remain readable. The stored1Mi-character and expanded2Mi-character recipe budgets,24 dictionaries and existing composition limits remain unchanged; definition references have additional1024-entry bounds.
 # Parcel spacing and fences
 
 Add `parcelLayout` under `planning` in the settlement profile. Omitting it preserves old behavior.
@@ -1167,7 +1167,7 @@ For a `buildingSections` composition, `maximumModules` is the whole-building str
 }
 ```
 
-The fragment above illustrates budget fields; use actual section objects and terminal caps from the fixture for a loadable recipe. Existing cell65536, floor16, section8 and height128 caps remain; basement depth remains16. Frozen storage still permits at most512Ki characters/64 parts,2Mi expanded characters and1024 references. This catalog uses19 distinct reachable module dictionaries, so the bounded dictionary cap is24 (previously16); byte/reference budgets and format4 are unchanged. Each composition retains only reachable definitions; no unrelated catalogs are copied to force dictionary sharing.
+The fragment above illustrates budget fields; use actual section objects and terminal caps from the fixture for a loadable recipe. Existing cell65536, floor16, section8 and height128 caps remain; basement depth remains16. Frozen storage permits at most1Mi characters/128 parts,2Mi expanded characters and1024 references. The dictionary cap is24; profiles retain selectable building recipes and embed complete section contracts. Format4 and the expansion/reference guards remain unchanged. Each composition retains only reachable definitions; no unrelated catalogs are copied to force dictionary sharing.
 
 Larger building slots can be opted in per existing parcel-size entry:
 
@@ -1180,3 +1180,17 @@ The optional integer override is0..8 and must leave positive width and depth aft
 Use matching JAR/pack for new generation. Existing profiles without the override and without the new aggregate field keep legacy defaults. New dictionaries or new larger recipes require the new JAR; forward-loading them with an old mod is not supported. Existing saved exact placement is not resized.
 
 The demo home boundary uses stone bricks as stable fence footing. Minecraft dirt paths turn into dirt beneath a solid block above, including a fence; using dirt paths for an entire fenced perimeter therefore creates inconsistent exposed surfaces. Author independent yard paths and gate approaches as walking routes, and choose a stable full block for the perimeter when a uniform border is desired. Materials remain datapack-defined.
+
+## Full-size residential buildings
+
+The fixture includes `residential:apartment_block`: a 29x15 footprint, six floors and a total height of25 blocks, with two four-room apartments per floor. Each of the12 apartments contains independently mounted living, bedroom, kitchen and bathroom interior modules. Room reservations are4x3x6; an owned partition row leaves4x5 usable floor space. The shared hall has three clear columns and a continuously backed ladder between floors. Conventional stair flights are not implemented by this example. Upper section geometry and interiors repeat exactly.
+
+Apartments reuse generic nested modules, rather than adding an apartment-only runtime generator: the apartment shell owns its shared walls and slabs, interior modules own their contents and the perpendicular room partition. Disjoint mount reservations cannot overwrite shell walls. Existing floor interfaces negotiate the apartment/hall wall into one layer. Ordinary floor recipes still compose rooms directly; apartment grouping is optional.
+
+Large parcels are37x37 with a four-block building inset, leaving29x29 building slots and outdoor space. Only parcels with `parcel_size: residential:large` select this apartment block; smaller parcels retain the existing home/workshop/landmark mix. A suitable large plot is optional in natural settlements, but is verified to occur on the flat acceptance fixture.
+
+The profile now surveys240x240 instead of224x224. Expanded city anchors retain their256-block spacing and vanilla eight-chunk reference constraints;240 is the adapter maximum, not permission for arbitrarily large structure pieces. Snapshot, recipe and support-envelope bounds use the same limit. Only the demonstration profile changes terrain allowances: preferred cut/fill4/4, hard cut/fill10/12, building foundation10, elevation range14 and total earthworks120000. Road grade, ravine policy and structural support limits remain enforced.
+
+`planning.districts.parcelSizeFallback` is an optional boolean, defaultfalse. When enabled, district seeding may merge one pair of complete adjacent seed rectangles for an authored larger plot, while retaining smaller neighboring districts. If the preferred local size still fails, at most three strictly smaller authored sizes are tried through the existing bounded local planner. Actual accepted size metadata drives content selection; a smaller fallback never receives the oversized building. Disabling this option preserves the original partition/size policy.
+
+Profiles retain only composition recipes referenced by their building pools and rule fallbacks; complete section floor contracts remain embedded and the source catalog remains available to authors. Larger profiles may store up to1Mi characters in128 parts; the expanded2Mi-character,24-table and1024-reference limits remain. Older frozen recipes remain readable. `scripts/generate_residential_fixture.py` rebuilds only the residential module recipes and profile changes deterministically.

@@ -56,14 +56,32 @@ final class DistrictCityPlanner {
         // A small survey may not fit subdivisions. Preserve the existing single-district option.
         var fallback = new SuburbPlanningRequest(request.settlementId(), request.survey(), request.seed(),
                 settings.withDistricts(settings.districts().parcelSizes().isEmpty()?DistrictPlanningSettings.single():
-                        new DistrictPlanningSettings(1,settings.districts().targetParcels(),settings.districts().maxConnectionAttempts(),settings.districts().zoning(),settings.districts().parcelSizes())), request.terrainResponsePolicy());
+                        new DistrictPlanningSettings(1,settings.districts().targetParcels(),settings.districts().maxConnectionAttempts(),settings.districts().zoning(),settings.districts().parcelSizes(),settings.districts().parcelSizeFallback())), request.terrainResponsePolicy());
         return planner.plan(fallback, acceptance);
     }
 
     private static Optional<Local> planLocal(SuburbPlanner planner, SuburbPlanningRequest request,
             TerrainDistrictGrowth.Region region, int index, int capacity, PlanningAcceptance acceptance) {
-        var excluded = new HashSet<GridPoint>();
         var size=request.settings().districts().parcelSize(request.seed(),request.settlementId().value(),index);
+        var result=planLocal(planner,request,region,index,capacity,acceptance,size);
+        if(result.isPresent() || size.isEmpty() || !request.settings().districts().allowsParcelSizeFallback())return result;
+        var preferred=size.orElseThrow();
+        // At most three strictly smaller authored sizes; never retry an equal/larger footprint.
+        var alternatives=request.settings().districts().parcelSizes().stream()
+                .filter(s->s.width()<=preferred.width() && s.depth()<=preferred.depth()
+                        && (s.width()<preferred.width() || s.depth()<preferred.depth()))
+                .sorted(Comparator.comparingInt((DistrictParcelSize s)->s.width()*s.depth()).reversed().thenComparing(DistrictParcelSize::id))
+                .limit(3).toList();
+        for(var alternative:alternatives) {
+            result=planLocal(planner,request,region,index,capacity,acceptance,Optional.of(alternative));
+            if(result.isPresent())return result;
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<Local> planLocal(SuburbPlanner planner, SuburbPlanningRequest request,
+            TerrainDistrictGrowth.Region region, int index, int capacity, PlanningAcceptance acceptance,Optional<DistrictParcelSize> size) {
+        var excluded = new HashSet<GridPoint>();
         var districtSettings=size.map(request.settings()::withParcelSize).orElse(request.settings());
         var settings = districtSettings.forDistrict(Math.min(capacity, request.settings().targetParcelCount()));
         var policy = request.terrainResponsePolicy();
@@ -109,8 +127,14 @@ final class DistrictCityPlanner {
 
     private static List<GridBounds> partitions(SuburbPlanningRequest request) {
         var settings = request.settings();
-        int minimumWidth = settings.roadWidth() + settings.districts().parcelSizes().stream().mapToInt(DistrictParcelSize::width).max().orElse(settings.parcelWidth()) * 2;
-        int minimumDepth = 2 * (settings.roadWidth() + settings.terrainTransitions().roadShoulderRadius() + settings.districts().parcelSizes().stream().mapToInt(DistrictParcelSize::depth).max().orElse(settings.parcelDepth()));
+        // Optional large plots must not force every terrain region into their footprint.
+        // Such profiles can recover smaller local plots through the bounded size fallback.
+        int parcelWidth=settings.districts().allowsParcelSizeFallback()?settings.parcelWidth():
+                settings.districts().parcelSizes().stream().mapToInt(DistrictParcelSize::width).max().orElse(settings.parcelWidth());
+        int parcelDepth=settings.districts().allowsParcelSizeFallback()?settings.parcelDepth():
+                settings.districts().parcelSizes().stream().mapToInt(DistrictParcelSize::depth).max().orElse(settings.parcelDepth());
+        int minimumWidth = settings.roadWidth() + parcelWidth * 2;
+        int minimumDepth = 2 * (settings.roadWidth() + settings.terrainTransitions().roadShoulderRadius() + parcelDepth);
         List<GridBounds> bounds = new ArrayList<>(List.of(request.survey().bounds()));
         while (bounds.size() < settings.districts().maxCount()) {
             GridBounds split = bounds.stream().filter(b -> b.size().width() >= minimumWidth * 2
@@ -139,7 +163,25 @@ final class DistrictCityPlanner {
             bounds.add(new GridBounds(new GridPoint(split.minX() + (alongX ? cut : 0), split.minZ() + (alongX ? 0 : cut)),
                     new GridSize(alongX ? length - cut : split.size().width(), alongX ? split.size().depth() : length - cut)));
         }
-        return bounds.stream().sorted(Comparator.comparingInt(GridBounds::minZ).thenComparingInt(GridBounds::minX)).toList();
+        var ordered=new ArrayList<>(bounds.stream().sorted(Comparator.comparingInt(GridBounds::minZ).thenComparingInt(GridBounds::minX)).toList());
+        if(settings.districts().allowsParcelSizeFallback()) {
+            // Give a large authored district one larger seed instead of making all
+            // districts large. Merge only complete adjacent rectangles, at most once per seed.
+            for(int i=0;i<ordered.size();i++) {
+                var size=settings.districts().parcelSize(request.seed(),request.settlementId().value(),i);
+                if(size.isEmpty())continue;
+                int w=settings.roadWidth()+2*size.orElseThrow().width();
+                int d=2*(settings.roadWidth()+settings.terrainTransitions().roadShoulderRadius()+size.orElseThrow().depth());
+                var a=ordered.get(i);if(a.size().width()>=w && a.size().depth()>=d)continue;
+                for(int j=i+1;j<ordered.size();j++) {
+                    var b=ordered.get(j);int x=Math.min(a.minX(),b.minX()),z=Math.min(a.minZ(),b.minZ());
+                    int width=Math.max(a.maxXExclusive(),b.maxXExclusive())-x,depth=Math.max(a.maxZExclusive(),b.maxZExclusive())-z;
+                    if(width<w || depth<d || (long)width*depth!=(long)a.size().width()*a.size().depth()+(long)b.size().width()*b.size().depth())continue;
+                    ordered.set(i,new GridBounds(new GridPoint(x,z),new GridSize(width,depth)));ordered.remove(j);break;
+                }
+            }
+        }
+        return List.copyOf(ordered);
     }
 
     private static Optional<SuburbPlanningResult> merge(SuburbPlanningRequest request, List<Local> locals, PlanningAcceptance acceptance) {

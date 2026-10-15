@@ -10,6 +10,30 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DistrictCityPlannerTest {
+    @Test void explicitFallbackCanRecoverSmallerParcelsAfterLargeSitesFailExactAcceptance() {
+        var small=new DistrictParcelSize("test:small",6,7,1);
+        var large=new DistrictParcelSize("test:large",35,35,4);
+        var sizes=List.of(small,large);long seed=0;
+        while(!new DistrictPlanningSettings(2,3,8,ZoningSettings.NONE,sizes,true)
+                .parcelSize(seed,"test:residential",0).orElseThrow().equals(large))seed++;
+        var bounds=new GridBounds(new GridPoint(0,0),new GridSize(160,96));
+        var survey=TerrainSurvey.sample(bounds,p->Optional.of(new TerrainCell(p,65,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var rejections=new int[]{0};
+        PlanningAcceptance exact=(request,candidate)->{
+            if(candidate.plan().orElseThrow().parcels().stream().anyMatch(p->p.bounds().size().width()>20)) {
+                rejections[0]++;
+                return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_DISTRICT_CAPACITY);
+            }
+            return candidate;
+        };
+        var settings=SuburbPlanningSettings.defaults().withDistricts(new DistrictPlanningSettings(2,3,8,ZoningSettings.NONE,sizes,true));
+        var request=new SuburbPlanningRequest(new PlanElementId("test:residential"),survey,seed,settings,request(false,false).terrainResponsePolicy());
+        var result=SuburbPlanner.defaults().plan(request,exact);
+        assertTrue(result.successful(),result.toString());assertTrue(rejections[0]>0);
+        assertTrue(result.plan().orElseThrow().districts().stream().allMatch(d->d.properties()
+                .find(new PlanPropertyKey("parcel_size")).orElseThrow().equals("test:small")));
+        assertTrue(result.plan().orElseThrow().parcels().stream().allMatch(p->p.bounds().size().width()<20));
+    }
     @Test void districtExhaustionPreservesExactSupportDiagnosticForLocalRetry() {
         var base=request(false,false);
         var result=SuburbPlanner.defaults().planDistrict(base,(r,candidate) -> {

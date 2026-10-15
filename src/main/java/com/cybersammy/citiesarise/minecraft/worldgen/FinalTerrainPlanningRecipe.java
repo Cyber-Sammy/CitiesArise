@@ -1,5 +1,7 @@
 package com.cybersammy.citiesarise.minecraft.worldgen;
 
+import com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea;
+
 import com.cybersammy.citiesarise.core.geometry.GridBounds;
 import com.cybersammy.citiesarise.core.profile.SettlementProfile;
 import com.google.gson.Gson;
@@ -8,6 +10,8 @@ import net.minecraft.nbt.*;
 /** Versioned, self-contained immutable profile/content inputs; no live reload/resource dependency. */
 public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bounds,long seed,String settlementId) {
     private static final int MAX_MODULE_TABLES=24;
+    private static final int MAX_STORED_CHARACTERS=1048576;
+    private static final int PART_SIZE=8192;
     private static final Gson JSON=new com.google.gson.GsonBuilder().enableComplexMapKeySerialization().serializeNulls()
             .registerTypeAdapterFactory(new OptionalCodec()).create();
     private static final class OptionalCodec implements com.google.gson.TypeAdapterFactory {
@@ -30,7 +34,7 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
     public FinalTerrainPlanningRecipe {
         java.util.Objects.requireNonNull(profile);java.util.Objects.requireNonNull(bounds);
         if(!profile.surveySize().equals(bounds.size())) throw new IllegalArgumentException("Final terrain recipe survey size mismatch");
-        if(bounds.size().width()>224 || bounds.size().depth()>224 || settlementId==null || settlementId.length()>512)
+        if(bounds.size().width()>CityPlanningArea.MAX_SIZE || bounds.size().depth()>CityPlanningArea.MAX_SIZE || settlementId==null || settlementId.length()>512)
             throw new IllegalArgumentException("Invalid final terrain recipe");
         new com.cybersammy.citiesarise.core.model.PlanElementId(settlementId);
     }
@@ -42,9 +46,9 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
         var definitions=new com.google.gson.JsonArray();var references=definitionReferences(tables,definitions);
         var packed=new com.google.gson.JsonObject();packed.add("recipe",tree);packed.add("moduleTables",references);packed.add("moduleDefinitions",definitions);
         var tag=new CompoundTag();tag.putInt("Version",4);var list=new ListTag();String text=packed.toString();
-        if(text.length()>524288) throw new IllegalArgumentException("Final terrain recipe too large");
+        if(text.length()>MAX_STORED_CHARACTERS) throw new IllegalArgumentException("Final terrain recipe too large: "+text.length());
         expand(tree.deepCopy(),tables,new long[]{0,text.length()},0,true); // Save and reload enforce identical expansion budgets.
-        for(int i=0;i<text.length();i+=8192) list.add(StringTag.valueOf(text.substring(i,Math.min(i+8192,text.length()))));
+        for(int i=0;i<text.length();i+=PART_SIZE) list.add(StringTag.valueOf(text.substring(i,Math.min(i+PART_SIZE,text.length()))));
         tag.put("Json",list);return tag;
     }
     private static boolean composition(com.google.gson.JsonObject value) {return value.has("roots") && value.get("roots").isJsonArray() && value.has("attachments") && value.get("attachments").isJsonArray()
@@ -124,9 +128,9 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
     }
     static FinalTerrainPlanningRecipe load(CompoundTag tag) {
         int version=tag.getInt("Version");if(version<1 || version>4) throw new IllegalArgumentException("Unknown final terrain recipe");
-        var parts=tag.getList("Json",Tag.TAG_STRING);if(parts.isEmpty() || parts.size()>64) throw new IllegalArgumentException("Final terrain recipe too large");
+        var parts=tag.getList("Json",Tag.TAG_STRING);if(parts.isEmpty() || parts.size()>MAX_STORED_CHARACTERS/PART_SIZE) throw new IllegalArgumentException("Final terrain recipe too large");
         var text=new StringBuilder();for(var part:parts) {
-            if(part.getAsString().length()>8192) throw new IllegalArgumentException("Final terrain recipe part too large");
+            if(part.getAsString().length()>PART_SIZE) throw new IllegalArgumentException("Final terrain recipe part too large");
             text.append(part.getAsString());
         }
         if(version==1)return JSON.fromJson(text.toString(),FinalTerrainPlanningRecipe.class);

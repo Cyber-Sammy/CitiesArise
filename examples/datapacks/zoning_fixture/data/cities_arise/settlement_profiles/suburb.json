@@ -1,7 +1,7 @@
 {
   "survey": {
-    "width": 224,
-    "depth": 224
+    "width": 240,
+    "depth": 240
   },
   "planning": {
     "districts": {
@@ -72,8 +72,15 @@
           "width": 20,
           "depth": 20,
           "buildingMargin": 3
+        },
+        {
+          "id": "residential:large",
+          "width": 37,
+          "depth": 37,
+          "buildingMargin": 4
         }
-      ]
+      ],
+      "parcelSizeFallback": true
     },
     "roadWidth": 5,
     "maxBuildableSlope": 0.75,
@@ -83,13 +90,13 @@
     "parcelWidth": 16,
     "parcelDepth": 18,
     "buildingMargin": 4,
-    "maxElevationRange": 10,
-    "preferredMaxCutDepth": 3,
-    "preferredMaxFillDepth": 3,
-    "maxCutDepth": 8,
-    "maxFillDepth": 10,
-    "maxBuildingFoundationDepth": 8,
-    "maxEarthworkVolume": 80000,
+    "maxElevationRange": 14,
+    "preferredMaxCutDepth": 4,
+    "preferredMaxFillDepth": 4,
+    "maxCutDepth": 10,
+    "maxFillDepth": 12,
+    "maxBuildingFoundationDepth": 10,
+    "maxEarthworkVolume": 120000,
     "buildings": {
       "catalog": "zoning:fixture",
       "pool": [
@@ -103,6 +110,24 @@
       ],
       "fallback": "zoning:empty",
       "rules": [
+        {
+          "id": "residential:large",
+          "match": {
+            "properties": {
+              "parcel_size": "residential:large"
+            }
+          },
+          "pool": [
+            {
+              "asset": "residential:apartment_block",
+              "weight": 1
+            }
+          ],
+          "palettes": [
+            "residential:brick"
+          ],
+          "fallback": "zoning:empty"
+        },
         {
           "id": "zoning:landmark",
           "match": {

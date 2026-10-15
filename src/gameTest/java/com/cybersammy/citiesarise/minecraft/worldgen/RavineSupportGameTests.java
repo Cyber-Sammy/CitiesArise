@@ -136,7 +136,9 @@ public final class RavineSupportGameTests {
     }
     @GameTest(template="empty",timeoutTicks=100)
     public static void structurePieceDefersUntilFinalTerrainAndKeepsWaterAndEntranceOpen(GameTestHelper helper) {
-        int x=Math.floorDiv(helper.absolutePos(BlockPos.ZERO).getX(),16)*16+9216;var level=helper.getLevel();var f=fixture(level,x,true);
+        // Async assertions must not share fixed-Z fixtures with other tests in the batch.
+        // A 256-block offset difference can cancel the batch's horizontal template spacing.
+        int x=Math.floorDiv(helper.absolutePos(BlockPos.ZERO).getX(),16)*16+1048576;var level=helper.getLevel();var f=fixture(level,x,true);
         level.setBlock(new BlockPos(x+6,48,18),Blocks.WATER.defaultBlockState(),2);
         var operations=new ArrayList<>(f.original().operations());
         operations.add(new DebugBlockPlacementOperation(new GridPoint(x+12,3),0,DebugPlacementRole.BUILDING_ACCESS_SURFACE,
@@ -154,7 +156,8 @@ public final class RavineSupportGameTests {
         helper.assertTrue(level.getBlockState(new BlockPos(x+8,65,5)).isAir(),"Structure wrote its old foundation before support acceptance");
         helper.runAfterDelay(12,()->{
             verify(helper,x);
-            helper.assertTrue(level.getBlockState(new BlockPos(x+6,48,18)).is(Blocks.WATER),"Suspended house filled the channel");
+            helper.assertTrue(level.getBlockState(new BlockPos(x+6,48,18)).is(Blocks.WATER),
+                    "Suspended house changed the channel at "+new BlockPos(x+6,48,18)+": "+level.getBlockState(new BlockPos(x+6,48,18)));
             helper.assertTrue(level.getBlockState(new BlockPos(x+12,66,3)).isAir(),"Span rail blocked a building entrance");
             helper.succeed();
         });

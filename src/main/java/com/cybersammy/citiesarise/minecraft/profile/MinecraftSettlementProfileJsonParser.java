@@ -128,8 +128,19 @@ public final class MinecraftSettlementProfileJsonParser {
                     rule.has("match")?ZoningJsonParser.metadata(ZoningJsonParser.object(rule.get("match"))):com.cybersammy.citiesarise.core.model.MetadataSelector.ANY,
                     rulePool,rulePalettes,requiredAsset(catalog,contentString(rule,"fallback"))));
         }
+        var fallback=requiredAsset(catalog,contentString(content,"fallback"));
+        var boundAssets=new java.util.ArrayList<BuildingAsset>();
+        pool.forEach(e->boundAssets.add(e.asset()));boundAssets.add(fallback);
+        for(var rule:rules){rule.pool().forEach(e->boundAssets.add(e.asset()));boundAssets.add(rule.fallback());}
+        // Section recipes already embed their floor contracts. Keep only selectable buildings
+        // in a profile, rather than serializing every authoring-only floor a second time.
+        var compositions=new java.util.TreeMap<String,com.cybersammy.citiesarise.core.content.CompositionSettings>();
+        for(var asset:boundAssets) {
+            var id=asset.parameters().get("composition");
+            if(id!=null)compositions.put(id,catalog.compositions().get(id));
+        }
         var settings=new BuildingContentSettings(pool, palettes,
-                requiredAsset(catalog, contentString(content, "fallback")), catalog.palettes(), catalog.compositions(), catalog.surfaces(), catalog.props(), catalog.surfaceTemplates(),rules,catalog.parcelRules());
+                fallback, catalog.palettes(), compositions, catalog.surfaces(), catalog.props(), catalog.surfaceTemplates(),rules,catalog.parcelRules());
         validateBinding(pool,palettes,settings.fallback(),catalog);
         for(var rule:rules) validateBinding(rule.pool(),rule.palettes(),rule.fallback(),catalog);
         return settings;
@@ -166,7 +177,8 @@ public final class MinecraftSettlementProfileJsonParser {
                     size.has("buildingMargin")?requiredInt(size,"buildingMargin"):null));
         }
         return new com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings(
-                optionalInt(value, "maxCount", 4), optionalInt(value, "targetParcels", 4), optionalInt(value, "maxConnectionAttempts", 8), ZoningJsonParser.parse(value),sizes);
+                optionalInt(value, "maxCount", 4), optionalInt(value, "targetParcels", 4), optionalInt(value, "maxConnectionAttempts", 8), ZoningJsonParser.parse(value),sizes,
+                optionalBoolean(value,"parcelSizeFallback",false));
     }
 
     private static BuildingAsset requiredAsset(ContentCatalogParser.Catalog catalog, String id) {

@@ -2,7 +2,12 @@ package com.cybersammy.citiesarise.core.planning.suburb;
 
 /** Bounded, profile-owned city subdivision. One district preserves legacy planning. */
 public record DistrictPlanningSettings(int maxCount, int targetParcels, int maxConnectionAttempts, ZoningSettings zoning,
-        java.util.List<DistrictParcelSize> parcelSizes) {
+        java.util.List<DistrictParcelSize> parcelSizes, Boolean parcelSizeFallback) {
+    public DistrictPlanningSettings(int maxCount,int targetParcels,int maxConnectionAttempts,ZoningSettings zoning,
+            java.util.List<DistrictParcelSize> parcelSizes) {
+        this(maxCount,targetParcels,maxConnectionAttempts,zoning,parcelSizes,false);
+    }
+    public boolean allowsParcelSizeFallback() {return Boolean.TRUE.equals(parcelSizeFallback);}
     public DistrictPlanningSettings(int maxCount,int targetParcels,int maxConnectionAttempts,ZoningSettings zoning) {
         this(maxCount,targetParcels,maxConnectionAttempts,zoning,java.util.List.of());
     }
@@ -18,6 +23,7 @@ public record DistrictPlanningSettings(int maxCount, int targetParcels, int maxC
     }
     public DistrictPlanningSettings {
         java.util.Objects.requireNonNull(zoning);
+        parcelSizeFallback=Boolean.TRUE.equals(parcelSizeFallback);
         parcelSizes=java.util.List.copyOf(parcelSizes);
         if(parcelSizes.size()>8 || parcelSizes.stream().map(DistrictParcelSize::id).distinct().count()!=parcelSizes.size())
             throw new IllegalArgumentException("At most 8 unique district parcel sizes");

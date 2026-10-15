@@ -4,7 +4,8 @@ import com.cybersammy.citiesarise.core.geometry.*;
 
 /** Keeps expanded cities inside vanilla's eight-chunk structure-reference reach. */
 public final class CityPlanningArea {
-    public static final int MAX_SIZE=224;
+    public static final int MAX_SIZE=240;
+    public static final int MAX_AREA=MAX_SIZE*MAX_SIZE;
     private CityPlanningArea() { }
     public static boolean expanded(GridSize size) {return size.width()>128 || size.depth()>128;}
     public static boolean anchor(SettlementRegion region,GridSize size) {

@@ -47,7 +47,7 @@ public final class PlanningPerformanceGameTests {
                 .getHolderOrThrow(MultiNoiseBiomeSourceParameterLists.OVERWORLD));
         var generator = new NoiseBasedChunkGenerator(biomes,noise);
         var random = RandomState.create(noise.value(),registry.lookupOrThrow(Registries.NOISE),worldSeed);
-        Path pack = Path.of("../../../examples/datapacks/zoning_fixture/data");
+        Path pack = Path.of(System.getProperty("citiesarise.benchmarkDatapack","../../../examples/datapacks/zoning_fixture/data"));
         var fixture = JsonParser.parseString(Files.readString(pack.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject();
         if (reject) fixture.getAsJsonObject("planning").addProperty("maxEarthworkVolume",1);
         var profile = new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("cities_arise:suburb"),fixture,
@@ -81,7 +81,8 @@ public final class PlanningPerformanceGameTests {
         String geometry = JSON.toJson(canonical(fingerprint));
         Files.writeString(output.resolve(name+"-geometry.json"),geometry);
         Path baseline = output.resolveSibling("baseline").resolve(name+"-geometry.json");
-        if (!output.getFileName().toString().equals("baseline") && Files.exists(baseline))
+        if (Boolean.parseBoolean(System.getProperty("citiesarise.benchmarkCompareBaseline","true"))
+                && !output.getFileName().toString().equals("baseline") && Files.exists(baseline))
             helper.assertTrue(Files.readString(baseline).equals(geometry),"Canonical geometry changed for "+name);
         var timings=Map.of("surveyMs",(sampled-start)/1e6,"planMs",(planned-sampled)/1e6,"refinementMs",(refined-planned)/1e6,
                 "totalMs",(refined-start)/1e6,"exactSurveyCalls",measured.exactCalls,"exactSurveyMs",measured.exactNanos/1e6,

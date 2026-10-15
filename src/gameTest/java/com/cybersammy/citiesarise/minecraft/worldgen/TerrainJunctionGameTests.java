@@ -194,11 +194,14 @@ public final class TerrainJunctionGameTests {
             if(object.has("floorLayout") && object.has("entranceJoint") && object.get("entranceJoint").getAsString().equals("down"))
                 object.addProperty("entranceJoint","entrance");
             if(object.has("id") && object.has("cells") && object.has("joints")
-                    && java.util.Set.of("zoning:section_main","zoning:section_narrow").contains(object.get("id").getAsString())) {
-                object.getAsJsonArray("joints").add(com.google.gson.JsonParser.parseString("{\"id\":\"entrance\",\"type\":\"zoning:entrance\",\"accepts\":[],\"position\":{\"x\":3,\"y\":1,\"z\":0},\"face\":\"NORTH\",\"width\":1,\"height\":2,\"optional\":false,\"external\":true,\"capMaterial\":\"\"}"));
+                    && (java.util.Set.of("zoning:section_main","zoning:section_narrow").contains(object.get("id").getAsString())
+                    || object.get("id").getAsString().startsWith("variety:") && object.get("id").getAsString().endsWith("_upper"))) {
+                int entryX=object.get("id").getAsString().startsWith("variety:")?1:3;
+                var entrance=com.google.gson.JsonParser.parseString("{\"id\":\"entrance\",\"type\":\"zoning:entrance\",\"accepts\":[],\"position\":{\"x\":3,\"y\":1,\"z\":0},\"face\":\"NORTH\",\"width\":1,\"height\":2,\"optional\":false,\"external\":true,\"capMaterial\":\"\"}").getAsJsonObject();
+                entrance.getAsJsonObject("position").addProperty("x",entryX);object.getAsJsonArray("joints").add(entrance);
                 for(var item:object.getAsJsonArray("cells")) {
                     var cell=item.getAsJsonObject();var p=cell.getAsJsonObject("position");
-                    if(p.get("x").getAsInt()==3 && p.get("z").getAsInt()==0 && (p.get("y").getAsInt()==1 || p.get("y").getAsInt()==2))cell.addProperty("material","minecraft:air");
+                    if(p.get("x").getAsInt()==entryX && p.get("z").getAsInt()==0 && (p.get("y").getAsInt()==1 || p.get("y").getAsInt()==2))cell.addProperty("material","minecraft:air");
                 }
             }
             object.entrySet().forEach(e->restoreLegacyExteriorAccess(e.getValue()));

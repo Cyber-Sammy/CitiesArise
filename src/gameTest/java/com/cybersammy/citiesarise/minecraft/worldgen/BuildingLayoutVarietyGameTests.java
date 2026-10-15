@@ -40,11 +40,13 @@ public final class BuildingLayoutVarietyGameTests {
         }
         int index=0;
         for(String shape:List.of("rectangle","gamma"))for(int turn=0;turn<4;turn++) {
-            int depth=shape.equals("rectangle")?8:12,height=shape.equals("rectangle")?13:9;
+            int depth=shape.equals("rectangle")?7:10,height=shape.equals("rectangle")?13:9;
             var cfg=restored.profile().suburbPlanningSettings().buildings().compositions().get("variety:"+shape+"_house");
             var entry=CompositionAssembler.rotate(new Joint("entry","zoning:entrance",Set.of(),new Vec(5,1,0),Face.NORTH,1,2,false,true,""),new Vec(11,height,depth),turn);
             var assembler=new CompositionAssembler();var result=assembler.assemble(cfg,16,16,entry.position(),entry.face(),42);
             helper.assertTrue(result.isPresent(),assembler.failure());var plan=result.orElseThrow();
+            helper.assertTrue(plan.connections().stream().filter(s->s.contains("/side_south ->") || s.contains("/side_north ->")).count()==(shape.equals("rectangle")?6:4),
+                    "Every adjacent wing room needs a negotiated shared wall");
             var base=helper.absolutePos(new BlockPos(65536+64*index++,3,65536));base=new BlockPos(Math.floorDiv(base.getX(),16)*16+13,base.getY(),base.getZ());
             var palette=catalog.palettes().get("zoning:warm");var ops=new ArrayList<DebugBlockPlacementOperation>();
             for(var cell:plan.cells())ops.add(new DebugBlockPlacementOperation(new GridPoint(base.getX()+cell.position().x(),base.getZ()+cell.position().z()),cell.position().y(),DebugPlacementRole.CONTENT_BLOCK,
@@ -66,6 +68,13 @@ public final class BuildingLayoutVarietyGameTests {
                 }
             }
             helper.assertTrue(ladders==height-2 && inventories>0,"Ladder route or workroom furnishing missing");
+            for(int floor=0;floor<(shape.equals("rectangle")?3:2);floor++)for(int seam:shape.equals("rectangle")?new int[]{3}:new int[]{3,6}) {
+                for(int dz:new int[]{-1,0,1}) {
+                    var point=CompositionAssembler.rotateCell(new Vec(3,floor*4+2,seam+dz),new Vec(11,height,depth),turn);
+                    boolean empty=helper.getLevel().getBlockState(base.offset(point.x(),point.y(),point.z())).isAir();
+                    helper.assertTrue(empty==(dz!=0),"Room partition must be exactly one block thick with free space on both sides");
+                }
+            }
             if(shape.equals("gamma"))helper.assertTrue(helper.getLevel().getBlockState(sentinel).is(Blocks.GOLD_BLOCK),"Concave courtyard was filled");
             var upperEntry=CompositionAssembler.rotateCell(new Vec(5,5,0),new Vec(11,height,depth),turn);
             helper.assertTrue(!helper.getLevel().getBlockState(base.offset(upperEntry.x(),upperEntry.y(),upperEntry.z())).isAir(),"Upper exterior entrance appeared");

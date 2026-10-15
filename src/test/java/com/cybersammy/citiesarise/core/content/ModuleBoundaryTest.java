@@ -69,6 +69,13 @@ class ModuleBoundaryTest {
     @Test void oldModulesKeepTheOriginalTwoLayerGeometry(){
         var result=assemble(floor("a",true,null),floor("b",false,null)).orElseThrow();assertEquals(4,result.modules().get(1).origin().y());assertEquals(72,result.cells().size());
     }
+    @Test void closedWallContactsCannotMasqueradeAsFloorSlabsOrTechnicalPassages() {
+        assertThrows(IllegalArgumentException.class,()->new ModuleBoundary("up",ModuleBoundary.Role.CEILING,"slab",Set.of("slab"),
+                new Vec(0,3,0),new Vec(2,3,2),0,false,0,List.of(),false));
+        assertThrows(IllegalArgumentException.class,()->new ModuleBoundary("side",ModuleBoundary.Role.WALL,"wall",Set.of("wall"),
+                new Vec(0,0,0),new Vec(0,3,2),0,false,1,List.of(),false));
+        assertTrue(boundary(true,0,false,0,List.of()).passage());
+    }
     @Test void invalidExtentRoleDuplicateAndGapBudgetAreRejected(){
         assertThrows(IllegalArgumentException.class,()->floor("a",true,new ModuleBoundary("up",ModuleBoundary.Role.WALL,"x",Set.of("x"),new Vec(0,3,0),new Vec(2,3,2),0,false,0,List.of())));
         assertThrows(IllegalArgumentException.class,()->boundary(true,0,false,9,List.of()));

@@ -1084,7 +1084,8 @@
             0,
             0
           ],
-          "material": "minecraft:barrel[facing=north,open=false]"
+          "material": "minecraft:barrel[facing=north,open=false]",
+          "blockEntity": "{id:'minecraft:barrel',Items:[{Slot:0b,id:'minecraft:stick',count:3}]}"
         }
       ],
       "size": [
@@ -9462,6 +9463,202 @@
           }
         ]
       }
+    },
+    "zoning:yard_bench": {
+      "size": [
+        2,
+        1,
+        1
+      ],
+      "cells": [
+        {
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "material": "minecraft:oak_stairs[facing=south]"
+        },
+        {
+          "at": [
+            1,
+            0,
+            0
+          ],
+          "material": "minecraft:oak_stairs[facing=south]"
+        }
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "joints": [],
+      "variants": [],
+      "damage": {
+        "enabled": false
+      }
+    },
+    "zoning:yard_shed": {
+      "size": [
+        3,
+        3,
+        2
+      ],
+      "cells": [
+        {
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "material": "minecraft:oak_planks"
+        },
+        {
+          "at": [
+            2,
+            0,
+            0
+          ],
+          "material": "minecraft:oak_planks"
+        },
+        {
+          "at": [
+            0,
+            0,
+            1
+          ],
+          "material": "minecraft:oak_planks"
+        },
+        {
+          "at": [
+            2,
+            0,
+            1
+          ],
+          "material": "minecraft:oak_planks"
+        },
+        {
+          "at": [
+            0,
+            1,
+            0
+          ],
+          "material": "minecraft:oak_planks"
+        },
+        {
+          "at": [
+            2,
+            1,
+            0
+          ],
+          "material": "minecraft:oak_planks"
+        },
+        {
+          "at": [
+            0,
+            1,
+            1
+          ],
+          "material": "minecraft:oak_planks"
+        },
+        {
+          "at": [
+            2,
+            1,
+            1
+          ],
+          "material": "minecraft:oak_planks"
+        },
+        {
+          "at": [
+            0,
+            2,
+            0
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "at": [
+            1,
+            2,
+            0
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "at": [
+            2,
+            2,
+            0
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "at": [
+            0,
+            2,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "at": [
+            1,
+            2,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        },
+        {
+          "at": [
+            2,
+            2,
+            1
+          ],
+          "material": "minecraft:spruce_planks"
+        }
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "joints": [],
+      "variants": [],
+      "damage": {
+        "enabled": false
+      }
+    },
+    "zoning:yard_storage": {
+      "size": [
+        1,
+        2,
+        1
+      ],
+      "cells": [
+        {
+          "at": [
+            0,
+            0,
+            0
+          ],
+          "material": "minecraft:barrel",
+          "blockEntity": "{id:'minecraft:barrel',Items:[{Slot:0b,id:'minecraft:stick',count:3}]}"
+        },
+        {
+          "at": [
+            0,
+            1,
+            0
+          ],
+          "material": "minecraft:oak_slab"
+        }
+      ],
+      "tags": [
+        "zoning:style"
+      ],
+      "joints": [],
+      "variants": [],
+      "damage": {
+        "enabled": false
+      }
     }
   },
   "compositions": {
@@ -10414,6 +10611,51 @@
       "palette": "zoning:palette",
       "maxCount": 1,
       "anchor": "parcel_back"
+    },
+    "zoning:garden_bench": {
+      "anchor": "parcel_front",
+      "pool": [
+        "zoning:yard_bench"
+      ],
+      "palette": "zoning:palette",
+      "inset": 1,
+      "spacing": 1,
+      "clearance": 1,
+      "chance": 100,
+      "maxCount": 1,
+      "requiredTags": [
+        "zoning:style"
+      ]
+    },
+    "zoning:back_shed": {
+      "anchor": "parcel_back",
+      "pool": [
+        "zoning:yard_shed"
+      ],
+      "palette": "zoning:palette",
+      "inset": 1,
+      "spacing": 1,
+      "clearance": 0,
+      "chance": 65,
+      "maxCount": 1,
+      "requiredTags": [
+        "zoning:style"
+      ]
+    },
+    "zoning:yard_storage": {
+      "anchor": "parcel_side",
+      "pool": [
+        "zoning:yard_storage"
+      ],
+      "palette": "zoning:palette",
+      "inset": 1,
+      "spacing": 1,
+      "clearance": 1,
+      "chance": 100,
+      "maxCount": 1,
+      "requiredTags": [
+        "zoning:style"
+      ]
     }
   },
   "materialRules": {
@@ -10531,7 +10773,86 @@
         }
       },
       "props": [
-        "zoning:home_planter"
+        "zoning:home_planter",
+        "zoning:garden_bench",
+        "zoning:back_shed"
+      ],
+      "outdoorLayouts": [
+        {
+          "id": "zoning:garden",
+          "weight": 3,
+          "zones": [
+            {
+              "id": "yard",
+              "kind": "CONTENT",
+              "minX": 0,
+              "minZ": 0,
+              "maxX": 100,
+              "maxZ": 100,
+              "props": [
+                "zoning:home_planter",
+                "zoning:garden_bench",
+                "zoning:back_shed"
+              ]
+            },
+            {
+              "id": "front_walk",
+              "kind": "PATH",
+              "minX": 40,
+              "minZ": 0,
+              "maxX": 60,
+              "maxZ": 25,
+              "props": [],
+              "material": "minecraft:dirt_path"
+            },
+            {
+              "id": "side_passage",
+              "kind": "FREE",
+              "minX": 0,
+              "minZ": 0,
+              "maxX": 8,
+              "maxZ": 100,
+              "props": []
+            }
+          ]
+        },
+        {
+          "id": "zoning:quiet_yard",
+          "weight": 2,
+          "zones": [
+            {
+              "id": "yard",
+              "kind": "CONTENT",
+              "minX": 0,
+              "minZ": 0,
+              "maxX": 100,
+              "maxZ": 100,
+              "props": [
+                "zoning:home_planter",
+                "zoning:back_shed"
+              ]
+            },
+            {
+              "id": "front_walk",
+              "kind": "PATH",
+              "minX": 8,
+              "minZ": 8,
+              "maxX": 92,
+              "maxZ": 18,
+              "props": [],
+              "material": "minecraft:dirt_path"
+            },
+            {
+              "id": "side_passage",
+              "kind": "FREE",
+              "minX": 0,
+              "minZ": 0,
+              "maxX": 8,
+              "maxZ": 100,
+              "props": []
+            }
+          ]
+        }
       ]
     },
     {
@@ -10565,7 +10886,85 @@
       },
       "props": [
         "zoning:yard_lamp",
-        "zoning:work_area"
+        "zoning:work_area",
+        "zoning:yard_storage"
+      ],
+      "outdoorLayouts": [
+        {
+          "id": "zoning:working_yard",
+          "weight": 3,
+          "zones": [
+            {
+              "id": "yard",
+              "kind": "CONTENT",
+              "minX": 0,
+              "minZ": 0,
+              "maxX": 100,
+              "maxZ": 100,
+              "props": [
+                "zoning:yard_lamp",
+                "zoning:work_area",
+                "zoning:yard_storage"
+              ]
+            },
+            {
+              "id": "front_walk",
+              "kind": "PATH",
+              "minX": 8,
+              "minZ": 8,
+              "maxX": 92,
+              "maxZ": 18,
+              "props": [],
+              "material": "minecraft:stone_bricks"
+            },
+            {
+              "id": "side_passage",
+              "kind": "FREE",
+              "minX": 0,
+              "minZ": 0,
+              "maxX": 8,
+              "maxZ": 100,
+              "props": []
+            }
+          ]
+        },
+        {
+          "id": "zoning:storage_yard",
+          "weight": 1,
+          "zones": [
+            {
+              "id": "yard",
+              "kind": "CONTENT",
+              "minX": 0,
+              "minZ": 0,
+              "maxX": 100,
+              "maxZ": 100,
+              "props": [
+                "zoning:yard_lamp",
+                "zoning:yard_storage"
+              ]
+            },
+            {
+              "id": "front_walk",
+              "kind": "PATH",
+              "minX": 35,
+              "minZ": 0,
+              "maxX": 65,
+              "maxZ": 25,
+              "props": [],
+              "material": "minecraft:stone_bricks"
+            },
+            {
+              "id": "side_passage",
+              "kind": "FREE",
+              "minX": 0,
+              "minZ": 0,
+              "maxX": 8,
+              "maxZ": 100,
+              "props": []
+            }
+          ]
+        }
       ]
     }
   ]

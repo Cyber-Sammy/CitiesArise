@@ -93,4 +93,48 @@ class ParcelContentAcceptanceTest {
             assertThrows(IllegalArgumentException.class,() -> new ContentCatalogParser(RESOURCES).parse(json),mutation);
         }
     }
+    @Test void demoOutdoorLayoutsContainDifferentContentsAndPreserveAllReservedCirculation() throws Exception {
+        var shed=new ContentCatalogParser(RESOURCES).parse(catalog()).modules().get("zoning:yard_shed");
+        for(int y=0;y<2;y++) for(int z=0;z<2;z++) {
+            var passage=new ModuleDefinition.Vec(1,y,z);
+            assertTrue(shed.cells().stream().noneMatch(c -> c.position().equals(passage)),"Storage canopy needs two open ends");
+        }
+        var result=city();var plan=result.plan().orElseThrow();var content=result.content();
+        var variants=content.parcels().values().stream().map(p -> p.outdoor().layout()).collect(java.util.stream.Collectors.toSet());
+        assertTrue(variants.size()>=3,variants.toString());
+        var used=content.props().stream().map(ResolvedProp::ruleId).collect(java.util.stream.Collectors.toSet());
+        assertTrue(used.containsAll(Set.of("zoning:home_planter","zoning:yard_lamp","zoning:garden_bench","zoning:back_shed","zoning:yard_storage")),used.toString());
+        assertTrue(content.parcels().values().stream().anyMatch(p -> !p.outdoor().paths().isEmpty()));
+        var occupied=new HashSet<GridPoint>();
+        for(var prop:content.props()) {
+            var parcel=content.parcels().get(prop.source());if(parcel==null)continue;
+            var extent=prop.composition().cells().stream().map(c -> prop.origin().add(c.position())).toList();
+            var footprint=new HashSet<GridPoint>();extent.forEach(v -> footprint.add(new GridPoint(v.x(),v.z())));
+            for(var p:footprint) {
+                assertTrue(occupied.add(p),"Props overlap");assertTrue(parcel.outdoor().permits(prop.ruleId(),p));
+                assertFalse(content.boundaries().reserved().contains(p),"Prop blocks access, gate or fence");
+            }
+        }
+        var operations=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow(),content).operations();
+        assertTrue(operations.stream().anyMatch(o -> o.role()==DebugPlacementRole.PARCEL_PROP));
+        assertTrue(operations.stream().filter(o -> o.role()==DebugPlacementRole.PARCEL_PROP || o.role()==DebugPlacementRole.PARCEL_PATH
+                || o.role()==DebugPlacementRole.PARCEL_PATH_CLEARANCE).allMatch(o -> o.role().substrateIndependent()));
+    }
+    @Test void outdoorCatalogRejectsInvalidZonesWeightsAndUnboundProps() throws Exception {
+        for(String mutation:List.of("weight","fraction","bound","kind","unknown","duplicate","overlap","missingMaterial")) {
+            var json=catalog();var layout=json.getAsJsonArray("parcelRules").get(0).getAsJsonObject().getAsJsonArray("outdoorLayouts").get(0).getAsJsonObject();
+            var zones=layout.getAsJsonArray("zones");var zone=zones.get(0).getAsJsonObject();
+            switch(mutation) {
+                case "weight" -> layout.addProperty("weight",0);
+                case "fraction" -> zone.addProperty("minX",0.5);
+                case "bound" -> zone.addProperty("maxX",101);
+                case "kind" -> zone.addProperty("kind","ROAD");
+                case "unknown" -> zone.add("props",JsonParser.parseString("[\"test:unknown\"]"));
+                case "duplicate" -> zones.add(zone.deepCopy());
+                case "overlap" -> {var other=zone.deepCopy();other.addProperty("id","other");zones.add(other);}
+                case "missingMaterial" -> zones.get(1).getAsJsonObject().remove("material");
+            }
+            assertThrows(IllegalArgumentException.class,() -> new ContentCatalogParser(RESOURCES).parse(json),mutation);
+        }
+    }
 }

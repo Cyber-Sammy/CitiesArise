@@ -53,7 +53,10 @@ public enum DebugPlacementRole {
     PARCEL_FOUNDATION(49),
     PARCEL_FENCE(50),
     PARCEL_ALLEY(51),
-    PARCEL_ALLEY_CLEARANCE(52);
+    PARCEL_ALLEY_CLEARANCE(52),
+    PARCEL_PATH(53),
+    PARCEL_PATH_CLEARANCE(54),
+    PARCEL_PROP(55);
 
     private final int serializedId;
 
@@ -71,7 +74,8 @@ public enum DebugPlacementRole {
 
     /** Exact boundary decoration must never start another substrate preparation pass. */
     public boolean substrateIndependent() {
-        return suspended() || this==PARCEL_FENCE || this==PARCEL_ALLEY || this==PARCEL_ALLEY_CLEARANCE;
+        return suspended() || this==PARCEL_FENCE || this==PARCEL_ALLEY || this==PARCEL_ALLEY_CLEARANCE
+                || this==PARCEL_PATH || this==PARCEL_PATH_CLEARANCE || this==PARCEL_PROP;
     }
 
     public boolean bridge() {
@@ -89,6 +93,8 @@ public enum DebugPlacementRole {
 
     int priority() {
         return switch (this) {
+            case PARCEL_PATH -> 28;
+            case PARCEL_PATH_CLEARANCE -> 29;
             case PARCEL_FENCE -> 55;
             case PARCEL_ALLEY -> 62;
             case PARCEL_ALLEY_CLEARANCE -> 56;
@@ -96,7 +102,7 @@ public enum DebugPlacementRole {
             case SUPPORT_LINING -> 1;
             case PARCEL_FOUNDATION -> 2;
             case BRIDGE_PIER, BRIDGE_STEP, BRIDGE_DECK, BRIDGE_RAIL, BRIDGE_ABUTMENT, BRIDGE_CLEARANCE -> 80;
-            case SUSPENDED_CONTENT, STRUCTURAL_BEAM, STRUCTURAL_PIER, STRUCTURAL_BRACE, CONTENT_BLOCK -> 50;
+            case SUSPENDED_CONTENT, STRUCTURAL_BEAM, STRUCTURAL_PIER, STRUCTURAL_BRACE, CONTENT_BLOCK, PARCEL_PROP -> 50;
             case OAK_HOUSE_WALL, STONE_HOUSE_WALL -> 40;
             case RED_HOUSE_ROOF, SLATE_HOUSE_ROOF, BUILDING_WINDOW, BUILDING_WORKBENCH,
                     BUILDING_BOOKSHELF, BUILDING_CEILING_LIGHT -> 50;

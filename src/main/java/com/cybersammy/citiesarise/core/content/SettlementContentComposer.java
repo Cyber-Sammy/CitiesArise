@@ -39,9 +39,14 @@ public final class SettlementContentComposer {
         for(var parcel:plan.parcels()) {
             var metadata=context.forParcel(parcel.id());
             settings.parcelRules().stream().filter(r -> r.match().matches(metadata.tags(),metadata.properties())).findFirst()
-                    .ifPresent(r -> parcels.put(parcel.id(),new ResolvedParcelContent(r.id(),metadata,r.surfaces(),r.surfaceTemplates(),r.props())));
+                    .ifPresent(r -> parcels.put(parcel.id(),new ResolvedParcelContent(r.id(),metadata,r.surfaces(),r.surfaceTemplates(),r.props(),
+                            ParcelOutdoorPlanner.resolve(parcel,r,plan,preparation,boundaries,seed))));
         }
-        var props=SurfacePropPlanner.plan(plan,preparation,settings.props(),seed,parcels,boundaries.reserved()).stream().filter(prop ->
+        if(parcels.values().stream().mapToInt(p -> p.outdoor().free().size()+p.outdoor().paths().size()).sum()>60000)
+            throw new IllegalArgumentException("Settlement outdoor reservation budget exceeded");
+        var reservations=new java.util.HashSet<>(boundaries.reserved());
+        parcels.values().forEach(p -> reservations.addAll(p.outdoor().free()));
+        var props=SurfacePropPlanner.plan(plan,preparation,settings.props(),seed,parcels,reservations).stream().filter(prop ->
                 prop.composition().cells().stream().noneMatch(cell -> {
                     var world=prop.origin().add(cell.position());
                     return plan.roadGraph().bridges().stream().anyMatch(b -> b.bounds().contains(

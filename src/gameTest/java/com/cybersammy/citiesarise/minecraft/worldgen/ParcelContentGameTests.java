@@ -22,10 +22,12 @@ public final class ParcelContentGameTests {
         var catalog=new ContentCatalogParser(ContentResources.of(helper.getLevel().getServer().getResourceManager())).load("zoning:fixture");
         var empty=catalog.assets().get("zoning:empty");
         // Keep this surface/snapshot fixture independent of entrance-aware layout geometry.
-        var props=catalog.props().stream().map(p -> new PropRule(p.id(),p.layoutAnchor()?"parcel_corner":p.anchor(),
+        var props=catalog.props().stream().filter(p -> Set.of("zoning:home_planter","zoning:yard_lamp").contains(p.id())).map(p -> new PropRule(p.id(),p.layoutAnchor()?"parcel_corner":p.anchor(),
                 p.pool(),p.materials(),p.requiredTags(),p.forbiddenTags(),p.inset(),p.spacing(),p.severity(),p.airMaterial(),p.definitions(),p.materialRules())).toList();
         var settings=new BuildingContentSettings(List.of(new BuildingContentSettings.Entry(empty,1)),List.of("zoning:palette"),empty,
-                catalog.palettes(),catalog.compositions(),catalog.surfaces(),props,catalog.surfaceTemplates(),List.of(),catalog.parcelRules());
+                catalog.palettes(),catalog.compositions(),catalog.surfaces(),props,catalog.surfaceTemplates(),List.of(),catalog.parcelRules().stream()
+                        .map(r -> new ParcelContentRule(r.id(),r.match(),r.surfaces(),r.surfaceTemplates(),r.props().stream()
+                                .filter(id -> props.stream().anyMatch(p -> p.id().equals(id))).toList())).toList());
         var origin=helper.absolutePos(new BlockPos(2,4,2));
         var parcels=new ArrayList<Parcel>();var zones=new ArrayList<ElevationZone>();var columns=new ArrayList<TerrainPreparationColumn>();
         for(int i=0;i<2;i++) {

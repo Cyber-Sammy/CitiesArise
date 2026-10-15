@@ -25,7 +25,11 @@ public final class ParcelLayoutGameTests {
         var rule=new PropRule(authored.id(),authored.anchor(),authored.pool(),authored.materials(),authored.requiredTags(),authored.forbiddenTags(),
                 authored.inset(),authored.spacing(),authored.severity(),authored.airMaterial(),authored.definitions(),authored.materialRules(),1,100,1);
         var empty=catalog.assets().get("zoning:empty");
-        var binding=new ParcelContentRule("test:work",MetadataSelector.ANY,Map.of(),Map.of(),List.of(rule.id()));
+        var binding=new ParcelContentRule("test:work",MetadataSelector.ANY,Map.of(),Map.of(),List.of(rule.id()),List.of(
+                new ParcelOutdoorLayout("test:working_yard",1,List.of(
+                        new ParcelOutdoorLayout.Zone("rear",ParcelOutdoorLayout.Kind.CONTENT,0,0,100,100,"",List.of(rule.id())),
+                        new ParcelOutdoorLayout.Zone("front_walk",ParcelOutdoorLayout.Kind.PATH,0,0,100,25,"minecraft:stone_bricks",List.of()),
+                        new ParcelOutdoorLayout.Zone("passage",ParcelOutdoorLayout.Kind.FREE,0,0,12,100,"",List.of())))));
         var settings=new BuildingContentSettings(List.of(new BuildingContentSettings.Entry(empty,1)),List.of("zoning:palette"),empty,
                 catalog.palettes(),catalog.compositions(),catalog.surfaces(),List.of(rule),catalog.surfaceTemplates(),List.of(),List.of(binding));
         var base=helper.absolutePos(new BlockPos(3072,10,3072));var parcels=new ArrayList<Parcel>();var slots=new ArrayList<BuildingSlot>();
@@ -42,7 +46,9 @@ public final class ParcelLayoutGameTests {
             var entry=CompositionAssembler.rotateCell(new Vec(8,0,4),new Vec(16,1,16),turn);
             transitions.add(new ElevationTransition(ElevationTransitionType.BUILDING_ACCESS,r,s,new GridPoint(x+entry.x(),z+entry.z()),y,y));
             for(int dz=0;dz<16;dz++) for(int dx=0;dx<16;dx++) {
-                columns.add(new TerrainPreparationColumn(new GridPoint(x+dx,z+dz),p,y,0,0));
+                var local=CompositionAssembler.rotateCell(new Vec(dx,0,dz),new Vec(16,1,16),(4-turn)%4);
+                columns.add(new TerrainPreparationColumn(new GridPoint(x+dx,z+dz),p,y,0,0,
+                        local.x()==8 && local.z()<4?TerrainPreparationColumnType.BUILDING_ACCESS:TerrainPreparationColumnType.PLATFORM));
                 for(int dy=-4;dy<=0;dy++) helper.getLevel().setBlock(new BlockPos(x+dx,y+dy,z+dz),Blocks.STONE.defaultBlockState(),2);
             }
         }
@@ -50,6 +56,10 @@ public final class ParcelLayoutGameTests {
         var prep=TerrainPreparationPlan.of(new RegionalElevationPlan(zones,transitions),parcels.stream().map(p->new TerrainPreparationArea(p.id(),p.bounds(),base.getY()+parcels.indexOf(p),0,0)).toList(),columns);
         var content=SettlementContentComposer.compose(plan,prep,42,settings);
         helper.assertTrue(content.props().size()==4,"Each oriented parcel needs its own rear work area");
+        helper.assertTrue(content.parcels().values().stream().allMatch(p -> p.outdoor().paths().size()==60),"All flat yards need connected outdoor paths");
+        var hollow=content.parcels().values().stream().flatMap(p -> p.outdoor().paths().stream()).findFirst().orElseThrow();
+        var hollowPos=new BlockPos(hollow.point().x(),hollow.y()-2,hollow.point().z());
+        helper.getLevel().setBlock(hollowPos,Blocks.AIR.defaultBlockState(),2);
         // This fixture isolates resolved content rotation and saved platform heights.
         // Full terrain-preparation conversion is exercised by ParcelContentGameTests and real-city fixtures.
         var placement=new DebugPlacementPlanConverter().convert(plan,content);
@@ -59,6 +69,12 @@ public final class ParcelLayoutGameTests {
         var chunks=new ArrayList<>(restored.operations().stream().map(o->PlacementChunk.containing(o.point())).distinct().toList());Collections.reverse(chunks);
         var index=new DebugPlacementChunkProjector().partition(restored);
         for(var chunk:chunks) new WorldgenPlacementApplier().apply(helper.getLevel(),index.slice(chunk));
+        helper.assertTrue(helper.getLevel().getBlockState(hollowPos).isAir(),"Outdoor path restarted foundation infill");
+        for(var parcel:content.parcels().values()) for(var path:parcel.outdoor().paths()) {
+            var pos=new BlockPos(path.point().x(),path.y(),path.point().z());
+            helper.assertTrue(helper.getLevel().getBlockState(pos).is(Blocks.STONE_BRICKS),"Saved yard path changed across chunks");
+            helper.assertTrue(helper.getLevel().getBlockState(pos.above()).isAir() && helper.getLevel().getBlockState(pos.above(2)).isAir(),"Yard path headroom lost");
+        }
         for(var prop:content.props()) {
             int turn=Integer.parseInt(prop.source().value().substring("test:parcel".length()));
             var barrel=prop.composition().cells().stream().filter(c->c.material().contains("barrel")).findFirst().orElseThrow();
@@ -67,6 +83,9 @@ public final class ParcelLayoutGameTests {
             helper.assertTrue(helper.getLevel().getBlockState(pos).is(Blocks.BARREL)
                     && helper.getLevel().getBlockState(pos).getValue(BarrelBlock.FACING)==expected,"Work area facing/elevation lost");
             helper.assertTrue(helper.getLevel().getBlockEntity(pos)!=null,"Work area barrel entity missing");
+            helper.assertTrue(helper.getLevel().getBlockEntity(pos) instanceof net.minecraft.world.Container container
+                    && container.getItem(0).is(net.minecraft.world.item.Items.STICK) && container.getItem(0).getCount()==3,
+                    "Outdoor provider inventory was not preserved");
         }
         helper.succeed();
     }

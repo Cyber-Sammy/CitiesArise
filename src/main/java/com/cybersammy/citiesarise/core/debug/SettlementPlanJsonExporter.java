@@ -63,7 +63,18 @@ public final class SettlementPlanJsonExporter {
             json.objectField("properties", () -> writeProperties(json,decision.context().properties()));
             json.objectField("surfaces", () -> decision.surfaces().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(e -> json.stringField(e.getKey(),e.getValue())));
             json.arrayField("surfaceTemplates", () -> decision.surfaceTemplates().keySet().stream().sorted().forEach(json::arrayStringValue));
-            json.arrayField("props", () -> decision.props().forEach(json::arrayStringValue)); json.endObject();
+            json.arrayField("props", () -> decision.props().forEach(json::arrayStringValue));
+            if(!decision.outdoor().layout().isEmpty()) json.objectField("outdoor", () -> {
+                json.stringField("layout",decision.outdoor().layout());json.numberField("freeCells",decision.outdoor().free().size());
+                json.arrayField("areas", () -> decision.outdoor().areas().forEach(area -> json.arrayValue(() -> {
+                    json.beginObject();json.stringField("id",area.id());writeBounds(json,area.bounds());
+                    json.arrayField("props", () -> area.props().forEach(json::arrayStringValue));json.endObject();
+                })));
+                json.arrayField("paths", () -> decision.outdoor().paths().forEach(cell -> json.arrayValue(() -> {
+                    json.beginObject();writePoint(json,cell.point());json.numberField("y",cell.y());json.stringField("material",cell.material());json.endObject();
+                })));
+            });
+            json.endObject();
         })));
         json.arrayField("buildings", () -> content.buildings().entrySet().stream()
                 .sorted(Comparator.comparing(e -> e.getKey().value())).forEach(entry -> json.arrayValue(() -> {

@@ -77,4 +77,71 @@ class ParcelPropLayoutTest {
             assertEquals(Set.of(new GridPoint(1,1),new GridPoint(2,1)),points);
         }
     }
+    private ParcelContentRule outdoorRule(List<ParcelOutdoorLayout> layouts) {
+        return new ParcelContentRule("test:yard",MetadataSelector.ANY,Map.of(),Map.of(),List.of("test:rule"),layouts);
+    }
+    private ParcelOutdoorLayout outdoor(String id) {
+        return new ParcelOutdoorLayout(id,1,List.of(
+                new ParcelOutdoorLayout.Zone("contents",ParcelOutdoorLayout.Kind.CONTENT,0,0,100,100,"",List.of("test:rule")),
+                new ParcelOutdoorLayout.Zone("walk",ParcelOutdoorLayout.Kind.PATH,0,0,100,25,"minecraft:stone_bricks",List.of()),
+                new ParcelOutdoorLayout.Zone("passage",ParcelOutdoorLayout.Kind.FREE,0,0,12,100,"",List.of())));
+    }
+    @Test void outdoorPathsAndOccupiedZonesRotateTogetherWithoutBlockingAccess() {
+        for(int turn=0;turn<4;turn++) {
+            var f=fixture(turn,true,false);var parcel=f.plan.parcels().getFirst();var r=outdoorRule(List.of(outdoor("test:garden")));
+            var resolved=ParcelOutdoorPlanner.resolve(parcel,r,f.plan,f.preparation,Set.of(),42);
+            assertEquals(60,resolved.paths().size());
+            assertEquals(resolved,ParcelOutdoorPlanner.resolve(parcel,r,f.plan,f.preparation,Set.of(),42));
+            for(var cell:resolved.paths()) {
+                assertTrue(f.layout.local(cell.point()).z()<4);assertEquals(65,cell.y());
+                assertFalse(f.preparation.columns().stream().anyMatch(c -> c.point().equals(cell.point()) && c.type()==TerrainPreparationColumnType.BUILDING_ACCESS));
+            }
+            var binding=new ResolvedParcelContent(r.id(),r.match(),r.surfaces(),r.surfaceTemplates(),r.props(),resolved);
+            var props=SurfacePropPlanner.plan(f.plan,f.preparation,List.of(rule("parcel_back",2,100)),42,Map.of(parcelId,binding),resolved.free());
+            assertFalse(props.isEmpty());
+            for(var prop:props) for(var cell:prop.composition().cells()) {
+                var world=prop.origin().add(cell.position());var point=new GridPoint(world.x(),world.z());
+                assertTrue(resolved.permits(prop.ruleId(),point));assertFalse(resolved.free().contains(point));
+            }
+        }
+    }
+    @Test void outdoorPathsSkipDisconnectedProtectedAndUnevenSurfaces() {
+        var f=fixture(0,true,false);var parcel=f.plan.parcels().getFirst();var r=outdoorRule(List.of(outdoor("test:garden")));
+        var fence=new HashSet<GridPoint>();for(int z=30;z<46;z++)fence.add(new GridPoint(-13,z));
+        var resolved=ParcelOutdoorPlanner.resolve(parcel,r,f.plan,f.preparation,fence,42);
+        assertFalse(resolved.paths().isEmpty());assertTrue(resolved.paths().stream().allMatch(c -> c.point().x()>-13));
+        var missing=TerrainPreparationPlan.of(f.preparation.elevationPlan(),f.preparation.areas(),
+                f.preparation.columns().stream().filter(c -> !fence.contains(c.point())).toList());
+        assertEquals(resolved.paths(),ParcelOutdoorPlanner.resolve(parcel,r,f.plan,missing,Set.of(),42).paths());
+        var uneven=fixture(0,true,true);
+        assertTrue(ParcelOutdoorPlanner.resolve(uneven.plan.parcels().getFirst(),r,uneven.plan,uneven.preparation,Set.of(),42).paths().isEmpty());
+    }
+    @Test void weightedOutdoorChoiceIsFrozenAndMissingAccessSuppressesOptionalProps() {
+        var f=fixture(0,true,false);var r=outdoorRule(List.of(outdoor("test:garden"),outdoor("test:court")));
+        var choices=new HashSet<String>();var random=new Random(16);
+        for(int i=0;i<24;i++) choices.add(ParcelOutdoorPlanner.resolve(f.plan.parcels().getFirst(),r,f.plan,f.preparation,Set.of(),random.nextLong()).layout());
+        assertEquals(Set.of("test:garden","test:court"),choices);
+        f=fixture(0,false,false);
+        var outdoor=ParcelOutdoorPlanner.resolve(f.plan.parcels().getFirst(),r,f.plan,f.preparation,Set.of(),42);
+        assertFalse(outdoor.layout().isEmpty());assertTrue(outdoor.paths().isEmpty());assertTrue(outdoor.areas().isEmpty());
+        var binding=new ResolvedParcelContent(r.id(),r.match(),r.surfaces(),r.surfaceTemplates(),r.props(),outdoor);
+        assertTrue(SurfacePropPlanner.plan(f.plan,f.preparation,List.of(rule("parcel_back",2,100)),42,Map.of(parcelId,binding)).isEmpty());
+    }
+    @Test void outdoorContractsRejectOverlapUnknownBindingsAndInvalidBounds() {
+        var content=outdoor("test:yard").zones().getFirst();
+        assertThrows(IllegalArgumentException.class,() -> new ParcelOutdoorLayout.Zone("bad",ParcelOutdoorLayout.Kind.FREE,0,0,101,100,"",List.of()));
+        assertThrows(IllegalArgumentException.class,() -> new ParcelOutdoorLayout.Zone("bad",ParcelOutdoorLayout.Kind.CONTENT,0,0,100,100,"minecraft:air",List.of()));
+        assertThrows(IllegalArgumentException.class,() -> new ParcelOutdoorLayout("bad",1,List.of(content,
+                new ParcelOutdoorLayout.Zone("other",ParcelOutdoorLayout.Kind.CONTENT,1,1,90,90,"",List.of()))));
+        assertThrows(IllegalArgumentException.class,() -> new ParcelContentRule("bad",MetadataSelector.ANY,Map.of(),Map.of(),List.of(),List.of(outdoor("test:yard"))));
+        assertThrows(IllegalArgumentException.class,() -> outdoorRule(List.of(outdoor("same"),outdoor("same"))));
+    }
+    @Test void omittedOutdoorMetadataKeepsLegacyRulesAndResolvedContent() {
+        var rule=new ParcelContentRule("test:old",MetadataSelector.ANY,Map.of(),Map.of(),List.of());
+        var json=new com.google.gson.Gson().toJsonTree(rule).getAsJsonObject();json.remove("outdoorLayouts");
+        assertEquals(rule,new com.google.gson.Gson().fromJson(json,ParcelContentRule.class));
+        var resolved=new ResolvedParcelContent("test:old",MetadataSelector.ANY,Map.of(),Map.of(),List.of());
+        json=new com.google.gson.Gson().toJsonTree(resolved).getAsJsonObject();json.remove("outdoor");
+        assertEquals(resolved,new com.google.gson.Gson().fromJson(json,ResolvedParcelContent.class));
+    }
 }

@@ -139,7 +139,10 @@ class BuildingLayoutVarietyTest {
         assertTrue(modules.containsKey("variety:lounge"));assertTrue(modules.containsKey("zoning:desk"));
         assertFalse(modules.containsKey("zoning:section_main"));assertFalse(modules.containsKey("variety:gamma_upper"));
         assertTrue(catalog.modules().containsKey("zoning:section_main"));
-        assertEquals(Set.of("zoning:lamp"),catalog.props().getFirst().definitions().keySet());
+        // Outdoor rules share only their reachable prop dictionary, never the building catalog.
+        var propIds=catalog.props().stream().flatMap(p -> p.pool().stream()).map(ModuleDefinition::id).collect(java.util.stream.Collectors.toSet());
+        for(var prop:catalog.props()) assertEquals(propIds,prop.definitions().keySet());
+        assertEquals(1,catalog.props().stream().map(PropRule::definitions).distinct().count());
         var json=JsonParser.parseString(Files.readString(Path.of("examples/datapacks/zoning_fixture/data/zoning/content_catalogs/fixture.json"))).getAsJsonObject();
         var definitions=json.getAsJsonObject("modules");definitions.add("variety:alternate_lounge",definitions.get("variety:lounge").deepCopy());
         definitions.getAsJsonObject("variety:left_living").getAsJsonArray("layouts").get(0).getAsJsonObject().getAsJsonObject("contract")

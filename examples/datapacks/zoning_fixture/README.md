@@ -362,3 +362,6 @@ Composition and prop recipes retain only reachable module definitions, including
 # Parcel boundary demonstration
 
 The profile now enables `planning.parcelLayout`: oak fences on homes, cobblestone walls on workshop parcels, three-block access openings, and paved road-connected natural gaps up to three blocks wide. Compatible touching plots at the same elevation share one row; wood and masonry keep separate rows. Existing plot geometry is retained (`minimumSpacing: 0`). Set a positive spacing to require free columns between plots; this may reduce accepted capacity on tight terrain. Gate openings are reserved passages; animated gate blocks and richer yards belong to the next content stage. Replace both the JAR and this pack before generating a new settlement. Already saved settlements retain their prior operations.
+
+
+Outdoor examples now use weighted garden/quiet and working/storage yard layouts. Free passage and path zones reserve space before planters, benches, small storage sheds, lamps and containers. Space and support restrictions can omit optional props. Paths reuse only flat prepared surfaces connected to existing access. Matching JAR plus updated pack and newly generated parcels are required; existing saved geometry is unchanged. Authoring details and bounds are in AUTHORING_GUIDE.md.

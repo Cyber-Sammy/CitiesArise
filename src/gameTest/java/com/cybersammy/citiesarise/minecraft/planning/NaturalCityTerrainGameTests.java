@@ -4,6 +4,7 @@ import com.cybersammy.citiesarise.core.geometry.*;
 import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.planning.suburb.*;
 import com.cybersammy.citiesarise.core.profile.SettlementProfileId;
+import com.cybersammy.citiesarise.core.terrain.TerrainSurvey;
 import com.cybersammy.citiesarise.minecraft.profile.MinecraftSettlementProfileJsonParser;
 import com.cybersammy.citiesarise.minecraft.terrain.MinecraftWorldgenTerrainProvider;
 import java.nio.file.*;
@@ -17,6 +18,43 @@ import net.neoforged.neoforge.gametest.*;
 @GameTestHolder("cities_arise")
 @PrefixGameTestTemplate(false)
 public final class NaturalCityTerrainGameTests {
+    @GameTest(template="empty",timeoutTicks=400)
+    public static void reportedLocateSeedRetainsAnAcceptedCityBeyondFirstRejectedCandidates(GameTestHelper helper) throws Exception {
+        var registry=helper.getLevel().registryAccess();
+        var noise=registry.registryOrThrow(Registries.NOISE_SETTINGS).getHolderOrThrow(NoiseGeneratorSettings.OVERWORLD);
+        var biomes=MultiNoiseBiomeSource.createFromPreset(registry.registryOrThrow(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST)
+                .getHolderOrThrow(MultiNoiseBiomeSourceParameterLists.OVERWORLD));
+        var generator=new NoiseBasedChunkGenerator(biomes,noise);
+        long seed=6293076325333422811L;
+        var random=RandomState.create(noise.value(),registry.lookupOrThrow(Registries.NOISE),seed);
+        var root=Path.of("../examples/datapacks/zoning_fixture/data");
+        var json=com.google.gson.JsonParser.parseString(Files.readString(root.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject();
+        var profile=new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("cities_arise:suburb"),json,
+                (id,d,e)->{var p=id.split(":",2);return Files.newInputStream(root.resolve(p[0]).resolve(d).resolve(p[1]+e));});
+        var terrain=new TiledCityTerrainProvider(new MinecraftWorldgenTerrainProvider(generator,random,generator.getMinY(),generator.getGenDepth()));
+        int[] samples={0},supportChecks={0};var checked=new HashSet<GridPoint>();
+        WorldgenTerrainSurveyProvider provider=new WorldgenTerrainSurveyProvider() {
+            public TerrainSurvey sample(GridBounds bounds){return terrain.sample(bounds);}
+            public Optional<TerrainSurvey> sampleWithExactWaterMask(GridBounds bounds,Set<GridPoint> points) {
+                samples[0]++;checked.addAll(points);
+                return terrain.sampleWithExactWaterMask(bounds,points);
+            }
+            public Optional<com.cybersammy.citiesarise.core.earthwork.TerrainPreparationColumn> unsupportedColumn(
+                    com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlan plan) {
+                supportChecks[0]++;return terrain.unsupportedColumn(plan);
+            }
+        };
+        var region=new SettlementRegion(-6,-16);var id=new PlanElementId("cities_arise:debug_suburb_-6_-16");
+        var survey=provider.sample(CityPlanningArea.bounds(region,profile.surveySize()));
+        var request=new SuburbPlanningRequest(id,survey,SettlementSeed.forRegion(seed,region,id),profile.suburbPlanningSettings(),profile.terrainResponsePolicy());
+        var planner=SuburbPlanner.defaults();var result=WorldgenWaterMaskRefiner.refine(planner,provider,request,planner.plan(request));
+        helper.assertTrue(result.successful(),"Reported locate seed lost its accepted city: "+result.failureReason());
+        helper.assertTrue(result.plan().orElseThrow().parcels().size()>=profile.suburbPlanningSettings().minimumParcelCount(),"Accepted city lost required capacity");
+        helper.assertTrue(samples[0]>0 && samples[0]<=10 && supportChecks[0]>0,"Terrain refinement bypassed support checks or exceeded its bounded retries");
+        helper.assertTrue(result.terrainPreparationPlan().orElseThrow().columns().stream().allMatch(c->checked.contains(c.point())),"Accepted preparation includes unrefined terrain");
+        helper.succeed();
+    }
+
     @GameTest(template="empty",timeoutTicks=400)
     public static void reportedJungleCoastCityIsReproducible(GameTestHelper helper) throws Exception {
         var registry=helper.getLevel().registryAccess();
@@ -112,6 +150,7 @@ public final class NaturalCityTerrainGameTests {
             planning.addProperty("maxFillDepth",10);
             planning.addProperty("maxEarthworkVolume",80000);
             planning.getAsJsonObject("districts").addProperty("parcelSizeFallback",false);
+            planning.getAsJsonObject("districts").remove("elevation");
             fixture.getAsJsonObject("planning").getAsJsonObject("terrainTransitions").addProperty("parcelShoulderRadius",3);
             fixture.getAsJsonObject("planning").getAsJsonObject("terrainTransitions").addProperty("fillSlopeRadius",0);
             fixture.getAsJsonObject("planning").getAsJsonObject("districts").getAsJsonObject("zoning").getAsJsonArray("rules").remove(1);

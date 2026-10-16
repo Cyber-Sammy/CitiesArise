@@ -63,7 +63,7 @@ public record SuburbPlanningSettings(
     public SuburbPlanningSettings forDistrict(int target) {
         return new SuburbPlanningSettings(roadWidth, maxBuildableSlope, new DevelopmentCapacity(1, target, target),
                 parcelWidth, parcelDepth, buildingMargin, maxElevationRange, preferredMaxCutDepth, preferredMaxFillDepth,
-                maxCutDepth, maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, buildings, DistrictPlanningSettings.single(), parcelLayout);
+                maxCutDepth, maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, buildings, DistrictPlanningSettings.single().withElevation(districts.elevation()), parcelLayout);
     }
     public SuburbPlanningSettings(int roadWidth, double maxBuildableSlope, DevelopmentCapacity parcelCapacity,
             int parcelWidth, int parcelDepth, int buildingMargin, int maxElevationRange,

@@ -93,6 +93,24 @@ final class TerrainAwareRoadGraphRouter {
             RoutingContext routingContext,
             RoadTerrainEvaluationCache terrainEvaluations
     ) {
+        return route(request,routingBounds,source,reservedBounds,routingContext,terrainEvaluations,true);
+    }
+
+    Optional<RoadGraph> routePlanar(SuburbPlanningRequest request,GridBounds bounds,RoadGraph source,List<GridBounds> reserved,
+            RoutingContext context,RoadTerrainEvaluationCache cache) {
+        return route(request,bounds,source,reserved,context,cache,false);
+    }
+    Optional<RoadGraph> routeCorridor(SuburbPlanningRequest request,GridBounds bounds,RoadGraph source,List<GridBounds> reserved,
+            RoutingContext context,RoadTerrainEvaluationCache cache) {
+        return route(request,bounds,source,reserved,context,cache,false,true);
+    }
+
+    private Optional<RoadGraph> route(SuburbPlanningRequest request,GridBounds routingBounds,RoadGraph source,
+            List<GridBounds> reservedBounds,RoutingContext routingContext,RoadTerrainEvaluationCache terrainEvaluations,boolean gradeAware) {
+        return route(request,routingBounds,source,reservedBounds,routingContext,terrainEvaluations,gradeAware,false);
+    }
+    private Optional<RoadGraph> route(SuburbPlanningRequest request,GridBounds routingBounds,RoadGraph source,
+            List<GridBounds> reservedBounds,RoutingContext routingContext,RoadTerrainEvaluationCache terrainEvaluations,boolean gradeAware,boolean straight) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(routingBounds, "routingBounds");
         Objects.requireNonNull(source, "source");
@@ -105,9 +123,43 @@ final class TerrainAwareRoadGraphRouter {
         List<RoadSegment> routedSegments = new ArrayList<>();
         List<GridBounds> dynamicReservations = new ArrayList<>(reservedBounds);
         for (RoadSegment segment : source.segments()) {
+            var policy=request.settings().districts().elevation();
+            if(gradeAware && policy.enabled()) {
+                var a=sourceNodes.get(segment.startNodeId());var b=sourceNodes.get(segment.endNodeId());
+                var startBounds=junctionBounds(a.point(),segment.width());var endBounds=junctionBounds(b.point(),segment.width());
+                if(!request.survey().bounds().contains(startBounds) || !request.survey().bounds().contains(endBounds))return Optional.empty();
+                int startY=TerrainPlatform.medianElevation(request,startBounds);
+                int endY=TerrainPlatform.medianElevation(request,endBounds);
+                int distance=Math.abs(a.point().x()-b.point().x())+Math.abs(a.point().z()-b.point().z());
+                if(Math.abs((long)startY-endY)>policy.preferredDepth()+distance/policy.roadRunPerRise()) {
+                    var graded=GradeAwareRoadPlanner.route(request,routingBounds,new RoadGraph(List.of(a,b),List.of(segment)),dynamicReservations,startY,endY);
+                    if(graded.isPresent()) {
+                        var g=graded.orElseThrow();
+                        routedNodes.addAll(g.nodes().stream().filter(n->!sourceNodes.containsKey(n.id())).toList());routedSegments.addAll(g.segments());
+                        var byId=new HashMap<PlanElementId,RoadNode>();g.nodes().forEach(n->byId.put(n.id(),n));
+                        g.segments().forEach(s->dynamicReservations.add(AxisAlignedGridCorridor.bounds(byId.get(s.startNodeId()).point(),byId.get(s.endNodeId()).point(),s.width())));
+                        continue;
+                    }
+                }
+            }
+            var segmentBounds=routingBounds;
+            if(straight) {
+                var a=sourceNodes.get(segment.startNodeId()).point();var b=sourceNodes.get(segment.endNodeId()).point();
+                if(a.x()!=b.x() && a.z()!=b.z())return Optional.empty();
+                int half=segment.width()/2;
+                segmentBounds=new GridBounds(new GridPoint(Math.min(a.x(),b.x())-half,Math.min(a.z(),b.z())-half),
+                        new GridSize(Math.abs(a.x()-b.x())+segment.width(),Math.abs(a.z()-b.z())+segment.width()));
+                if(!routingBounds.contains(segmentBounds))return Optional.empty();
+                // Keep a narrow ribbon for obstacle avoidance instead of searching the entire district again.
+                int x=Math.max(routingBounds.minX(),segmentBounds.minX()-segment.width());
+                int z=Math.max(routingBounds.minZ(),segmentBounds.minZ()-segment.width());
+                segmentBounds=new GridBounds(new GridPoint(x,z),new GridSize(
+                        Math.min(routingBounds.maxXExclusive(),segmentBounds.maxXExclusive()+segment.width())-x,
+                        Math.min(routingBounds.maxZExclusive(),segmentBounds.maxZExclusive()+segment.width())-z));
+            }
             Optional<RoutedSegment> routed = routeSegment(
                     request,
-                    routingBounds,
+                    segmentBounds,
                     segment,
                     sourceNodes,
                     dynamicReservations,

@@ -234,12 +234,15 @@ public final class CitiesAriseCommands {
         rejectedLocateRegions.computeIfAbsent(source.getLevel().dimension().location().toString(),key->new java.util.HashSet<>())
                 .addAll(result.rejectedRegions());
         if (result.settlement().isEmpty()) {
-            String summary = "No accepted Cities Arise settlement candidate was found after checking "
+            boolean timeLimited=result.rejectionCounts().containsKey("SEARCH_TIME_LIMIT");
+            String summary = (timeLimited?"Diagnostic time limit reached; the search is incomplete. No accepted site yet after checking "
+                    :"No accepted Cities Arise settlement candidate was found after checking ")
                     + result.attemptedCandidates()
                     + " candidates. Rejections: "
                     + result.rejectionSummary()
                     + ". Use diagnostic next to continue with unchecked candidates; move farther if the radius is exhausted.";
-            source.sendFailure(Component.literal(summary));
+            if(timeLimited)source.sendSuccess(()->Component.literal(summary),false);
+            else source.sendFailure(Component.literal(summary));
             logCommandResult(summary);
             return;
         }

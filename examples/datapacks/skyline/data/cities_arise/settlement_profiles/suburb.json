@@ -1,0 +1,184 @@
+{
+  "survey": {
+    "width": 240,
+    "depth": 240
+  },
+  "planning": {
+    "districts": {
+      "maxCount": 8,
+      "targetParcels": 4,
+      "maxConnectionAttempts": 8,
+      "zoning": {
+        "districtTypes": [
+          {
+            "id": "skyline:centre",
+            "weight": 1,
+            "properties": {
+              "skyline:purpose": "towers"
+            }
+          }
+        ],
+        "rules": [
+          {
+            "target": "BUILDING_SLOT",
+            "every": 8,
+            "offset": 7,
+            "properties": {
+              "skyline:purpose": "lowrise"
+            }
+          }
+        ]
+      },
+      "parcelSizes": [
+        {
+          "id": "skyline:large",
+          "width": 39,
+          "depth": 39,
+          "buildingMargin": 4
+        }
+      ],
+      "parcelSizeFallback": false,
+      "elevation": {
+        "enabled": true,
+        "preferredDepth": 3,
+        "maximumTerraces": 8,
+        "levelChangeCost": 80,
+        "roadRunPerRise": 6,
+        "maximumDetourLength": 96
+      }
+    },
+    "roadWidth": 5,
+    "maxBuildableSlope": 0.75,
+    "minimumParcelCount": 8,
+    "targetParcelCount": 16,
+    "maximumParcelCount": 24,
+    "parcelWidth": 39,
+    "parcelDepth": 39,
+    "buildingMargin": 4,
+    "maxElevationRange": 14,
+    "preferredMaxCutDepth": 4,
+    "preferredMaxFillDepth": 4,
+    "maxCutDepth": 10,
+    "maxFillDepth": 12,
+    "maxBuildingFoundationDepth": 10,
+    "maxEarthworkVolume": 120000,
+    "buildings": {
+      "catalog": "skyline:city",
+      "pool": [
+        {
+          "asset": "skyline:crown",
+          "weight": 1
+        },
+        {
+          "asset": "skyline:metropolitan",
+          "weight": 1
+        },
+        {
+          "asset": "skyline:regent",
+          "weight": 1
+        },
+        {
+          "asset": "skyline:terrace",
+          "weight": 1
+        }
+      ],
+      "palettes": [
+        "skyline:limestone",
+        "skyline:brick",
+        "skyline:ivory",
+        "skyline:slate"
+      ],
+      "fallback": "skyline:crown",
+      "rules": [
+        {
+          "id": "skyline:lowrise",
+          "match": {
+            "properties": {
+              "skyline:purpose": "lowrise"
+            }
+          },
+          "pool": [
+            {
+              "asset": "skyline:townhouse",
+              "weight": 1
+            },
+            {
+              "asset": "skyline:pavilion",
+              "weight": 1
+            }
+          ],
+          "palettes": [
+            "skyline:brick",
+            "skyline:ivory"
+          ],
+          "fallback": "skyline:townhouse"
+        }
+      ]
+    },
+    "terrainTransitions": {
+      "buildingAccessRunPerRise": 2,
+      "roadShoulderRadius": 2,
+      "roadShoulderMaxFillDepth": 3,
+      "parcelShoulderRadius": 1,
+      "parcelShoulderMaxFillDepth": 3,
+      "buildingShoulderRadius": 3,
+      "buildingShoulderMaxFillDepth": 3,
+      "retainingWalls": true,
+      "retainingWallMinimumHeight": 2,
+      "supportLiningDepth": 4,
+      "cutSlopeRadius": 8,
+      "fillSlopeRadius": 8
+    },
+    "structuralSupports": {
+      "enabled": true,
+      "maximumDepth": 32,
+      "maximumSpan": 12,
+      "pierSpacing": 4,
+      "maximumVolume": 20000,
+      "maximumShallowFoundationHeight": 5
+    },
+    "ravineRoads": {
+      "mode": "bridge",
+      "minimumDepth": 4,
+      "maximumFillDepth": 32,
+      "maximumFillVolume": 20000,
+      "edgeClearance": 2,
+      "maximumDetour": 24,
+      "maximumRoutingAttempts": 2
+    }
+  },
+  "terrainPolicy": {
+    "responses": {
+      "water": "cross_if_supported",
+      "blockedTerrain": "avoid",
+      "steepSlope": "terraform"
+    },
+    "capabilities": [
+      "bridge"
+    ],
+    "adaptation": {
+      "sensitivity": 0.5,
+      "maxTerraformArea": 32,
+      "maxTerraformRelief": 4,
+      "maxTerraformVolume": 160
+    },
+    "bridges": {
+      "maxLength": 48,
+      "maxCount": 2,
+      "deckDepth": 1,
+      "minimumClearance": 0,
+      "allowDryCrossings": true,
+      "minimumDryClearance": 2,
+      "maxConstructionVolume": 4096,
+      "maxCandidateChecks": 32,
+      "maxElevationDifference": 2,
+      "terrainSupports": {
+        "maxBankCut": 1,
+        "maxBankFill": 1,
+        "maxTerrainWorkVolume": 256,
+        "pierSpacing": 12,
+        "maxPierHeight": 16
+      }
+    }
+  }
+}

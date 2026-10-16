@@ -52,4 +52,5 @@ public final class CitiesAriseWorldgen {
         }
         return structureGeneration;
     }
+    public static void clearPlacementCache(){if(structureGeneration!=null)structureGeneration.clearCache();}
 }

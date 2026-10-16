@@ -25,6 +25,9 @@ final class SuburbStructureGeneration {
     private final DebugPlacementPlanConverter planConverter;
     private final WorldgenRegionCandidateSelector candidateSelector;
     private final Logger logger;
+    private SuburbDebugPlanResult partitionedSource;
+    private PartitionedCityPlacement partitionedPlacement;
+    synchronized void clearCache(){partitionedSource=null;partitionedPlacement=null;}
 
     SuburbStructureGeneration(
             MinecraftSuburbPlanningService planningService,
@@ -46,14 +49,6 @@ final class SuburbStructureGeneration {
 
         BlockPos center = regionCenter(context);
         SettlementRegion region = SettlementRegion.fromBlockPosition(center.getX(), center.getZ());
-        if (!candidateSelector.isCandidate(
-                context.seed(),
-                region,
-                CitiesAriseWorldgenConfig.candidateRegionModulo()
-        )) {
-            return Optional.empty();
-        }
-
         SettlementProfileId profileId = new SettlementProfileId(CitiesAriseWorldgenConfig.settlementProfileId());
         Optional<SettlementProfile> optionalProfile = profileStore.find(profileId);
         if (optionalProfile.isEmpty()) {
@@ -62,6 +57,9 @@ final class SuburbStructureGeneration {
         }
 
         SettlementProfile profile = optionalProfile.get();
+        var localRegion=region;
+        region=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.parent(region,profile.surveySize());
+        if(!candidateSelector.isCandidate(context.seed(),region,CitiesAriseWorldgenConfig.candidateRegionModulo()))return Optional.empty();
         if(!com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,profile.surveySize(),context.chunkPos().x,context.chunkPos().z)) return Optional.empty();
         var cityCenter=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.center(region,profile.surveySize());
         center=new BlockPos(cityCenter.x(),center.getY(),cityCenter.z());
@@ -87,6 +85,20 @@ final class SuburbStructureGeneration {
                 center, result.successful(), (System.nanoTime() - planningStarted) / 1_000_000.0);
         if (!result.successful()) {
             return Optional.empty();
+        }
+
+        if(com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.partitioned(profile.surveySize())) {
+            var prepared=partitioned(result,profile,center);
+            var part=prepared.part(localRegion);if(part.isEmpty())return Optional.empty();
+            var local=part.orElseThrow();var box=boundingBox(local.snapshot(),profile,context);
+            int startX=context.chunkPos().x,startZ=context.chunkPos().z;
+            if(Math.floorDiv(box.minX(),16)<startX-8 || Math.floorDiv(box.maxX(),16)>startX+8
+                    || Math.floorDiv(box.minZ(),16)<startZ-8 || Math.floorDiv(box.maxZ(),16)>startZ+8)return Optional.empty();
+            if(local.snapshot().operations().stream().anyMatch(op->op.platformY().isPresent()
+                    && (op.platformY().getAsInt()+op.verticalOffset()<context.heightAccessor().getMinBuildHeight()
+                    || op.platformY().getAsInt()+op.verticalOffset()>=context.heightAccessor().getMaxBuildHeight())))return Optional.empty();
+            return Optional.of(new Generation(center,new CitiesAriseSuburbPiece(box,local.snapshot(),profile.id().value(),
+                    result.plan().id().child("owner-"+localRegion.x()+"-"+localRegion.z()).value(),center.getX(),center.getZ(),local.blueprint(),prepared.metadata)));
         }
 
         DebugPlacementPlan placementPlan = result.optionalTerrainPreparationPlan()
@@ -115,6 +127,19 @@ final class SuburbStructureGeneration {
                                 .withinConstructionBudget(profile.suburbPlanningSettings().maxEarthworkVolume()-result.optionalTerrainPreparationPlan().orElseThrow().constructionVolume()):null)));
     }
 
+    private synchronized PartitionedCityPlacement partitioned(SuburbDebugPlanResult result,SettlementProfile profile,BlockPos center) {
+        if(partitionedSource==result)return partitionedPlacement;
+        var placement=result.optionalTerrainPreparationPlan().map(p->planConverter.convert(result.plan(),p,result.content()))
+                .orElseGet(()->planConverter.convert(result.plan(),result.content()));
+        var blueprint=profile.structuralSupports().enabled() && result.optionalTerrainPreparationPlan().isPresent()
+                ?StructuralSupportBlueprint.from(result.plan(),result.optionalTerrainPreparationPlan().orElseThrow(),profile.structuralSupports(),result.content().placementMaterials())
+                    .withRecipe(new FinalTerrainPlanningRecipe(profile,result.surveyBounds(),result.seed(),result.plan().id().value()))
+                    .withinConstructionBudget(profile.suburbPlanningSettings().maxEarthworkVolume()-result.optionalTerrainPreparationPlan().orElseThrow().constructionVolume()):null;
+        partitionedSource=result;
+        partitionedPlacement=new PartitionedCityPlacement(placement,blueprint,profile.id().value(),result.plan().id().value(),center.getX(),center.getZ());
+        return partitionedPlacement;
+    }
+
     private static BlockPos regionCenter(Structure.GenerationContext context) {
         int blockX = context.chunkPos().getMiddleBlockX();
         int blockZ = context.chunkPos().getMiddleBlockZ();
@@ -138,7 +163,8 @@ final class SuburbStructureGeneration {
         int minY = minimumStructureY(snapshot, profile, context);
         int maxY = maximumStructureY(snapshot, profile, context);
         var reservation=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.bounds(
-                SettlementRegion.fromBlockPosition(regionCenter(context).getX(),regionCenter(context).getZ()),profile.surveySize());
+                com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.parent(
+                    SettlementRegion.fromBlockPosition(regionCenter(context).getX(),regionCenter(context).getZ()),profile.surveySize()),profile.surveySize());
         boolean full=profile.ravineRoads().enabled() && profile.ravineRoads().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE;
         return new BoundingBox(
                 full?reservation.minX():snapshot.minimumX() - WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,

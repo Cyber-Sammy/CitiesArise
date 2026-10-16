@@ -49,6 +49,7 @@ final class RegionalElevationPlanner {
             boolean fitEarthworks,PlanningAcceptance acceptance,boolean coordinateElevation,
             com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlan adaptation) {
         var independent=atLevel(request,settlementPlan,fitEarthworks,null);
+        if(request.settings().districts().grid().enabled())return independent;
         if(!request.settings().districts().elevation().enabled())return independent;
         return coordinateElevation?DistrictElevationPlanner.choose(request,settlementPlan,independent,acceptance,adaptation)
                 :DistrictElevationPlanner.annotate(independent,independent.settlementPlan().parcels().stream()
@@ -137,9 +138,20 @@ final class RegionalElevationPlanner {
                 maximum = Math.min(maximum, access.roadZone().targetElevation() + rise);
             }
             var interval=ParcelPlatformElevation.interval(parcel.bounds(),point->TerrainPlatform.requiredTerrainCell(request,point).height()-1,
-                    request.settings(),minimum,maximum,target!=null);
+                    request.settings(),minimum,maximum,target!=null || request.settings().districts().grid().enabled());
             limits.put(parcel.id(),interval);
             elevations.put(parcel.id(),interval.minimum()<=interval.maximum()?Math.clamp(interval.preferred(),interval.minimum(),interval.maximum()):interval.preferred());
+        }
+        if(request.settings().districts().grid().enabled()) {
+            var result=new HashMap<PlanElementId,Integer>();
+            for(var block:plan.districts()) {
+                var local=new HashMap<PlanElementId,NeighborhoodLevels.Interval>();block.parcels().forEach(id->local.put(id,limits.get(id)));
+                var edges=new ArrayList<NeighborhoodLevels.Edge>();
+                for(int i=0;i<block.parcels().size();i++)for(int j=i+1;j<block.parcels().size();j++)
+                    edges.add(new NeighborhoodLevels.Edge(block.parcels().get(i),block.parcels().get(j)));
+                result.putAll(NeighborhoodLevels.chooseLocally(local,edges));
+            }
+            return Map.copyOf(result);
         }
         if(target!=null) {
             var adjacency=new ArrayList<NeighborhoodLevels.Edge>();var parcels=sortedParcels(plan.parcels());

@@ -40,6 +40,10 @@ final class DistrictElevationPlanner {
     }
 
     static boolean permits(SuburbPlanningRequest request,SettlementPlan plan) {
+        if(request.settings().districts().grid().enabled()) {
+            var levels=new HashMap<PlanElementId,Integer>();plan.parcels().forEach(p->levels.put(p.id(),TerrainPlatform.requiredElevation(p.properties())));
+            return plan.districts().stream().allMatch(b->b.parcels().stream().map(levels::get).distinct().count()<=request.settings().districts().elevation().maximumTerraces());
+        }
         return !request.settings().districts().elevation().enabled() || plan.parcels().stream()
                 .map(p->TerrainPlatform.requiredElevation(p.properties())).distinct().count()<=request.settings().districts().elevation().maximumTerraces();
     }

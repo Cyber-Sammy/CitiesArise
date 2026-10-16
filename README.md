@@ -3,7 +3,9 @@
 The [Skyline datapack](examples/datapacks/skyline/README.md) adds broad 29 x 25 block
 towers with 10, 12, 14 or 16 floors, two low-rise recipes, recessed two-block windows,
 projecting facades, setbacks, flat roofs and crowns. It uses 39 x 39 plots and
-five-block-wide roads. Enable it instead of the other example profile packs for
+five-block-wide roads. Its large-city profile targets 80 buildings in 20 orthogonal
+blocks over a 540 x 540 survey, with coordinated elevations within each block.
+Use the matching large-city JAR. Enable it instead of the other example profile packs for
 new settlements; `scripts/generate_skyline_fixture.py` builds its installable ZIP.
 
 Parcel boundaries are configured through `planning.parcelLayout`: independent spacing, reserved road-connected alleys, compatible shared fences and explicit separate-boundary policy. Gates reserve open passages before props. The zoning fixture enables wood fences for homes and stone walls for workshops; [its authoring guide](examples/datapacks/zoning_fixture/AUTHORING_GUIDE.md#parcel-spacing-and-fences) describes the options. These changes apply to newly generated settlements and require the matching JAR and datapack.

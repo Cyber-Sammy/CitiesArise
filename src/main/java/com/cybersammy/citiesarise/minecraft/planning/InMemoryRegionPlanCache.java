@@ -13,7 +13,8 @@ public final class InMemoryRegionPlanCache implements RegionPlanCache {
     }
 
     public InMemoryRegionPlanCache(int maxEntries) {
-        this.plans = new BoundedLruCache<>(maxEntries);
+        this.plans = new BoundedLruCache<>(maxEntries,maxEntries,
+                result->result.successful() && CityPlanningArea.partitioned(result.surveyBounds().size())?Math.max(1,maxEntries/2):1);
     }
 
     @Override

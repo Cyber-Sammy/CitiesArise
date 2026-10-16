@@ -21,7 +21,9 @@ final class BatchedNoiseTerrain {
     private final Aquifer.FluidPicker fluidPicker;
     private static final int WIDTH=16;
     private final int cellWidth, height, minimumY;
-    private final BoundedLruCache<GridPoint,Cell> cells=new BoundedLruCache<>(256);
+    // One maximum-size city plus boundary samples fits without repeatedly rebuilding evicted noise cells.
+    // Primitive bitsets remain bounded (under 28 MiB at the supported 512-block vertical span).
+    private final BoundedLruCache<GridPoint,Cell> cells=new BoundedLruCache<>(1536);
 
     static BatchedNoiseTerrain create(ChunkGenerator generator,RandomState random,LevelHeightAccessor height) {
         // Subclasses can override base sampling; preserve their existing API semantics.

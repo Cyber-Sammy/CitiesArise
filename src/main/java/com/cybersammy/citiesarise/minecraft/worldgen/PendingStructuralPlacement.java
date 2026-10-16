@@ -10,12 +10,13 @@ import net.minecraft.world.level.saveddata.SavedData;
 
 /** Waits for existing FULL chunks, validates the entire blueprint, then persists exact resolved operations. */
 final class PendingStructuralPlacement extends SavedData {
-    private static final int MAX_PENDING=32,MAX_OPERATIONS=1000000;
+    private static final int MAX_PENDING=64,MAX_OPERATIONS=4000000;
     private final Map<String,Entry> pending=new LinkedHashMap<>();
     private final Map<String,String> completed=new LinkedHashMap<>();
     private static final org.slf4j.Logger LOG=com.mojang.logging.LogUtils.getLogger();
     private static final class Entry {
         String profile,id;int centerX,centerZ;
+        SettlementIndex.Metadata parent;
         SuburbStructurePlacementSnapshot original,resolved;
         StructuralSupportBlueprint blueprint;
         FinalTerrainSnapshot captured;
@@ -53,12 +54,15 @@ final class PendingStructuralPlacement extends SavedData {
                 (tag,lookup)->load(tag)),"cities_arise_structural_placement");
     }
     void add(String profile,String id,int x,int z,SuburbStructurePlacementSnapshot snapshot,StructuralSupportBlueprint blueprint) {
+        add(profile,id,x,z,snapshot,blueprint,null);
+    }
+    void add(String profile,String id,int x,int z,SuburbStructurePlacementSnapshot snapshot,StructuralSupportBlueprint blueprint,SettlementIndex.Metadata parent) {
         if(completed.containsKey(id) || pending.containsKey(id)) return;
         long operations=pending.values().stream().mapToLong(e->e.original.operations().size()).sum();
         if(pending.size()>=MAX_PENDING || operations+snapshot.operations().size()>MAX_OPERATIONS) {
             LOG.warn("Structural placement queue full; settlement {} was not published",id);return;
         }
-        var e=new Entry();e.profile=profile;e.id=id;e.centerX=x;e.centerZ=z;e.original=snapshot;e.blueprint=blueprint;
+        var e=new Entry();e.profile=profile;e.id=id;e.centerX=x;e.centerZ=z;e.original=snapshot;e.blueprint=blueprint;e.parent=parent;
         pending.put(id,e);setDirty();
     }
     void applyReady(ServerLevel level) {
@@ -116,6 +120,8 @@ final class PendingStructuralPlacement extends SavedData {
             var allChunks=chunks.stream().map(c->net.minecraft.world.level.ChunkPos.asLong(c.x(),c.z())).collect(java.util.stream.Collectors.toSet());
             var metadata=new SettlementIndex.Metadata(level.dimension().location().toString(),e.profile,e.id,e.centerX,e.centerZ,
                     e.resolved.minimumX(),e.resolved.minimumZ(),e.resolved.maximumX(),e.resolved.maximumZ(),allChunks);
+            if(e.parent!=null)metadata=new SettlementIndex.Metadata(level.dimension().location().toString(),e.parent.profile(),e.parent.planId(),
+                    e.parent.centerX(),e.parent.centerZ(),e.parent.minX(),e.parent.minZ(),e.parent.maxX(),e.parent.maxZ(),e.parent.placementChunks());
             SettlementRegistry.get(level).placed(metadata,net.minecraft.world.level.ChunkPos.asLong(chunk.x(),chunk.z()),System.nanoTime()-started);
             return; // At most one chunk (and one structural resolution) per dimension per tick.
         }
@@ -140,6 +146,7 @@ final class PendingStructuralPlacement extends SavedData {
             e.centerX=row.getInt("X");e.centerZ=row.getInt("Z");e.original=SuburbStructurePlacementSnapshot.load(row.getCompound("Original"));
             operations+=e.original.operations().size();if(operations>MAX_OPERATIONS) throw new IllegalArgumentException("Structural operation budget exceeded");
             e.blueprint=StructuralSupportBlueprint.load(row.getCompound("Blueprint"));
+            if(row.contains("ParentCity"))e.parent=SettlementRegistry.readMetadata(row.getCompound("ParentCity"));
             if(row.contains("Captured")) e.captured=FinalTerrainSnapshot.load(row.getCompound("Captured"));
             if(row.contains("Resolved")) e.resolved=SuburbStructurePlacementSnapshot.load(row.getCompound("Resolved"));
             for(long packed:row.getLongArray("Placed")) e.placed.add(new PlacementChunk((int)packed,(int)(packed>>32)));
@@ -152,6 +159,7 @@ final class PendingStructuralPlacement extends SavedData {
         var list=new ListTag();
         for(var e:pending.values()) {
             var row=new CompoundTag();row.putString("Id",e.id);row.putString("Profile",e.profile);row.putInt("X",e.centerX);row.putInt("Z",e.centerZ);
+            if(e.parent!=null)row.put("ParentCity",SettlementRegistry.writeMetadata(e.parent));
             var original=new CompoundTag();e.original.save(original);row.put("Original",original);row.put("Blueprint",e.blueprint.save());
             if(e.resolved!=null) { var resolved=new CompoundTag();e.resolved.save(resolved);row.put("Resolved",resolved); }
             if(e.captured!=null) row.put("Captured",e.captured.save());

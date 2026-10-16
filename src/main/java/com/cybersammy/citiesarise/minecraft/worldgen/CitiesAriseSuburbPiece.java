@@ -26,6 +26,7 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
     private final int centerX;
     private final int centerZ;
     private final Metadata registryTemplate;
+    private final Metadata sharedParent;
     private final StructuralSupportBlueprint structuralBlueprint;
 
     CitiesAriseSuburbPiece(BoundingBox boundingBox, SuburbStructurePlacementSnapshot snapshot) {
@@ -40,6 +41,10 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
 
     CitiesAriseSuburbPiece(BoundingBox boundingBox,SuburbStructurePlacementSnapshot snapshot,
             String profileId,String planId,int centerX,int centerZ,StructuralSupportBlueprint structuralBlueprint) {
+        this(boundingBox,snapshot,profileId,planId,centerX,centerZ,structuralBlueprint,null);
+    }
+    CitiesAriseSuburbPiece(BoundingBox boundingBox,SuburbStructurePlacementSnapshot snapshot,
+            String profileId,String planId,int centerX,int centerZ,StructuralSupportBlueprint structuralBlueprint,Metadata parent) {
         super(CitiesAriseWorldgen.SUBURB_PIECE_TYPE.get(), 0, Objects.requireNonNull(boundingBox, "boundingBox"));
         this.structuralBlueprint=structuralBlueprint;
         this.profileId = Objects.requireNonNull(profileId);
@@ -47,7 +52,8 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
         this.centerX = centerX;
         this.centerZ = centerZ;
         this.snapshot = Objects.requireNonNull(snapshot, "snapshot");
-        this.registryTemplate = createRegistryTemplate();
+        this.sharedParent=parent;
+        this.registryTemplate = parent==null?createRegistryTemplate():parent;
         this.placementIndex = createPlacementIndex(snapshot);
         this.vegetationCleanupIndex = createVegetationCleanupIndex(snapshot);
     }
@@ -60,7 +66,8 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
         this.planId = tag.contains("SettlementPlan") ? tag.getString("SettlementPlan") : "cities_arise:legacy";
         this.centerX = tag.contains("SettlementCenterX") ? tag.getInt("SettlementCenterX") : boundingBox.getCenter().getX();
         this.centerZ = tag.contains("SettlementCenterZ") ? tag.getInt("SettlementCenterZ") : boundingBox.getCenter().getZ();
-        this.registryTemplate = createRegistryTemplate();
+        this.sharedParent=tag.contains("ParentCity")?SettlementRegistry.readMetadata(tag.getCompound("ParentCity")):null;
+        this.registryTemplate = sharedParent==null?createRegistryTemplate():sharedParent;
         this.placementIndex = createPlacementIndex(snapshot);
         this.vegetationCleanupIndex = createVegetationCleanupIndex(snapshot);
     }
@@ -68,6 +75,7 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
     @Override
     protected void addAdditionalSaveData(StructurePieceSerializationContext context, CompoundTag tag) {
         snapshot.save(tag);
+        if(sharedParent!=null)tag.put("ParentCity",SettlementRegistry.writeMetadata(sharedParent));
         if(structuralBlueprint!=null) tag.put("StructuralBlueprint",structuralBlueprint.save());
         tag.putString("SettlementProfile", profileId);
         tag.putString("SettlementPlan", planId);
@@ -90,7 +98,7 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
         if(structuralBlueprint!=null && structuralBlueprint.settings().enabled()) {
             var server=level.getLevel();
             ServerThreadPublication.publish(server.getServer(),()->PendingStructuralPlacement.get(server)
-                    .add(profileId,planId,centerX,centerZ,snapshot,structuralBlueprint));
+                    .add(profileId,planId,centerX,centerZ,snapshot,structuralBlueprint,sharedParent));
             return;
         }
         PlacementChunk chunk = new PlacementChunk(chunkPos.x, chunkPos.z);
@@ -112,7 +120,7 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
     }
 
     Metadata registryMetadata(String dimension) {
-        return new Metadata(dimension, profileId, planId, centerX, centerZ,
+        return new Metadata(dimension, registryTemplate.profile(), registryTemplate.planId(), centerX, centerZ,
                 registryTemplate.minX(), registryTemplate.minZ(), registryTemplate.maxX(), registryTemplate.maxZ(),
                 registryTemplate.placementChunks());
     }

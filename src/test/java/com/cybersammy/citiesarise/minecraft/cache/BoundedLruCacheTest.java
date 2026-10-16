@@ -14,6 +14,15 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 final class BoundedLruCacheTest {
+    @Test void weightedEntriesEvictEnoughOldValuesAndClearTheirBudget() {
+        var cache=new BoundedLruCache<String,Integer>(8,8,Integer::longValue);
+        cache.getOrCreate("a",()->4);cache.getOrCreate("b",()->4);
+        cache.getOrCreate("c",()->4);assertEquals(2,cache.size());
+        var calls=new AtomicInteger();cache.getOrCreate("a",()->{calls.incrementAndGet();return 4;});
+        assertEquals(1,calls.get());assertEquals(2,cache.size());
+        cache.clear();cache.getOrCreate("d",()->8);assertEquals(1,cache.size());
+        cache.getOrCreate("oversized",()->9);assertEquals(1,cache.size());
+    }
     @Test
     void reusesValuesAndEvictsLeastRecentlyUsedEntry() {
         BoundedLruCache<String, Object> cache = new BoundedLruCache<>(2);

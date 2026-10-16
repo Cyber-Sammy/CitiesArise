@@ -30,6 +30,7 @@ public final class StructuralSupportPlacement {
         });
     }
     public static Resolution resolve(DebugPlacementPlan original,StructuralSupportBlueprint blueprint,StructuralSupportPlanner.Ground ground) {
+        var originalPositions=blueprint.ownership()==null?Set.<String>of():original.operations().stream().map(StructuralSupportPlacement::key).collect(java.util.stream.Collectors.toSet());
         boolean fill=blueprint.ravines().enabled() && blueprint.ravines().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FILL;
         var fillEnvelopes=new ArrayList<>(blueprint.envelopes());
         if(fill) for(var op:original.operations()) if(op.role()==DebugPlacementRole.BRIDGE_DECK && op.platformY().isPresent())
@@ -41,7 +42,9 @@ public final class StructuralSupportPlacement {
         if(!fillResult.accepted()) return new Resolution(Optional.empty(),fillResult.reason(),0,0);
         var geometry=StructuralSupportPlanner.plan(blueprint.envelopes().stream().filter(e->!fill || e.kind()==StructuralSupportPlanner.Kind.PARCEL).toList(),blueprint.settings(),ground);
         if(!geometry.accepted()) return new Resolution(Optional.empty(),geometry.rejection().orElseThrow(),0,0);
-        if(geometry.cells().size()>blueprint.constructionAllowance()) return new Resolution(Optional.empty(),"CONSTRUCTION_VOLUME_LIMIT",0,0);
+        long ownedGeometry=blueprint.ownership()==null?geometry.cells().size():geometry.cells().stream()
+                .filter(c->blueprint.ownership().contains(new GridPoint(c.position().x(),c.position().z()))).count();
+        if(ownedGeometry>blueprint.constructionAllowance()) return new Resolution(Optional.empty(),"CONSTRUCTION_VOLUME_LIMIT",0,0);
         var suspendedPoints=new HashSet<GridPoint>();geometry.suspended().forEach(c->suspendedPoints.add(c.point()));
         var junctions=FinalRetainingJunctions.apply(original,blueprint,suspendedPoints,ground);
         original = FinalTerrainAprons.connected(junctions.plan(), blueprint, ground);
@@ -107,7 +110,14 @@ public final class StructuralSupportPlacement {
                     cell.source().child("ravine-fill"),OptionalInt.of(p.y()),blueprint.materials().getOrDefault("FOUNDATION","minecraft:andesite"),0);
             operations.putIfAbsent(key(op),op);
         }
-        if(geometry.cells().size()+cleared+junctions.additionalCells()+fillResult.cells().size()>blueprint.constructionAllowance()) return new Resolution(Optional.empty(),"CONSTRUCTION_VOLUME_LIMIT",0,0);
+        long construction=geometry.cells().size()+cleared+junctions.additionalCells()+fillResult.cells().size();
+        if(blueprint.ownership()!=null) {
+            operations.values().removeIf(op->!blueprint.ownership().contains(op.point()));
+            construction=operations.values().stream().filter(op->!originalPositions.contains(key(op))).count()
+                    +geometry.cells().stream().filter(c->blueprint.ownership().contains(new GridPoint(c.position().x(),c.position().z()))
+                        && originalPositions.contains(c.position().x()+","+c.position().y()+","+c.position().z())).count();
+        }
+        if(construction>blueprint.constructionAllowance()) return new Resolution(Optional.empty(),"CONSTRUCTION_VOLUME_LIMIT",0,0);
         // Removals run before authored content; their saved positions also participate in debug undo.
         var ordered=new ArrayList<>(operations.values());
         ordered.sort(Comparator.comparingInt(op->op.role()==DebugPlacementRole.TERRAIN_CLEARANCE?0:1));

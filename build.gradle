@@ -129,6 +129,8 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.withType(Test).configureEach {
+    // Full skyline-grid acceptance constructs eighty broad buildings in one plan.
+    maxHeapSize = '2g'
     useJUnitPlatform()
     inputs.dir('examples/datapacks')
 }

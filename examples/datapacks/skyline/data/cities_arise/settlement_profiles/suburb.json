@@ -1,7 +1,7 @@
 {
   "survey": {
-    "width": 240,
-    "depth": 240
+    "width": 540,
+    "depth": 540
   },
   "planning": {
     "districts": {
@@ -21,8 +21,8 @@
         "rules": [
           {
             "target": "BUILDING_SLOT",
-            "every": 8,
-            "offset": 7,
+            "every": 40,
+            "offset": 0,
             "properties": {
               "skyline:purpose": "lowrise"
             }
@@ -40,28 +40,35 @@
       "parcelSizeFallback": false,
       "elevation": {
         "enabled": true,
-        "preferredDepth": 3,
-        "maximumTerraces": 8,
-        "levelChangeCost": 80,
-        "roadRunPerRise": 6,
+        "preferredDepth": 4,
+        "maximumTerraces": 16,
+        "levelChangeCost": 160,
+        "roadRunPerRise": 12,
         "maximumDetourLength": 96
+      },
+      "grid": {
+        "enabled": true,
+        "columns": 5,
+        "rows": 4,
+        "parcelsAcross": 2,
+        "parcelsDeep": 2
       }
     },
     "roadWidth": 5,
-    "maxBuildableSlope": 0.75,
-    "minimumParcelCount": 8,
-    "targetParcelCount": 16,
-    "maximumParcelCount": 24,
+    "maxBuildableSlope": 2.0,
+    "minimumParcelCount": 32,
+    "targetParcelCount": 80,
+    "maximumParcelCount": 80,
     "parcelWidth": 39,
     "parcelDepth": 39,
     "buildingMargin": 4,
-    "maxElevationRange": 14,
+    "maxElevationRange": 28,
     "preferredMaxCutDepth": 4,
     "preferredMaxFillDepth": 4,
-    "maxCutDepth": 10,
-    "maxFillDepth": 12,
-    "maxBuildingFoundationDepth": 10,
-    "maxEarthworkVolume": 120000,
+    "maxCutDepth": 12,
+    "maxFillDepth": 16,
+    "maxBuildingFoundationDepth": 16,
+    "maxEarthworkVolume": 1000000,
     "buildings": {
       "catalog": "skyline:city",
       "pool": [
@@ -117,7 +124,7 @@
     },
     "terrainTransitions": {
       "buildingAccessRunPerRise": 2,
-      "roadShoulderRadius": 2,
+      "roadShoulderRadius": 0,
       "roadShoulderMaxFillDepth": 3,
       "parcelShoulderRadius": 1,
       "parcelShoulderMaxFillDepth": 3,
@@ -134,7 +141,7 @@
       "maximumDepth": 32,
       "maximumSpan": 12,
       "pierSpacing": 4,
-      "maximumVolume": 20000,
+      "maximumVolume": 100000,
       "maximumShallowFoundationHeight": 5
     },
     "ravineRoads": {
@@ -158,9 +165,9 @@
     ],
     "adaptation": {
       "sensitivity": 0.5,
-      "maxTerraformArea": 32,
-      "maxTerraformRelief": 4,
-      "maxTerraformVolume": 160
+      "maxTerraformArea": 128,
+      "maxTerraformRelief": 8,
+      "maxTerraformVolume": 1024
     },
     "bridges": {
       "maxLength": 48,

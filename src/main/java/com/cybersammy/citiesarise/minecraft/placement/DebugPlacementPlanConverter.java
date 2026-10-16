@@ -263,7 +263,9 @@ public final class DebugPlacementPlanConverter {
         for (TerrainPreparationColumn column : preparationPlan.columns()) {
             elevations.put(column.point(), column.targetElevation());
         }
-        return Map.copyOf(elevations);
+        // Dense grid-coordinate hashes cluster in MapN's linear-probing table.
+        // Preserve immutable ownership while retaining HashMap collision handling.
+        return java.util.Collections.unmodifiableMap(elevations);
     }
 
     private static DebugBlockPlacementOperation withPreparationElevation(

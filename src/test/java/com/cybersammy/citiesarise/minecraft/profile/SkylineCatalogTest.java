@@ -75,13 +75,14 @@ class SkylineCatalogTest {
         var result=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(new PlanElementId("test:skyline"),survey,42,settings,profile.terrainResponsePolicy()));
         assertTrue(result.successful(),result.toString());
         var city=result.plan().orElseThrow();
-        assertTrue(city.parcels().size()>=8);
+        assertEquals(80,city.parcels().size());
+        assertEquals(20,city.districts().size());
         assertTrue(city.buildingSlots().stream().allMatch(s->s.bounds().size().width()>=31 && s.bounds().size().depth()>=31));
         var counts=new TreeMap<String,Long>();
         result.content().selections().values().forEach(s->counts.merge(s.asset(),1L,Long::sum));
         assertTrue(result.content().buildings().values().stream().allMatch(b->b.resolved().isPresent()));
         long low=result.content().selections().values().stream().filter(s->s.rule().equals("skyline:lowrise")).count();
-        assertEquals(city.buildingSlots().size()/8,low,counts.toString());
+        assertEquals(2,low,counts.toString());
         Files.writeString(Path.of("build/skyline-city-summary.txt"),"Parcels: "+city.parcels().size()+"; districts: "+city.districts().size()+"; buildings: "+counts);
     }
 }

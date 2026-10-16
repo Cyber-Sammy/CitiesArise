@@ -34,7 +34,7 @@ final class RoadElevationPlanner {
         Map<PlanElementId, Integer> desiredElevations = desiredElevations(request, roadGraph, nodesById);
         boolean locked=request.settings().districts().elevation().enabled() && roadGraph.segments().stream()
                 .anyMatch(s->s.properties().find(GradeAwareRoadPlanner.GRADED).isPresent());
-        var intervals = fitEarthworks || target!=null || locked ? feasibleElevations(request,roadGraph,nodesById,occupiedPads) : Map.<PlanElementId,Interval>of();
+        var intervals = fitEarthworks || target!=null || locked || request.settings().districts().grid().enabled() ? feasibleElevations(request,roadGraph,nodesById,occupiedPads) : Map.<PlanElementId,Interval>of();
         if(locked) {
             var fixed=new HashMap<>(intervals);
             var desired=new HashMap<>(desiredElevations);
@@ -44,7 +44,7 @@ final class RoadElevationPlanner {
             }
             desiredElevations=Map.copyOf(desired);intervals=Map.copyOf(fixed);
         }
-        if(target!=null) {
+        if(target!=null || request.settings().districts().grid().enabled()) {
             var limits=new HashMap<PlanElementId,NeighborhoodLevels.Interval>();
             int depth=request.settings().districts().elevation().preferredDepth();
             for(var segment:roadGraph.segments()) {
@@ -62,9 +62,14 @@ final class RoadElevationPlanner {
             var adjacency=new ArrayList<NeighborhoodLevels.Edge>();
             for(var neighbors:segmentsByNode(roadGraph).values())for(int i=0;i<neighbors.size();i++)for(int j=i+1;j<neighbors.size();j++)
                 adjacency.add(new NeighborhoodLevels.Edge(neighbors.get(i),neighbors.get(j)));
-            desiredElevations=NeighborhoodLevels.choose(limits,adjacency,target);
+            desiredElevations=target==null?NeighborhoodLevels.chooseLocally(limits,adjacency):NeighborhoodLevels.choose(limits,adjacency,target);
         }
         Map<PlanElementId, Integer> componentElevations = componentElevations(roadGraph, desiredElevations,intervals);
+        if(request.settings().districts().grid().enabled() && hasDisconnectedGrade(roadGraph,componentElevations)) {
+            // Inconsistent hard intervals must not mix clamped and fallback profiles into a vertical jump.
+            // Keep the continuous preferred grade; preparation reports the actual cut/fill violation for block pruning.
+            componentElevations=componentElevations(roadGraph,desiredElevations,Map.of());
+        }
         List<RoadSegment> elevatedSegments = new ArrayList<>();
 
         for (RoadSegment segment : roadGraph.segments()) {
@@ -72,6 +77,12 @@ final class RoadElevationPlanner {
         }
 
         return new RoadGraph(roadGraph.nodes(), elevatedSegments);
+    }
+
+    private static boolean hasDisconnectedGrade(RoadGraph graph,Map<PlanElementId,Integer> elevations) {
+        for(var neighbors:segmentsByNode(graph).values())for(int i=0;i<neighbors.size();i++)for(int j=i+1;j<neighbors.size();j++)
+            if(Math.abs((long)elevations.get(neighbors.get(i))-elevations.get(neighbors.get(j)))>1)return true;
+        return false;
     }
 
     private static Map<PlanElementId, Integer> desiredElevations(

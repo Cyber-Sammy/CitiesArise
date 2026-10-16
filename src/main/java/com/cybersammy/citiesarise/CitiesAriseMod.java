@@ -41,7 +41,7 @@ public final class CitiesAriseMod {
             MinecraftSuburbPlanningService planningService,
             ReloadableSettlementProfileStore profileStore
     ) {
-        MinecraftCacheLifecycle cacheLifecycle = new MinecraftCacheLifecycle(planningService::clearCache);
+        MinecraftCacheLifecycle cacheLifecycle = new MinecraftCacheLifecycle(planningService::clearCache,CitiesAriseWorldgen::clearPlacementCache);
         CitiesAriseCommands commands = new CitiesAriseCommands(planningService, LOGGER);
         NeoForge.EVENT_BUS.addListener(commands::register);
         NeoForge.EVENT_BUS.addListener(commands::onServerStopped);

@@ -10,6 +10,18 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DistrictCityPlannerTest {
+    @Test void deferringContentRetainsTheExactFinishedCityAndDoesNotMutateTheOriginalPlanner() {
+        var request=request(false,false);
+        var planner=SuburbPlanner.defaults();
+        var original=planner.plan(request);
+        var geometry=planner.geometryOnly().plan(request);
+        assertTrue(geometry.successful());
+        assertEquals(com.cybersammy.citiesarise.core.content.ResolvedSettlementContent.EMPTY,geometry.content());
+        assertEquals(original,planner.finishContent(request,geometry));
+        assertEquals(original,planner.plan(request));
+        var rejected=SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_PARCEL_SPACE);
+        assertSame(rejected,planner.finishContent(request,rejected));
+    }
     @Test void explicitFallbackCanRecoverSmallerParcelsAfterLargeSitesFailExactAcceptance() {
         var small=new DistrictParcelSize("test:small",6,7,1);
         var large=new DistrictParcelSize("test:large",35,35,4);

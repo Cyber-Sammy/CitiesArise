@@ -13,6 +13,7 @@ final class PendingStructuralPlacement extends SavedData {
     private static final int MAX_PENDING=64,MAX_OPERATIONS=4000000;
     private final Map<String,Entry> pending=new LinkedHashMap<>();
     private final Map<String,String> completed=new LinkedHashMap<>();
+    private final NearbyPlacementCompletion completion=new NearbyPlacementCompletion();
     private static final org.slf4j.Logger LOG=com.mojang.logging.LogUtils.getLogger();
     private static final class Entry {
         String profile,id;int centerX,centerZ;
@@ -66,6 +67,17 @@ final class PendingStructuralPlacement extends SavedData {
         pending.put(id,e);setDirty();
     }
     void applyReady(ServerLevel level) {
+        if(level.getGameTime()%20==0) {
+            var nearby=new ArrayList<NearbyPlacementCompletion.Candidate>();
+            for(var e:pending.values()) {
+                int minX=e.original.minimumX(),minZ=e.original.minimumZ(),maxX=e.original.maximumX(),maxZ=e.original.maximumZ();
+                int radius=Math.min(128,level.getServer().getPlayerList().getViewDistance()*16);
+                boolean near=level.players().stream().anyMatch(p->Math.max(Math.max(minX-p.getX(),p.getX()-maxX),0)<=radius
+                        && Math.max(Math.max(minZ-p.getZ(),p.getZ()-maxZ),0)<=radius);
+                if(near)nearby.add(new NearbyPlacementCompletion.Candidate(e.id,e.required()));
+            }
+            completion.maintain(level,nearby);
+        }
         for(var e:List.copyOf(pending.values())) {
             if(e.resolved==null) {
                 StructuralSupportPlacement.Resolution result;
@@ -108,8 +120,10 @@ final class PendingStructuralPlacement extends SavedData {
                 LOG.info("Final-terrain structural placement accepted {}: suspendedColumns={}, supportBlocks={}",e.id,result.suspendedColumns(),result.supports());
             }
             e.prepareResolved();var plan=e.placementCache;var index=e.indexCache;var chunks=e.chunkCache;
-            var next=chunks.stream().filter(c->!e.placed.contains(c)).findFirst();
-            if(next.isEmpty()) { completed.put(e.id,"PLACED");pending.remove(e.id);setDirty();return; }
+            if(e.placed.containsAll(chunks)) { completed.put(e.id,"PLACED");pending.remove(e.id);setDirty();return; }
+            var next=chunks.stream().filter(c->!e.placed.contains(c)
+                    && level.getChunkSource().getChunkNow(c.x(),c.z())!=null).findFirst();
+            if(next.isEmpty())continue;
             var chunk=next.orElseThrow();
             if(level.getChunkSource().getChunkNow(chunk.x(),chunk.z())==null) continue;
             long started=System.nanoTime();

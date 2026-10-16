@@ -1,0 +1,9 @@
+// Isolate the two readiness regressions; default gameTestServer also includes them.
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory = project.file('build/readiness-validation-runtime')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'cities_arise_readiness'
+        }
+    }
+}

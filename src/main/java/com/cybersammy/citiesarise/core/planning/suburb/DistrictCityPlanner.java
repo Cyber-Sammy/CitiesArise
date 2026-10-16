@@ -53,7 +53,7 @@ final class DistrictCityPlanner {
                     local = smaller.orElseThrow();
                 }
                 var proposed = new ArrayList<>(accepted); proposed.add(local);
-                var merged = merge(request, proposed, acceptance,adaptation);
+                var merged = merge(request, proposed, acceptance,adaptation,planner.composesContent());
                 if (merged.isPresent()) { accepted = proposed; group = merged.orElseThrow(); }
             }
             if (group != null && (city == null || group.plan().orElseThrow().parcels().size() > city.plan().orElseThrow().parcels().size())) city = group;
@@ -196,7 +196,7 @@ final class DistrictCityPlanner {
         return List.copyOf(ordered);
     }
 
-    private static Optional<SuburbPlanningResult> merge(SuburbPlanningRequest request, List<Local> locals, PlanningAcceptance acceptance,TerrainAdaptationPlan adaptation) {
+    private static Optional<SuburbPlanningResult> merge(SuburbPlanningRequest request, List<Local> locals, PlanningAcceptance acceptance,TerrainAdaptationPlan adaptation,boolean composeContent) {
         var nodes = new ArrayList<RoadNode>();
         var segments = new ArrayList<RoadSegment>();
         var parcels = new ArrayList<Parcel>();
@@ -267,7 +267,7 @@ final class DistrictCityPlanner {
                 final var baseZones=List.copyOf(zones);final var baseTransitions=List.copyOf(transitions);
                 Connection[] selected={null};
                 var connector=connector(request,bridged,pair,connectionIndex,graph->{
-                    var checked=assessConnection(request,basePlan,graph,baseZones,baseTransitions,acceptance,adaptation);
+                    var checked=assessConnection(request,basePlan,graph,baseZones,baseTransitions,acceptance,adaptation,composeContent);
                     checked.ifPresent(c->selected[0]=c);return checked.isPresent();
                 },adaptation);
                 if(connector.isEmpty())continue;
@@ -294,7 +294,7 @@ final class DistrictCityPlanner {
         if (!new PlanValidator().validate(bridged).isEmpty() || !new TerrainPreparationPlanValidator().validate(bridged, prep).isEmpty()) return Optional.empty();
         com.cybersammy.citiesarise.core.content.ResolvedSettlementContent content;
         try {
-            content = com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(bridged, prep,
+            content = !composeContent ? com.cybersammy.citiesarise.core.content.ResolvedSettlementContent.EMPTY : com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(bridged, prep,
                     request.seed(), request.settings().buildings(), request.settings().parcelLayout());
         } catch (IllegalArgumentException incompatibleContent) {
             return Optional.empty();
@@ -307,7 +307,7 @@ final class DistrictCityPlanner {
     private record Connection(SettlementPlan plan,TerrainPreparationAssessment preparation,List<ElevationZone> zones,List<ElevationTransition> transitions) { }
 
     private static Optional<Connection> assessConnection(SuburbPlanningRequest request,SettlementPlan base,RoadGraph graph,
-            List<ElevationZone> zones,List<ElevationTransition> transitions,PlanningAcceptance acceptance,TerrainAdaptationPlan adaptation) {
+            List<ElevationZone> zones,List<ElevationTransition> transitions,PlanningAcceptance acceptance,TerrainAdaptationPlan adaptation,boolean composeContent) {
         var proposedNodes=new ArrayList<>(base.roadGraph().nodes());
         var ids=new HashSet<>(proposedNodes.stream().map(RoadNode::id).toList());
         graph.nodes().stream().filter(n->ids.add(n.id())).forEach(proposedNodes::add);
@@ -322,7 +322,7 @@ final class DistrictCityPlanner {
         if(prepared.plan().isEmpty())return Optional.empty();
         var plan=new SettlementPlan(base.id(),proposedGraph,base.parcels(),base.buildingSlots(),base.tags(),base.properties(),base.districts());
         if(!new TerrainPreparationPlanValidator().validate(plan,prepared.plan().orElseThrow()).isEmpty())return Optional.empty();
-        try {com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(plan,prepared.plan().orElseThrow(),request.seed(),request.settings().buildings(),request.settings().parcelLayout());}
+        try {if(composeContent)com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(plan,prepared.plan().orElseThrow(),request.seed(),request.settings().buildings(),request.settings().parcelLayout());}
         catch(IllegalArgumentException incompatibleContent){return Optional.empty();}
         if(!acceptance.validate(request,SuburbPlanningResult.success(plan,prepared.plan().orElseThrow())).successful())return Optional.empty();
         return Optional.of(new Connection(plan,prepared,proposedZones,proposedTransitions));

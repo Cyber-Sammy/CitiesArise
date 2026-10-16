@@ -322,14 +322,22 @@ public final class MinecraftSuburbPlanningService {
                 planningSettings,
                 terrainResponsePolicy
         );
-        SuburbPlanningResult result = planner.plan(request);
+        var terrainPlanner=planner.geometryOnly();
+        SuburbPlanningResult result = terrainPlanner.plan(request);
         long planned = System.nanoTime();
         SuburbPlanningResult refinedResult = WorldgenWaterMaskRefiner.refine(
-                planner,
+                terrainPlanner,
                 terrainProvider,
                 request,
                 result
         );
+        var finished=planner.finishContent(request,refinedResult);
+        if(refinedResult.successful() && !finished.successful()) {
+            // Invalid content can affect layout fallback. Retain the original full solver
+            // for that exceptional case, with already cached terrain samples.
+            finished=WorldgenWaterMaskRefiner.refine(planner,terrainProvider,request,planner.plan(request));
+        }
+        refinedResult=finished;
         long refined = System.nanoTime();
         SuburbPlanningResult transformedResult = transformService.apply(refinedResult, seed);
         transformedResult = TerrainSupportAcceptance.validate(terrainProvider, survey, transformedResult);

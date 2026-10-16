@@ -47,10 +47,32 @@ public final class SuburbPlanner {
     private static final TerrainAdaptationPlanner TERRAIN_ADAPTATION_PLANNER = new TerrainAdaptationPlanner();
     private final TerrainSuitabilityScorer terrainScorer;
     private final PlanValidator planValidator;
+    private final boolean composeContent;
 
     public SuburbPlanner(TerrainSuitabilityScorer terrainScorer, PlanValidator planValidator) {
+        this(terrainScorer,planValidator,true);
+    }
+    private SuburbPlanner(TerrainSuitabilityScorer terrainScorer,PlanValidator planValidator,boolean composeContent) {
         this.terrainScorer = Objects.requireNonNull(terrainScorer, "terrainScorer");
         this.planValidator = Objects.requireNonNull(planValidator, "planValidator");
+        this.composeContent=composeContent;
+    }
+
+    /** Immutable terrain-only planner for repeated adapter refinements. */
+    public SuburbPlanner geometryOnly() {return new SuburbPlanner(terrainScorer,planValidator,false);}
+    boolean composesContent() {return composeContent;}
+
+    public SuburbPlanningResult finishContent(SuburbPlanningRequest request,SuburbPlanningResult result) {
+        if(!result.successful())return result;
+        try {
+            return result.withContent(com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
+                    result.plan().orElseThrow(),result.terrainPreparationPlan().orElseThrow(),request.seed(),
+                    request.settings().buildings(),request.settings().parcelLayout()));
+        } catch(IllegalArgumentException error) {
+            return SuburbPlanningResult.invalid(List.of(PlanValidationError.forElement(
+                    com.cybersammy.citiesarise.core.validation.PlanValidationErrorCode.CONTENT_COMPOSITION_FAILED,
+                    result.plan().orElseThrow().id(),error.getMessage())));
+        }
     }
 
     public static SuburbPlanner defaults() {
@@ -208,6 +230,7 @@ public final class SuburbPlanner {
             // before the city retry removes that unsupported road or parcel.
             var checked = acceptance.validate(request, SuburbPlanningResult.success(plan, preparationPlan, siteAssessment));
             if (!checked.successful()) return checked;
+            if(!composeContent)return checked;
             var content=com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
                     plan, preparationPlan, request.seed(), request.settings().buildings(), request.settings().parcelLayout());
             return SuburbPlanningResult.success(plan, preparationPlan, siteAssessment).withContent(content);

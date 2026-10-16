@@ -71,17 +71,21 @@ public final class SuburbPlanner {
         var selectedSize=request.settings().districts().parcelSize(request.seed(),request.settlementId().value(),0);
         if(selectedSize.isPresent()) request=new SuburbPlanningRequest(request.settlementId(),request.survey(),request.seed(),
                 request.settings().withParcelSize(selectedSize.orElseThrow()),request.terrainResponsePolicy());
-        var result = planSingle(request, acceptance, false,false);
+        var result = planSingle(request, acceptance, false,false,true);
         return result.successful() ? acceptance.validate(request, result) : result;
     }
 
     SuburbPlanningResult planDistrict(SuburbPlanningRequest request, PlanningAcceptance acceptance,boolean compactDistrict) {
-        var result = planSingle(request, acceptance, true,compactDistrict);
+        return planDistrict(request,acceptance,compactDistrict,true);
+    }
+    SuburbPlanningResult planDistrict(SuburbPlanningRequest request,PlanningAcceptance acceptance,
+            boolean compactDistrict,boolean coordinateElevation) {
+        var result = planSingle(request, acceptance, true,compactDistrict,coordinateElevation);
         return result.successful() ? acceptance.validate(request, result) : result;
     }
 
     private SuburbPlanningResult planSingle(SuburbPlanningRequest request, PlanningAcceptance acceptance, boolean checkPreparation,
-            boolean compactDistrict) {
+            boolean compactDistrict,boolean coordinateElevation) {
 
         if (!hasEnoughSpace(request)) {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.SURVEY_TOO_SMALL);
@@ -90,7 +94,7 @@ public final class SuburbPlanner {
         TerrainAdaptationPlan adaptationPlan = createTerrainAdaptationPlan(request);
         // Preserve an exact support failure so the district retry can reserve that point.
         SuburbPlanningResult[] acceptanceFailure = new SuburbPlanningResult[1];
-        Optional<SuburbLayoutSelection> selection = createAdaptiveLayout(request, adaptationPlan, checkPreparation,compactDistrict,acceptance,acceptanceFailure);
+        Optional<SuburbLayoutSelection> selection = createAdaptiveLayout(request, adaptationPlan, checkPreparation,compactDistrict,coordinateElevation,acceptance,acceptanceFailure);
         if (selection.isEmpty()) {
             if (acceptanceFailure[0] != null) return acceptanceFailure[0];
             Optional<SuburbTerrainDiagnostic> compatibilityDiagnostic = fixedCapacityTerrainDiagnostic(
@@ -118,8 +122,9 @@ public final class SuburbPlanner {
         }
 
         SettlementPlan plan = createPlan(request, selection.orElseThrow());
-        RegionalElevationPlanningResult elevationPlanning = RegionalElevationPlanner.plan(request, plan,compactDistrict);
+        RegionalElevationPlanningResult elevationPlanning = RegionalElevationPlanner.plan(request, plan,compactDistrict,acceptance,coordinateElevation,adaptationPlan);
         plan = elevationPlanning.settlementPlan();
+        if(!DistrictElevationPlanner.permits(request,plan))return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.DISTRICT_ELEVATION_CONFLICT);
         TerrainPreparationAssessment preparation = TerrainPreparationPlanner.plan(
                 request,
                 elevationPlanning.elevationPlan(),
@@ -374,7 +379,7 @@ public final class SuburbPlanner {
     private Optional<SuburbLayoutSelection> createAdaptiveLayout(
             SuburbPlanningRequest request,
             TerrainAdaptationPlan adaptationPlan,
-            boolean checkPreparation,boolean compactDistrict,PlanningAcceptance acceptance,SuburbPlanningResult[] acceptanceFailure
+            boolean checkPreparation,boolean compactDistrict,boolean coordinateElevation,PlanningAcceptance acceptance,SuburbPlanningResult[] acceptanceFailure
     ) {
         TerrainTopology topology = analyzeTopology(request, adaptationPlan);
         RoadTerrainEvaluationCache roadTerrainEvaluations = new RoadTerrainEvaluationCache();
@@ -409,7 +414,7 @@ public final class SuburbPlanner {
                         routingContext,
                         roadTerrainEvaluations,
                         parcelTerrainEvaluations,compactDistrict
-                ).filter(routed -> !checkPreparation || preparationFits(request,routed,topology,adaptationPlan,compactDistrict,acceptance,acceptanceFailure))
+                ).filter(routed -> !checkPreparation || preparationFits(request,routed,topology,adaptationPlan,compactDistrict,coordinateElevation,acceptance,acceptanceFailure))
         );
     }
 
@@ -439,13 +444,16 @@ public final class SuburbPlanner {
 
     /** Reject a costly layout while the bounded selector can still try another position or capacity. */
     private boolean preparationFits(SuburbPlanningRequest request, SuburbLayout layout,
-            TerrainTopology topology, TerrainAdaptationPlan adaptation,boolean compactDistrict,PlanningAcceptance acceptance,SuburbPlanningResult[] acceptanceFailure) {
+            TerrainTopology topology, TerrainAdaptationPlan adaptation,boolean compactDistrict,boolean coordinateElevation,PlanningAcceptance acceptance,SuburbPlanningResult[] acceptanceFailure) {
         var anchorPoint = layout.parcelBounds().getFirst().origin();
         var region = topology.regionIdAt(anchorPoint);
         if (region.isEmpty()) return false;
         var selection = new SuburbLayoutSelection(layout, new DistrictAnchor(region.getAsInt(),anchorPoint),
                 layout.parcelBounds().size());
-        var elevation = RegionalElevationPlanner.plan(request,createPlan(request,selection),compactDistrict);
+        var elevation = RegionalElevationPlanner.plan(request,createPlan(request,selection),compactDistrict,acceptance,coordinateElevation,adaptation);
+        if(!DistrictElevationPlanner.permits(request,elevation.settlementPlan())) {
+            acceptanceFailure[0]=SuburbPlanningResult.rejected(SuburbPlanningFailureReason.DISTRICT_ELEVATION_CONFLICT);return false;
+        }
         return TerrainPreparationPlanner.plan(request,elevation.elevationPlan(),adaptation).plan()
                 .filter(preparation -> new com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator()
                         .validate(elevation.settlementPlan(), preparation).isEmpty())

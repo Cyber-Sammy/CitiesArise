@@ -2,7 +2,14 @@ package com.cybersammy.citiesarise.core.planning.suburb;
 
 /** Bounded, profile-owned city subdivision. One district preserves legacy planning. */
 public record DistrictPlanningSettings(int maxCount, int targetParcels, int maxConnectionAttempts, ZoningSettings zoning,
-        java.util.List<DistrictParcelSize> parcelSizes, Boolean parcelSizeFallback) {
+        java.util.List<DistrictParcelSize> parcelSizes, Boolean parcelSizeFallback, DistrictElevationSettings elevation) {
+    public DistrictPlanningSettings(int maxCount,int targetParcels,int maxConnectionAttempts,ZoningSettings zoning,
+            java.util.List<DistrictParcelSize> parcelSizes,Boolean parcelSizeFallback) {
+        this(maxCount,targetParcels,maxConnectionAttempts,zoning,parcelSizes,parcelSizeFallback,DistrictElevationSettings.disabled());
+    }
+    public DistrictPlanningSettings withElevation(DistrictElevationSettings value) {
+        return new DistrictPlanningSettings(maxCount,targetParcels,maxConnectionAttempts,zoning,parcelSizes,parcelSizeFallback,value);
+    }
     public DistrictPlanningSettings(int maxCount,int targetParcels,int maxConnectionAttempts,ZoningSettings zoning,
             java.util.List<DistrictParcelSize> parcelSizes) {
         this(maxCount,targetParcels,maxConnectionAttempts,zoning,parcelSizes,false);
@@ -22,6 +29,7 @@ public record DistrictPlanningSettings(int maxCount, int targetParcels, int maxC
         this(maxCount,targetParcels,maxConnectionAttempts,ZoningSettings.NONE);
     }
     public DistrictPlanningSettings {
+        if(elevation==null)elevation=DistrictElevationSettings.disabled();
         java.util.Objects.requireNonNull(zoning);
         parcelSizeFallback=Boolean.TRUE.equals(parcelSizeFallback);
         parcelSizes=java.util.List.copyOf(parcelSizes);

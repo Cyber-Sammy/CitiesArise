@@ -4,7 +4,7 @@ import com.cybersammy.citiesarise.core.geometry.*;
 import com.cybersammy.citiesarise.core.model.*;
 import java.util.*;
 
-/** Grades a routed chain against terrain, keeping endpoints and six-block spacing between steps. */
+/** Grades a routed chain against terrain, keeping complete endpoint decks and configured spacing between steps. */
 final class TerrainConnectorGrader {
     private TerrainConnectorGrader() { }
 
@@ -23,9 +23,17 @@ final class TerrainConnectorGrader {
         var profiles = new ArrayList<int[]>();
         var lengths = new ArrayList<Integer>();
         var shoulderCeilings = new ArrayList<Integer>();
+        var endpointLevels = new ArrayList<OptionalInt>();
+        var firstSegment=graph.segments().getFirst();var lastSegment=graph.segments().getLast();
+        var startJunction=junction(points.get(firstSegment.startNodeId()),firstSegment.width());
+        var endJunction=junction(points.get(lastSegment.endNodeId()),lastSegment.width());
         for (var segment : graph.segments()) {
             var a = points.get(segment.startNodeId()); var b = points.get(segment.endNodeId());
             var bounds = AxisAlignedGridCorridor.bounds(a, b, segment.width());
+            boolean startOverlap=bounds.intersects(startJunction),endOverlap=bounds.intersects(endJunction);
+            if(request.settings().districts().elevation().enabled() && startOverlap && endOverlap && startY!=endY)return Optional.empty();
+            endpointLevels.add(!request.settings().districts().elevation().enabled()?OptionalInt.empty():
+                    startOverlap?OptionalInt.of(startY):endOverlap?OptionalInt.of(endY):OptionalInt.empty());
             if (!request.survey().bounds().contains(bounds)) return Optional.empty();
             int[] heights = new int[bounds.size().width()*bounds.size().depth()];
             int index=0;
@@ -53,6 +61,8 @@ final class TerrainConnectorGrader {
             lengths.add(Math.abs(a.x()-b.x())+Math.abs(a.z()-b.z()));
         }
         Comparator<Key> order = Comparator.comparingInt(Key::y).thenComparingInt(Key::sinceStep);
+        var policy=request.settings().districts().elevation();
+        int run=policy.enabled()?policy.roadRunPerRise():6;
         Map<Key, State> states = new TreeMap<>(order);
         long initialCost = cost(request, profiles.getFirst(), startY);
         if (initialCost == Long.MAX_VALUE || startY>shoulderCeilings.getFirst()) return Optional.empty();
@@ -60,16 +70,20 @@ final class TerrainConnectorGrader {
         for (int i=1; i<profiles.size(); i++) {
             Map<Key, State> next = new TreeMap<>(order);
             for (var entry : states.entrySet()) {
-                int distance = Math.min(6, entry.getKey().sinceStep()+lengths.get(i-1));
+                int distance = Math.min(run, entry.getKey().sinceStep()+lengths.get(i-1));
                 for (int delta=-1; delta<=1; delta++) {
-                    if (delta!=0 && distance<6) continue;
+                    if (delta!=0 && distance<run) continue;
                     int y = entry.getKey().y()+delta;
+                    // A short final segment can leave the previous stair inside the endpoint
+                    // junction. Keep the entire shared deck at the adjoining street's level.
+                    if(endpointLevels.get(i).isPresent() && endpointLevels.get(i).getAsInt()!=y)continue;
                     if (y>shoulderCeilings.get(i)) continue;
                     if (Math.abs((long)y-endY)>profiles.size()-i-1) continue;
                     long earthwork = cost(request, profiles.get(i), y);
                     if (earthwork==Long.MAX_VALUE) continue;
                     var key = new Key(y, delta==0 ? distance : 0);
-                    var state = new State(y, entry.getValue().cost()+earthwork, entry.getValue());
+                    var state = new State(y, entry.getValue().cost()+earthwork
+                            +(policy.enabled() && delta!=0?policy.levelChangeCost():0), entry.getValue());
                     if (!next.containsKey(key) || state.cost()<next.get(key).cost()) next.put(key,state);
                 }
             }
@@ -88,6 +102,10 @@ final class TerrainConnectorGrader {
                     s.properties().with(PlanPropertyKeys.PLATFORM_Y,Integer.toString(levels[i]))));
         }
         return Optional.of(new RoadGraph(graph.nodes(),segments));
+    }
+
+    private static GridBounds junction(GridPoint point,int width) {
+        return new GridBounds(new GridPoint(point.x()-width/2,point.z()-width/2),new GridSize(width,width));
     }
 
     private static long cost(SuburbPlanningRequest request, int[] heights, int level) {

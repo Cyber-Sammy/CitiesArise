@@ -34,9 +34,30 @@ final class RegionalElevationPlanner {
     }
 
     static RegionalElevationPlanningResult plan(SuburbPlanningRequest request,SettlementPlan settlementPlan,boolean fitEarthworks) {
+        return plan(request,settlementPlan,fitEarthworks,PlanningAcceptance.ACCEPT);
+    }
+    static RegionalElevationPlanningResult plan(SuburbPlanningRequest request,SettlementPlan settlementPlan,boolean fitEarthworks,PlanningAcceptance acceptance) {
+        return plan(request,settlementPlan,fitEarthworks,acceptance,true);
+    }
+    static RegionalElevationPlanningResult plan(SuburbPlanningRequest request,SettlementPlan settlementPlan,
+            boolean fitEarthworks,PlanningAcceptance acceptance,boolean coordinateElevation) {
+        return plan(request,settlementPlan,fitEarthworks,acceptance,coordinateElevation,
+                request.settings().districts().elevation().enabled()?new com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlanner()
+                        .plan(request.survey(),request.settings().maxBuildableSlope(),request.terrainResponsePolicy()):null);
+    }
+    static RegionalElevationPlanningResult plan(SuburbPlanningRequest request,SettlementPlan settlementPlan,
+            boolean fitEarthworks,PlanningAcceptance acceptance,boolean coordinateElevation,
+            com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationPlan adaptation) {
+        var independent=atLevel(request,settlementPlan,fitEarthworks,null);
+        if(!request.settings().districts().elevation().enabled())return independent;
+        return coordinateElevation?DistrictElevationPlanner.choose(request,settlementPlan,independent,acceptance,adaptation)
+                :DistrictElevationPlanner.annotate(independent,independent.settlementPlan().parcels().stream()
+                        .mapToInt(p->TerrainPlatform.requiredElevation(p.properties())).sorted().findFirst().orElse(0));
+    }
+    static RegionalElevationPlanningResult atLevel(SuburbPlanningRequest request,SettlementPlan settlementPlan,boolean fitEarthworks,Integer target) {
         RoadGraph elevatedRoadGraph = RoadElevationPlanner.apply(request, settlementPlan.roadGraph(),
-                settlementPlan.parcels().stream().map(Parcel::bounds).toList(),fitEarthworks);
-        ParcelElevationResult parcelElevations = elevateParcelsAndBuildings(request, settlementPlan, elevatedRoadGraph);
+                settlementPlan.parcels().stream().map(Parcel::bounds).toList(),fitEarthworks,target);
+        ParcelElevationResult parcelElevations = elevateParcelsAndBuildings(request, settlementPlan, elevatedRoadGraph,target);
         SettlementPlan elevatedPlan = new SettlementPlan(
                 settlementPlan.id(),
                 elevatedRoadGraph,
@@ -56,9 +77,9 @@ final class RegionalElevationPlanner {
     private static ParcelElevationResult elevateParcelsAndBuildings(
             SuburbPlanningRequest request,
             SettlementPlan plan,
-            RoadGraph elevatedRoadGraph
+            RoadGraph elevatedRoadGraph,Integer target
     ) {
-        Map<PlanElementId, Integer> elevationByParcel = parcelElevations(request, plan, elevatedRoadGraph);
+        Map<PlanElementId, Integer> elevationByParcel = parcelElevations(request, plan, elevatedRoadGraph,target);
         List<Parcel> elevatedParcels = new ArrayList<>();
         for (Parcel parcel : plan.parcels()) {
             elevatedParcels.add(new Parcel(
@@ -94,9 +115,10 @@ final class RegionalElevationPlanner {
     private static Map<PlanElementId, Integer> parcelElevations(
             SuburbPlanningRequest request,
             SettlementPlan plan,
-            RoadGraph elevatedRoadGraph
+            RoadGraph elevatedRoadGraph,Integer target
     ) {
         Map<PlanElementId, Integer> elevations = new HashMap<>();
+        var limits=new HashMap<PlanElementId,NeighborhoodLevels.Interval>();
         Map<PlanElementId, RoadNode> nodes = nodesById(elevatedRoadGraph);
         List<ElevationZone> roads = sortedSegments(elevatedRoadGraph.segments()).stream().map(road ->
                 new ElevationZone(road.id(), ElevationZoneType.ROAD_SEGMENT,
@@ -114,9 +136,21 @@ final class RegionalElevationPlanner {
                 minimum = Math.max(minimum, access.roadZone().targetElevation() - rise);
                 maximum = Math.min(maximum, access.roadZone().targetElevation() + rise);
             }
-            elevations.put(parcel.id(), ParcelPlatformElevation.choose(parcel.bounds(),
-                    point -> TerrainPlatform.requiredTerrainCell(request, point).height() - 1,
-                    request.settings(), minimum, maximum));
+            var interval=ParcelPlatformElevation.interval(parcel.bounds(),point->TerrainPlatform.requiredTerrainCell(request,point).height()-1,
+                    request.settings(),minimum,maximum,target!=null);
+            limits.put(parcel.id(),interval);
+            elevations.put(parcel.id(),interval.minimum()<=interval.maximum()?Math.clamp(interval.preferred(),interval.minimum(),interval.maximum()):interval.preferred());
+        }
+        if(target!=null) {
+            var adjacency=new ArrayList<NeighborhoodLevels.Edge>();var parcels=sortedParcels(plan.parcels());
+            int reach=request.settings().roadWidth()+2*request.settings().terrainTransitions().roadShoulderRadius()+2;
+            for(int i=0;i<parcels.size();i++)for(int j=i+1;j<parcels.size();j++) {
+                var a=parcels.get(i).bounds();var b=parcels.get(j).bounds();
+                int dx=Math.max(0,Math.max(a.minX()-b.maxXExclusive(),b.minX()-a.maxXExclusive()));
+                int dz=Math.max(0,Math.max(a.minZ()-b.maxZExclusive(),b.minZ()-a.maxZExclusive()));
+                if(dx+dz<=reach)adjacency.add(new NeighborhoodLevels.Edge(parcels.get(i).id(),parcels.get(j).id()));
+            }
+            return NeighborhoodLevels.choose(limits,adjacency,target);
         }
         return Map.copyOf(elevations);
     }

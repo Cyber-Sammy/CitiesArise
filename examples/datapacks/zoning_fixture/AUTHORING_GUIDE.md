@@ -1204,3 +1204,39 @@ A roof has one matching internal downward joint and an explicit FLOOR boundary a
 Keep a continuous climbable connection across the ceiling and at least one cell above it, explicit side backing, two-block landing headroom and a declared route to that landing. Both alternatives in the fixture share this access. Roof cells are sparse exterior geometry; access clearance is explicit, while unrelated exterior air is omitted. A roof adds one structural module plus any nested modules; count it in `minimumModules`, `maximumModules`, `maximumResolvedModules` and the asset/composition height. Existing caps remain unchanged. A five-layer roof sharingY0 adds four blocks, not five or a second ceiling. The apartment example now has19 structural/67 resolved modules and height29.
 
 Run residential/floor generators first and `scripts/generate_roof_fixture.py` last. The roof generator is idempotent. Optional missing roof fields still use the old supportive top cap; old frozen profiles and saved placement do not acquire new roofs automatically. Test all weighted alternatives, rotations, rejected boundaries, concave voids, saved recipes and reversed chunk placement before distribution.
+
+
+## District elevation policy
+
+`planning.districts.elevation` is optional. Missing policy means disabled, including old frozen recipes. All copies used for local district sizing retain the policy.
+
+```json
+"elevation": {
+  "enabled": true,
+  "preferredDepth": 3,
+  "maximumTerraces": 8,
+  "levelChangeCost": 80,
+  "roadRunPerRise": 6,
+  "maximumDetourLength": 96
+}
+```
+
+- `preferredDepth` (0..8): preferred cut/fill envelope when coordinating groups; hard cut/fill/foundation limits still apply. If a footprint has no such preferred interval, its hard feasible interval is considered instead.
+- `maximumTerraces` (1..16): maximum distinct accepted parcel height levels per local district. A layout exceeding this bound is rejected with `DISTRICT_ELEVATION_CONFLICT`; intervening road ramp levels are not counted as parcel terraces.
+- `levelChangeCost` (0..1000): cost added for road elevation changes, both when comparing prepared district choices and when grading a chain. Reducing the number of feasible parcel levels takes priority within the earthwork budget; valid alternatives are ordered by work plus road-change cost.
+- `roadRunPerRise` (6..24): minimum horizontal run between one-block rises on grade-aware chains. Larger values require longer routes and may reject tight sites.
+- `maximumDetourLength` (0..256): maximum extra Manhattan length for newly generated winding alternatives beyond direct endpoint distance, with a fixed direct-plus-twelve-corridor search and at most128x128 routing bounds. Zero disables newly synthesized extra-length alternatives. The existing primary terrain route retains its existing routing-area bound and may already be longer to avoid obstacles; it is not discarded merely because a new switchback budget is smaller. The tested corridor offsets depend on rise spacing and the configured detour budget; arbitrary maze-like or unlimited switchbacks are not synthesized.
+
+The planner evaluates the local parcel median and offsets0,-1,+1,-2,+2. Adjacent groups share a level only when their complete hard/access and preferred intervals intersect; road profiles also retain junction continuity and any already validated grades. Actual preparation, lining, shoulders, entrances and total earthworks must validate. Adapter-supplied support checks participate in ranked choice: an unsupported common datum can fall back to another candidate, including the independent profile, instead of losing an otherwise viable site. Old independent behavior is not a bypass for the configured terrace count.
+
+Simple road detour candidates are validated inside narrow fixed corridors, so an impossible detour cannot repeatedly search the entire routing area. Full road width, terrain response, water, shoulders, junction overlaps, non-adjacent collisions in new detours, grade spacing and actual endpoint heights are retained. Local alternatives are reserved before parcel allocation; interdistrict alternatives also reserve existing plots/roads/bridges. A winding road is only generated when a valid candidate fits. It is not a guarantee that every steep cliff can be connected; ordinary layout/site rejection and explicitly enabled bridge alternatives remain available.
+
+The existing ceiling on earthwork depth/volume, foundation height, exact terrain queries, survey size, serialized data and search retries is unchanged. The district target is a preference, not a promise to raise a low remote endpoint to that height. A long incline may retain multiple levels and flat reaches separated by rises. Use the debug metadata to inspect actual chosen levels, and test natural terrain, historical omitted-policy fixtures, frozen reload and reversed chunks alongside synthetic ramps.
+
+Interdistrict links validate each candidate against the complete preparation/content/support plan and continue after rejection. Existing stair decks remain protected: short approach segments may not introduce a rise inside an endpoint junction. Pairs whose endpoints cannot fit the existing128x128 routing window are discarded before spending a connection attempt. In addition to the direct-plus-twelve search, one reverse approach in the original16-block-margin terrain corridor remains available as a compatibility alternative.
+
+If a coordinated city fails specifically because districts cannot connect, one complete independent-level retry is permitted. It changes only the shared-datum preference; the configured grade/run, detour, terrace count, exact support and earthwork constraints remain active. This retry does not run for ordinary capacity rejection and never recursively retries. A difficult site may therefore retain several local levels to preserve valid connectivity.
+
+The extra datum/route validation increases first-generation planning cost. Cold natural-terrain measurements after reuse were about33s versus23s and59s versus37s with the policy disabled; the latter also accepted21parcels instead of17. These are individual measurements, not speed guarantees. Saved resolved cities are unaffected. Keep the policy disabled for legacy selection cost; tuning it does not rewrite saved cities.
+
+A diagnostic time-limit stop is an incomplete search, not an exhausted search radius. Continue with `citiesarise locate diagnostic next` to skip previously checked candidates. Plain `diagnostic` restarts from the nearest candidates. The time budget is checked between candidates; the active bounded candidate may finish after the budget.

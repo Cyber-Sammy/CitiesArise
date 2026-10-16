@@ -1,0 +1,15 @@
+// Isolate native skyline content checks from ordinary development worlds.
+allprojects {
+    afterEvaluate {
+        tasks.named('processGameTestResources') {
+            from('src/gameTest/resources/data/cities_arise/structure') {
+                into 'data/cities_arise_skyline/structure'
+            }
+        }
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory = project.file('build/skyline-validation-runtime')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'cities_arise_skyline'
+            systemProperty 'citiesarise.skylineData', project.file('examples/datapacks/skyline/data').absolutePath
+        }
+    }
+}

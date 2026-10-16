@@ -178,7 +178,15 @@ public final class MinecraftSettlementProfileJsonParser {
         }
         return new com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings(
                 optionalInt(value, "maxCount", 4), optionalInt(value, "targetParcels", 4), optionalInt(value, "maxConnectionAttempts", 8), ZoningJsonParser.parse(value),sizes,
-                optionalBoolean(value,"parcelSizeFallback",false));
+                optionalBoolean(value,"parcelSizeFallback",false),parseDistrictElevation(value));
+    }
+
+    private static com.cybersammy.citiesarise.core.planning.suburb.DistrictElevationSettings parseDistrictElevation(JsonObject districts) {
+        if(!districts.has("elevation"))return com.cybersammy.citiesarise.core.planning.suburb.DistrictElevationSettings.disabled();
+        var e=requiredObject(districts,"elevation");
+        return new com.cybersammy.citiesarise.core.planning.suburb.DistrictElevationSettings(optionalBoolean(e,"enabled",false),
+                optionalInt(e,"preferredDepth",3),optionalInt(e,"maximumTerraces",8),optionalInt(e,"levelChangeCost",80),
+                optionalInt(e,"roadRunPerRise",6),optionalInt(e,"maximumDetourLength",96));
     }
 
     private static BuildingAsset requiredAsset(ContentCatalogParser.Catalog catalog, String id) {

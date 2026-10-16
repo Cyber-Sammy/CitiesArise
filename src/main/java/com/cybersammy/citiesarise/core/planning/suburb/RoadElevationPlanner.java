@@ -26,9 +26,44 @@ final class RoadElevationPlanner {
 
     static RoadGraph apply(SuburbPlanningRequest request,RoadGraph roadGraph,
             List<GridBounds> occupiedPads,boolean fitEarthworks) {
+        return apply(request,roadGraph,occupiedPads,fitEarthworks,null);
+    }
+    static RoadGraph apply(SuburbPlanningRequest request,RoadGraph roadGraph,
+            List<GridBounds> occupiedPads,boolean fitEarthworks,Integer target) {
         Map<PlanElementId, RoadNode> nodesById = nodesById(roadGraph);
         Map<PlanElementId, Integer> desiredElevations = desiredElevations(request, roadGraph, nodesById);
-        var intervals = fitEarthworks ? feasibleElevations(request,roadGraph,nodesById,occupiedPads) : Map.<PlanElementId,Interval>of();
+        boolean locked=request.settings().districts().elevation().enabled() && roadGraph.segments().stream()
+                .anyMatch(s->s.properties().find(GradeAwareRoadPlanner.GRADED).isPresent());
+        var intervals = fitEarthworks || target!=null || locked ? feasibleElevations(request,roadGraph,nodesById,occupiedPads) : Map.<PlanElementId,Interval>of();
+        if(locked) {
+            var fixed=new HashMap<>(intervals);
+            var desired=new HashMap<>(desiredElevations);
+            for(var s:roadGraph.segments())if(s.properties().find(GradeAwareRoadPlanner.GRADED).isPresent()) {
+                int level=TerrainPlatform.requiredElevation(s.properties());desired.put(s.id(),level);
+                var hard=fixed.get(s.id());fixed.put(s.id(),new Interval(Math.max(hard.minimum(),level),Math.min(hard.maximum(),level)));
+            }
+            desiredElevations=Map.copyOf(desired);intervals=Map.copyOf(fixed);
+        }
+        if(target!=null) {
+            var limits=new HashMap<PlanElementId,NeighborhoodLevels.Interval>();
+            int depth=request.settings().districts().elevation().preferredDepth();
+            for(var segment:roadGraph.segments()) {
+                var bounds=AxisAlignedGridCorridor.bounds(nodesById.get(segment.startNodeId()).point(),nodesById.get(segment.endNodeId()).point(),segment.width());
+                int low=Integer.MIN_VALUE,high=Integer.MAX_VALUE;
+                for(int z=bounds.minZ();z<bounds.maxZExclusive();z++)for(int x=bounds.minX();x<bounds.maxXExclusive();x++) {
+                    var cell=request.survey().findCell(new com.cybersammy.citiesarise.core.geometry.GridPoint(x,z));
+                    if(cell.isEmpty())continue;
+                    int ground=cell.orElseThrow().height()-1;
+                    low=Math.max(low,ground-depth);high=Math.min(high,ground+depth);
+                }
+                var hard=intervals.get(segment.id());low=Math.max(low,hard.minimum());high=Math.min(high,hard.maximum());
+                limits.put(segment.id(),new NeighborhoodLevels.Interval(low<=high?low:hard.minimum(),low<=high?high:hard.maximum(),desiredElevations.get(segment.id())));
+            }
+            var adjacency=new ArrayList<NeighborhoodLevels.Edge>();
+            for(var neighbors:segmentsByNode(roadGraph).values())for(int i=0;i<neighbors.size();i++)for(int j=i+1;j<neighbors.size();j++)
+                adjacency.add(new NeighborhoodLevels.Edge(neighbors.get(i),neighbors.get(j)));
+            desiredElevations=NeighborhoodLevels.choose(limits,adjacency,target);
+        }
         Map<PlanElementId, Integer> componentElevations = componentElevations(roadGraph, desiredElevations,intervals);
         List<RoadSegment> elevatedSegments = new ArrayList<>();
 

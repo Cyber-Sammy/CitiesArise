@@ -1,5 +1,11 @@
 # Cities Arise
 
+The [Skyline datapack](examples/datapacks/skyline/README.md) adds broad 29 x 25 block
+towers with 10, 12, 14 or 16 floors, two low-rise recipes, recessed two-block windows,
+projecting facades, setbacks, flat roofs and crowns. It uses 39 x 39 plots and
+five-block-wide roads. Enable it instead of the other example profile packs for
+new settlements; `scripts/generate_skyline_fixture.py` builds its installable ZIP.
+
 Parcel boundaries are configured through `planning.parcelLayout`: independent spacing, reserved road-connected alleys, compatible shared fences and explicit separate-boundary policy. Gates reserve open passages before props. The zoning fixture enables wood fences for homes and stone walls for workshops; [its authoring guide](examples/datapacks/zoning_fixture/AUTHORING_GUIDE.md#parcel-spacing-and-fences) describes the options. These changes apply to newly generated settlements and require the matching JAR and datapack.
 
 For pack installation, resource layout, directed joints, floor/room contracts,
@@ -1133,3 +1139,14 @@ Full-size residential examples now include a six-floor29x15 apartment block with
 ### Modular building roofs
 
 All six section-built fixture recipes now attach separate authored `roofs:*` modules to their actual top floor. Smaller houses choose deterministically between stepped pitched roofs with optional ridge caps; the apartment block uses terrace/parapet alternatives and is29 blocks high including the roof. The roof shares the existing ceiling layer, preserves a backed ladder and landing, and follows concave or narrowed top footprints. Legacy cottages/stacks and saved cities keep their previous geometry. Install matching JAR and datapack for new generation.
+
+
+### Coordinated district heights and winding climbs
+
+Datapacks can opt into `planning.districts.elevation` to prefer shared neighborhood heights. A fixed five-target search coordinates adjoining feasible pad and road groups, validates actual earthworks and adapter support, and retains multiple levels on stronger slopes. The zoning fixture enables this policy; omitted policies preserve legacy behavior. Houses remain level, and no district bounding rectangle is blanket-filled across voids or unreserved terrain.
+
+Road profiles prefer level reaches within existing cut/fill, shoulder, access, water and support limits. Critical local climbs reserve a winding corridor before parcel allocation; district links connect their actual prepared endpoint heights. A direct route plus at most twelve fixed detour corridors are tested, with bounded length and grade spacing. Lack of space does not authorize extreme fill or a road through another parcel. Exact accepted heights are frozen through existing recipe/snapshot storage. See the zoning fixture guide for authoring controls and limitations.
+
+Coordinated heights remain a preference within hard terrain limits. If they prevent district connections, one bounded retry retains local levels while preserving the configured road grade, terrace, support and earthwork limits.
+
+Diagnostic searches distinguish a time-limit stop from an exhausted search; use `citiesarise locate diagnostic next` to continue with unchecked candidates.

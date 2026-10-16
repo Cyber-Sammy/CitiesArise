@@ -80,7 +80,15 @@
           "buildingMargin": 4
         }
       ],
-      "parcelSizeFallback": true
+      "parcelSizeFallback": true,
+      "elevation": {
+        "enabled": true,
+        "preferredDepth": 3,
+        "maximumTerraces": 8,
+        "levelChangeCost": 80,
+        "roadRunPerRise": 6,
+        "maximumDetourLength": 96
+      }
     },
     "roadWidth": 5,
     "maxBuildableSlope": 0.75,

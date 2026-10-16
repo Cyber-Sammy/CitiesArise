@@ -35,6 +35,9 @@ public final class BigGlobeCompatibilityValidation {
         var server=event.getServer();var level=server.overworld();
         try {
             if(!level.getChunkSource().getGenerator().getClass().getName().contains("BigGlobe"))throw new IllegalStateException("Not a Big Globe world");
+            if(Boolean.getBoolean("citiesarise.requireWorldgenAtStartup") && !CitiesAriseWorldgenConfig.enabled())
+                throw new IllegalStateException("Startup regression requires city generation enabled before spawn selection");
+            LOG.info("BIG_GLOBE_VALIDATION STARTUP_COMPLETE worldgenAlreadyEnabled={} spawn={}",CitiesAriseWorldgenConfig.enabled(),level.getSharedSpawnPos());
             var field=CitiesAriseWorldgenConfig.class.getDeclaredField("ENABLED");field.setAccessible(true);
             var enabled=(ModConfigSpec.BooleanValue)field.get(null);enabled.set(true);enabled.clearCache();
             var structure=level.registryAccess().registryOrThrow(Registries.STRUCTURE).get(ResourceLocation.parse("cities_arise:suburb"));

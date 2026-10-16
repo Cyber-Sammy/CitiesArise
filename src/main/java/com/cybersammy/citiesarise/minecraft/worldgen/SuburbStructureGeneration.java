@@ -29,6 +29,13 @@ final class SuburbStructureGeneration {
     private PartitionedCityPlacement partitionedPlacement;
     synchronized void clearCache(){partitionedSource=null;partitionedPlacement=null;}
 
+    boolean reservesSpawn(long seed,int x,int z) {
+        if(!CitiesAriseWorldgenConfig.enabled())return false;
+        var profile=profileStore.find(new SettlementProfileId(CitiesAriseWorldgenConfig.settlementProfileId()));
+        if(profile.isEmpty())return false;
+        return WorldgenSpawnReservation.contains(seed,x,z,profile.orElseThrow().surveySize(),CitiesAriseWorldgenConfig.candidateRegionModulo());
+    }
+
     SuburbStructureGeneration(
             MinecraftSuburbPlanningService planningService,
             ReloadableSettlementProfileStore profileStore,

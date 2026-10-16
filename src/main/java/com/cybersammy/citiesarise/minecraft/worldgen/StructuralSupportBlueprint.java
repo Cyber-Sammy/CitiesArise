@@ -37,7 +37,7 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
         if(ownership!=null && (ownership.size().width()>128 || ownership.size().depth()>128))throw new IllegalArgumentException("Structural owner exceeds local start bounds");
         Objects.requireNonNull(settings);Objects.requireNonNull(ravines);
         if(ravines.enabled() && !settings.enabled()) throw new IllegalArgumentException("Ravine policy requires structural support");
-        if(constructionAllowance<0 || constructionAllowance>100000) throw new IllegalArgumentException("Invalid structural allowance");
+        if(constructionAllowance<0) throw new IllegalArgumentException("Invalid structural allowance");
         envelopes=List.copyOf(envelopes);materials=Map.copyOf(materials);
         if(envelopes.size()>4096) throw new IllegalArgumentException("Too many structural envelopes");
     }
@@ -71,9 +71,11 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
         return new StructuralSupportBlueprint(settings,envelopes,materials);
     }
     public StructuralSupportBlueprint withinConstructionBudget(long remaining) {
-        int limit=Math.max(settings.maximumVolume(),ravines.enabled() && ravines.mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FILL?ravines.maximumFillVolume():0);
-        return new StructuralSupportBlueprint(settings,envelopes,materials,(int)Math.clamp(remaining,0,limit),ravines,recipe,ownership,clearanceHeight,sharedBudget);
+        // Earthwork pays for clearance, junctions and supports together. Structural
+        // geometry has its own maximumVolume ceiling and must not cap this pool.
+        return new StructuralSupportBlueprint(settings,envelopes,materials,(int)Math.clamp(remaining,0,Integer.MAX_VALUE),ravines,recipe,ownership,clearanceHeight,sharedBudget);
     }
+
     public StructuralSupportBlueprint withRecipe(FinalTerrainPlanningRecipe recipe) {
         var policy=recipe.profile().ravineRoads();
         return new StructuralSupportBlueprint(settings,envelopes,materials,constructionAllowance,policy,

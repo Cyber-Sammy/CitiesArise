@@ -15,6 +15,35 @@ import net.neoforged.neoforge.gametest.*;
 @PrefixGameTestTemplate(false)
 public final class PlacementReadinessGameTests {
     @GameTest(template="empty")
+    public static void removedSubstrateChunkStillCompletesParentWithoutLoadingIt(GameTestHelper helper) {
+        var level=helper.getLevel();int x=helper.absolutePos(BlockPos.ZERO).getX()+32768,z=0,far=x+16384;
+        level.getChunk(x>>4,z>>4);
+        var source=new PlanElementId("test:empty-final-chunk");
+        var near=new DebugBlockPlacementOperation(new GridPoint(x,z),0,DebugPlacementRole.SUSPENDED_CONTENT,
+                source,OptionalInt.of(70),"minecraft:diamond_block",0);
+        var removed=new DebugBlockPlacementOperation(new GridPoint(far,z),0,DebugPlacementRole.TERRAIN_FILL,
+                source,OptionalInt.of(65),"minecraft:stone",0);
+        var original=SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(List.of(near,removed)));
+        var parent=new com.cybersammy.citiesarise.core.registry.SettlementIndex.Metadata("cities_arise:unbound",
+                "test:empty","test:empty-parent",x,z,x,z,far,z,Set.of(net.minecraft.world.level.ChunkPos.asLong(x>>4,z>>4),net.minecraft.world.level.ChunkPos.asLong(far>>4,z>>4)));
+        var queue=new PendingStructuralPlacement();queue.add("test:empty",source.value(),x,z,original,
+                new StructuralSupportBlueprint(StructuralSupportSettings.disabled(),List.of(),Map.of()),parent);
+        var saved=queue.save(new CompoundTag(),level.registryAccess());
+        var resolved=new CompoundTag();SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(List.of(near))).save(resolved);
+        saved.getList("Pending",Tag.TAG_COMPOUND).getCompound(0).put("Resolved",resolved);
+        queue=PendingStructuralPlacement.load(saved);queue.applyReady(level);queue.applyReady(level);
+        var entry=SettlementRegistry.get(level).entries().stream().filter(e->e.metadata().planId().equals(parent.planId()) && e.metadata().centerX()==x && e.metadata().centerZ()==z).findFirst().orElseThrow();
+        helper.assertTrue(entry.state().equals("PLACEMENT_COMPLETE"),"Removed substrate left phantom pending chunks");
+        helper.assertTrue(entry.metadata().dimension().equals(level.dimension().location().toString()),"Template dimension leaked into registry");
+        var doneOnly=queue.save(new CompoundTag(),level.registryAccess());
+        level.setBlock(new BlockPos(x,70,z),Blocks.EMERALD_BLOCK.defaultBlockState(),2);
+        PendingStructuralPlacement.load(doneOnly).add(level,"test:empty",source.value(),x,z,original,
+                new StructuralSupportBlueprint(StructuralSupportSettings.disabled(),List.of(),Map.of()),parent);
+        helper.assertTrue(level.getBlockState(new BlockPos(x,70,z)).is(Blocks.EMERALD_BLOCK),"Completed re-publication rebuilt authored blocks");
+        helper.assertTrue(level.getChunkSource().getChunkNow(far>>4,z>>4)==null,"No-work chunk was unnecessarily loaded");
+        helper.succeed();
+    }
+    @GameTest(template="empty")
     public static void neighborTowerInClearanceHaloCannotRejectOwnedParcel(GameTestHelper helper) {
         var source=new PlanElementId("test:clearance-owner");
         var owned=new com.cybersammy.citiesarise.core.geometry.GridBounds(new GridPoint(0,0),new com.cybersammy.citiesarise.core.geometry.GridSize(1,1));
@@ -34,6 +63,13 @@ public final class PlacementReadinessGameTests {
     }
     @GameTest(template="empty")
     public static void sharedCityBudgetUsesActualWorkAndSurvivesReload(GameTestHelper helper) {
+        verifySharedBudget(helper,false);
+    }
+    @GameTest(template="empty")
+    public static void structuralCeilingIsSeparateFromEarthworkBudget(GameTestHelper helper) {
+        verifySharedBudget(helper,true);
+    }
+    private static void verifySharedBudget(GameTestHelper helper,boolean structuralLimit) {
         var level=helper.getLevel();var origin=helper.absolutePos(new BlockPos(0,4,0));
         int x=origin.getX(),z=origin.getZ(),y=origin.getY();level.getChunk(x>>4,z>>4);
         for(int xx=x;xx<x+3;xx++)for(int yy=y-8;yy<=y+20;yy++)
@@ -51,10 +87,11 @@ public final class PlacementReadinessGameTests {
             var bounds=new com.cybersammy.citiesarise.core.geometry.GridBounds(point,new com.cybersammy.citiesarise.core.geometry.GridSize(1,1));
             var snapshot=SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(List.of(new DebugBlockPlacementOperation(point,0,
                     DebugPlacementRole.PARCEL_YARD,source,OptionalInt.of(y),"minecraft:grass_block",0))));
-            var bp=new StructuralSupportBlueprint(new StructuralSupportSettings(true,32,12,4,1000,5),List.of(
+            var bp=new StructuralSupportBlueprint(new StructuralSupportSettings(true,32,12,4,structuralLimit?4:1000,5),List.of(
                     new com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Envelope(source,bounds,y,
-                            com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Kind.PARCEL)),Map.of(),4,
+                            com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Kind.PARCEL)),Map.of(),structuralLimit?1000:4,
                     com.cybersammy.citiesarise.core.road.RavineRoadSettings.disabled(),null,bounds,16,true);
+            helper.assertTrue(bp.withinConstructionBudget(250000).constructionAllowance()==250000,"Earthwork pool was capped by structural volume");
             helper.assertTrue(StructuralSupportBlueprint.load(bp.save()).sharedBudget(),"Shared budget flag not persisted");
             queue.add("test:budget",source.value(),x,z,snapshot,bp,parent);
         }
@@ -64,7 +101,7 @@ public final class PlacementReadinessGameTests {
         var saved=queue.save(new CompoundTag(),level.registryAccess());var done=saved.getCompound("Completed");
         helper.assertTrue(done.getString("test:budget-owner-0").equals("PLACED"),"Large owner could not borrow unused budget");
         helper.assertTrue(done.getString("test:budget-owner-1").equals("PLACED"),"Remaining budget not reusable after reload");
-        helper.assertTrue(done.getString("test:budget-owner-2").equals("CITY_CONSTRUCTION_VOLUME_LIMIT"),"Shared ceiling multiplied across owners");
+        helper.assertTrue(done.getString("test:budget-owner-2").equals(structuralLimit?"CITY_STRUCTURAL_VOLUME_LIMIT":"CITY_CONSTRUCTION_VOLUME_LIMIT"),"Shared ceiling multiplied across owners");
         helper.assertTrue(saved.getCompound("ConstructionSpent").getLong("test:budget-city")==4,"Shared work charged incorrectly");
         helper.succeed();
     }

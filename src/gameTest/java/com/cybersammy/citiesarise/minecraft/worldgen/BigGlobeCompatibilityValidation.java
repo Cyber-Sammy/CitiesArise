@@ -28,6 +28,7 @@ public final class BigGlobeCompatibilityValidation {
     private static BlockPos expected;
     private static int ticks;
     private static ServerLevel checkedLevel;
+    private static final java.util.Set<String> expectedOwners=new java.util.HashSet<>();
     private static final org.slf4j.Logger LOG=org.slf4j.LoggerFactory.getLogger(BigGlobeCompatibilityValidation.class);
 
     @SubscribeEvent public static void start(ServerStartedEvent event) {
@@ -66,7 +67,9 @@ public final class BigGlobeCompatibilityValidation {
                     report("STARTS_VALID",found.toString());
                     var placement=(RandomSpreadStructurePlacement)level.registryAccess().registryOrThrow(Registries.STRUCTURE_SET)
                             .get(ResourceLocation.parse("cities_arise:suburb")).placement();
-                    // Choose a local owner containing an authored lamp, then let Big Globe itself generate its chunks.
+                    boolean allOwners=Boolean.getBoolean("citiesarise.validateWholeCity");
+                    String parent="cities_arise:debug_suburb_"+found.region().x()+"_"+found.region().z();
+                    // Full-city mode checks every owner, including road-only fragments.
                     for(int dz:new int[]{0,-1,1,-2,2})for(int dx:new int[]{0,-1,1,-2,2}) {
                         var owner=new SettlementRegion(found.region().x()+dx,found.region().z()+dz);
                         var chunk=WorldgenSettlementLocator.potentialChunkForRegion(placement,level.getSeed(),owner);
@@ -75,13 +78,31 @@ public final class BigGlobeCompatibilityValidation {
                                 level.getStructureManager(),level.getSeed(),chunk,0,level,structure.biomes()::contains);
                         if(!nativeStart.isValid())continue;
                         var piece=(CitiesAriseSuburbPiece)nativeStart.getPieces().getFirst();
-                        var snapshot=SuburbStructurePlacementSnapshot.load(piece.createTag(StructurePieceSerializationContext.fromLevel(level)));
+                        var tag=piece.createTag(StructurePieceSerializationContext.fromLevel(level));
+                        if(allOwners && !tag.getString("SettlementPlan").startsWith(parent+"/"))continue;
+                        var snapshot=SuburbStructurePlacementSnapshot.load(tag);
+                        if(allOwners) {
+                            expectedOwners.add(tag.getString("SettlementPlan"));
+                            loadOwner(level,structure,chunk,piece.getBoundingBox());
+                            // Exercise publication for both fresh and persisted FULL starts.
+                            PendingStructuralPlacement.get(level).add(level,tag.getString("SettlementProfile"),tag.getString("SettlementPlan"),
+                                    tag.getInt("SettlementCenterX"),tag.getInt("SettlementCenterZ"),snapshot,
+                                    StructuralSupportBlueprint.load(tag.getCompound("StructuralBlueprint")),
+                                    SettlementRegistry.readMetadata(tag.getCompound("ParentCity")));
+                            continue;
+                        }
                         var lamp=snapshot.operations().stream().filter(o->o.material().equals("minecraft:sea_lantern")).findFirst();
                         if(lamp.isEmpty())continue;
                         var op=lamp.orElseThrow();expected=new BlockPos(op.point().x(),op.platformY().orElseThrow()+op.verticalOffset(),op.point().z());
                         report("GENERATING_CHUNKS","Local owner "+owner+"; start="+chunk+"; lamp="+expected);
                         loadOwner(level,structure,chunk,piece.getBoundingBox());checkedLevel=level;
                         report("CHUNKS_GENERATED", "Waiting for persistent placement at "+expected);return;
+                    }
+                    if(allOwners) {
+                        if(expectedOwners.size()!=10)throw new IllegalStateException("Expected ten full-city owners, got "+expectedOwners);
+                        checkedLevel=level;
+                        report("ALL_CHUNKS_GENERATED","Waiting for every owner: "+expectedOwners);
+                        return;
                     }
                     throw new IllegalStateException("No lamp-bearing local owner");
                 } catch(Throwable failure){fail(server,failure);}
@@ -105,6 +126,19 @@ public final class BigGlobeCompatibilityValidation {
     @SubscribeEvent public static void tick(ServerTickEvent.Post event) {
         if(checkedLevel==null)return;
         try {
+            if(!expectedOwners.isEmpty()) {
+                var saved=PendingStructuralPlacement.get(checkedLevel).save(new net.minecraft.nbt.CompoundTag(),checkedLevel.registryAccess());
+                var done=saved.getCompound("Completed");
+                for(var id:expectedOwners)if(done.contains(id) && !done.getString(id).equals("PLACED"))
+                    throw new IllegalStateException("City owner rejected: "+id+"="+done.getString(id));
+                if(expectedOwners.stream().allMatch(id->done.getString(id).equals("PLACED"))) {
+                    var entry=SettlementRegistry.get(checkedLevel).entries().stream().filter(e->e.metadata().planId().equals("cities_arise:debug_suburb_9_87") && e.metadata().dimension().equals(checkedLevel.dimension().location().toString())).findFirst().orElseThrow();
+                    if(!entry.state().equals("PLACEMENT_COMPLETE"))throw new IllegalStateException("All owners done but registry incomplete: "+entry.state());
+                    report("PASSED","All ten city owners PLACED; registry="+entry.state()+"; construction="+saved.getCompound("ConstructionSpent")+"; structural="+saved.getCompound("StructuralSpent"));
+                    checkedLevel=null;event.getServer().halt(false);
+                } else if(++ticks>1600)throw new IllegalStateException("Whole-city placement timed out: "+done);
+                return;
+            }
             if(checkedLevel.getBlockState(expected).is(net.minecraft.world.level.block.Blocks.SEA_LANTERN)) {
                 report("PASSED","Automatic Big Globe city start and authored building lamp placed at "+expected
                         +"; registered cities="+SettlementRegistry.get(checkedLevel).entries().size());

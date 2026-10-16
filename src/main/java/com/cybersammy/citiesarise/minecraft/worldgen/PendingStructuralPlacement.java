@@ -14,6 +14,7 @@ final class PendingStructuralPlacement extends SavedData {
     private final Map<String,Entry> pending=new LinkedHashMap<>();
     private final Map<String,String> completed=new LinkedHashMap<>();
     private final Map<String,Long> constructionSpent=new HashMap<>();
+    private final Map<String,Long> structuralSpent=new HashMap<>();
     private final NearbyPlacementCompletion completion=new NearbyPlacementCompletion();
     private static final org.slf4j.Logger LOG=com.mojang.logging.LogUtils.getLogger();
     private static final class Entry {
@@ -54,6 +55,19 @@ final class PendingStructuralPlacement extends SavedData {
         if(!level.getServer().isSameThread()) throw new IllegalStateException("Structural placement requires server thread");
         return level.getDataStorage().computeIfAbsent(new Factory<>(PendingStructuralPlacement::new,
                 (tag,lookup)->load(tag)),"cities_arise_structural_placement");
+    }
+    void add(ServerLevel level,String profile,String id,int x,int z,SuburbStructurePlacementSnapshot snapshot,
+            StructuralSupportBlueprint blueprint,SettlementIndex.Metadata parent) {
+        add(profile,id,x,z,snapshot,blueprint,parent);
+        // Re-publication of an already completed native start must also repair parent
+        // progress for original chunks whose operations disappeared during resolution.
+        if("PLACED".equals(completed.get(id)) && parent!=null)recordOriginalChunks(level,snapshot,parent);
+    }
+    private static void recordOriginalChunks(ServerLevel level,SuburbStructurePlacementSnapshot snapshot,SettlementIndex.Metadata parent) {
+        var metadata=new SettlementIndex.Metadata(level.dimension().location().toString(),parent.profile(),parent.planId(),
+                parent.centerX(),parent.centerZ(),parent.minX(),parent.minZ(),parent.maxX(),parent.maxZ(),parent.placementChunks());
+        for(var chunk:snapshot.operations().stream().map(op->PlacementChunk.containing(op.point())).distinct().toList())
+            SettlementRegistry.get(level).placed(metadata,net.minecraft.world.level.ChunkPos.asLong(chunk.x(),chunk.z()),0);
     }
     void add(String profile,String id,int x,int z,SuburbStructurePlacementSnapshot snapshot,StructuralSupportBlueprint blueprint) {
         add(profile,id,x,z,snapshot,blueprint,null);
@@ -115,9 +129,15 @@ final class PendingStructuralPlacement extends SavedData {
                 if(result.plan().isPresent() && e.blueprint.sharedBudget()) {
                     String city=e.parent==null?e.id:e.parent.planId();
                     long spent=constructionSpent.getOrDefault(city,0L);
+                    long supports=structuralSpent.getOrDefault(city,0L);
                     if(result.construction()>e.blueprint.constructionAllowance()-spent)
                         result=new StructuralSupportPlacement.Resolution(Optional.empty(),"CITY_CONSTRUCTION_VOLUME_LIMIT",0,0);
-                    else constructionSpent.put(city,spent+result.construction());
+                    else if(result.structuralVolume()>e.blueprint.settings().maximumVolume()-supports)
+                        result=new StructuralSupportPlacement.Resolution(Optional.empty(),"CITY_STRUCTURAL_VOLUME_LIMIT",0,0);
+                    else {
+                        constructionSpent.put(city,spent+result.construction());
+                        structuralSpent.put(city,supports+result.structuralVolume());
+                    }
                 }
                 if(result.plan().isEmpty()) {
                     completed.put(e.id,result.reason());pending.remove(e.id);setDirty();
@@ -128,7 +148,12 @@ final class PendingStructuralPlacement extends SavedData {
                 LOG.info("Final-terrain structural placement accepted {}: suspendedColumns={}, supportBlocks={}",e.id,result.suspendedColumns(),result.supports());
             }
             e.prepareResolved();var plan=e.placementCache;var index=e.indexCache;var chunks=e.chunkCache;
-            if(e.placed.containsAll(chunks)) { completed.put(e.id,"PLACED");pending.remove(e.id);setDirty();return; }
+            if(e.placed.containsAll(chunks)) {
+                // Final support resolution can remove every old substrate operation in
+                // a chunk. It has no remaining work, but still belongs to the parent plan.
+                if(e.parent!=null)recordOriginalChunks(level,e.original,e.parent);
+                completed.put(e.id,"PLACED");pending.remove(e.id);setDirty();return;
+            }
             var next=chunks.stream().filter(c->!e.placed.contains(c)
                     && level.getChunkSource().getChunkNow(c.x(),c.z())!=null).findFirst();
             if(next.isEmpty())continue;
@@ -164,8 +189,14 @@ final class PendingStructuralPlacement extends SavedData {
         var spent=tag.getCompound("ConstructionSpent");
         for(var city:spent.getAllKeys()) {
             long value=spent.getLong(city);
-            if(value<0 || value>100000)throw new IllegalArgumentException("Invalid shared construction budget");
+            if(value<0 || value>Integer.MAX_VALUE)throw new IllegalArgumentException("Invalid shared construction budget");
             data.constructionSpent.put(city,value);
+        }
+        var structural=tag.getCompound("StructuralSpent");
+        for(var city:structural.getAllKeys()) {
+            long value=structural.getLong(city);
+            if(value<0 || value>100000)throw new IllegalArgumentException("Invalid shared structural budget");
+            data.structuralSpent.put(city,value);
         }
         var done=tag.getCompound("Completed");done.getAllKeys().forEach(id->data.completed.put(id,done.getString(id)));
         for(var item:tag.getList("Pending",Tag.TAG_COMPOUND)) {
@@ -183,7 +214,7 @@ final class PendingStructuralPlacement extends SavedData {
         return data;
     }
     @Override public CompoundTag save(CompoundTag tag,HolderLookup.Provider lookup) {
-        tag.putInt("Version",1);var spent=new CompoundTag();constructionSpent.forEach(spent::putLong);tag.put("ConstructionSpent",spent);var done=new CompoundTag();completed.forEach(done::putString);tag.put("Completed",done);
+        tag.putInt("Version",1);var spent=new CompoundTag();constructionSpent.forEach(spent::putLong);tag.put("ConstructionSpent",spent);var structural=new CompoundTag();structuralSpent.forEach(structural::putLong);tag.put("StructuralSpent",structural);var done=new CompoundTag();completed.forEach(done::putString);tag.put("Completed",done);
         var list=new ListTag();
         for(var e:pending.values()) {
             var row=new CompoundTag();row.putString("Id",e.id);row.putString("Profile",e.profile);row.putInt("X",e.centerX);row.putInt("Z",e.centerZ);

@@ -8,9 +8,9 @@ import net.minecraft.commands.arguments.blocks.BlockStateParser;
 
 /** Resolves final terrain geometry into saved explicit operations before any placement is published. */
 public final class StructuralSupportPlacement {
-    public record Resolution(Optional<DebugPlacementPlan> plan,String reason,int suspendedColumns,int supports,long construction) {
+    public record Resolution(Optional<DebugPlacementPlan> plan,String reason,int suspendedColumns,int supports,long construction,long structuralVolume) {
         public Resolution(Optional<DebugPlacementPlan> plan,String reason,int suspendedColumns,int supports) {
-            this(plan,reason,suspendedColumns,supports,0);
+            this(plan,reason,suspendedColumns,supports,0,0);
         }
     }
     private StructuralSupportPlacement() { }
@@ -125,7 +125,7 @@ public final class StructuralSupportPlacement {
         // Removals run before authored content; their saved positions also participate in debug undo.
         var ordered=new ArrayList<>(operations.values());
         ordered.sort(Comparator.comparingInt(op->op.role()==DebugPlacementRole.TERRAIN_CLEARANCE?0:1));
-        return new Resolution(Optional.of(new DebugPlacementPlan(ordered)),"ACCEPTED",columns.size(),addedSupports,construction);
+        return new Resolution(Optional.of(new DebugPlacementPlan(ordered)),"ACCEPTED",columns.size(),addedSupports,construction,ownedGeometry);
     }
     private static boolean roadEdge(StructuralSupportBlueprint blueprint,int x,int z) {
         for(int[] delta:new int[][]{{1,0},{-1,0},{0,1},{0,-1}}) {

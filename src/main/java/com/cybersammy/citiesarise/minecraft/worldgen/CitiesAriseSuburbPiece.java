@@ -98,7 +98,7 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
         if(structuralBlueprint!=null && structuralBlueprint.settings().enabled()) {
             var server=level.getLevel();
             ServerThreadPublication.publish(server.getServer(),()->PendingStructuralPlacement.get(server)
-                    .add(profileId,planId,centerX,centerZ,snapshot,structuralBlueprint,sharedParent));
+                    .add(server,profileId,planId,centerX,centerZ,snapshot,structuralBlueprint,sharedParent));
             return;
         }
         PlacementChunk chunk = new PlacementChunk(chunkPos.x, chunkPos.z);

@@ -131,8 +131,15 @@ final class RegionalElevationPlanner {
             int maximum = Integer.MAX_VALUE;
             for (BuildingSlot slot : plan.buildingSlots()) {
                 if (!slot.parcelId().equals(parcel.id())) continue;
-                var access = BuildingAccessResolver.resolve(roads,
-                        new ElevationZone(slot.id(), ElevationZoneType.BUILDING_PAD, slot.bounds(), 0));
+                var buildingZone = new ElevationZone(slot.id(), ElevationZoneType.BUILDING_PAD, slot.bounds(), 0);
+                var access = BuildingAccessResolver.resolve(roads,buildingZone);
+                if(request.settings().districts().grid().enabled()) {
+                    var terrain = ParcelPlatformElevation.interval(parcel.bounds(),
+                            point->TerrainPlatform.requiredTerrainCell(request,point).height()-1,
+                            request.settings(),Integer.MIN_VALUE,Integer.MAX_VALUE,false);
+                    access = BuildingAccessResolver.resolve(roads,buildingZone,
+                            request.settings().terrainTransitions().buildingAccessRunPerRise(),terrain.minimum(),terrain.maximum());
+                }
                 int rise = access.distance() / request.settings().terrainTransitions().buildingAccessRunPerRise();
                 minimum = Math.max(minimum, access.roadZone().targetElevation() - rise);
                 maximum = Math.min(maximum, access.roadZone().targetElevation() + rise);
@@ -221,7 +228,7 @@ final class RegionalElevationPlanner {
         addBuildingAccessTransitions(
                 zones,
                 request.settings().terrainTransitions().buildingAccessRunPerRise(),
-                transitions
+                transitions, request.settings().districts().grid().enabled()
         );
         return List.copyOf(transitions);
     }
@@ -257,12 +264,20 @@ final class RegionalElevationPlanner {
             int minimumRunPerRise,
             List<ElevationTransition> transitions
     ) {
+        addBuildingAccessTransitions(zones,minimumRunPerRise,transitions,false);
+    }
+
+    private static void addBuildingAccessTransitions(List<ElevationZone> zones,int minimumRunPerRise,
+            List<ElevationTransition> transitions,boolean gradeAware) {
         List<ElevationZone> buildingZones = zones.stream()
                 .filter(zone -> zone.type() == ElevationZoneType.BUILDING_PAD)
                 .sorted(Comparator.comparing(zone -> zone.sourceElementId().value()))
                 .toList();
         for (ElevationZone buildingZone : buildingZones) {
-            BuildingAccessResolver.BuildingAccess access = BuildingAccessResolver.resolve(zones, buildingZone);
+            BuildingAccessResolver.BuildingAccess access = gradeAware
+                    ? BuildingAccessResolver.resolve(zones,buildingZone,minimumRunPerRise,
+                            buildingZone.targetElevation(),buildingZone.targetElevation())
+                    : BuildingAccessResolver.resolve(zones, buildingZone);
             transitions.add(new ElevationTransition(
                     ElevationTransitionType.BUILDING_ACCESS,
                     access.roadZone().sourceElementId(),

@@ -103,7 +103,7 @@ public final class StructuralSupportPlacement {
                         || previous.role()==DebugPlacementRole.FOUNDATION)) operations.put(key(op),op);
             else if(operations.putIfAbsent(key(op),op)==null) addedSupports++;
         }
-        int cleared=FinalTerrainClearance.add(operations,original,blueprint.envelopes(),ground,12);
+        int cleared=FinalTerrainClearance.add(operations,original,blueprint.envelopes(),ground,blueprint.clearanceHeight());
         if(cleared<0) return new Resolution(Optional.empty(),"CLEARANCE_HEIGHT_LIMIT",0,0);
         for(var cell:fillResult.cells()) {
             var p=cell.position();var op=new DebugBlockPlacementOperation(new GridPoint(p.x(),p.z()),0,DebugPlacementRole.SUSPENDED_CONTENT,

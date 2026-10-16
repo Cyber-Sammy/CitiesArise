@@ -98,7 +98,8 @@ class CityGridPlannerTest {
         assertEquals(16,result.plan().orElseThrow().parcels().size());
         var prepared=result.terrainPreparationPlan().orElseThrow();
         assertTrue(prepared.constructionVolume()<=p.suburbPlanningSettings().maxEarthworkVolume());
-        assertTrue(prepared.columns().stream().allMatch(c->c.cutDepth()<=12 && c.fillDepth()<=16));
+        assertTrue(prepared.columns().stream().allMatch(c->c.cutDepth()<=p.suburbPlanningSettings().maxCutDepth()
+                && c.fillDepth()<=p.suburbPlanningSettings().maxFillDepth()));
         assertTrue(prepared.columns().stream().anyMatch(c->c.cutDepth()>4 || c.fillDepth()>4));
     }
     @Test void aLateUnsupportedStreetPointKeepsTheConnectedAlternativeFrontages() throws Exception {

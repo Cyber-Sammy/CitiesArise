@@ -61,8 +61,8 @@ public final class LargeCityGameTests {
         var logging=(ModConfigSpec.BooleanValue)loggingField.get(null);boolean oldLogging=logging.get();
         var pieces=new ArrayList<CitiesAriseSuburbPiece>();long started=System.nanoTime();
         try {
-            enabled.set(true);modulo.set(1);enabled.clearCache();modulo.clearCache();logging.set(true);
-            helper.assertTrue(CitiesAriseWorldgenConfig.enabled() && CitiesAriseWorldgenConfig.candidateRegionModulo()==1,"Native config overrides did not take effect");
+            enabled.set(true);modulo.set(16);enabled.clearCache();modulo.clearCache();logging.set(true);
+            helper.assertTrue(CitiesAriseWorldgenConfig.enabled() && CitiesAriseWorldgenConfig.candidateRegionModulo()==16,"Native config overrides did not take effect");
             for(var chunk:List.of(new ChunkPos(24,24),new ChunkPos(8,8),new ChunkPos(32,32))) {
                 var start=structure.generate(level.registryAccess(),generator,generator.getBiomeSource(),level.getChunkSource().randomState(),
                     level.getStructureManager(),level.getSeed(),chunk,0,level,structure.biomes()::contains);

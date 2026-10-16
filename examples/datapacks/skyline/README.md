@@ -40,21 +40,28 @@ Each block contains four plots in a 2 x 2 arrangement. Streets share an orthogon
 lattice; height changes can still introduce short graded sections. Homes within a
 block seek a shared elevation, while separate blocks can occupy different terraces.
 Unusable plots and street edges are omitted individually. Plots remain when they
-have another safe street frontage in the connected city. At least 32 plots must
+have another safe street frontage in the connected city. At least 24 plots must
 remain. Terrain therefore affects the final city size and search success.
-The large profile allows up to 12 blocks of cut and 16 blocks of fill/foundation,
+The large profile allows up to 16 blocks of cut and 16 blocks of fill/foundation,
 with a one-million-block earthwork cap. Shared block levels now prefer up to eight
 blocks of cut/fill, so moderate hills are terraced instead of splitting every plot
 onto its own level. The slope threshold increases from two to four. This changes
 the Skyline profile only; other packs retain their existing terrain policy.
-Actual preparation still respects the
-12/16 depth limits, total earthwork budget, water avoidance and solid-ground support.
+Actual preparation still respects the depth limits, total earthwork budget, water
+avoidance and solid-ground support. Equally close street frontages are compared
+for a feasible entrance grade before rejecting a plot; access never jumps across
+a neighboring plot to reach a more distant road.
 
 The enlarged city is generated through coordinated local structure starts, each
 owning a disjoint part of the city. Reloaded pieces retain their common city identity
 and frozen content. The pack overrides the suburb structure set to allow all local
 starts; it omits the default per-start vanilla-village exclusion, which would leave
 holes in a large city. Other example packs retain their existing structure rules.
+Candidate density accounts for the parent's 6 x 6 reservation: the configured
+`candidateRegionModulo` is divided by 36, rounded up, for partitioned cities only.
+The default 16 therefore considers every large parent, already 768 blocks apart,
+instead of discarding another fifteen out of sixteen. Locate and automatic world
+generation use the same selection. Ordinary profiles keep their exact candidate set.
 Bridge and fill ravine policies are supported; large partitioned profiles cannot use
 `follow_edge`. This version requires the matching large-city mod JAR.
 
@@ -69,7 +76,8 @@ Bridge and fill ravine policies are supported; large partitioned profiles cannot
    Saved settlements retain their frozen content and are not rebuilt by a reload.
 4. Search with `/citiesarise locate diagnostic`. If the time limit ends without a
    result, `/citiesarise locate diagnostic next` continues unchecked candidates in
-   the same server session.
+   the same server session. If the radius is exhausted, move to another area or
+   increase `worldgen.locateSearchRadiusRegions`; repeating `next` cannot extend it.
 
 The ZIP has `pack.mcmeta` at its root; do not wrap it in an extra directory.
 

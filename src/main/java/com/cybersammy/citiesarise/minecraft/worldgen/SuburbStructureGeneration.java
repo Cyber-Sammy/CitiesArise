@@ -59,7 +59,7 @@ final class SuburbStructureGeneration {
         SettlementProfile profile = optionalProfile.get();
         var localRegion=region;
         region=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.parent(region,profile.surveySize());
-        if(!candidateSelector.isCandidate(context.seed(),region,CitiesAriseWorldgenConfig.candidateRegionModulo()))return Optional.empty();
+        if(!candidateSelector.isCandidate(context.seed(),region,CitiesAriseWorldgenConfig.candidateRegionModulo(),profile.surveySize()))return Optional.empty();
         if(!com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,profile.surveySize(),context.chunkPos().x,context.chunkPos().z)) return Optional.empty();
         var cityCenter=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.center(region,profile.surveySize());
         center=new BlockPos(cityCenter.x(),center.getY(),cityCenter.z());

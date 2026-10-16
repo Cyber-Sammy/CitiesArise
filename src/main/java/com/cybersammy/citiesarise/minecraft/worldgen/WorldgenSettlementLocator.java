@@ -81,7 +81,7 @@ public final class WorldgenSettlementLocator {
                 CitiesAriseWorldgenConfig.locateMaxCandidateAttempts(),
                 ranked ? CitiesAriseWorldgenConfig.locateImprovementCandidateAttempts() : 0,
                 region -> !skipped.contains(region) && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,context.surveySize())
-                        && candidateSelector.isCandidate(worldSeed, region, regionModulo)
+                        && candidateSelector.isCandidate(worldSeed, region, regionModulo,context.surveySize())
                         && placement.isStructureRegion(region)
                         && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,context.surveySize(),
                                 placement.potentialChunk(region).x,placement.potentialChunk(region).z),
@@ -117,7 +117,7 @@ public final class WorldgenSettlementLocator {
         return PotentialRegionSearch.find(SettlementRegion.fromBlockPosition(origin.getX(), origin.getZ()),
                 CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
                 region -> com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,size) && candidateSelector.isCandidate(level.getSeed(), region,
-                        CitiesAriseWorldgenConfig.candidateRegionModulo()) && context.isStructureRegion(region)
+                        CitiesAriseWorldgenConfig.candidateRegionModulo(),size) && context.isStructureRegion(region)
                         && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,size,
                                 context.potentialChunk(region).x,context.potentialChunk(region).z))
                 .map(context::locatePosition);

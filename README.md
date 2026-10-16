@@ -6,7 +6,10 @@ projecting facades, setbacks, flat roofs and crowns. It uses 39 x 39 plots and
 five-block-wide roads. Its large-city profile targets 80 buildings in 20 orthogonal
 blocks over a 540 x 540 survey, with coordinated elevations within each block.
 Skyline prefers up to eight blocks of cut/fill for shared terraces, within hard
-limits of twelve blocks of cut, sixteen of fill and one million earthwork blocks.
+limits of sixteen blocks of cut/fill and one million earthwork blocks. Partial
+Skyline cities may retain 24 or more safe plots. Partitioned-city candidate density
+accounts for the existing 6 x 6 reservation instead of applying the full ordinary
+region divisor a second time; diagnostic search and world generation agree.
 Use the matching large-city JAR. Enable it instead of the other example profile packs for
 new settlements; `scripts/generate_skyline_fixture.py` builds its installable ZIP.
 

@@ -10,6 +10,26 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 final class BuildingAccessResolverTest {
+    @Test void selectsReachableFrontageInsteadOfAnEquallyCloseCliff() {
+        var north=road("a_north",0,0,8,1);
+        var south=new ElevationZone(id("z_south"),ElevationZoneType.ROAD_SEGMENT,bounds(0,6,8,1),78);
+        var building=new ElevationZone(id("building"),ElevationZoneType.BUILDING_PAD,bounds(2,2,3,3),78);
+        assertEquals(north,BuildingAccessResolver.resolve(List.of(north,south),building).roadZone());
+        assertEquals(south,BuildingAccessResolver.resolve(List.of(north,south),building,2,78,78).roadZone());
+        assertEquals(south,BuildingAccessResolver.resolve(List.of(south,north),building,2,77,79).roadZone());
+    }
+    @Test void doesNotChooseADistantRoadAcrossAnotherParcel() {
+        var nearest=road("near",0,0,8,1);
+        var distant=new ElevationZone(id("far"),ElevationZoneType.ROAD_SEGMENT,bounds(0,20,8,1),78);
+        var building=new ElevationZone(id("building"),ElevationZoneType.BUILDING_PAD,bounds(2,2,3,3),78);
+        assertEquals(nearest,BuildingAccessResolver.resolve(List.of(nearest,distant),building,2,78,78).roadZone());
+    }
+    @Test void aGradeCompatibleCornerDoesNotMoveTheAuthoredFacadeEntrance() {
+        var centered=road("centered",0,0,31,1);
+        var corner=new ElevationZone(id("corner"),ElevationZoneType.ROAD_SEGMENT,bounds(0,32,3,1),78);
+        var building=new ElevationZone(id("building"),ElevationZoneType.BUILDING_PAD,bounds(2,2,27,29),78);
+        assertEquals(centered,BuildingAccessResolver.resolve(List.of(centered,corner),building,2,78,78).roadZone());
+    }
     @Test
     void selectsTheBuildingSideFacingTheNearestRoad() {
         ElevationZone road = road("road", 0, 5, 8, 1);

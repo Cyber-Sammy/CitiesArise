@@ -57,9 +57,10 @@ final class SuburbStructureGeneration {
         }
 
         SettlementProfile profile = optionalProfile.get();
+        long worldSeed=StructureWorldSeeds.resolve(context.chunkGenerator(),context.seed());
         var localRegion=region;
         region=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.parent(region,profile.surveySize());
-        if(!candidateSelector.isCandidate(context.seed(),region,CitiesAriseWorldgenConfig.candidateRegionModulo(),profile.surveySize()))return Optional.empty();
+        if(!candidateSelector.isCandidate(worldSeed,region,CitiesAriseWorldgenConfig.candidateRegionModulo(),profile.surveySize()))return Optional.empty();
         if(!com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,profile.surveySize(),context.chunkPos().x,context.chunkPos().z)) return Optional.empty();
         var cityCenter=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.center(region,profile.surveySize());
         center=new BlockPos(cityCenter.x(),center.getY(),cityCenter.z());
@@ -70,7 +71,7 @@ final class SuburbStructureGeneration {
                 context.heightAccessor().getHeight()
         );
         StructurePlanningContext planningContext = new StructurePlanningContext(
-                context.seed(),
+                worldSeed,
                 profile.id(),
                 profile.surveySize(),
                 profile.suburbPlanningSettings(),
@@ -91,13 +92,18 @@ final class SuburbStructureGeneration {
             var prepared=partitioned(result,profile,center);
             var part=prepared.part(localRegion);if(part.isEmpty())return Optional.empty();
             var local=part.orElseThrow();var box=boundingBox(local.snapshot(),profile,context);
+            // Adjacent owners belong to one city. A read-only clearance halo must not make
+            // their structure pieces overlap in generators which resolve structure collisions.
+            var owner=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.owner(localRegion);
+            box=new BoundingBox(Math.max(box.minX(),owner.minX()),box.minY(),Math.max(box.minZ(),owner.minZ()),
+                    Math.min(box.maxX(),owner.maxXExclusive()-1),box.maxY(),Math.min(box.maxZ(),owner.maxZExclusive()-1));
             int startX=context.chunkPos().x,startZ=context.chunkPos().z;
             if(Math.floorDiv(box.minX(),16)<startX-8 || Math.floorDiv(box.maxX(),16)>startX+8
                     || Math.floorDiv(box.minZ(),16)<startZ-8 || Math.floorDiv(box.maxZ(),16)>startZ+8)return Optional.empty();
             if(local.snapshot().operations().stream().anyMatch(op->op.platformY().isPresent()
                     && (op.platformY().getAsInt()+op.verticalOffset()<context.heightAccessor().getMinBuildHeight()
                     || op.platformY().getAsInt()+op.verticalOffset()>=context.heightAccessor().getMaxBuildHeight())))return Optional.empty();
-            return Optional.of(new Generation(center,new CitiesAriseSuburbPiece(box,local.snapshot(),profile.id().value(),
+            return Optional.of(new Generation(biomePosition(local.snapshot(),context.chunkPos()),new CitiesAriseSuburbPiece(box,local.snapshot(),profile.id().value(),
                     result.plan().id().child("owner-"+localRegion.x()+"-"+localRegion.z()).value(),center.getX(),center.getZ(),local.blueprint(),prepared.metadata)));
         }
 
@@ -119,7 +125,7 @@ final class SuburbStructureGeneration {
         int startX=context.chunkPos().x,startZ=context.chunkPos().z;
         if(Math.floorDiv(boundingBox.minX(),16)<startX-8 || Math.floorDiv(boundingBox.maxX(),16)>startX+8
                 || Math.floorDiv(boundingBox.minZ(),16)<startZ-8 || Math.floorDiv(boundingBox.maxZ(),16)>startZ+8) return Optional.empty();
-        return Optional.of(new Generation(center, new CitiesAriseSuburbPiece(boundingBox, snapshot,
+        return Optional.of(new Generation(biomePosition(snapshot,context.chunkPos()), new CitiesAriseSuburbPiece(boundingBox, snapshot,
                 profile.id().value(), result.plan().id().value(), center.getX(), center.getZ(),
                 profile.structuralSupports().enabled() && result.optionalTerrainPreparationPlan().isPresent()
                         ? StructuralSupportBlueprint.from(result.plan(),result.optionalTerrainPreparationPlan().orElseThrow(),profile.structuralSupports(),result.content().placementMaterials())
@@ -138,6 +144,29 @@ final class SuburbStructureGeneration {
         partitionedSource=result;
         partitionedPlacement=new PartitionedCityPlacement(placement,blueprint,profile.id().value(),result.plan().id().value(),center.getX(),center.getZ());
         return partitionedPlacement;
+    }
+
+    java.util.Set<SettlementRegion> requiredStartRegions(SuburbDebugPlanResult result,SettlementProfileId profileId) {
+        var profile=profileStore.find(profileId).orElseThrow(()->new IllegalStateException("Structure profile unavailable"));
+        if(!com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.partitioned(profile.surveySize()))return java.util.Set.of(result.region());
+        var bounds=result.surveyBounds();
+        var center=new BlockPos(bounds.minX()+bounds.size().width()/2,0,bounds.minZ()+bounds.size().depth()/2);
+        return java.util.Set.copyOf(partitioned(result,profile,center).owners());
+    }
+
+    /** Biome eligibility belongs to the occupied local surface, not the parent's sea-level centre. */
+    static BlockPos biomePosition(SuburbStructurePlacementSnapshot snapshot,net.minecraft.world.level.ChunkPos chunk) {
+        var surface=snapshot.operations().stream().filter(op->op.platformY().isPresent() && switch(op.role()) {
+            case PARCEL_YARD,PARCEL_BOUNDARY,BUILDING_FLOOR,ROAD_SURFACE,WORN_ROAD_SURFACE,
+                    ROAD_TRANSITION_STEP,BUILDING_ACCESS_SURFACE,BUILDING_ACCESS_STEP,BRIDGE_DECK,BRIDGE_STEP,
+                    TERRAIN_SURFACE,TERRAIN_CUT_SURFACE,PARCEL_ALLEY,PARCEL_PATH,ROAD_END_CURB -> true;
+            default -> false;
+        }).min(java.util.Comparator.comparingLong((SuburbStructurePlacementSnapshot.Operation op)->{
+            long dx=(long)op.point().x()-chunk.getMiddleBlockX(),dz=(long)op.point().z()-chunk.getMiddleBlockZ();
+            return dx*dx+dz*dz;
+        }).thenComparingInt(op->op.point().x()).thenComparingInt(op->op.point().z())
+                .thenComparingInt(op->op.platformY().orElseThrow()+op.verticalOffset())).orElseThrow();
+        return new BlockPos(surface.point().x(),surface.platformY().orElseThrow()+surface.verticalOffset()+1,surface.point().z());
     }
 
     private static BlockPos regionCenter(Structure.GenerationContext context) {

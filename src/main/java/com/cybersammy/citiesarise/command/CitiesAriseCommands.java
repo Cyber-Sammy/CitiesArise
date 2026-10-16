@@ -252,7 +252,7 @@ public final class CitiesAriseCommands {
         var located = result.settlement().orElseThrow();
         com.cybersammy.citiesarise.minecraft.worldgen.DiagnosticSettlementLocations.get(source.getLevel()).remember(
                 new com.cybersammy.citiesarise.minecraft.worldgen.DiagnosticSettlementLocations.Entry(located.region(),located.blockX(),located.blockZ(),result.profile()));
-        String summary = "Terrain-accepted candidate center (not a generated settlement): ["
+        String summary = "Structure-start-validated candidate center (not a generated settlement): ["
                 + located.blockX()
                 + ", ~, "
                 + located.blockZ()

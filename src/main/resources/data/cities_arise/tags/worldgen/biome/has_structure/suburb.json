@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "#c:is_overworld",
+    { "id": "#bigglobe:overworld", "required": false }
+  ]
+}

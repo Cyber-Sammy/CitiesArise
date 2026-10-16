@@ -1,0 +1,12 @@
+// Build an opt-in test mod for an isolated production server. Connector cannot
+// discover a clean Minecraft artifact in ModDev's development server launcher.
+allprojects {
+    afterEvaluate {
+        tasks.register('bigGlobeValidationJar', Jar) {
+            archiveFileName = 'cities_arise-validation.jar'
+            destinationDirectory = project.file('build/bigglobe-compat/runtime/mods')
+            from sourceSets.main.output
+            from sourceSets.gameTest.output
+        }
+    }
+}

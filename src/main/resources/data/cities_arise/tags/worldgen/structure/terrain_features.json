@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    {"id": "bigglobe:lava_lake", "required": false},
+    {"id": "bigglobe:water_lake", "required": false},
+    {"id": "bigglobe:underground_pockets/lava", "required": false},
+    {"id": "bigglobe:underground_pockets/water", "required": false},
+    {"id": "bigglobe:mega_tree", "required": false}
+  ]
+}

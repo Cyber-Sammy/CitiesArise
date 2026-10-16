@@ -13,7 +13,10 @@ public final class InMemoryRegionPlanCache implements RegionPlanCache {
     }
 
     public InMemoryRegionPlanCache(int maxEntries) {
-        this.plans = new BoundedLruCache<>(maxEntries,maxEntries,
+        // Keep two neighboring large plans alongside a bounded set of rejected candidates.
+        // Otherwise a single small rejection evicts one of those expensive plans and
+        // custom structure managers can repeatedly alternate between rebuilding them.
+        this.plans = new BoundedLruCache<>(maxEntries,(long)maxEntries+Math.max(1,maxEntries/8),
                 result->result.successful() && CityPlanningArea.partitioned(result.surveyBounds().size())?Math.max(1,maxEntries/2):1);
     }
 

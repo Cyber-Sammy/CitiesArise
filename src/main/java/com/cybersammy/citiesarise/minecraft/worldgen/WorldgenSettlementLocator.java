@@ -55,6 +55,9 @@ public final class WorldgenSettlementLocator {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(origin, "origin");
 
+        if(!CitiesAriseWorldgenConfig.enabled())return CompletableFuture.completedFuture(
+                new SearchResult(Optional.empty(),0,Map.of("WORLDGEN_DISABLED",1)));
+
         Optional<WorldgenPlanningContext> optionalContext = planningService.prepareLocateContext(
                 level,
                 level.getChunkSource().getGenerator()
@@ -69,6 +72,7 @@ public final class WorldgenSettlementLocator {
             return CompletableFuture.completedFuture(placementUnavailableResult());
         }
         PlacementContext placement = optionalPlacement.orElseThrow();
+        var nativeStarts=new NativeStructureStartVerifier(level,placement.placement());
         long worldSeed = context.worldSeed();
         int regionModulo = CitiesAriseWorldgenConfig.candidateRegionModulo();
         int seaLevel = level.getSeaLevel();
@@ -86,7 +90,7 @@ public final class WorldgenSettlementLocator {
                         && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,context.surveySize(),
                                 placement.potentialChunk(region).x,placement.potentialChunk(region).z),
                 region -> {
-                    var evaluation=evaluate(context,seaLevel,region,rejectionCounts);
+                    var evaluation=evaluate(context,seaLevel,region,rejectionCounts,nativeStarts);
                     if(evaluation.isEmpty()) rejectedRegions.add(region);
                     return evaluation;
                 },
@@ -127,11 +131,15 @@ public final class WorldgenSettlementLocator {
             WorldgenPlanningContext context,
             int seaLevel,
             SettlementRegion region,
-            Map<String, Integer> rejectionCounts
+            Map<String, Integer> rejectionCounts,NativeStructureStartVerifier nativeStarts
     ) {
         BlockPos center = centerPosition(seaLevel, region);
         SuburbDebugPlanResult result = planningService.planForWorldgen(context, center);
         if (result.successful()) {
+            var rejection=nativeStarts.rejection(result,context.profileId());
+            if(rejection.isPresent()) {
+                increment(rejectionCounts,rejection.orElseThrow());return Optional.empty();
+            }
             return Optional.of(result.optionalSiteAssessment().orElseThrow(
                     () -> new IllegalStateException("successful worldgen plan is missing site assessment")
             ));

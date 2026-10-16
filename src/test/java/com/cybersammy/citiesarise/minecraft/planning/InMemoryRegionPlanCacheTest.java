@@ -15,6 +15,37 @@ import org.junit.jupiter.api.Test;
 
 final class InMemoryRegionPlanCacheTest {
     @Test
+    void retainsTwoNeighboringLargePlansAlongsideRejectedCandidates() {
+        var cache=new InMemoryRegionPlanCache();var calls=new AtomicInteger();
+        var settings=SuburbPlanningSettings.defaults();
+        var first=key("minecraft:overworld","cities_arise:first",settings);
+        var second=key("minecraft:overworld","cities_arise:second",settings);
+        var a=cache.getOrCreate(first,()->largeResult(1,calls));
+        for(int i=0;i<32;i++) {
+            var rejected=key("minecraft:overworld","cities_arise:rejected_"+i,settings);
+            cache.getOrCreate(rejected,()->rejectedResult(calls));
+        }
+        var b=cache.getOrCreate(second,()->largeResult(2,calls));
+        assertSame(a,cache.getOrCreate(first,()->largeResult(3,calls)));
+        assertSame(b,cache.getOrCreate(second,()->largeResult(4,calls)));
+        assertEquals(34,calls.get(),"Local rejection checks evicted a neighboring large city");
+        var third=key("minecraft:overworld","cities_arise:third",settings);
+        cache.getOrCreate(third,()->largeResult(5,calls));
+        cache.getOrCreate(first,()->largeResult(6,calls));
+        assertEquals(36,calls.get(),"The large-plan memory budget became unbounded");
+    }
+
+    private static SuburbDebugPlanResult largeResult(long seed,AtomicInteger calls) {
+        calls.incrementAndGet();
+        var plan=new com.cybersammy.citiesarise.core.model.SettlementPlan(
+                new com.cybersammy.citiesarise.core.model.PlanElementId("test:cache"),
+                new com.cybersammy.citiesarise.core.model.RoadGraph(java.util.List.of(),java.util.List.of(),java.util.List.of()),
+                java.util.List.of(),java.util.List.of(),java.util.Set.of(),com.cybersammy.citiesarise.core.model.PlanProperties.empty());
+        return new SuburbDebugPlanResult(new SettlementRegion(3,3),
+                new GridBounds(new GridPoint(122,122),new GridSize(540,540)),seed,true,plan,null,null);
+    }
+
+    @Test
     void reusesPlanForSameKey() {
         InMemoryRegionPlanCache cache = new InMemoryRegionPlanCache();
         AtomicInteger calls = new AtomicInteger();

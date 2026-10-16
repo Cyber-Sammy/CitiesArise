@@ -68,6 +68,9 @@ public final class LargeCityGameTests {
                     level.getStructureManager(),level.getSeed(),chunk,0,level,structure.biomes()::contains);
                 helper.assertTrue(start.isValid(),"Missing real local start at "+chunk);
                 var piece=(CitiesAriseSuburbPiece)start.getPieces().getFirst();var box=piece.getBoundingBox();
+                var owner=CityPlanningArea.owner(SettlementRegion.fromBlockPosition(chunk.getMiddleBlockX(),chunk.getMiddleBlockZ()));
+                helper.assertTrue(box.minX()>=owner.minX() && box.maxX()<owner.maxXExclusive()
+                        && box.minZ()>=owner.minZ() && box.maxZ()<owner.maxZExclusive(),"Read-only halo made neighboring city owners collide");
                 helper.assertTrue(Math.floorDiv(box.minX(),16)>=chunk.x-8 && Math.floorDiv(box.maxX(),16)<=chunk.x+8
                     && Math.floorDiv(box.minZ(),16)>=chunk.z-8 && Math.floorDiv(box.maxZ(),16)<=chunk.z+8,"Local start exceeds vanilla reference reach");
                 pieces.add(piece);

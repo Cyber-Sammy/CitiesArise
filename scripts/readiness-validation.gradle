@@ -1,4 +1,4 @@
-// Isolate the two readiness regressions; default gameTestServer also includes them.
+// Isolate readiness and owner-validation regressions; default gameTestServer also includes them.
 allprojects {
     afterEvaluate {
         neoForge.runs.named('gameTestServer') {

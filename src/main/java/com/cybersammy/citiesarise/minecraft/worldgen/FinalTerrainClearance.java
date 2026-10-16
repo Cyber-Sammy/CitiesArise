@@ -9,6 +9,11 @@ import java.util.*;
 final class FinalTerrainClearance {
     static int add(Map<String,DebugBlockPlacementOperation> operations, DebugPlacementPlan original,
             List<StructuralSupportPlanner.Envelope> envelopes,StructuralSupportPlanner.Ground ground, int height) {
+        return add(operations,original,envelopes,ground,height,null);
+    }
+    static int add(Map<String,DebugBlockPlacementOperation> operations, DebugPlacementPlan original,
+            List<StructuralSupportPlanner.Envelope> envelopes,StructuralSupportPlanner.Ground ground, int height,
+            com.cybersammy.citiesarise.core.geometry.GridBounds ownership) {
         var floors=new LinkedHashMap<GridPoint,DebugBlockPlacementOperation>();
         for(var op:original.operations()) if(op.platformY().isPresent() && floor(op.role())) {
             var previous=floors.get(op.point());
@@ -23,6 +28,7 @@ final class FinalTerrainClearance {
         }
         int count=0;
         for(var floor:floors.values()) {
+            if(ownership!=null && !ownership.contains(floor.point())) continue;
             if(ground.solid(floor.point().x(),y(floor)+height+1,floor.point().z())) return -1;
             for(int y=y(floor)+1;y<=y(floor)+height;y++) {
             if(!ground.solid(floor.point().x(),y,floor.point().z())) continue;

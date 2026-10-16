@@ -24,25 +24,22 @@ final class PartitionedCityPlacement {
         if(groups.size()>36)throw new IllegalArgumentException("Partitioned city exceeds 36 local owners");
         metadata=new Metadata("cities_arise:unbound",profile,city,x,z,minX,minZ,maxX,maxZ,chunks);
         var result=new LinkedHashMap<SettlementRegion,Part>();
-        long total=blueprint==null?0:blueprint.envelopes().stream().mapToLong(e->(long)e.bounds().size().width()*e.bounds().size().depth()).sum();
         for(var entry:groups.entrySet()) {
             StructuralSupportBlueprint local=null;
             if(blueprint!=null) {
                 var owner=CityPlanningArea.owner(entry.getKey());
                 // Read-only context keeps bridge rails and retaining junctions continuous at owner seams.
                 var context=new GridBounds(new GridPoint(owner.minX()-8,owner.minZ()-8),new GridSize(144,144));
-                var envelopes=new ArrayList<StructuralSupportPlanner.Envelope>();long area=0;
+                var envelopes=new ArrayList<StructuralSupportPlanner.Envelope>();
                 for(var envelope:blueprint.envelopes()) {
                     var b=envelope.bounds();if(!context.intersects(b))continue;
                     int xx=Math.max(context.minX(),b.minX()),zz=Math.max(context.minZ(),b.minZ());
                     var clipped=new GridBounds(new GridPoint(xx,zz),new GridSize(Math.min(context.maxXExclusive(),b.maxXExclusive())-xx,
                         Math.min(context.maxZExclusive(),b.maxZExclusive())-zz));
-                    if(owner.intersects(b))area+=(long)(Math.min(owner.maxXExclusive(),b.maxXExclusive())-Math.max(owner.minX(),b.minX()))
-                            *(Math.min(owner.maxZExclusive(),b.maxZExclusive())-Math.max(owner.minZ(),b.minZ()));
                     envelopes.add(new StructuralSupportPlanner.Envelope(envelope.source(),clipped,envelope.platformY(),envelope.kind()));
                 }
-                int allowance=total==0?0:(int)(blueprint.constructionAllowance()*area/total);
-                local=new StructuralSupportBlueprint(blueprint.settings(),envelopes,blueprint.materials(),allowance,blueprint.ravines(),null,owner,blueprint.clearanceHeight());
+                int allowance=blueprint.constructionAllowance();
+                local=new StructuralSupportBlueprint(blueprint.settings(),envelopes,blueprint.materials(),allowance,blueprint.ravines(),null,owner,blueprint.clearanceHeight(),true);
             }
             result.put(entry.getKey(),new Part(SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(entry.getValue())),local));
         }

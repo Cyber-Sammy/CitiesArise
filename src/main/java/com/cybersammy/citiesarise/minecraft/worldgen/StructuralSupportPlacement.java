@@ -8,7 +8,11 @@ import net.minecraft.commands.arguments.blocks.BlockStateParser;
 
 /** Resolves final terrain geometry into saved explicit operations before any placement is published. */
 public final class StructuralSupportPlacement {
-    public record Resolution(Optional<DebugPlacementPlan> plan,String reason,int suspendedColumns,int supports) { }
+    public record Resolution(Optional<DebugPlacementPlan> plan,String reason,int suspendedColumns,int supports,long construction) {
+        public Resolution(Optional<DebugPlacementPlan> plan,String reason,int suspendedColumns,int supports) {
+            this(plan,reason,suspendedColumns,supports,0);
+        }
+    }
     private StructuralSupportPlacement() { }
     public static Resolution resolveReady(net.minecraft.server.level.ServerLevel level,DebugPlacementPlan original,StructuralSupportBlueprint blueprint) {
         if(blueprint.ravines().enabled() && blueprint.ravines().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE) {
@@ -103,7 +107,7 @@ public final class StructuralSupportPlacement {
                         || previous.role()==DebugPlacementRole.FOUNDATION)) operations.put(key(op),op);
             else if(operations.putIfAbsent(key(op),op)==null) addedSupports++;
         }
-        int cleared=FinalTerrainClearance.add(operations,original,blueprint.envelopes(),ground,blueprint.clearanceHeight());
+        int cleared=FinalTerrainClearance.add(operations,original,blueprint.envelopes(),ground,blueprint.clearanceHeight(),blueprint.ownership());
         if(cleared<0) return new Resolution(Optional.empty(),"CLEARANCE_HEIGHT_LIMIT",0,0);
         for(var cell:fillResult.cells()) {
             var p=cell.position();var op=new DebugBlockPlacementOperation(new GridPoint(p.x(),p.z()),0,DebugPlacementRole.SUSPENDED_CONTENT,
@@ -121,7 +125,7 @@ public final class StructuralSupportPlacement {
         // Removals run before authored content; their saved positions also participate in debug undo.
         var ordered=new ArrayList<>(operations.values());
         ordered.sort(Comparator.comparingInt(op->op.role()==DebugPlacementRole.TERRAIN_CLEARANCE?0:1));
-        return new Resolution(Optional.of(new DebugPlacementPlan(ordered)),"ACCEPTED",columns.size(),addedSupports);
+        return new Resolution(Optional.of(new DebugPlacementPlan(ordered)),"ACCEPTED",columns.size(),addedSupports,construction);
     }
     private static boolean roadEdge(StructuralSupportBlueprint blueprint,int x,int z) {
         for(int[] delta:new int[][]{{1,0},{-1,0},{0,1},{0,-1}}) {

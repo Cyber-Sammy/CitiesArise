@@ -13,6 +13,7 @@ final class PendingStructuralPlacement extends SavedData {
     private static final int MAX_PENDING=64,MAX_OPERATIONS=4000000;
     private final Map<String,Entry> pending=new LinkedHashMap<>();
     private final Map<String,String> completed=new LinkedHashMap<>();
+    private final Map<String,Long> constructionSpent=new HashMap<>();
     private final NearbyPlacementCompletion completion=new NearbyPlacementCompletion();
     private static final org.slf4j.Logger LOG=com.mojang.logging.LogUtils.getLogger();
     private static final class Entry {
@@ -111,6 +112,13 @@ final class PendingStructuralPlacement extends SavedData {
                         public boolean fluid(int x,int y,int z) {return !level.getFluidState(new BlockPos(x,y,z)).isEmpty();}
                     });
                 }
+                if(result.plan().isPresent() && e.blueprint.sharedBudget()) {
+                    String city=e.parent==null?e.id:e.parent.planId();
+                    long spent=constructionSpent.getOrDefault(city,0L);
+                    if(result.construction()>e.blueprint.constructionAllowance()-spent)
+                        result=new StructuralSupportPlacement.Resolution(Optional.empty(),"CITY_CONSTRUCTION_VOLUME_LIMIT",0,0);
+                    else constructionSpent.put(city,spent+result.construction());
+                }
                 if(result.plan().isEmpty()) {
                     completed.put(e.id,result.reason());pending.remove(e.id);setDirty();
                     LOG.warn("Final-terrain structural placement rejected {}: {}; no settlement blocks placed",e.id,result.reason());
@@ -153,6 +161,12 @@ final class PendingStructuralPlacement extends SavedData {
     static PendingStructuralPlacement load(CompoundTag tag) {
         if(tag.getInt("Version")!=1) throw new IllegalArgumentException("Unsupported structural placement version");
         var data=new PendingStructuralPlacement();long operations=0;
+        var spent=tag.getCompound("ConstructionSpent");
+        for(var city:spent.getAllKeys()) {
+            long value=spent.getLong(city);
+            if(value<0 || value>100000)throw new IllegalArgumentException("Invalid shared construction budget");
+            data.constructionSpent.put(city,value);
+        }
         var done=tag.getCompound("Completed");done.getAllKeys().forEach(id->data.completed.put(id,done.getString(id)));
         for(var item:tag.getList("Pending",Tag.TAG_COMPOUND)) {
             if(data.pending.size()>=MAX_PENDING) throw new IllegalArgumentException("Too many pending structural settlements");
@@ -169,7 +183,7 @@ final class PendingStructuralPlacement extends SavedData {
         return data;
     }
     @Override public CompoundTag save(CompoundTag tag,HolderLookup.Provider lookup) {
-        tag.putInt("Version",1);var done=new CompoundTag();completed.forEach(done::putString);tag.put("Completed",done);
+        tag.putInt("Version",1);var spent=new CompoundTag();constructionSpent.forEach(spent::putLong);tag.put("ConstructionSpent",spent);var done=new CompoundTag();completed.forEach(done::putString);tag.put("Completed",done);
         var list=new ListTag();
         for(var e:pending.values()) {
             var row=new CompoundTag();row.putString("Id",e.id);row.putString("Profile",e.profile);row.putInt("X",e.centerX);row.putInt("Z",e.centerZ);

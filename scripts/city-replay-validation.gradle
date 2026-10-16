@@ -1,0 +1,14 @@
+// Opt-in replay of exported chunk NBT; snapshot files remain local under build/.
+allprojects {
+    afterEvaluate {
+        tasks.named('processGameTestResources') {
+            from('src/gameTest/resources/data/cities_arise/structure') { into 'data/cities_arise_city_replay/structure' }
+        }
+        neoForge.runs.named('gameTestServer') {
+            jvmArguments.add('-Xmx4G')
+            gameDirectory = project.file('build/city-replay-validation-runtime')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'cities_arise_city_replay'
+            systemProperty 'citiesarise.cityReplay', project.file('build/cabg4-replay').absolutePath
+        }
+    }
+}

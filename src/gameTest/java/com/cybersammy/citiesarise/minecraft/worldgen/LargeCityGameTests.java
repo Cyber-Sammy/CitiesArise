@@ -113,7 +113,8 @@ public final class LargeCityGameTests {
         var city=new PartitionedCityPlacement(new DebugPlacementPlan(ops),blueprint,"test:seams","test:city",128,102);
         int allowance=0;
         for(var region:city.owners()) {
-            var part=city.part(region).orElseThrow();var loaded=StructuralSupportBlueprint.load(part.blueprint().save());allowance+=loaded.constructionAllowance();
+            var part=city.part(region).orElseThrow();var loaded=StructuralSupportBlueprint.load(part.blueprint().save());allowance=Math.max(allowance,loaded.constructionAllowance());
+            helper.assertTrue(loaded.sharedBudget(),"Local owner lost its shared city budget");
             var resolved=StructuralSupportPlacement.resolve(part.snapshot().toPlacementPlan(),loaded,(x,y,z)->y<=50 || ((x<120 || x>136) && y<=64));
             helper.assertTrue(resolved.plan().isPresent(),"Seam bridge resolution failed: "+resolved.reason());
             for(var op:resolved.plan().orElseThrow().operations()) {
@@ -121,7 +122,7 @@ public final class LargeCityGameTests {
                 helper.assertTrue(!(op.role()==DebugPlacementRole.BRIDGE_RAIL && (op.point().x()==127 || op.point().x()==128) && op.point().z()==102),"Fake transverse rail at owner boundary");
             }
         }
-        helper.assertTrue(allowance<=blueprint.constructionAllowance(),"Local owners multiplied the parent construction budget");
+        helper.assertTrue(allowance<=blueprint.constructionAllowance(),"Local owner exceeded the shared parent construction ceiling");
         // A neighbor's read-only halo must not consume this owner's proportional foundation budget.
         var padOps=new ArrayList<DebugBlockPlacementOperation>();
         for(int z=100;z<=104;z++)for(int x=116;x<=140;x++)padOps.add(new DebugBlockPlacementOperation(new GridPoint(x,z),0,

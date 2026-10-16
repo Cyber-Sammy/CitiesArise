@@ -86,6 +86,8 @@ class DistrictCityPlannerTest {
         var rejections=new java.util.concurrent.atomic.AtomicInteger();
         PlanningAcceptance acceptance=(r,result) -> {
             if(result.terrainPreparationPlan().orElseThrow().columns().stream().noneMatch(c -> c.point().equals(bad))) return result;
+            assertEquals(com.cybersammy.citiesarise.core.content.ResolvedSettlementContent.EMPTY, result.content(),
+                    "Unsupported candidate assembled building content before contact validation");
             rejections.incrementAndGet();
             return SuburbPlanningResult.rejectedTerrain(new SuburbTerrainDiagnostic(r.survey().findCell(bad).orElseThrow(),
                     new com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability(0,

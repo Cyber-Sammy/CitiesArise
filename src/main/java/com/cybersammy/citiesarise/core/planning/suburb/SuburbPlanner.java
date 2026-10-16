@@ -204,6 +204,10 @@ public final class SuburbPlanner {
         );
         try {
             if (!compactDistrict || request.settings().districts().grid().enabled()) plan = SettlementZoningPlanner.apply(plan,request.seed(),request.settings().districts().zoning());
+            // A rejected terrain contact must not assemble every skyscraper's rooms/facade
+            // before the city retry removes that unsupported road or parcel.
+            var checked = acceptance.validate(request, SuburbPlanningResult.success(plan, preparationPlan, siteAssessment));
+            if (!checked.successful()) return checked;
             var content=com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
                     plan, preparationPlan, request.seed(), request.settings().buildings(), request.settings().parcelLayout());
             return SuburbPlanningResult.success(plan, preparationPlan, siteAssessment).withContent(content);

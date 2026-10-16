@@ -6,14 +6,11 @@ import com.cybersammy.citiesarise.core.model.PlanElementId;
 import com.cybersammy.citiesarise.core.model.RoadGraph;
 import com.cybersammy.citiesarise.core.model.RoadNode;
 import com.cybersammy.citiesarise.core.model.RoadSegment;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 
 final class RoadElevationPlanner {
@@ -104,112 +101,32 @@ final class RoadElevationPlanner {
             RoadGraph graph,
             Map<PlanElementId, Integer> desiredElevations,Map<PlanElementId,Interval> intervals
     ) {
-        Map<PlanElementId, RoadSegment> segmentsById = segmentsById(graph);
-        Map<PlanElementId, List<PlanElementId>> segmentsByNode = segmentsByNode(graph);
-        Map<PlanElementId, Integer> elevations = new HashMap<>();
-        Set<PlanElementId> visited = new HashSet<>();
-        List<PlanElementId> orderedIds = segmentsById.keySet().stream()
-                .sorted(Comparator.comparing(PlanElementId::value))
-                .toList();
-
-        for (PlanElementId segmentId : orderedIds) {
-            if (visited.contains(segmentId)) {
-                continue;
-            }
-            List<PlanElementId> component = connectedComponent(
-                    segmentId,
-                    segmentsById,
-                    segmentsByNode,
-                    visited
-            );
-            elevations.putAll(boundedComponentElevations(
-                    component,
-                    segmentsById,
-                    segmentsByNode,
-                    desiredElevations,intervals
-            ));
+        var neighbors = new HashMap<PlanElementId, Set<PlanElementId>>();
+        graph.segments().forEach(segment -> neighbors.put(segment.id(), new HashSet<>()));
+        for (var joined : segmentsByNode(graph).values()) {
+            for (var id : joined) neighbors.get(id).addAll(joined);
         }
-        return Map.copyOf(elevations);
-    }
-
-    private static List<PlanElementId> connectedComponent(
-            PlanElementId startId,
-            Map<PlanElementId, RoadSegment> segmentsById,
-            Map<PlanElementId, List<PlanElementId>> segmentsByNode,
-            Set<PlanElementId> visited
-    ) {
-        List<PlanElementId> component = new ArrayList<>();
-        Queue<PlanElementId> pending = new ArrayDeque<>();
-        pending.add(startId);
-        visited.add(startId);
-
-        while (!pending.isEmpty()) {
-            PlanElementId segmentId = pending.remove();
-            component.add(segmentId);
-            RoadSegment segment = segmentsById.get(segmentId);
-            enqueueNeighbors(segment.startNodeId(), segmentsByNode, visited, pending);
-            enqueueNeighbors(segment.endNodeId(), segmentsByNode, visited, pending);
+        // These are exactly max(desired-distance) and min(desired+distance),
+        // computed together instead of a breadth-first search from every segment.
+        var lower = RoadElevationEnvelope.propagate(desiredElevations, neighbors, true);
+        var upper = RoadElevationEnvelope.propagate(desiredElevations, neighbors, false);
+        var minimumSources = new HashMap<PlanElementId, Integer>();
+        var maximumSources = new HashMap<PlanElementId, Integer>();
+        intervals.forEach((id, interval) -> {
+            minimumSources.put(id, interval.minimum());
+            maximumSources.put(id, interval.maximum());
+        });
+        var minimum = RoadElevationEnvelope.propagate(minimumSources, neighbors, true);
+        var maximum = RoadElevationEnvelope.propagate(maximumSources, neighbors, false);
+        var elevations = new HashMap<PlanElementId, Integer>();
+        for (var segment : graph.segments()) {
+            var id = segment.id();
+            long preferred = Math.floorDiv(lower.get(id) + upper.get(id), 2L);
+            long low = minimum.getOrDefault(id, Long.MIN_VALUE);
+            long high = maximum.getOrDefault(id, Long.MAX_VALUE);
+            elevations.put(id, Math.toIntExact(low <= high ? Math.clamp(preferred, low, high) : preferred));
         }
-        return List.copyOf(component);
-    }
-
-    private static void enqueueNeighbors(
-            PlanElementId nodeId,
-            Map<PlanElementId, List<PlanElementId>> segmentsByNode,
-            Set<PlanElementId> visited,
-            Queue<PlanElementId> pending
-    ) {
-        for (PlanElementId neighborId : segmentsByNode.getOrDefault(nodeId, List.of())) {
-            if (visited.add(neighborId)) {
-                pending.add(neighborId);
-            }
-        }
-    }
-
-    private static Map<PlanElementId, Integer> boundedComponentElevations(
-            List<PlanElementId> component,
-            Map<PlanElementId, RoadSegment> segmentsById,
-            Map<PlanElementId, List<PlanElementId>> segmentsByNode,
-            Map<PlanElementId, Integer> desiredElevations,Map<PlanElementId,Interval> intervals
-    ) {
-        Map<PlanElementId, Integer> elevations = new HashMap<>();
-        for (PlanElementId segmentId : component) {
-            Map<PlanElementId, Integer> distances = segmentDistances(
-                    segmentId,
-                    segmentsById,
-                    segmentsByNode
-            );
-            elevations.put(segmentId, boundedElevation(component, desiredElevations, distances,intervals));
-        }
-        return Map.copyOf(elevations);
-    }
-
-    private static int boundedElevation(
-            List<PlanElementId> component,
-            Map<PlanElementId, Integer> desiredElevations,
-            Map<PlanElementId, Integer> distances,Map<PlanElementId,Interval> intervals
-    ) {
-        int lowerEnvelope = Integer.MIN_VALUE;
-        int upperEnvelope = Integer.MAX_VALUE;
-        for (PlanElementId candidateId : component) {
-            int desired = desiredElevations.get(candidateId);
-            int distance = distances.get(candidateId);
-            lowerEnvelope = Math.max(lowerEnvelope, desired - distance);
-            upperEnvelope = Math.min(upperEnvelope, desired + distance);
-        }
-        long envelopeSum = (long) lowerEnvelope + upperEnvelope;
-        int preferred = Math.toIntExact(Math.floorDiv(envelopeSum, 2L));
-        if(intervals.isEmpty()) return preferred;
-        long minimum=Long.MIN_VALUE,maximum=Long.MAX_VALUE;
-        for(var id:component) {
-            var interval=intervals.get(id); int distance=distances.get(id);
-            minimum=Math.max(minimum,(long)interval.minimum()-distance);
-            maximum=Math.min(maximum,(long)interval.maximum()+distance);
-        }
-        // Both feasible envelopes are one-Lipschitz on the segment graph. Clamping the
-        // preferred profile preserves <=1 block between neighbours. Infeasible sites
-        // retain the preferred profile so preparation produces the ordinary diagnostic.
-        return minimum<=maximum ? Math.toIntExact(Math.clamp((long)preferred,minimum,maximum)) : preferred;
+        return elevations;
     }
 
     private static Map<PlanElementId,Interval> feasibleElevations(SuburbPlanningRequest request,RoadGraph graph,
@@ -241,49 +158,6 @@ final class RoadElevationPlanner {
         return result;
     }
     private record Interval(int minimum,int maximum) { }
-
-    private static Map<PlanElementId, Integer> segmentDistances(
-            PlanElementId startId,
-            Map<PlanElementId, RoadSegment> segmentsById,
-            Map<PlanElementId, List<PlanElementId>> segmentsByNode
-    ) {
-        Map<PlanElementId, Integer> distances = new HashMap<>();
-        Queue<PlanElementId> pending = new ArrayDeque<>();
-        distances.put(startId, 0);
-        pending.add(startId);
-
-        while (!pending.isEmpty()) {
-            PlanElementId segmentId = pending.remove();
-            RoadSegment segment = segmentsById.get(segmentId);
-            int neighborDistance = distances.get(segmentId) + 1;
-            enqueueDistances(segment.startNodeId(), neighborDistance, segmentsByNode, distances, pending);
-            enqueueDistances(segment.endNodeId(), neighborDistance, segmentsByNode, distances, pending);
-        }
-        return Map.copyOf(distances);
-    }
-
-    private static void enqueueDistances(
-            PlanElementId nodeId,
-            int distance,
-            Map<PlanElementId, List<PlanElementId>> segmentsByNode,
-            Map<PlanElementId, Integer> distances,
-            Queue<PlanElementId> pending
-    ) {
-        for (PlanElementId neighborId : segmentsByNode.getOrDefault(nodeId, List.of())) {
-            if (!distances.containsKey(neighborId)) {
-                distances.put(neighborId, distance);
-                pending.add(neighborId);
-            }
-        }
-    }
-
-    private static Map<PlanElementId, RoadSegment> segmentsById(RoadGraph graph) {
-        Map<PlanElementId, RoadSegment> segments = new HashMap<>();
-        for (RoadSegment segment : graph.segments()) {
-            segments.put(segment.id(), segment);
-        }
-        return Map.copyOf(segments);
-    }
 
     private static Map<PlanElementId, List<PlanElementId>> segmentsByNode(RoadGraph graph) {
         Map<PlanElementId, List<PlanElementId>> segments = new HashMap<>();

@@ -47,6 +47,16 @@ public final class BigGlobeCompatibilityValidation {
                     +"; columnSeed="+level.getChunkSource().getGenerator().getClass().getField("columnSeed").getLong(level.getChunkSource().getGenerator()));
             var planningField=SuburbStructureGeneration.class.getDeclaredField("planningService");planningField.setAccessible(true);
             var planning=(MinecraftSuburbPlanningService)planningField.get(CitiesAriseWorldgen.structureGeneration());
+            if(Boolean.getBoolean("citiesarise.validateBigGlobeTerrain")) {
+                com.cybersammy.citiesarise.minecraft.terrain.BigGlobeTerrainValidation.run(level);
+                var context=planning.prepareWorldgenContext(level,level.getChunkSource().getGenerator()).orElseThrow();
+                long started=System.nanoTime();
+                var rejected=planning.planForWorldgen(context,new BlockPos(7304,0,-4216));
+                if(rejected.successful() || rejected.terrainDiagnostic()==null
+                        || !rejected.terrainDiagnostic().cell().point().equals(new com.cybersammy.citiesarise.core.geometry.GridPoint(7086,-4081)))
+                    throw new IllegalStateException("Known unsupported neighboring city changed: "+rejected);
+                LOG.info("BIG_GLOBE_TERRAIN_REJECTED_NEIGHBOR elapsedMs={} diagnostic={}",(System.nanoTime()-started)/1e6,rejected.terrainDiagnostic());
+            }
             var locator=new WorldgenSettlementLocator(planning);
             locator.findFirstAsync(level,new BlockPos(1160,0,11144),Set.of()).whenComplete((result,error)->server.execute(()->{
                 locator.stop();

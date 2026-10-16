@@ -155,10 +155,11 @@ p = profile['planning']
 profile['survey'] = dict(width=540, depth=540)
 p.update(roadWidth=5, parcelWidth=39, parcelDepth=39, buildingMargin=4,
          minimumParcelCount=32, targetParcelCount=80, maximumParcelCount=80, maxEarthworkVolume=1000000,
-         maxBuildableSlope=2.0, maxElevationRange=28, maxCutDepth=12, maxFillDepth=16, maxBuildingFoundationDepth=16)
+         maxBuildableSlope=4.0, maxElevationRange=28, preferredMaxCutDepth=8, preferredMaxFillDepth=8,
+         maxCutDepth=12, maxFillDepth=16, maxBuildingFoundationDepth=16)
 p['districts'].update(targetParcels=4, parcelSizes=[dict(id='skyline:large', width=39, depth=39, buildingMargin=4)], parcelSizeFallback=False)
 p['districts']['grid'] = dict(enabled=True, columns=5, rows=4, parcelsAcross=2, parcelsDeep=2)
-p['districts']['elevation'].update(preferredDepth=4, maximumTerraces=16, levelChangeCost=160, roadRunPerRise=12)
+p['districts']['elevation'].update(preferredDepth=8, maximumTerraces=16, levelChangeCost=160, roadRunPerRise=12)
 # Dense paved blocks use retaining faces and bounded slope aprons rather than mandatory shallow grass verges.
 p['terrainTransitions']['roadShoulderRadius'] = 0
 p['structuralSupports']['maximumVolume'] = 100000

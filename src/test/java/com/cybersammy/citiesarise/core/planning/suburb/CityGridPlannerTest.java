@@ -88,6 +88,19 @@ class CityGridPlannerTest {
             if(a.startNodeId().equals(b.startNodeId()) || a.startNodeId().equals(b.endNodeId()) || a.endNodeId().equals(b.startNodeId()) || a.endNodeId().equals(b.endNodeId()))
                 assertTrue(Math.abs(TerrainPlatform.requiredElevation(a.properties())-TerrainPlatform.requiredElevation(b.properties()))<=1);
     }
+    @Test void skylineTerracesModerateHillsWithinItsActualEarthworkLimits() throws Exception {
+        var p=profile();var bounds=new GridBounds(new GridPoint(0,0),p.surveySize());
+        var survey=TerrainSurvey.sample(bounds,point->Optional.of(new TerrainCell(point,
+                65+point.x()/12,false,3.0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var result=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(new PlanElementId("test:terraced-hills"),
+                survey,42,p.suburbPlanningSettings(),p.terrainResponsePolicy()));
+        assertTrue(result.successful(),result.toString());
+        assertEquals(16,result.plan().orElseThrow().parcels().size());
+        var prepared=result.terrainPreparationPlan().orElseThrow();
+        assertTrue(prepared.constructionVolume()<=p.suburbPlanningSettings().maxEarthworkVolume());
+        assertTrue(prepared.columns().stream().allMatch(c->c.cutDepth()<=12 && c.fillDepth()<=16));
+        assertTrue(prepared.columns().stream().anyMatch(c->c.cutDepth()>4 || c.fillDepth()>4));
+    }
     @Test void aLateUnsupportedStreetPointKeepsTheConnectedAlternativeFrontages() throws Exception {
         var p=profile();var bounds=new GridBounds(new GridPoint(0,0),p.surveySize());
         var survey=TerrainSurvey.sample(bounds,point->Optional.of(new TerrainCell(point,65,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));

@@ -5,6 +5,8 @@ towers with 10, 12, 14 or 16 floors, two low-rise recipes, recessed two-block wi
 projecting facades, setbacks, flat roofs and crowns. It uses 39 x 39 plots and
 five-block-wide roads. Its large-city profile targets 80 buildings in 20 orthogonal
 blocks over a 540 x 540 survey, with coordinated elevations within each block.
+Skyline prefers up to eight blocks of cut/fill for shared terraces, within hard
+limits of twelve blocks of cut, sixteen of fill and one million earthwork blocks.
 Use the matching large-city JAR. Enable it instead of the other example profile packs for
 new settlements; `scripts/generate_skyline_fixture.py` builds its installable ZIP.
 

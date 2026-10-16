@@ -43,8 +43,12 @@ Unusable plots and street edges are omitted individually. Plots remain when they
 have another safe street frontage in the connected city. At least 32 plots must
 remain. Terrain therefore affects the final city size and search success.
 The large profile allows up to 12 blocks of cut and 16 blocks of fill/foundation,
-with a one-million-block earthwork cap. Preferred shallow work remains four blocks;
-the higher limits allow individual terraces to absorb stronger local relief.
+with a one-million-block earthwork cap. Shared block levels now prefer up to eight
+blocks of cut/fill, so moderate hills are terraced instead of splitting every plot
+onto its own level. The slope threshold increases from two to four. This changes
+the Skyline profile only; other packs retain their existing terrain policy.
+Actual preparation still respects the
+12/16 depth limits, total earthwork budget, water avoidance and solid-ground support.
 
 The enlarged city is generated through coordinated local structure starts, each
 owning a disjoint part of the city. Reloaded pieces retain their common city identity

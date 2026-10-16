@@ -40,7 +40,7 @@
       "parcelSizeFallback": false,
       "elevation": {
         "enabled": true,
-        "preferredDepth": 4,
+        "preferredDepth": 8,
         "maximumTerraces": 16,
         "levelChangeCost": 160,
         "roadRunPerRise": 12,
@@ -55,7 +55,7 @@
       }
     },
     "roadWidth": 5,
-    "maxBuildableSlope": 2.0,
+    "maxBuildableSlope": 4.0,
     "minimumParcelCount": 32,
     "targetParcelCount": 80,
     "maximumParcelCount": 80,
@@ -63,8 +63,8 @@
     "parcelDepth": 39,
     "buildingMargin": 4,
     "maxElevationRange": 28,
-    "preferredMaxCutDepth": 4,
-    "preferredMaxFillDepth": 4,
+    "preferredMaxCutDepth": 8,
+    "preferredMaxFillDepth": 8,
     "maxCutDepth": 12,
     "maxFillDepth": 16,
     "maxBuildingFoundationDepth": 16,

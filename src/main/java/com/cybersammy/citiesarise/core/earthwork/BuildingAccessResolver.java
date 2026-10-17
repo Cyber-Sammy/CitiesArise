@@ -47,6 +47,28 @@ public final class BuildingAccessResolver {
         return point.z() == bounds.maxZExclusive() - 1;
     }
 
+    /** Chooses a grade-compatible frontage without routing across a more distant parcel. */
+    public static BuildingAccess resolve(List<ElevationZone> zones, ElevationZone buildingZone,
+            int minimumRunPerRise, int minimumPadY, int maximumPadY) {
+        if (minimumRunPerRise < 1) throw new IllegalArgumentException("minimumRunPerRise must be positive");
+        var nearest = resolve(zones, buildingZone);
+        BuildingAccess accessible = null;
+        for (var zone : zones) {
+            if (zone.type() != ElevationZoneType.ROAD_SEGMENT) continue;
+            var candidate = nearerAccess(null, zone, buildingZone.bounds());
+            if (candidate.distance() != nearest.distance()) continue;
+            // A short graded segment can touch only a corner of a broad facade.
+            // Preserve the original entrance alignment so the authored building still fits.
+            if (centerOffset(candidate.anchor(),buildingZone.bounds()) != centerOffset(nearest.anchor(),buildingZone.bounds())) continue;
+            int rise = candidate.distance() / minimumRunPerRise;
+            if ((long) zone.targetElevation() + rise < minimumPadY
+                    || (long) zone.targetElevation() - rise > maximumPadY) continue;
+            if (accessible == null || shouldReplace(accessible, candidate, buildingZone.bounds())) accessible = candidate;
+        }
+        // Keep the original failure diagnostic when no frontage is actually reachable.
+        return accessible == null ? nearest : accessible;
+    }
+
     private static BuildingAccess nearerAccess(
             BuildingAccess nearest,
             ElevationZone roadZone,

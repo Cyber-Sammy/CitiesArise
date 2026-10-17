@@ -12,14 +12,22 @@ public final class BoundedLruCache<K, V> {
     private final Map<K, V> entries;
     private final Map<K, CompletableFuture<V>> inFlight = new ConcurrentHashMap<>();
     private final int maxEntries;
+    private final long maximumWeight;
+    private final java.util.function.ToLongFunction<V> weight;
+    private long totalWeight;
     private long generation;
 
     public BoundedLruCache(int maxEntries) {
+        this(maxEntries,maxEntries,value->1L);
+    }
+    public BoundedLruCache(int maxEntries,long maximumWeight,java.util.function.ToLongFunction<V> weight) {
         if (maxEntries < 1) {
             throw new IllegalArgumentException("maxEntries must be positive");
         }
 
         this.maxEntries = maxEntries;
+        if(maximumWeight<1)throw new IllegalArgumentException("maximumWeight must be positive");
+        this.maximumWeight=maximumWeight;this.weight=Objects.requireNonNull(weight);
         this.entries = new LinkedHashMap<>(maxEntries, 0.75f, true);
     }
 
@@ -49,6 +57,7 @@ public final class BoundedLruCache<K, V> {
     public synchronized void clear() {
         generation++;
         entries.clear();
+        totalWeight=0;
         inFlight.clear();
     }
 
@@ -83,7 +92,10 @@ public final class BoundedLruCache<K, V> {
         if (creationGeneration != generation) {
             return;
         }
-        entries.put(key, value);
+        long cost=weight.applyAsLong(value);if(cost<1)throw new IllegalArgumentException("Cache weight must be positive");
+        if(cost>maximumWeight)return;
+        var old=entries.put(key, value);if(old!=null)totalWeight-=weight.applyAsLong(old);
+        totalWeight+=cost;
         evictEldestEntry();
     }
 
@@ -103,11 +115,9 @@ public final class BoundedLruCache<K, V> {
     }
 
     private void evictEldestEntry() {
-        if (entries.size() <= maxEntries) {
-            return;
+        while(entries.size()>maxEntries || totalWeight>maximumWeight) {
+            K eldestKey = entries.keySet().iterator().next();
+            totalWeight-=weight.applyAsLong(entries.remove(eldestKey));
         }
-
-        K eldestKey = entries.keySet().iterator().next();
-        entries.remove(eldestKey);
     }
 }

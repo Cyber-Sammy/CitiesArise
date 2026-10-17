@@ -51,6 +51,13 @@ public record MinecraftSettlementProfileLimits(
     public void validate(SettlementProfile profile) {
         Objects.requireNonNull(profile, "profile");
 
+        if(com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.partitioned(profile.surveySize())) {
+            if(!profile.suburbPlanningSettings().districts().grid().enabled())
+                throw new IllegalArgumentException("Cities larger than 240 require the partitioned city grid");
+            if(profile.ravineRoads().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE)
+                throw new IllegalArgumentException("Partitioned city grids support bridge/fill ravine roads; follow_edge requires a local city profile");
+        }
+
         if(com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.expanded(profile.surveySize())
                 && profile.suburbPlanningSettings().districts().maxCount()<4)
             throw new IllegalArgumentException("Expanded cities require at least four district slots");

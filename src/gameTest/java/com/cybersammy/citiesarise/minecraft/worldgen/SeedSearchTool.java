@@ -131,7 +131,7 @@ public final class SeedSearchTool {
             for(var region:regions) {
                 if(stopped(o,output,report,started,seconds)) return;
                 if(!com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,profile.surveySize())) continue;
-                if(!selector.isCandidate(seed,region,CitiesAriseWorldgenConfig.candidateRegionModulo())) continue;
+                if(!selector.isCandidate(seed,region,CitiesAriseWorldgenConfig.candidateRegionModulo(),profile.surveySize())) continue;
                 var chunk=placement.getPotentialStructureChunk(seed,region.x()*8,region.z()*8);
                 if(!com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,profile.surveySize(),chunk.x,chunk.z)) continue;
                 if(!placement.isStructureChunk(state,chunk.x,chunk.z)) { reject(report,"STRUCTURE_PLACEMENT"); continue; }

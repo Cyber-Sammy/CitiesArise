@@ -178,7 +178,14 @@ public final class MinecraftSettlementProfileJsonParser {
         }
         return new com.cybersammy.citiesarise.core.planning.suburb.DistrictPlanningSettings(
                 optionalInt(value, "maxCount", 4), optionalInt(value, "targetParcels", 4), optionalInt(value, "maxConnectionAttempts", 8), ZoningJsonParser.parse(value),sizes,
-                optionalBoolean(value,"parcelSizeFallback",false),parseDistrictElevation(value));
+                optionalBoolean(value,"parcelSizeFallback",false),parseDistrictElevation(value),parseCityGrid(value));
+    }
+
+    private static com.cybersammy.citiesarise.core.planning.suburb.CityGridSettings parseCityGrid(JsonObject districts) {
+        if(!districts.has("grid"))return com.cybersammy.citiesarise.core.planning.suburb.CityGridSettings.disabled();
+        var g=requiredObject(districts,"grid");
+        return new com.cybersammy.citiesarise.core.planning.suburb.CityGridSettings(optionalBoolean(g,"enabled",false),
+                optionalInt(g,"columns",1),optionalInt(g,"rows",1),optionalInt(g,"parcelsAcross",2),optionalInt(g,"parcelsDeep",2));
     }
 
     private static com.cybersammy.citiesarise.core.planning.suburb.DistrictElevationSettings parseDistrictElevation(JsonObject districts) {

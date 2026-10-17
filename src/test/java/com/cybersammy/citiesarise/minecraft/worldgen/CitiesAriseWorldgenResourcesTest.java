@@ -25,8 +25,44 @@ class CitiesAriseWorldgenResourcesTest {
             JsonObject structure = JsonParser.parseReader(reader).getAsJsonObject();
 
             assertEquals("cities_arise:suburb", structure.get("type").getAsString());
-            assertEquals("#c:is_overworld", structure.get("biomes").getAsString());
+            assertEquals("#cities_arise:has_structure/suburb", structure.get("biomes").getAsString());
             assertEquals("top_layer_modification", structure.get("step").getAsString());
+        }
+    }
+
+    @Test
+    void includesBigGlobeBiomesWithoutRequiringTheMod() throws IOException {
+        try (var stream=requiredResource("data/cities_arise/tags/worldgen/biome/has_structure/suburb.json");
+             var reader=new InputStreamReader(stream,StandardCharsets.UTF_8)) {
+            var tag=JsonParser.parseReader(reader).getAsJsonObject();
+            assertEquals(false,tag.get("replace").getAsBoolean());
+            var values=tag.getAsJsonArray("values");
+            assertEquals("#c:is_overworld",values.get(0).getAsString());
+            assertEquals("#bigglobe:overworld",values.get(1).getAsJsonObject().get("id").getAsString());
+            assertEquals(false,values.get(1).getAsJsonObject().get("required").getAsBoolean());
+        }
+    }
+
+    @Test
+    void scopesOptionalCollisionPriorityToNaturalTerrainFeatures() throws IOException {
+        try (var stream=requiredResource("data/cities_arise/tags/worldgen/structure/terrain_features.json");
+             var reader=new InputStreamReader(stream,StandardCharsets.UTF_8)) {
+            var tag=JsonParser.parseReader(reader).getAsJsonObject();
+            assertEquals(false,tag.get("replace").getAsBoolean());
+            var ids=new java.util.HashSet<String>();
+            for(var value:tag.getAsJsonArray("values")) {
+                var entry=value.getAsJsonObject();
+                assertEquals(false,entry.get("required").getAsBoolean());
+                ids.add(entry.get("id").getAsString());
+            }
+            assertEquals(java.util.Set.of("bigglobe:lava_lake","bigglobe:water_lake","bigglobe:mega_tree",
+                    "bigglobe:underground_pockets/lava","bigglobe:underground_pockets/water"),ids);
+        }
+        try (var stream=requiredResource("data/bigglobe/tags/worldgen/bigglobe_overrider/overworld.json");
+             var reader=new InputStreamReader(stream,StandardCharsets.UTF_8)) {
+            var tag=JsonParser.parseReader(reader).getAsJsonObject();
+            assertEquals(false,tag.get("replace").getAsBoolean());
+            assertEquals("cities_arise:city_terrain_priority",tag.getAsJsonArray("values").get(0).getAsString());
         }
     }
 

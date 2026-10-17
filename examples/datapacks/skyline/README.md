@@ -15,9 +15,9 @@ build (Minecraft 1.21.1 / NeoForge); this is not a standalone vanilla structure 
 | Pavilion | 1 | 29 x 25 | Flat roof and parapet |
 
 Tower choices have equal weights. Four independently selected palettes provide
-limestone, brick, ivory quartz and dark slate appearances. Every eighth building
-slot selects one of the two low-rise recipes instead; a sixteen-plot city therefore
-has fourteen towers and two low buildings. Random selection can repeat a recipe.
+limestone, brick, ivory quartz and dark slate appearances. One building in each group of forty slots
+selects one of the two low-rise recipes instead; a full eighty-plot city therefore
+has seventy-eight towers and two low buildings. Random selection can repeat a recipe.
 
 Each floor has four large furnished rooms around intersecting halls. The lower
 tower floors have rooms approximately 10 x 8 blocks inside their partitions;
@@ -34,11 +34,36 @@ Upper floors close the ground-floor lobby entrance instead of repeating exterior
 doorways. Floors use single-block partitions.
 
 Plots are **39 x 39**, with a four-block building margin, five-block-wide roads
-and paved plazas instead of garden fencing. The profile surveys 240 x 240 blocks,
-targets sixteen plots, accepts eight or more, and caps the city at twenty-four.
-It retains district elevation coordination, terrain transitions and ravine bridges
-from the current zoning profile. Large plots need more continuous usable terrain
-than the small-house pack; there is no guarantee that every search candidate fits.
+and paved plazas instead of garden fencing. The profile surveys **540 x 540** blocks,
+about five times the previous survey area, and targets **80 plots in 20 blocks**.
+Each block contains four plots in a 2 x 2 arrangement. Streets share an orthogonal
+lattice; height changes can still introduce short graded sections. Homes within a
+block seek a shared elevation, while separate blocks can occupy different terraces.
+Unusable plots and street edges are omitted individually. Plots remain when they
+have another safe street frontage in the connected city. At least 24 plots must
+remain. Terrain therefore affects the final city size and search success.
+The large profile allows up to 16 blocks of cut and 16 blocks of fill/foundation,
+with a one-million-block earthwork cap. Shared block levels now prefer up to eight
+blocks of cut/fill, so moderate hills are terraced instead of splitting every plot
+onto its own level. The slope threshold increases from two to four. This changes
+the Skyline profile only; other packs retain their existing terrain policy.
+Actual preparation still respects the depth limits, total earthwork budget, water
+avoidance and solid-ground support. Equally close street frontages are compared
+for a feasible entrance grade before rejecting a plot; access never jumps across
+a neighboring plot to reach a more distant road.
+
+The enlarged city is generated through coordinated local structure starts, each
+owning a disjoint part of the city. Reloaded pieces retain their common city identity
+and frozen content. The pack overrides the suburb structure set to allow all local
+starts; it omits the default per-start vanilla-village exclusion, which would leave
+holes in a large city. Other example packs retain their existing structure rules.
+Candidate density accounts for the parent's 6 x 6 reservation: the configured
+`candidateRegionModulo` is divided by 36, rounded up, for partitioned cities only.
+The default 16 therefore considers every large parent, already 768 blocks apart,
+instead of discarding another fifteen out of sixteen. Locate and automatic world
+generation use the same selection. Ordinary profiles keep their exact candidate set.
+Bridge and fill ravine policies are supported; large partitioned profiles cannot use
+`follow_edge`. This version requires the matching large-city mod JAR.
 
 ## Install
 
@@ -51,9 +76,32 @@ than the small-house pack; there is no guarantee that every search candidate fit
    Saved settlements retain their frozen content and are not rebuilt by a reload.
 4. Search with `/citiesarise locate diagnostic`. If the time limit ends without a
    result, `/citiesarise locate diagnostic next` continues unchecked candidates in
-   the same server session.
+   the same server session. If the radius is exhausted, move to another area or
+   increase `worldgen.locateSearchRadiusRegions`; repeating `next` cannot extend it.
 
 The ZIP has `pack.mcmeta` at its root; do not wrap it in an extra directory.
+
+## Grid profile settings
+
+The opt-in configuration lives under `planning.districts.grid`:
+
+```json
+{"enabled": true, "columns": 5, "rows": 4, "parcelsAcross": 2, "parcelsDeep": 2}
+```
+
+Columns and rows each support 1-8 blocks, parcels per axis support 1-3, and the
+product cannot exceed 128 plots. The complete lattice must fit the survey with
+its road shoulders. Parcel dimensions, spacing, margins, street width and cut/fill
+limits retain their existing profile settings. Skyline uses no spacing between
+plots inside a block, so its street pitch is 83 blocks. Mandatory grass road shoulders are disabled;
+retaining faces and bounded cut/fill aprons meet the paved blocks instead.
+
+Surveys above 240 blocks on either axis require the grid and coordinated local
+starts. The maximum survey is 576 x 576; large parent cities are 768 blocks apart.
+Automatic generation needs a structure-set start opportunity in every 128 x 128
+owner tile, as supplied by this pack's spacing8/separation7 override. A custom
+structure set that skips owners can leave portions of the city ungenerated.
+Smaller profiles keep the existing single-start layout unless the grid is enabled.
 
 ## Author and verify
 
@@ -71,4 +119,5 @@ Run `gradlew.bat test --tests "*SkylineCatalogTest"` for composition, rotation,
 height, footprint and full-city selection checks. Run
 `gradlew.bat runGameTestServer -I scripts/skyline-validation.gradle` for native
 material validation, frozen profile/snapshot round trips, reverse chunk placement
-and ladder survival in an isolated test world under `build`.
+ladder survival, coordinated local structure starts, deferred placement after save/load
+and bridge continuity across ownership boundaries in an isolated test world under `build`.

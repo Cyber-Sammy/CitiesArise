@@ -235,12 +235,14 @@ public final class CitiesAriseCommands {
                 .addAll(result.rejectedRegions());
         if (result.settlement().isEmpty()) {
             boolean timeLimited=result.rejectionCounts().containsKey("SEARCH_TIME_LIMIT");
+            boolean exhausted=result.attemptedCandidates()==0 && result.rejectionCounts().isEmpty();
             String summary = (timeLimited?"Diagnostic time limit reached; the search is incomplete. No accepted site yet after checking "
                     :"No accepted Cities Arise settlement candidate was found after checking ")
                     + result.attemptedCandidates()
                     + " candidates. Rejections: "
                     + result.rejectionSummary()
-                    + ". Use diagnostic next to continue with unchecked candidates; move farther if the radius is exhausted.";
+                    + (exhausted ? ". No unchecked candidates remain in this search radius. Move farther or increase worldgen.locateSearchRadiusRegions."
+                            : ". Use diagnostic next to continue with unchecked candidates; move farther if the radius is exhausted.");
             if(timeLimited)source.sendSuccess(()->Component.literal(summary),false);
             else source.sendFailure(Component.literal(summary));
             logCommandResult(summary);
@@ -250,7 +252,7 @@ public final class CitiesAriseCommands {
         var located = result.settlement().orElseThrow();
         com.cybersammy.citiesarise.minecraft.worldgen.DiagnosticSettlementLocations.get(source.getLevel()).remember(
                 new com.cybersammy.citiesarise.minecraft.worldgen.DiagnosticSettlementLocations.Entry(located.region(),located.blockX(),located.blockZ(),result.profile()));
-        String summary = "Terrain-accepted candidate center (not a generated settlement): ["
+        String summary = "Structure-start-validated candidate center (not a generated settlement): ["
                 + located.blockX()
                 + ", ~, "
                 + located.blockZ()

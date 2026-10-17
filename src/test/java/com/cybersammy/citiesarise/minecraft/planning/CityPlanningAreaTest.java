@@ -7,6 +7,22 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CityPlanningAreaTest {
+    @Test void partitionedCitiesHaveDisjointReservationsAndLocalOwnersInBothCoordinateSigns() {
+        var size=new GridSize(540,540);
+        for(int cluster=-2;cluster<=2;cluster++) {
+            var anchor=new SettlementRegion(cluster*6+3,3);var area=CityPlanningArea.bounds(anchor,size);
+            assertFalse(area.intersects(CityPlanningArea.bounds(new SettlementRegion(anchor.x()+6,anchor.z()),size)));
+            var owners=new HashSet<SettlementRegion>();
+            for(int z=area.minZ();z<area.maxZExclusive();z++)for(int x=area.minX();x<area.maxXExclusive();x++) {
+                assertEquals(anchor,CityPlanningArea.regionAt(x,z,size));
+                var owner=SettlementRegion.fromBlockPosition(x,z);owners.add(owner);
+                assertTrue(CityPlanningArea.owner(owner).contains(new GridPoint(x,z)));
+            }
+            assertTrue(owners.size()<=36);
+            for(var owner:owners)assertTrue(CityPlanningArea.reachable(anchor,size,owner.x()*8,owner.z()*8));
+            assertFalse(CityPlanningArea.reachable(anchor,size,(anchor.x()+6)*8,anchor.z()*8));
+        }
+    }
     @Test void expandedCitiesHaveDisjointReservationsAndStayWithinReferenceReachAtNegativeCoordinates() {
         var size=new GridSize(224,224);
         for(int x=-4;x<=4;x+=2) for(int z=-4;z<=4;z+=2) {

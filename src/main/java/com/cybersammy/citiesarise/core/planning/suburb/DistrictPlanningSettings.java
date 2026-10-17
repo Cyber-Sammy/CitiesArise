@@ -2,13 +2,17 @@ package com.cybersammy.citiesarise.core.planning.suburb;
 
 /** Bounded, profile-owned city subdivision. One district preserves legacy planning. */
 public record DistrictPlanningSettings(int maxCount, int targetParcels, int maxConnectionAttempts, ZoningSettings zoning,
-        java.util.List<DistrictParcelSize> parcelSizes, Boolean parcelSizeFallback, DistrictElevationSettings elevation) {
+        java.util.List<DistrictParcelSize> parcelSizes, Boolean parcelSizeFallback, DistrictElevationSettings elevation, CityGridSettings grid) {
+    public DistrictPlanningSettings(int maxCount,int targetParcels,int maxConnectionAttempts,ZoningSettings zoning,
+            java.util.List<DistrictParcelSize> parcelSizes,Boolean parcelSizeFallback,DistrictElevationSettings elevation) {
+        this(maxCount,targetParcels,maxConnectionAttempts,zoning,parcelSizes,parcelSizeFallback,elevation,CityGridSettings.disabled());
+    }
     public DistrictPlanningSettings(int maxCount,int targetParcels,int maxConnectionAttempts,ZoningSettings zoning,
             java.util.List<DistrictParcelSize> parcelSizes,Boolean parcelSizeFallback) {
         this(maxCount,targetParcels,maxConnectionAttempts,zoning,parcelSizes,parcelSizeFallback,DistrictElevationSettings.disabled());
     }
     public DistrictPlanningSettings withElevation(DistrictElevationSettings value) {
-        return new DistrictPlanningSettings(maxCount,targetParcels,maxConnectionAttempts,zoning,parcelSizes,parcelSizeFallback,value);
+        return new DistrictPlanningSettings(maxCount,targetParcels,maxConnectionAttempts,zoning,parcelSizes,parcelSizeFallback,value,grid);
     }
     public DistrictPlanningSettings(int maxCount,int targetParcels,int maxConnectionAttempts,ZoningSettings zoning,
             java.util.List<DistrictParcelSize> parcelSizes) {
@@ -29,6 +33,7 @@ public record DistrictPlanningSettings(int maxCount, int targetParcels, int maxC
         this(maxCount,targetParcels,maxConnectionAttempts,ZoningSettings.NONE);
     }
     public DistrictPlanningSettings {
+        if(grid==null)grid=CityGridSettings.disabled();
         if(elevation==null)elevation=DistrictElevationSettings.disabled();
         java.util.Objects.requireNonNull(zoning);
         parcelSizeFallback=Boolean.TRUE.equals(parcelSizeFallback);

@@ -28,6 +28,22 @@ public final class SkylineGameTests {
             (id,d,e)->{var parts=id.split(":",2);return Files.newInputStream(root.resolve(parts[0]).resolve(d).resolve(parts[1]+e));});
         var recipe=new FinalTerrainPlanningRecipe(profile,new GridBounds(new GridPoint(0,0),profile.surveySize()),42,"test:skyline");
         var saved=recipe.save();helper.assertTrue(recipe.equals(FinalTerrainPlanningRecipe.load(saved)),"Skyline profile did not survive bounded recipe storage");
+        var cutSource=new com.cybersammy.citiesarise.core.model.PlanElementId("test:deep-cut");
+        var deepCut=new DebugPlacementPlan(List.of(new DebugBlockPlacementOperation(new GridPoint(0,0),0,
+                DebugPlacementRole.ROAD_SURFACE,cutSource,OptionalInt.of(64),"minecraft:stone_bricks",0)));
+        var cutBlueprint=new StructuralSupportBlueprint(profile.structuralSupports(),List.of(
+                new com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Envelope(cutSource,
+                        new GridBounds(new GridPoint(0,0),new GridSize(1,1)),64,
+                        com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Kind.ROAD)),Map.of()).withRecipe(recipe);
+        var deepResolution=StructuralSupportPlacement.resolve(deepCut,StructuralSupportBlueprint.load(cutBlueprint.save()),(x,y,z)->y<=80);
+        helper.assertTrue(deepResolution.plan().isPresent(),"Frozen profile lost its sixteen-block clearance: "+deepResolution.reason());
+        helper.assertTrue(deepResolution.plan().orElseThrow().operations().stream()
+                .filter(o->o.role()==DebugPlacementRole.TERRAIN_CLEARANCE).count()==16,"Deep cut retained obstructing terrain");
+        var oldCut=cutBlueprint.save();oldCut.putInt("Version",3);oldCut.remove("ClearanceHeight");
+        helper.assertTrue(StructuralSupportBlueprint.load(oldCut).clearanceHeight()==12,"Legacy clearance changed");
+        var partitionedCut=new PartitionedCityPlacement(deepCut,cutBlueprint,"test:cut","test:cut",392,392);
+        for(var owner:partitionedCut.owners())helper.assertTrue(partitionedCut.part(owner).orElseThrow().blueprint().clearanceHeight()==16,
+                "Local owner lost the parent's clearance allowance");
         Files.writeString(Path.of("skyline-recipe-size.txt"),"Stored characters: "+saved.getList("Json",8).stream().mapToInt(t->t.getAsString().length()).sum());
         var provider=new VanillaDebugBlockMaterialProvider();int offset=0;
         for(var name:List.of("crown","metropolitan","regent","terrace","townhouse","pavilion")) {

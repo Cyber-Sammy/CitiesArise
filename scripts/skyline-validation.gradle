@@ -7,6 +7,7 @@ allprojects {
             }
         }
         neoForge.runs.named('gameTestServer') {
+            jvmArguments.add('-Xmx4G')
             gameDirectory = project.file('build/skyline-validation-runtime')
             systemProperty 'neoforge.enabledGameTestNamespaces', 'cities_arise_skyline'
             systemProperty 'citiesarise.skylineData', project.file('examples/datapacks/skyline/data').absolutePath

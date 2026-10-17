@@ -41,7 +41,7 @@ neoForge {
 
         gameTestServer {
             type = 'gameTestServer'
-            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id + ',cities_arise_readiness'
         }
 
         seedSearch {
@@ -83,6 +83,9 @@ sourceSets.main.resources {
 }
 
 tasks.named('processGameTestResources') {
+    from('src/gameTest/resources/data/cities_arise/structure') {
+        into 'data/cities_arise_readiness/structure'
+    }
     from('src/gameTest/resources/data/cities_arise/structure') {
         into 'data/cities_arise_planning_benchmark/structure'
     }
@@ -129,6 +132,8 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.withType(Test).configureEach {
+    // Full skyline-grid acceptance constructs eighty broad buildings in one plan.
+    maxHeapSize = '2g'
     useJUnitPlatform()
     inputs.dir('examples/datapacks')
 }

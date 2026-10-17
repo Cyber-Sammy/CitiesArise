@@ -7,6 +7,16 @@ final class WorldgenRegionCandidateSelector {
     private static final long X_SALT = 0x9E3779B97F4A7C15L;
     private static final long Z_SALT = 0xC2B2AE3D27D4EB4FL;
 
+    boolean isCandidate(long worldSeed, SettlementRegion region, int regionModulo,
+            com.cybersammy.citiesarise.core.geometry.GridSize surveySize) {
+        if (regionModulo < 1) throw new IllegalArgumentException("regionModulo must be positive");
+        // A partitioned parent already replaces 36 ordinary candidate regions.
+        int area = com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.partitioned(surveySize)
+                ? com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.LARGE_REGION_STRIDE
+                    * com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.LARGE_REGION_STRIDE : 1;
+        return isCandidate(worldSeed, region, Math.ceilDiv(regionModulo, area));
+    }
+
     boolean isCandidate(long worldSeed, SettlementRegion region, int regionModulo) {
         Objects.requireNonNull(region, "region");
         if (regionModulo < 1) {

@@ -26,7 +26,8 @@ public final class CitiesAriseWorldgenConfig {
                 .worldRestart()
                 .define("settlementProfileId", DebugSuburbPlanningConfig.DEFAULT_SETTLEMENT_PROFILE_ID);
         CANDIDATE_REGION_MODULO = builder
-                .comment("Plans one deterministic candidate per approximately this many settlement regions.")
+                .comment("Plans one deterministic candidate per approximately this many ordinary settlement regions.",
+                        "Partitioned large cities account for their 6x6 region reservation before applying this divisor.")
                 .worldRestart()
                 .defineInRange("candidateRegionModulo", 16, 1, 1024);
         LOCATE_SEARCH_RADIUS_REGIONS = builder

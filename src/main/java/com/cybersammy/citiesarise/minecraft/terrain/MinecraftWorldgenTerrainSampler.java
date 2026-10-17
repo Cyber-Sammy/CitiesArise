@@ -231,6 +231,7 @@ public final class MinecraftWorldgenTerrainSampler {
         private final RandomState randomState;
         private final LevelHeightAccessor levelHeight;
         private final BatchedNoiseTerrain cells;
+        private final TiledHeightCache bigGlobeHeights;
 
         private ChunkGeneratorTerrainSource(
                 ChunkGenerator chunkGenerator,
@@ -246,11 +247,13 @@ public final class MinecraftWorldgenTerrainSampler {
             this.randomState = Objects.requireNonNull(randomState, "randomState");
             this.levelHeight = Objects.requireNonNull(levelHeight, "levelHeight");
             this.cells=cells;
+            this.bigGlobeHeights=BigGlobeTerrainHeights.create(chunkGenerator,levelHeight);
         }
 
         @Override
         public int height(GridPoint point) {
             if(cells!=null) return cells.surface(point);
+            if(bigGlobeHeights!=null) return bigGlobeHeights.get(point).surface();
             return chunkGenerator.getBaseHeight(
                     point.x(),
                     point.z(),
@@ -263,6 +266,7 @@ public final class MinecraftWorldgenTerrainSampler {
         @Override
         public int supportHeight(GridPoint point) {
             if(cells!=null) return cells.support(point);
+            if(bigGlobeHeights!=null) return bigGlobeHeights.get(point).support();
             return chunkGenerator.getBaseHeight(
                     point.x(),
                     point.z(),

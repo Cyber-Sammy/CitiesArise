@@ -8,7 +8,11 @@ import net.minecraft.commands.arguments.blocks.BlockStateParser;
 
 /** Resolves final terrain geometry into saved explicit operations before any placement is published. */
 public final class StructuralSupportPlacement {
-    public record Resolution(Optional<DebugPlacementPlan> plan,String reason,int suspendedColumns,int supports) { }
+    public record Resolution(Optional<DebugPlacementPlan> plan,String reason,int suspendedColumns,int supports,long construction,long structuralVolume) {
+        public Resolution(Optional<DebugPlacementPlan> plan,String reason,int suspendedColumns,int supports) {
+            this(plan,reason,suspendedColumns,supports,0,0);
+        }
+    }
     private StructuralSupportPlacement() { }
     public static Resolution resolveReady(net.minecraft.server.level.ServerLevel level,DebugPlacementPlan original,StructuralSupportBlueprint blueprint) {
         if(blueprint.ravines().enabled() && blueprint.ravines().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE) {
@@ -30,6 +34,7 @@ public final class StructuralSupportPlacement {
         });
     }
     public static Resolution resolve(DebugPlacementPlan original,StructuralSupportBlueprint blueprint,StructuralSupportPlanner.Ground ground) {
+        var originalPositions=blueprint.ownership()==null?Set.<String>of():original.operations().stream().map(StructuralSupportPlacement::key).collect(java.util.stream.Collectors.toSet());
         boolean fill=blueprint.ravines().enabled() && blueprint.ravines().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FILL;
         var fillEnvelopes=new ArrayList<>(blueprint.envelopes());
         if(fill) for(var op:original.operations()) if(op.role()==DebugPlacementRole.BRIDGE_DECK && op.platformY().isPresent())
@@ -41,7 +46,9 @@ public final class StructuralSupportPlacement {
         if(!fillResult.accepted()) return new Resolution(Optional.empty(),fillResult.reason(),0,0);
         var geometry=StructuralSupportPlanner.plan(blueprint.envelopes().stream().filter(e->!fill || e.kind()==StructuralSupportPlanner.Kind.PARCEL).toList(),blueprint.settings(),ground);
         if(!geometry.accepted()) return new Resolution(Optional.empty(),geometry.rejection().orElseThrow(),0,0);
-        if(geometry.cells().size()>blueprint.constructionAllowance()) return new Resolution(Optional.empty(),"CONSTRUCTION_VOLUME_LIMIT",0,0);
+        long ownedGeometry=blueprint.ownership()==null?geometry.cells().size():geometry.cells().stream()
+                .filter(c->blueprint.ownership().contains(new GridPoint(c.position().x(),c.position().z()))).count();
+        if(ownedGeometry>blueprint.constructionAllowance()) return new Resolution(Optional.empty(),"CONSTRUCTION_VOLUME_LIMIT",0,0);
         var suspendedPoints=new HashSet<GridPoint>();geometry.suspended().forEach(c->suspendedPoints.add(c.point()));
         var junctions=FinalRetainingJunctions.apply(original,blueprint,suspendedPoints,ground);
         original = FinalTerrainAprons.connected(junctions.plan(), blueprint, ground);
@@ -100,18 +107,25 @@ public final class StructuralSupportPlacement {
                         || previous.role()==DebugPlacementRole.FOUNDATION)) operations.put(key(op),op);
             else if(operations.putIfAbsent(key(op),op)==null) addedSupports++;
         }
-        int cleared=FinalTerrainClearance.add(operations,original,blueprint.envelopes(),ground,12);
+        int cleared=FinalTerrainClearance.add(operations,original,blueprint.envelopes(),ground,blueprint.clearanceHeight(),blueprint.ownership());
         if(cleared<0) return new Resolution(Optional.empty(),"CLEARANCE_HEIGHT_LIMIT",0,0);
         for(var cell:fillResult.cells()) {
             var p=cell.position();var op=new DebugBlockPlacementOperation(new GridPoint(p.x(),p.z()),0,DebugPlacementRole.SUSPENDED_CONTENT,
                     cell.source().child("ravine-fill"),OptionalInt.of(p.y()),blueprint.materials().getOrDefault("FOUNDATION","minecraft:andesite"),0);
             operations.putIfAbsent(key(op),op);
         }
-        if(geometry.cells().size()+cleared+junctions.additionalCells()+fillResult.cells().size()>blueprint.constructionAllowance()) return new Resolution(Optional.empty(),"CONSTRUCTION_VOLUME_LIMIT",0,0);
+        long construction=geometry.cells().size()+cleared+junctions.additionalCells()+fillResult.cells().size();
+        if(blueprint.ownership()!=null) {
+            operations.values().removeIf(op->!blueprint.ownership().contains(op.point()));
+            construction=operations.values().stream().filter(op->!originalPositions.contains(key(op))).count()
+                    +geometry.cells().stream().filter(c->blueprint.ownership().contains(new GridPoint(c.position().x(),c.position().z()))
+                        && originalPositions.contains(c.position().x()+","+c.position().y()+","+c.position().z())).count();
+        }
+        if(construction>blueprint.constructionAllowance()) return new Resolution(Optional.empty(),"CONSTRUCTION_VOLUME_LIMIT",0,0);
         // Removals run before authored content; their saved positions also participate in debug undo.
         var ordered=new ArrayList<>(operations.values());
         ordered.sort(Comparator.comparingInt(op->op.role()==DebugPlacementRole.TERRAIN_CLEARANCE?0:1));
-        return new Resolution(Optional.of(new DebugPlacementPlan(ordered)),"ACCEPTED",columns.size(),addedSupports);
+        return new Resolution(Optional.of(new DebugPlacementPlan(ordered)),"ACCEPTED",columns.size(),addedSupports,construction,ownedGeometry);
     }
     private static boolean roadEdge(StructuralSupportBlueprint blueprint,int x,int z) {
         for(int[] delta:new int[][]{{1,0},{-1,0},{0,1},{0,-1}}) {

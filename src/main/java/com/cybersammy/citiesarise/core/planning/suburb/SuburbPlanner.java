@@ -47,10 +47,32 @@ public final class SuburbPlanner {
     private static final TerrainAdaptationPlanner TERRAIN_ADAPTATION_PLANNER = new TerrainAdaptationPlanner();
     private final TerrainSuitabilityScorer terrainScorer;
     private final PlanValidator planValidator;
+    private final boolean composeContent;
 
     public SuburbPlanner(TerrainSuitabilityScorer terrainScorer, PlanValidator planValidator) {
+        this(terrainScorer,planValidator,true);
+    }
+    private SuburbPlanner(TerrainSuitabilityScorer terrainScorer,PlanValidator planValidator,boolean composeContent) {
         this.terrainScorer = Objects.requireNonNull(terrainScorer, "terrainScorer");
         this.planValidator = Objects.requireNonNull(planValidator, "planValidator");
+        this.composeContent=composeContent;
+    }
+
+    /** Immutable terrain-only planner for repeated adapter refinements. */
+    public SuburbPlanner geometryOnly() {return new SuburbPlanner(terrainScorer,planValidator,false);}
+    boolean composesContent() {return composeContent;}
+
+    public SuburbPlanningResult finishContent(SuburbPlanningRequest request,SuburbPlanningResult result) {
+        if(!result.successful())return result;
+        try {
+            return result.withContent(com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
+                    result.plan().orElseThrow(),result.terrainPreparationPlan().orElseThrow(),request.seed(),
+                    request.settings().buildings(),request.settings().parcelLayout()));
+        } catch(IllegalArgumentException error) {
+            return SuburbPlanningResult.invalid(List.of(PlanValidationError.forElement(
+                    com.cybersammy.citiesarise.core.validation.PlanValidationErrorCode.CONTENT_COMPOSITION_FAILED,
+                    result.plan().orElseThrow().id(),error.getMessage())));
+        }
     }
 
     public static SuburbPlanner defaults() {
@@ -65,6 +87,50 @@ public final class SuburbPlanner {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(acceptance, "acceptance");
 
+        if (request.settings().districts().grid().enabled()) {
+            var layout=CityGridLayout.create(request);
+            if(layout.isEmpty())return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_DISTRICT_CAPACITY);
+            var plan=layout.orElseThrow();
+            var adaptation=createTerrainAdaptationPlan(request);
+            SuburbPlanningResult result=SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_DISTRICT_CAPACITY);
+            int maximumAttempts=plan.parcels().size()+plan.roadGraph().segments().size();
+            for(int attempt=0;attempt<maximumAttempts;attempt++) {
+                var routed=CityGridRouting.route(request,plan,adaptation);
+                if(routed.isEmpty())return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.DISTRICT_CONNECTION_FAILED);
+                var accepted=routed.orElseThrow();
+                plan=accepted;
+                var elevated=new SettlementPlan(accepted.id(),RoadGraphSegmenter.splitLongSegments(accepted.roadGraph(),MAX_ROAD_ELEVATION_NODE_DISTANCE),
+                        accepted.parcels(),accepted.buildingSlots(),accepted.tags(),accepted.properties(),accepted.districts());
+                result=complete(request,elevated,acceptance,true,true,adaptation);
+                if(result.successful())result=acceptance.validate(request,result);
+                if(result.successful() || result.terrainDiagnostic().isEmpty())return result;
+                var diagnostic=result.terrainDiagnostic().orElseThrow();
+                var ids=new java.util.HashSet<PlanElementId>();
+                diagnostic.optionalPreparationLimit().ifPresent(d->{
+                    ids.add(d.sourceElementId());accepted.buildingSlots().stream().filter(s->s.id().equals(d.sourceElementId())).forEach(s->ids.add(s.parcelId()));
+                });
+                var nominal=plan;
+                var nodes=new java.util.HashMap<PlanElementId,GridPoint>();nominal.roadGraph().nodes().forEach(n->nodes.put(n.id(),n.point()));
+                var failedRoads=nominal.roadGraph().segments().stream().filter(r->ids.stream().anyMatch(id->id.equals(r.id()) || id.value().startsWith(r.id().value()+"/"))
+                        || AxisAlignedGridCorridor.bounds(nodes.get(r.startNodeId()),nodes.get(r.endNodeId()),r.width()).contains(diagnostic.cell().point())).toList();
+                var failed=accepted.districts().stream().filter(b->b.parcels().stream().anyMatch(ids::contains) || b.bounds().contains(diagnostic.cell().point())
+                                || failedRoads.stream().anyMatch(r->CityGridLayout.borders(nominal,r,b)))
+                        .map(com.cybersammy.citiesarise.core.model.DistrictPlan::id).collect(java.util.stream.Collectors.toSet());
+                var failedParcels=accepted.parcels().stream().filter(p->ids.contains(p.id()) || p.bounds().contains(diagnostic.cell().point()))
+                        .map(Parcel::id).collect(java.util.stream.Collectors.toSet());
+                if(!failedParcels.isEmpty())plan=CityGridLayout.removeParcels(plan,failedParcels);
+                else if(!failedRoads.isEmpty()) {
+                    var allowed=new java.util.HashSet<PlanElementId>();plan.roadGraph().segments().forEach(r->allowed.add(r.id()));
+                    failedRoads.forEach(r->allowed.remove(r.id()));
+                    plan=CityGridLayout.retainRoads(plan,allowed,request.settings().terrainTransitions().roadShoulderRadius());
+                } else {
+                    if(failed.isEmpty())return result;
+                    plan=CityGridLayout.retain(plan,failed);
+                }
+                if(plan.parcels().size()<request.settings().minimumParcelCount())return result;
+            }
+            return result;
+        }
         if (request.settings().districts().maxCount() > 1) {
             return DistrictCityPlanner.plan(this, request, acceptance);
         }
@@ -121,7 +187,11 @@ public final class SuburbPlanner {
             return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.NOT_ENOUGH_PARCEL_SPACE);
         }
 
-        SettlementPlan plan = createPlan(request, selection.orElseThrow());
+        return complete(request,createPlan(request, selection.orElseThrow()),acceptance,compactDistrict,coordinateElevation,adaptationPlan);
+    }
+
+    private SuburbPlanningResult complete(SuburbPlanningRequest request,SettlementPlan plan,PlanningAcceptance acceptance,
+            boolean compactDistrict,boolean coordinateElevation,TerrainAdaptationPlan adaptationPlan) {
         RegionalElevationPlanningResult elevationPlanning = RegionalElevationPlanner.plan(request, plan,compactDistrict,acceptance,coordinateElevation,adaptationPlan);
         plan = elevationPlanning.settlementPlan();
         if(!DistrictElevationPlanner.permits(request,plan))return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.DISTRICT_ELEVATION_CONFLICT);
@@ -155,7 +225,12 @@ public final class SuburbPlanner {
                 request.settings().preferredMaxFillDepth()
         );
         try {
-            if (!compactDistrict) plan = SettlementZoningPlanner.apply(plan,request.seed(),request.settings().districts().zoning());
+            if (!compactDistrict || request.settings().districts().grid().enabled()) plan = SettlementZoningPlanner.apply(plan,request.seed(),request.settings().districts().zoning());
+            // A rejected terrain contact must not assemble every skyscraper's rooms/facade
+            // before the city retry removes that unsupported road or parcel.
+            var checked = acceptance.validate(request, SuburbPlanningResult.success(plan, preparationPlan, siteAssessment));
+            if (!checked.successful()) return checked;
+            if(!composeContent)return checked;
             var content=com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
                     plan, preparationPlan, request.seed(), request.settings().buildings(), request.settings().parcelLayout());
             return SuburbPlanningResult.success(plan, preparationPlan, siteAssessment).withContent(content);

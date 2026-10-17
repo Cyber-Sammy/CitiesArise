@@ -152,11 +152,20 @@ for name, wall, trim, glass, accent in [
 
 profile = json.loads((SOURCE / 'cities_arise/settlement_profiles/suburb.json').read_text(encoding='utf-8'))
 p = profile['planning']
+profile['survey'] = dict(width=540, depth=540)
 p.update(roadWidth=5, parcelWidth=39, parcelDepth=39, buildingMargin=4,
-         minimumParcelCount=8, targetParcelCount=16, maximumParcelCount=24)
+         minimumParcelCount=24, targetParcelCount=80, maximumParcelCount=80, maxEarthworkVolume=1000000,
+         maxBuildableSlope=4.0, maxElevationRange=28, preferredMaxCutDepth=8, preferredMaxFillDepth=8,
+         maxCutDepth=16, maxFillDepth=16, maxBuildingFoundationDepth=16)
 p['districts'].update(targetParcels=4, parcelSizes=[dict(id='skyline:large', width=39, depth=39, buildingMargin=4)], parcelSizeFallback=False)
+p['districts']['grid'] = dict(enabled=True, columns=5, rows=4, parcelsAcross=2, parcelsDeep=2)
+p['districts']['elevation'].update(preferredDepth=8, maximumTerraces=16, levelChangeCost=160, roadRunPerRise=12)
+# Dense paved blocks use retaining faces and bounded slope aprons rather than mandatory shallow grass verges.
+p['terrainTransitions']['roadShoulderRadius'] = 0
+p['structuralSupports']['maximumVolume'] = 100000
+profile['terrainPolicy']['adaptation'].update(maxTerraformArea=128, maxTerraformRelief=8, maxTerraformVolume=1024)
 p['districts']['zoning'] = dict(districtTypes=[dict(id='skyline:centre', weight=1, properties={'skyline:purpose': 'towers'})],
-    rules=[dict(target='BUILDING_SLOT', every=8, offset=7, properties={'skyline:purpose': 'lowrise'})])
+    rules=[dict(target='BUILDING_SLOT', every=40, offset=0, properties={'skyline:purpose': 'lowrise'})])
 p['buildings'] = dict(catalog='skyline:city',
     pool=[dict(asset='skyline:'+name, weight=1) for name, _, _ in BUILDINGS[:4]],
     palettes=['skyline:'+name for name in ['limestone', 'brick', 'ivory', 'slate']], fallback='skyline:crown',
@@ -174,6 +183,11 @@ def write(relative, value):
 write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad 10-16 floor towers, setbacks and five-block roads')))
 write('data/skyline/content_catalogs/city.json', catalog)
 write('data/cities_arise/settlement_profiles/suburb.json', profile)
+# Every local owner must have the same deterministic start opportunity. Per-owner
+# village exclusion would otherwise delete isolated pieces of one accepted city.
+write('data/cities_arise/worldgen/structure_set/suburb.json', dict(
+    structures=[dict(structure='cities_arise:suburb', weight=1)],
+    placement=dict(type='minecraft:random_spread', salt=184736291, spacing=8, separation=7)))
 archive = ROOT / 'build/distributions/skyline.zip'
 archive.parent.mkdir(parents=True, exist_ok=True)
 with ZipFile(archive, 'w', ZIP_DEFLATED) as output:

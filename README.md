@@ -35,6 +35,11 @@ path level. `stepMaterial` must name a Minecraft stair block. `gradual` retains 
 older distributed access slope. Omitting `streets` preserves legacy geometry and
 materials. Street choices and placed blocks survive saved recipes and chunk reloads.
 
+Final terrain placement also waits for unwritten columns used to check the
+connection between an outer bank and its platform. Missing chunks keep that
+settlement pending across saves; readiness checks do not force-load them or spend
+the construction budget before placement can be resolved.
+
 The [Skyline datapack](examples/datapacks/skyline/README.md) adds broad 29 x 25 block
 towers with 10, 12, 14 or 16 floors, two low-rise recipes, recessed two-block windows,
 projecting facades, setbacks, flat roofs and crowns. It uses 39 x 39 plots and

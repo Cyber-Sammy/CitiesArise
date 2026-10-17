@@ -51,7 +51,7 @@ public final class DebugPlacementPlanConverter {
     public DebugPlacementPlan convert(SettlementPlan plan,ResolvedSettlementContent content) {
         content.validateAgainst(plan);
         Objects.requireNonNull(plan, "plan");
-        return ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(convert(plan, content, Map.of()), plan,content),plan,content),content),content.boundaries());
+        return StreetSectionPlacement.apply(ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(convert(plan, content, Map.of()), plan,content),plan,content),content),content.boundaries()),plan);
     }
 
     private DebugPlacementPlan convert(
@@ -98,8 +98,8 @@ public final class DebugPlacementPlanConverter {
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
-        return ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
-                .map(operation -> withMaterial(operation,content)).toList()), plan,content),plan,content),content),content.boundaries());
+        return StreetSectionPlacement.apply(ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
+                .map(operation -> withMaterial(operation,content)).toList()), plan,content),plan,content),content),content.boundaries()),plan,preparationPlan);
     }
 
     private DebugPlacementPlan withBridges(DebugPlacementPlan placement, SettlementPlan plan,ResolvedSettlementContent content) {
@@ -152,10 +152,15 @@ public final class DebugPlacementPlanConverter {
                 bridge.end().x()>bridge.start().x()?3:bridge.end().x()<bridge.start().x()?1:bridge.end().z()<bridge.start().z()?2:0);
         Map<DebugPlacementPosition,DebugBlockPlacementOperation> result=new LinkedHashMap<>();
         for(var op:placement.operations()) addOperation(op,result);
+        var streetSurfaces=com.cybersammy.citiesarise.core.road.StreetSectionGeometry.surfaces(plan.roadGraph());
         for(var op:placement.operations()) {
             if (op.role() == DebugPlacementRole.SUPPORT_LINING) continue;
             if (op.role() == DebugPlacementRole.BRIDGE_DECK && op.verticalOffset() != 0) continue;
             var template=content.surfaceTemplates().get(op.role().name());
+            var streetCell=streetSurfaces.get(op.point());
+            if(streetCell!=null && (streetCell.kind()==com.cybersammy.citiesarise.core.road.StreetSectionGeometry.Kind.SIDEWALK
+                    || streetCell.kind()==com.cybersammy.citiesarise.core.road.StreetSectionGeometry.Kind.VERGE)
+                    && (op.role()==DebugPlacementRole.ROAD_SURFACE || op.role()==DebugPlacementRole.WORN_ROAD_SURFACE || op.role()==DebugPlacementRole.BRIDGE_DECK))template=null;
             var local=content.parcels().get(op.sourceElementId());
             if(local!=null && com.cybersammy.citiesarise.core.content.ParcelContentRule.ROLES.contains(op.role().name())) {
                 // A selected material also replaces an inherited template for that role.

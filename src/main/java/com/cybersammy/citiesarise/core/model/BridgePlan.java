@@ -22,7 +22,7 @@ public record BridgePlan(PlanElementId id, PlanElementId startNodeId, PlanElemen
         foundations = java.util.List.copyOf(foundations);
         Objects.requireNonNull(start); Objects.requireNonNull(end);
         if (startNodeId.equals(endNodeId) || start.equals(end) || (start.x() != end.x() && start.z() != end.z())
-                || width < 3 || width > 16 || deckDepth < 1 || deckDepth > 4 || startBankLength < 1 || endBankLength < 1
+                || width < 3 || width > 32 || deckDepth < 1 || deckDepth > 4 || startBankLength < 1 || endBankLength < 1
                 || Math.abs((long)endDeckY - deckY) > 8
                 || distance(start,end) + 1L - startBankLength - endBankLength < 6L * Math.abs((long)endDeckY-deckY)
                 || distance(start, end) > 48 || distance(start, end) < startBankLength + endBankLength) {

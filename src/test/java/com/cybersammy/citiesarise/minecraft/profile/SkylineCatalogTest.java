@@ -67,9 +67,10 @@ class SkylineCatalogTest {
             }
         }
     }
-    @Test void largeParcelsAndFiveWideRoadsStillProduceAConnectedCity() throws Exception {
+    @Test void largeParcelsAndElevenWideRoadsStillProduceAConnectedCity() throws Exception {
         var profile=profile();var settings=profile.suburbPlanningSettings();
-        assertEquals(5,settings.roadWidth());
+        assertEquals(11,settings.roadWidth());
+        assertEquals(17,settings.corridorWidth());
         var survey=TerrainSurvey.sample(new GridBounds(new GridPoint(0,0),profile.surveySize()),p->Optional.of(
             new TerrainCell(p,65,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
         var result=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(new PlanElementId("test:skyline"),survey,42,settings,profile.terrainResponsePolicy()));

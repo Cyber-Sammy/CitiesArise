@@ -270,8 +270,28 @@ public final class MinecraftSettlementProfileJsonParser {
                         "maxEarthworkVolume",
                         SuburbPlanningSettings.DEFAULT_MAX_EARTHWORK_VOLUME
                 ),
-                parseTerrainTransitionSettings(planning)
+                parseTerrainTransitionSettings(planning).withStreets(parseStreets(planning))
         );
+    }
+
+    private static com.cybersammy.citiesarise.core.road.StreetSectionSettings parseStreets(JsonObject planning) {
+        var disabled=com.cybersammy.citiesarise.core.road.StreetSectionSettings.disabled();
+        if(!planning.has("streets"))return disabled;
+        var street=requiredObject(planning,"streets");var modules=new java.util.ArrayList<com.cybersammy.citiesarise.core.road.StreetSectionSettings.Module>();
+        if(!street.has("modules") || !street.get("modules").isJsonArray())throw new IllegalArgumentException("streets.modules must be an array");
+        for(var element:street.getAsJsonArray("modules")) {
+            var m=element.getAsJsonObject();
+            modules.add(new com.cybersammy.citiesarise.core.road.StreetSectionSettings.Module(requiredString(requiredElement(m,"id"),"id"),optionalInt(m,"weight",1),
+                    optionalInt(m,"leftWidth",2),optionalInt(m,"rightWidth",2),optionalBoolean(m,"carriageway",true),optionalInt(m,"pathWidth",3),
+                    m.has("material")?requiredString(requiredElement(m,"material"),"material"):"minecraft:stone_bricks"));
+        }
+        if(modules.isEmpty())throw new IllegalArgumentException("streets.modules must not be empty");
+        var access=street.has("access")?requiredObject(street,"access"):new JsonObject();
+        String mode=access.has("mode")?requiredString(requiredElement(access,"mode"),"mode"):"gradual";
+        if(!mode.equals("gradual") && !mode.equals("stairs_landing"))throw new IllegalArgumentException("Unknown street access mode");
+        return new com.cybersammy.citiesarise.core.road.StreetSectionSettings(optionalInt(street,"sectionLength",24),modules,
+                street.has("centerMaterial")?requiredString(requiredElement(street,"centerMaterial"),"centerMaterial"):"",street.has("vergeMaterial")?requiredString(requiredElement(street,"vergeMaterial"),"vergeMaterial"):"minecraft:grass_block",
+                mode.equals("stairs_landing"),optionalInt(access,"landingLength",1),access.has("stepMaterial")?requiredString(requiredElement(access,"stepMaterial"),"stepMaterial"):"minecraft:stone_brick_stairs");
     }
 
     private static TerrainTransitionSettings parseTerrainTransitionSettings(JsonObject planning) {

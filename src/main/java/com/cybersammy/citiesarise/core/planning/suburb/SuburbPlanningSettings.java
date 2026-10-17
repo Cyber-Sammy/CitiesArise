@@ -80,6 +80,12 @@ public record SuburbPlanningSettings(
                 maxFillDepth, maxBuildingFoundationDepth, maxEarthworkVolume, terrainTransitions, content, districts, parcelLayout);
     }
 
+    public int corridorWidth() {return terrainTransitions.streets().corridorWidth(roadWidth);}
+    public SuburbPlanningSettings withStreets(com.cybersammy.citiesarise.core.road.StreetSectionSettings streets) {
+        return new SuburbPlanningSettings(roadWidth,maxBuildableSlope,parcelCapacity,parcelWidth,parcelDepth,buildingMargin,maxElevationRange,
+                preferredMaxCutDepth,preferredMaxFillDepth,maxCutDepth,maxFillDepth,maxBuildingFoundationDepth,maxEarthworkVolume,
+                terrainTransitions.withStreets(streets),buildings,districts,parcelLayout);
+    }
     public static final int DEFAULT_ROAD_WIDTH = 3;
     public static final double DEFAULT_MAX_BUILDABLE_SLOPE = 0.25;
     public static final int DEFAULT_TARGET_PARCEL_COUNT = 6;
@@ -332,6 +338,7 @@ public record SuburbPlanningSettings(
         requireNonNegative(maxBuildingFoundationDepth, "maxBuildingFoundationDepth");
         requireNonNegative(maxEarthworkVolume, "maxEarthworkVolume");
         terrainTransitions = Objects.requireNonNull(terrainTransitions, "terrainTransitions");
+        terrainTransitions.streets().corridorWidth(roadWidth);
         buildings = Objects.requireNonNull(buildings, "buildings");
         districts = Objects.requireNonNull(districts, "districts");
         if (!buildings.fallback().fits(new GridSize(

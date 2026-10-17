@@ -31,7 +31,7 @@ final class TerrainDerivedRoadSkeletonPlanner {
         Objects.requireNonNull(footprint, "footprint");
         Objects.requireNonNull(settings, "settings");
 
-        int supportRadius = ((settings.roadWidth() - 1) / 2)
+        int supportRadius = ((settings.corridorWidth() - 1) / 2)
                 + settings.terrainTransitions().roadShoulderRadius();
         Axis axis = preferredAxis(footprint, supportRadius);
         Line mainLine = bestLine(footprint, axis, supportRadius);
@@ -42,7 +42,7 @@ final class TerrainDerivedRoadSkeletonPlanner {
         Random random = new Random(seed);
         int requestedBranchCount = 2 + random.nextInt(3);
         int crossLength = axis.maximumCross(footprint)-axis.minimumCross(footprint)+1;
-        int branchSpace = settings.roadWidth()+2*(settings.parcelDepth()+settings.roadWidth()
+        int branchSpace = settings.corridorWidth()+2*(settings.parcelDepth()+settings.corridorWidth()
                 +settings.terrainTransitions().roadShoulderRadius()+settings.terrainTransitions().parcelShoulderRadius());
         if(compactDistrict && crossLength<branchSpace) requestedBranchCount=0;
         List<Integer> junctionAxes = junctionAxes(
@@ -97,7 +97,7 @@ final class TerrainDerivedRoadSkeletonPlanner {
                     roadsId.child("main-" + index),
                     mainPath.get(index),
                     mainPath.get(index + 1),
-                    settings.roadWidth(),
+                    settings.corridorWidth(),
                     "main_road"
             ));
         }
@@ -106,7 +106,7 @@ final class TerrainDerivedRoadSkeletonPlanner {
                     roadsId.child("side-" + index),
                     roadsId.child("side-" + index + "-junction"),
                     roadsId.child("side-" + index + "-dead-end"),
-                    settings.roadWidth(),
+                    settings.corridorWidth(),
                     "side_road",
                     "dead_end"
             ));
@@ -260,8 +260,8 @@ final class TerrainDerivedRoadSkeletonPlanner {
             int mainCrossAxis,
             boolean negativeDirection
     ) {
-        int reach = settings.parcelDepth() + settings.roadWidth();
-        int boundaryMargin = settings.roadWidth();
+        int reach = settings.parcelDepth() + settings.corridorWidth();
+        int boundaryMargin = settings.corridorWidth();
         int target;
         if (negativeDirection) {
             target = Math.max(axis.minimumCross(footprint) + boundaryMargin, mainCrossAxis - reach);

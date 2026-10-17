@@ -11,26 +11,26 @@ final class CityGridLayout {
         var s=request.settings();var g=s.districts().grid();var survey=request.survey().bounds();
         int spacing=s.parcelLayout().minimumSpacing();
         int shoulder=s.terrainTransitions().roadShoulderRadius();
-        int pitchX=g.parcelsAcross()*s.parcelWidth()+(g.parcelsAcross()-1)*spacing+s.roadWidth()+2*shoulder;
-        int pitchZ=g.parcelsDeep()*s.parcelDepth()+(g.parcelsDeep()-1)*spacing+s.roadWidth()+2*shoulder;
-        int width=g.columns()*pitchX+s.roadWidth(),depth=g.rows()*pitchZ+s.roadWidth();
+        int pitchX=g.parcelsAcross()*s.parcelWidth()+(g.parcelsAcross()-1)*spacing+s.corridorWidth()+2*shoulder;
+        int pitchZ=g.parcelsDeep()*s.parcelDepth()+(g.parcelsDeep()-1)*spacing+s.corridorWidth()+2*shoulder;
+        int width=g.columns()*pitchX+s.corridorWidth(),depth=g.rows()*pitchZ+s.corridorWidth();
         if(width+2*shoulder>survey.size().width() || depth+2*shoulder>survey.size().depth())return Optional.empty();
-        int x0=survey.minX()+(survey.size().width()-width)/2+s.roadWidth()/2;
-        int z0=survey.minZ()+(survey.size().depth()-depth)/2+s.roadWidth()/2;
+        int x0=survey.minX()+(survey.size().width()-width)/2+s.corridorWidth()/2;
+        int z0=survey.minZ()+(survey.size().depth()-depth)/2+s.corridorWidth()/2;
         var nodes=new ArrayList<RoadNode>();var roads=new ArrayList<RoadSegment>();
         var parcels=new ArrayList<Parcel>();var slots=new ArrayList<BuildingSlot>();var blocks=new ArrayList<DistrictPlan>();
         var tags=Set.of(new PlanTag("urban"));
         for(int z=0;z<=g.rows();z++)for(int x=0;x<=g.columns();x++) {
             var id=request.settlementId().child("grid-node-"+x+"-"+z);
             nodes.add(new RoadNode(id,new GridPoint(x0+x*pitchX,z0+z*pitchZ),tags,PlanProperties.empty()));
-            if(x>0)roads.add(new RoadSegment(id.child("west"),request.settlementId().child("grid-node-"+(x-1)+"-"+z),id,s.roadWidth(),tags,PlanProperties.empty()));
-            if(z>0)roads.add(new RoadSegment(id.child("north"),request.settlementId().child("grid-node-"+x+"-"+(z-1)),id,s.roadWidth(),tags,PlanProperties.empty()));
+            if(x>0)roads.add(new RoadSegment(id.child("west"),request.settlementId().child("grid-node-"+(x-1)+"-"+z),id,s.corridorWidth(),tags,PlanProperties.empty()));
+            if(z>0)roads.add(new RoadSegment(id.child("north"),request.settlementId().child("grid-node-"+x+"-"+(z-1)),id,s.corridorWidth(),tags,PlanProperties.empty()));
         }
         for(int z=0;z<g.rows();z++)for(int x=0;x<g.columns();x++) {
             var candidate=new ArrayList<GridBounds>();
             for(int pz=0;pz<g.parcelsDeep();pz++)for(int px=0;px<g.parcelsAcross();px++)
-                candidate.add(new GridBounds(new GridPoint(x0+x*pitchX+s.roadWidth()/2+1+shoulder+px*(s.parcelWidth()+spacing),
-                    z0+z*pitchZ+s.roadWidth()/2+1+shoulder+pz*(s.parcelDepth()+spacing)),new GridSize(s.parcelWidth(),s.parcelDepth())));
+                candidate.add(new GridBounds(new GridPoint(x0+x*pitchX+s.corridorWidth()/2+1+shoulder+px*(s.parcelWidth()+spacing),
+                    z0+z*pitchZ+s.corridorWidth()/2+1+shoulder+pz*(s.parcelDepth()+spacing)),new GridSize(s.parcelWidth(),s.parcelDepth())));
             candidate.removeIf(b->!usable(request,b));
             if(candidate.isEmpty() || parcels.size()+candidate.size()>s.targetParcelCount())continue;
             var members=new ArrayList<PlanElementId>();
@@ -40,8 +40,8 @@ final class CityGridLayout {
                 slots.add(new BuildingSlot(request.settlementId().child("building-slot-"+i),id,SuburbParcelGeometry.buildingBounds(s,bounds),tags,PlanProperties.empty()));
             }
             blocks.add(new DistrictPlan(request.settlementId().child("block-"+x+"-"+z),
-                new GridBounds(new GridPoint(x0+x*pitchX+s.roadWidth()/2+1,z0+z*pitchZ+s.roadWidth()/2+1),
-                    new GridSize(pitchX-s.roadWidth(),pitchZ-s.roadWidth())),members));
+                new GridBounds(new GridPoint(x0+x*pitchX+s.corridorWidth()/2+1,z0+z*pitchZ+s.corridorWidth()/2+1),
+                    new GridSize(pitchX-s.corridorWidth(),pitchZ-s.corridorWidth())),members));
         }
         if(parcels.size()<s.minimumParcelCount())return Optional.empty();
         return Optional.of(retain(new SettlementPlan(request.settlementId(),new RoadGraph(nodes,roads),parcels,slots,tags,PlanProperties.empty(),blocks),Set.of()));

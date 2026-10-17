@@ -710,6 +710,8 @@ public final class TerrainPreparationPlanValidator {
             errors.add(error(transition.targetZoneId(), "building access anchor must be on the building perimeter"));
         }
 
+        if(transition.startOverride()!=null && !source.bounds().contains(transition.startOverride()))
+            errors.add(error(transition.targetZoneId(),"building access start is outside its street corridor"));
         BuildingAccessResolver.BuildingAccess expected = BuildingAccessResolver.resolve(List.of(source), target);
         // The transition explicitly owns its street; later city links must not rotate an entrance.
         if (!transition.anchor().equals(expected.anchor())) {

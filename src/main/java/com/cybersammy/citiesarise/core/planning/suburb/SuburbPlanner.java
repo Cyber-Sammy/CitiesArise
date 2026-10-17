@@ -276,23 +276,23 @@ public final class SuburbPlanner {
     }
 
     private static int minimumSurveyWidth(SuburbPlanningSettings settings) {
-        return settings.roadWidth() + settings.parcelWidth();
+        return settings.corridorWidth() + settings.parcelWidth();
     }
 
     private static int minimumSurveyDepth(SuburbPlanningSettings settings) {
         return 2 * (
-                settings.roadWidth()
+                settings.corridorWidth()
                         + settings.terrainTransitions().roadShoulderRadius()
                         + settings.parcelDepth()
         );
     }
 
     private boolean roadFitsSurvey(SuburbPlanningSettings settings, GridBounds bounds) {
-        if (settings.roadWidth() > bounds.size().width()) {
+        if (settings.corridorWidth() > bounds.size().width()) {
             return false;
         }
 
-        if (settings.roadWidth() > bounds.size().depth()) {
+        if (settings.corridorWidth() > bounds.size().depth()) {
             return false;
         }
 

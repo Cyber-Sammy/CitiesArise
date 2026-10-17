@@ -15,8 +15,18 @@ public record TerrainTransitionSettings(
         int retainingWallMinimumHeight,
         int supportLiningDepth,
         int cutSlopeRadius,
-        int fillSlopeRadius
+        int fillSlopeRadius,
+        com.cybersammy.citiesarise.core.road.StreetSectionSettings streets
 ) {
+    public TerrainTransitionSettings(int accessRun,int roadRadius,int roadFill,int parcelRadius,int parcelFill,
+            int buildingRadius,int buildingFill,boolean walls,int wallHeight,int liningDepth,int cutRadius,int fillRadius) {
+        this(accessRun,roadRadius,roadFill,parcelRadius,parcelFill,buildingRadius,buildingFill,walls,wallHeight,liningDepth,cutRadius,fillRadius,
+                com.cybersammy.citiesarise.core.road.StreetSectionSettings.disabled());
+    }
+    public TerrainTransitionSettings withStreets(com.cybersammy.citiesarise.core.road.StreetSectionSettings value) {
+        return new TerrainTransitionSettings(buildingAccessRunPerRise,roadShoulderRadius,roadShoulderMaxFillDepth,parcelShoulderRadius,parcelShoulderMaxFillDepth,
+                buildingShoulderRadius,buildingShoulderMaxFillDepth,retainingWalls,retainingWallMinimumHeight,supportLiningDepth,cutSlopeRadius,fillSlopeRadius,value);
+    }
     public TerrainTransitionSettings(int accessRun, int roadRadius, int roadFill, int parcelRadius, int parcelFill,
             int buildingRadius, int buildingFill, boolean walls, int wallHeight, int liningDepth, int cutRadius) {
         this(accessRun,roadRadius,roadFill,parcelRadius,parcelFill,buildingRadius,buildingFill,walls,wallHeight,liningDepth,cutRadius,0);
@@ -35,6 +45,7 @@ public record TerrainTransitionSettings(
     public static final int MAX_ACCESS_RUN_PER_RISE = 8;
 
     public TerrainTransitionSettings {
+        streets=streets==null?com.cybersammy.citiesarise.core.road.StreetSectionSettings.disabled():streets;
         requireRange(fillSlopeRadius,0,MAX_SUPPORT_RADIUS,"fillSlopeRadius");
         requireRange(cutSlopeRadius,0,MAX_SUPPORT_RADIUS,"cutSlopeRadius");
         requireRange(supportLiningDepth, 0, OrdinaryGroundSupport.REQUIRED_SOLID_DEPTH, "supportLiningDepth");

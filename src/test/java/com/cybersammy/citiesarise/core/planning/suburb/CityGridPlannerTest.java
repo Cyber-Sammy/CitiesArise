@@ -97,6 +97,8 @@ class CityGridPlannerTest {
         assertTrue(result.successful(),result.toString());
         assertEquals(16,result.plan().orElseThrow().parcels().size());
         var prepared=result.terrainPreparationPlan().orElseThrow();
+        var errors=new com.cybersammy.citiesarise.core.earthwork.TerrainPreparationPlanValidator().validate(result.plan().orElseThrow(),prepared);
+        assertTrue(errors.isEmpty(),errors.toString());
         assertTrue(prepared.constructionVolume()<=p.suburbPlanningSettings().maxEarthworkVolume());
         assertTrue(prepared.columns().stream().allMatch(c->c.cutDepth()<=p.suburbPlanningSettings().maxCutDepth()
                 && c.fillDepth()<=p.suburbPlanningSettings().maxFillDepth()));

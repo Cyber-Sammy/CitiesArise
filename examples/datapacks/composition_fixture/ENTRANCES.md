@@ -148,6 +148,13 @@ Street-to-parcel height changes continue to use the configured sidewalk stairs
 and landing. Entrance routing does not terraform an unprepared slope or invent a
 new foundation. Oversized candidates can fall back to a smaller authored module.
 
+A one-block-wide yard path may end at the low edge of a prepared descending
+access stair whose block is one block above the entrance platform. This requires
+enabled street modules and stair access, and the approach must match the actual
+materialized transition. The path stores that stair's prepared elevation, so
+placement retains its shape and clears headroom above it. This does not permit
+sideways joins, arbitrary one-block rises, or widening a single stair.
+
 Module footprints and paths are reserved before fences, gates, outdoor layouts
 and props. Paths receive explicit two-block headroom. Frozen placement snapshots
 contain the final materials, rotations, door halves and access cells, so loading

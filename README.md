@@ -10,6 +10,12 @@ and props. Required inaccessible entrances reject the composition; optional exit
 are closed with the authored cap material. Skyline demonstrates main and service
 entrances with two reusable portal/canopy variants.
 
+A level entrance path can terminate at the low edge of an existing descending
+access stair. The stair keeps its prepared height and shape; sideways approaches,
+unprepared height changes and paths wider than that stair remain invalid.
+Conflicting elevations at overlapping road transitions are detected before
+content assembly, allowing grid planning to retry without the offending street.
+
 See [authoring independent entrances](examples/datapacks/composition_fixture/ENTRANCES.md)
 for the schema, facade interfaces and `materialRules.operable` door traits. Both
 the updated JAR and Skyline ZIP are needed for these new examples; older packs

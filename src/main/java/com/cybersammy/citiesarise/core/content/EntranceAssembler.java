@@ -29,12 +29,15 @@ public final class EntranceAssembler {
         var requests=settings.requests().stream().sorted(Comparator.comparing((EntranceSettings.Request r)->!r.socket().equals("primary")).thenComparing(EntranceSettings.Request::id)).toList();
         int attempts=0;
         for(var request:requests) {
+            var failures=new TreeMap<String,Integer>();
             var matches=sockets.stream().filter(s->!used.contains(s.joint()) && (request.socket().equals("primary")
                     ?s.joint().position().equals(primary) && s.joint().face()==primaryFace:s.id().equals(request.socket()))).toList();
             ResolvedEntrance accepted=null;Joint acceptedSocket=null;
             for(var socket:matches) {
                 if(!ModuleDefinition.jointCells(socket.joint()).stream().filter(p->p.y()==primary.y())
-                        .allMatch(p->inside.contains(p.add(inward(socket.joint().face())))))continue;
+                        .allMatch(p->inside.contains(p.add(inward(socket.joint().face()))))) {
+                    failures.merge("interior route",1,Integer::sum);continue;
+                }
                 for(var choice:order(request.pool(),seed^request.id().hashCode())) {
                     var module=settings.modules().get(choice.module());
                     for(var raw:CompositionAssembler.standaloneAlternatives(module,request.connectionJoint(),settings.damageSeverity(),settings.airMaterial(),seed^request.id().hashCode())) {
@@ -56,21 +59,24 @@ public final class EntranceAssembler {
                             var transformed=translate(ParcelPropLayout.rotate(nested.orElseThrow(),module.size(),turn,settings.modules()),origin);
                             var entry=translate(CompositionAssembler.rotate(outside.orElseThrow(),module.size(),turn),origin);
                             var protectedSpace=new HashSet<>(occupied);protectedSpace.addAll(protectedPaths);
-                            if(entry.position().y()!=primary.y() || !fits(transformed,socket.joint(),merged,slot,parcel,columns,protectedSpace,platform,settings))continue;
+                            String fitFailure=fitFailure(transformed,socket.joint(),merged,slot,parcel,columns,protectedSpace,platform,settings);
+                            if(entry.position().y()!=primary.y() || fitFailure!=null) {
+                                failures.merge(fitFailure==null?"entrance elevation":fitFailure,1,Integer::sum);continue;
+                            }
                             var combined=new LinkedHashMap<>(merged);transformed.cells().forEach(c->combined.put(c.position(),c));
                             var body=ModuleDefinition.jointCells(entry).stream().filter(p->p.y()==primary.y()).toList();
                             if(body.stream().anyMatch(p->!standing(combined,p,settings.materialRules(),settings.airMaterial())))continue;
                             var outsidePoint=body.getFirst().subtract(inward(entry.face()));
                             var anchor=world(slot,outsidePoint);var reservations=footprint(slot,transformed);
                             var blocked=new HashSet<>(occupied);blocked.addAll(reservations);blocked.addAll(footprint(slot,building));
-                            var route=EntranceYardRouter.route(anchor,parcel,slot,city,preparation,platform,blocked,request.maximumPathLength(),request.pathWidth());
-                            if(route.isEmpty())continue;
+                            var route=EntranceYardRouter.route(anchor,world(slot,body.getFirst()),parcel,slot,city,preparation,platform,blocked,request.maximumPathLength(),request.pathWidth());
+                            if(route.isEmpty()){failures.merge("yard route",1,Integer::sum);continue;}
                             var path=new LinkedHashSet<GridPoint>();
                             for(var p:route.orElseThrow())for(int dz=-request.pathWidth()/2;dz<=request.pathWidth()/2;dz++)for(int dx=-request.pathWidth()/2;dx<=request.pathWidth()/2;dx++)
                                 path.add(new GridPoint(p.x()+dx,p.z()+dz));
                             reservations.addAll(path);
                             accepted=new ResolvedEntrance(request.id(),request.role(),request.socket(),transformed,anchor,platform,
-                                    path.stream().map(p->new ResolvedEntrance.PathCell(p,platform,request.pathMaterial())).toList(),reservations);
+                                    path.stream().map(p->new ResolvedEntrance.PathCell(p,columns.get(p).targetElevation(),request.pathMaterial())).toList(),reservations);
                             acceptedSocket=socket.joint();break;
                         }
                         if(accepted!=null)break;
@@ -80,7 +86,8 @@ public final class EntranceAssembler {
                 if(accepted!=null)break;
             }
             if(accepted==null) {
-                if(request.required())throw new IllegalArgumentException("No compatible reachable entrance "+request.id()+" for "+slot.id().value());
+                if(request.required())throw new IllegalArgumentException("No compatible reachable entrance "+request.id()+" for "+slot.id().value()
+                        +"; sockets="+matches.size()+", rejected="+failures);
                 for(var s:matches)for(var p:ModuleDefinition.jointCells(s.joint())) {
                     var old=base.get(p);
                     if(old!=null && !old.providerData().isEmpty())throw new IllegalArgumentException("Cannot cap occupied optional facade socket");
@@ -99,22 +106,22 @@ public final class EntranceAssembler {
         if(error.isPresent())throw new IllegalArgumentException("Entrance blocks building circulation: "+error.orElseThrow());
         return new Result(resolved,List.copyOf(placed));
     }
-    private static boolean fits(ResolvedComposition module,Joint socket,Map<Vec,PlacedCell> cells,BuildingSlot slot,Parcel parcel,
+    private static String fitFailure(ResolvedComposition module,Joint socket,Map<Vec,PlacedCell> cells,BuildingSlot slot,Parcel parcel,
             Map<GridPoint,TerrainPreparationColumn> columns,Set<GridPoint> occupied,int platform,EntranceSettings settings) {
         int plane=switch(socket.face()){case NORTH,SOUTH->ModuleDefinition.jointCells(socket).getFirst().z();default->ModuleDefinition.jointCells(socket).getFirst().x();};
         for(var c:module.cells()) {
             var p=c.position();var point=world(slot,p);var column=columns.get(point);
             if(!parcel.bounds().contains(point) || column==null || column.targetElevation()!=platform || occupied.contains(point)
-                    || p.y()<0 || p.y()>15)return false;
+                    || p.y()<0 || p.y()>15)return "prepared surface";
             var old=cells.get(p);
             if(column.type()!=TerrainPreparationColumnType.PLATFORM && column.type()!=TerrainPreparationColumnType.BUILDING_ACCESS
-                    && !(column.type()==TerrainPreparationColumnType.BUILDING_ACCESS_STEP && old!=null))return false;
+                    && !(column.type()==TerrainPreparationColumnType.BUILDING_ACCESS_STEP && old!=null))return "surface type "+column.type();
             if(old==null)continue;
             int value=socket.face()==Face.NORTH || socket.face()==Face.SOUTH?p.z():p.x();
             if(value!=plane || p.y()<socket.position().y()-1 || p.y()>socket.position().y()+socket.height()
-                    || !old.providerData().isEmpty() || settings.materialRules().climbable().contains(old.material()))return false;
+                    || !old.providerData().isEmpty() || settings.materialRules().climbable().contains(old.material()))return "building overlap";
         }
-        return true;
+        return null;
     }
     private static List<Socket> sockets(ResolvedComposition building,Map<String,ModuleDefinition> definitions,int y) {
         var result=new ArrayList<Socket>();

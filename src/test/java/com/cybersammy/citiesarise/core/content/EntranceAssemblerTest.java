@@ -84,6 +84,39 @@ class EntranceAssemblerTest {
             assertEquals(result,f.assemble(settings(true,128)));
         }
     }
+    @Test void aMainPortalCanMeetTheLowEdgeOfTheLastDescendingStairInEveryRotation() {
+        for(int turn=0;turn<4;turn++) {
+            var f=fixture(turn,false);var normal=ModuleBoundary.normal(f.face());
+            var facade=ModuleDefinition.jointCells(CompositionAssembler.rotate(
+                    joint("entry","facade","portal",new Vec(2,1,0),Face.NORTH,true),new Vec(5,4,5),turn)).getFirst();
+            var anchor=new GridPoint(4+facade.x(),4+facade.z());
+            var start=new GridPoint(anchor.x()+normal.x()*4,anchor.z()+normal.z()*4);
+            var road=new ElevationZone(new PlanElementId("test:road"),ElevationZoneType.ROAD_SEGMENT,
+                    new GridBounds(start,new GridSize(1,1)),67);
+            var transition=new ElevationTransition(ElevationTransitionType.BUILDING_ACCESS,road.sourceElementId(),f.slot().id(),anchor,67,65,1,start,true,1);
+            var zones=new ArrayList<>(f.preparation().elevationPlan().zones());zones.add(road);
+            var stairPoints=new HashMap<GridPoint,ElevationTransitionPolicy.TransitionPoint>();
+            ElevationTransitionPolicy.materialize(transition,road,zones.getFirst()).forEach(p->stairPoints.put(p.point(),p));
+            var columns=f.preparation().columns().stream().map(c->{
+                var point=stairPoints.get(c.point());
+                return point==null?c:new TerrainPreparationColumn(c.point(),f.slot().id(),point.targetElevation(),0,0,
+                        point.step()?TerrainPreparationColumnType.BUILDING_ACCESS_STEP:TerrainPreparationColumnType.BUILDING_ACCESS);
+            }).toList();
+            var streets=new com.cybersammy.citiesarise.core.road.StreetSectionSettings(24,List.of(
+                    new com.cybersammy.citiesarise.core.road.StreetSectionSettings.Module("test:sidewalk",1,1,1,true,1,"stone")),"","stone",true,1);
+            var preparation=TerrainPreparationPlan.of(new RegionalElevationPlan(zones,List.of(transition)),List.of(),columns,
+                    TerrainTransitionSettings.defaults().withStreets(streets));
+            var result=new Fixture(f.recipe(),f.building(),f.slot(),f.parcel(),f.city(),preparation,f.primary(),f.face()).assemble(settings(false,128));
+            var entrance=result.entrances().getFirst();
+            assertEquals(1,entrance.path().size());assertEquals(66,entrance.path().getFirst().elevation());
+            assertEquals(TerrainPreparationColumnType.BUILDING_ACCESS_STEP,columns.stream().filter(c->c.point().equals(entrance.accessAnchor())).findFirst().orElseThrow().type());
+            var blocked=new HashSet<GridPoint>();
+            assertTrue(EntranceYardRouter.route(entrance.accessAnchor(),start,f.parcel(),f.slot(),f.city(),preparation,65,blocked,128,1).isEmpty(),"A stair cannot be entered through its high or side edge at the lower floor height");
+            assertTrue(EntranceYardRouter.route(entrance.accessAnchor(),anchor,f.parcel(),f.slot(),f.city(),preparation,65,blocked,128,3).isEmpty(),"A one-block staircase cannot support a three-block route");
+            var legacy=TerrainPreparationPlan.of(preparation.elevationPlan(),List.of(),columns);
+            assertThrows(IllegalArgumentException.class,()->new Fixture(f.recipe(),f.building(),f.slot(),f.parcel(),f.city(),legacy,f.primary(),f.face()).assemble(settings(false,128)));
+        }
+    }
     @Test void optionalUnreachableExitIsCappedAndRequiredExitRejects() {
         var f=fixture(0,false);var result=f.assemble(settings(false,1));assertEquals(1,result.entrances().size());
         assertEquals("stone",result.building().cells().stream().filter(c->c.position().equals(new Vec(2,1,4))).findFirst().orElseThrow().material());

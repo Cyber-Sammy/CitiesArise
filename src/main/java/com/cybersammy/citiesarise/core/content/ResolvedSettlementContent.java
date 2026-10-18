@@ -70,7 +70,8 @@ public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buil
                 if(entrance.reserved().stream().anyMatch(p->!parcel.bounds().contains(p))
                         || entrance.composition().cells().stream().anyMatch(c->!parcel.bounds().contains(new com.cybersammy.citiesarise.core.geometry.GridPoint(
                                 slot.bounds().minX()+c.position().x(),slot.bounds().minZ()+c.position().z())))
-                        || entrance.path().stream().anyMatch(p->!parcel.bounds().contains(p.point()) || p.elevation()!=entrance.platformY()))
+                        || entrance.path().stream().anyMatch(p->!parcel.bounds().contains(p.point())
+                                || (long)p.elevation()<entrance.platformY() || (long)p.elevation()>entrance.platformY()+1L))
                     throw new IllegalArgumentException("Entrance exceeds its prepared host parcel");
             }
         });

@@ -23,7 +23,7 @@ class EntrancePlacementTest {
         var stair=new DebugBlockPlacementOperation(point,0,DebugPlacementRole.BUILDING_ACCESS_STEP,id,OptionalInt.of(64),"minecraft:stone_brick_stairs",0);
         var overhead=new DebugBlockPlacementOperation(point,0,DebugPlacementRole.ROAD_SURFACE,id,OptionalInt.of(70),"minecraft:deepslate_tiles",0);
         var module=new ResolvedComposition(List.of(),List.of(new ResolvedComposition.PlacedCell(new Vec(0,1,0),"minecraft:glass",0)),List.of(),List.of(),List.of());
-        var entrance=new ResolvedEntrance("main","main","primary",module,point,64,
+        var entrance=new ResolvedEntrance("main","main","primary",module,point,63,
                 List.of(new ResolvedEntrance.PathCell(point,64,"minecraft:stone_bricks")),Set.of(point,new GridPoint(4,4)));
         var building=new BuildingContent(BuildingAsset.placeholder(),Map.of(),Optional.empty(),Optional.empty(),Optional.of(catalog.entrances().get("skyline:residential")),List.of(entrance));
         var content=new ResolvedSettlementContent(Map.of(id,building),Map.of(),List.of(),Map.of());

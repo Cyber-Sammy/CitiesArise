@@ -51,7 +51,7 @@ public final class DebugPlacementPlanConverter {
     public DebugPlacementPlan convert(SettlementPlan plan,ResolvedSettlementContent content) {
         content.validateAgainst(plan);
         Objects.requireNonNull(plan, "plan");
-        return StreetSectionPlacement.apply(ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(convert(plan, content, Map.of()), plan,content),plan,content),content),content.boundaries()),plan);
+        return EntrancePlacement.add(StreetSectionPlacement.apply(ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(convert(plan, content, Map.of()), plan,content),plan,content),content),content.boundaries()),plan),plan,content);
     }
 
     private DebugPlacementPlan convert(
@@ -98,8 +98,8 @@ public final class DebugPlacementPlanConverter {
                 .stream()
                 .map(operation -> withPreparationElevation(operation, elevationByPoint))
                 .toList());
-        return StreetSectionPlacement.apply(ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
-                .map(operation -> withMaterial(operation,content)).toList()), plan,content),plan,content),content),content.boundaries()),plan,preparationPlan);
+        return EntrancePlacement.add(StreetSectionPlacement.apply(ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(new DebugPlacementPlan(withTerrainPreparationOperations(preparationPlan, preparedPlan).operations().stream()
+                .map(operation -> withMaterial(operation,content)).toList()), plan,content),plan,content),content),content.boundaries()),plan,preparationPlan),plan,content);
     }
 
     private DebugPlacementPlan withBridges(DebugPlacementPlan placement, SettlementPlan plan,ResolvedSettlementContent content) {

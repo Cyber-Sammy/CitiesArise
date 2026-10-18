@@ -11,7 +11,8 @@ import java.util.*;
 public final class ContentCatalogParser {
     public record Catalog(Map<String,BuildingAsset> assets, Map<String,Map<String,String>> palettes,
             Map<String,CompositionSettings> compositions, Map<String,String> surfaces, List<PropRule> props,
-            MaterialRules materialRules, Map<String,ModuleDefinition> modules, Map<String,SurfaceTemplate> surfaceTemplates, List<ParcelContentRule> parcelRules) { }
+            MaterialRules materialRules, Map<String,ModuleDefinition> modules, Map<String,SurfaceTemplate> surfaceTemplates, List<ParcelContentRule> parcelRules,
+            Map<String,EntranceSettings> entrances) { }
     private final ContentResources resources;
     public ContentCatalogParser(ContentResources resources) { this.resources=Objects.requireNonNull(resources); }
     public Catalog load(String id) {
@@ -24,7 +25,7 @@ public final class ContentCatalogParser {
     public Catalog parse(JsonObject json) {
         if(integer(json,"version",1)!=1) throw new IllegalArgumentException("Unsupported content catalog version");
         JsonObject traits=object(json,"materialRules");
-        MaterialRules materialRules=new MaterialRules(strings(traits,"passable"),strings(traits,"supportive"),strings(traits,"climbable"));
+        MaterialRules materialRules=new MaterialRules(strings(traits,"passable"),strings(traits,"supportive"),strings(traits,"climbable"),strings(traits,"operable"));
         Map<String,ModuleDefinition> modules=new LinkedHashMap<>();
         for(var entry:object(json,"modules").entrySet()) {
             JsonObject data=entry.getValue().getAsJsonObject(); Vec size=vec(data.getAsJsonArray("size"));
@@ -92,12 +93,15 @@ public final class ContentCatalogParser {
                     integer(c,"minimumModules",1),integer(c,"maximumModules",16),integer(c,"maximumHeight",64),first.damageSeverity(),first.airMaterial(),materialRules,null,recipe,
                     integer(c,"maximumResolvedModules",64)));
         }
+        var entrances=entrances(json,modules,materialRules);
         Map<String,BuildingAsset> assets=new LinkedHashMap<>();
         for(var entry:object(json,"assets").entrySet()) {
             JsonObject a=entry.getValue().getAsJsonObject(); String provider=string(a,"provider");
             if(!Set.of("placeholder","procedural_house","modules").contains(provider)) throw new IllegalArgumentException("Unregistered provider: "+provider);
             Map<String,String> parameters=stringMap(object(a,"parameters"));
             if(provider.equals("modules") && !compositions.containsKey(parameters.get("composition"))) throw new IllegalArgumentException("Asset needs a known composition");
+            if(parameters.containsKey("entrances") && (!provider.equals("modules") || !entrances.containsKey(parameters.get("entrances"))))
+                throw new IllegalArgumentException("Asset needs a known independent entrance group");
             if(provider.equals("procedural_house") && !Set.of("gable","hip","flat").contains(parameters.get("roof"))) throw new IllegalArgumentException("Unknown procedural roof algorithm");
             assets.put(entry.getKey(),new BuildingAsset(entry.getKey(),provider,integer(a,"minimumSize",1),integer(a,"maximumSize",64),integer(a,"height",64),parameters));
         }
@@ -197,7 +201,28 @@ public final class ContentCatalogParser {
         if(surfaces.containsKey("BRIDGE_STEP")) resources.validateBridgeSurface(surfaces.get("BRIDGE_STEP"),true);
         if(surfaces.containsKey("BRIDGE_DECK")) resources.validateWalkingSurface(surfaces.get("BRIDGE_DECK"));
         if(surfaces.containsKey("BRIDGE_CLEARANCE")) throw new IllegalArgumentException("Bridge clearance is reserved air, not a surface material");
-        return new Catalog(Map.copyOf(assets),Map.copyOf(palettes),Map.copyOf(compositions),Map.copyOf(surfaces),List.copyOf(props),materialRules,Map.copyOf(modules),Map.copyOf(templates),List.copyOf(parcelRules));
+        return new Catalog(Map.copyOf(assets),Map.copyOf(palettes),Map.copyOf(compositions),Map.copyOf(surfaces),List.copyOf(props),materialRules,Map.copyOf(modules),Map.copyOf(templates),List.copyOf(parcelRules),entrances);
+    }
+    private Map<String,EntranceSettings> entrances(JsonObject json,Map<String,ModuleDefinition> modules,MaterialRules rules) {
+        var result=new LinkedHashMap<String,EntranceSettings>();
+        for(var entry:object(json,"entranceGroups").entrySet()) {
+            var group=entry.getValue().getAsJsonObject();var requests=new ArrayList<EntranceSettings.Request>();var referenced=new LinkedHashSet<String>();
+            for(var item:array(group,"requests")) {
+                var r=item.getAsJsonObject();var pool=new ArrayList<EntranceSettings.Choice>();
+                for(var candidate:array(r,"pool")) {
+                    var c=candidate.getAsJsonObject();String module=string(c,"module");referenced.add(module);
+                    pool.add(new EntranceSettings.Choice(module,integer(c,"weight",1)));
+                }
+                requests.add(new EntranceSettings.Request(string(r,"id"),string(r,"role"),string(r,"socket"),bool(r,"required",false),pool,
+                        text(r,"connectionJoint","building"),text(r,"outsideJoint","outside"),string(r,"pathMaterial"),string(r,"capMaterial"),
+                        integer(r,"maximumPathLength",128),integer(r,"pathWidth",1)));
+                for(String material:List.of(string(r,"pathMaterial"),string(r,"capMaterial")))
+                    if(!rules.supportive().contains(material))throw new IllegalArgumentException("Entrance path and socket cap must be declared supportive");
+            }
+            String air=text(group,"airMaterial","minecraft:air");resources.validateMaterial(air);
+            result.put(entry.getKey(),new EntranceSettings(reachableModules(modules,referenced),requests,rules,air,integer(group,"damageSeverity",0)));
+        }
+        if(result.size()>64)throw new IllegalArgumentException("Too many entrance groups");return Map.copyOf(result);
     }
     private static List<String> parcelPropIds(JsonObject rule) {
         var ids=new ArrayList<String>();
@@ -249,10 +274,14 @@ public final class ContentCatalogParser {
     }
     private void validateTraits(MaterialRules rules,Map<String,Map<String,String>> palettes) {
         Set<String> materials=new HashSet<>(rules.passable()); materials.addAll(rules.supportive());
+        materials.addAll(rules.operable());
         for(String token:materials) {
             var states=token.contains(":")?List.of(token):palettes.values().stream().filter(p -> p.containsKey(token)).map(p -> p.get(token)).distinct().toList();
             if(states.isEmpty()) throw new IllegalArgumentException("Unknown physical material token: "+token);
-            for(String state:states) resources.validateTraits(state,rules.passable().contains(token),rules.supportive().contains(token),rules.climbable().contains(token));
+            for(String state:states) {
+                resources.validateTraits(state,rules.passable().contains(token),rules.supportive().contains(token),rules.climbable().contains(token));
+                if(rules.operable().contains(token))resources.validateOperable(state);
+            }
         }
     }
     private static ModuleContract contract(JsonObject json) {

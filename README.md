@@ -1,5 +1,20 @@
 # Cities Arise
 
+Building assets can bind independent datapack entrance modules through an
+`entrances` parameter. Entrance groups select weighted modules for the main,
+secondary, service or emergency facade sockets. Their doors, canopies, vestibules,
+materials and connection contracts belong to those modules. They are assembled
+once per building, separately from its floor recipes. Access paths use prepared
+parcel surfaces, join the existing sidewalk access and reserve space before fences
+and props. Required inaccessible entrances reject the composition; optional exits
+are closed with the authored cap material. Skyline demonstrates main and service
+entrances with two reusable portal/canopy variants.
+
+See [authoring independent entrances](examples/datapacks/composition_fixture/ENTRANCES.md)
+for the schema, facade interfaces and `materialRules.operable` door traits. Both
+the updated JAR and Skyline ZIP are needed for these new examples; older packs
+without an entrance binding retain their existing behavior.
+
 Optional `planning.streets` describes independently configured pedestrian sections:
 
 ```json

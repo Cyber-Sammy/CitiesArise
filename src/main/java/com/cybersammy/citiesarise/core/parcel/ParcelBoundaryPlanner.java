@@ -15,9 +15,13 @@ public final class ParcelBoundaryPlanner {
     }
     private record Side(Parcel parcel,GridPoint point,ParcelLayoutSettings.FenceStyle style) { }
     public static ParcelBoundaryPlan plan(SettlementPlan plan,TerrainPreparationPlan preparation,ParcelLayoutSettings settings) {
-        if(settings.styles().isEmpty() && settings.maximumAlleyWidth()==0) return ParcelBoundaryPlan.EMPTY;
+        return plan(plan,preparation,settings,Set.of());
+    }
+    public static ParcelBoundaryPlan plan(SettlementPlan plan,TerrainPreparationPlan preparation,ParcelLayoutSettings settings,Set<GridPoint> entranceReservations) {
+        if(settings.styles().isEmpty() && settings.maximumAlleyWidth()==0)
+            return entranceReservations.isEmpty()?ParcelBoundaryPlan.EMPTY:new ParcelBoundaryPlan(List.of(),List.of(),List.of(),entranceReservations);
         Map<GridPoint,Integer> heights=new HashMap<>(); Set<GridPoint> network=new HashSet<>(),blocked=new HashSet<>();
-        Set<GridPoint> accesses=new HashSet<>();
+        Set<GridPoint> accesses=new HashSet<>(entranceReservations);network.addAll(entranceReservations);
         for(var c:preparation.columns()) {
             heights.put(c.point(),c.targetElevation());
             if(c.type()==TerrainPreparationColumnType.BUILDING_ACCESS || c.type()==TerrainPreparationColumnType.BUILDING_ACCESS_STEP

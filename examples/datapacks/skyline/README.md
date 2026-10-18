@@ -26,6 +26,13 @@ than a new procedural room solver. Sections repeat their layout consistently.
 Vertical access uses a continuous **backed ladder**, including the roof landing.
 This pack does not supply lifts or stair flights.
 
+Entrances are separate datapack modules, shared by all building recipes. The
+required main entrance selects a portal or deeper canopy with a real two-block
+wooden door. An optional service entrance connects the rear facade to the same
+prepared yard access network. Unreachable service sockets are closed. Entrance
+modules are attached once at ground level; upper floors do not repeat them.
+See the [entrance authoring guide](../composition_fixture/ENTRANCES.md).
+
 The floor-to-floor step is exactly **4 blocks**: each five-layer floor module
 shares its boundary slab with the next floor. Windows are **2 blocks tall and
 2 blocks wide**, with six window bays along the long facade and five along the

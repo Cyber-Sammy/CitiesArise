@@ -93,6 +93,12 @@ public final class SettlementPlanJsonExporter {
             json.stringField("caps",String.join("; ",composition.cappedJoints()));
             json.stringField("damage",String.join("; ",composition.damageDecisions()));
         });
+                    if(!building.resolvedEntrances().isEmpty())json.arrayField("entrances",()->building.resolvedEntrances().forEach(e->json.arrayValue(()->{
+                        json.beginObject();json.stringField("id",e.id());json.stringField("role",e.role());json.stringField("socket",e.socket());
+                        json.numberField("platformY",e.platformY());json.objectField("access",()->writePoint(json,e.accessAnchor()));
+                        json.arrayField("modules",()->e.composition().modules().forEach(m->json.arrayStringValue(m.id())));
+                        json.numberField("pathCells",e.path().size());json.endObject();
+                    })));
                     json.endObject();
                 })));
         if(!content.props().isEmpty()) json.arrayField("props", () -> content.props().forEach(prop -> json.arrayValue(() -> {

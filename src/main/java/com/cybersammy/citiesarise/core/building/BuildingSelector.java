@@ -36,6 +36,7 @@ public final class BuildingSelector {
         if (selected.provider().equals("placeholder")) return new Result(java.util.Optional.empty(),decision);
         BuildingContent content=new BuildingContent(selected,settings.paletteDefinitions().get(palette),
                 java.util.Optional.ofNullable(selected.parameters().get("composition")).map(settings.compositions()::get),java.util.Optional.empty());
-        return new Result(java.util.Optional.of(content),decision);
+        String entranceGroup=selected.parameters().get("entrances");
+        return new Result(java.util.Optional.of(entranceGroup==null?content:content.withEntrances(settings.entrances().get(entranceGroup))),decision);
     }
 }

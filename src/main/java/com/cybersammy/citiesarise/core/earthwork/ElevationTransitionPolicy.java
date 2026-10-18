@@ -30,8 +30,10 @@ public final class ElevationTransitionPolicy {
         if (transition.type() == ElevationTransitionType.ROAD_CONNECTION) {
             return 1;
         }
-        GridPoint start = nearestPoint(source.bounds(), transition.anchor());
-        return manhattanDistance(start, transition.anchor()) / transition.minimumRunPerRise();
+        GridPoint start = transitionStart(transition,source.bounds());
+        int available=manhattanDistance(start,transition.anchor());
+        if(transition.concentratedStairs() && transition.elevationDelta()>0)available-=1+transition.landingLength();
+        return Math.max(0,available) / transition.minimumRunPerRise();
     }
 
     public static List<TransitionPoint> materialize(
@@ -77,7 +79,7 @@ public final class ElevationTransitionPolicy {
         List<Integer> elevations = pathElevations(
                 transition.sourceElevation(),
                 transition.targetElevation(),
-                edgeCount
+                edgeCount,transition
         );
         List<TransitionPoint> points = new ArrayList<>();
         for (int index = 0; index < edgeCount; index++) {
@@ -90,13 +92,13 @@ public final class ElevationTransitionPolicy {
         return List.copyOf(points);
     }
 
-    private static List<Integer> pathElevations(int source, int target, int edgeCount) {
+    private static List<Integer> pathElevations(int source, int target, int edgeCount,ElevationTransition transition) {
         int delta = target - source;
         int direction = Integer.signum(delta);
         int absoluteDelta = Math.abs(delta);
         List<Integer> elevations = new ArrayList<>();
         for (int index = 0; index <= edgeCount; index++) {
-            int completedSteps = (absoluteDelta * index) / edgeCount;
+            int completedSteps = transition.concentratedStairs()?Math.min(absoluteDelta,Math.max(0,index-1)/transition.minimumRunPerRise()):(absoluteDelta * index) / edgeCount;
             elevations.add(source + (direction * completedSteps));
         }
         return List.copyOf(elevations);
@@ -119,7 +121,7 @@ public final class ElevationTransitionPolicy {
     }
 
     private static GridPoint transitionStart(ElevationTransition transition, GridBounds roadBounds) {
-        return nearestPoint(roadBounds, transition.anchor());
+        return transition.startOverride()==null?nearestPoint(roadBounds,transition.anchor()):transition.startOverride();
     }
 
     private static GridPoint nearestPoint(GridBounds bounds, GridPoint point) {

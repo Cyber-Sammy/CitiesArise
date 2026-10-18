@@ -39,16 +39,7 @@ final class PendingStructuralPlacement extends SavedData {
         }
         Set<PlacementChunk> required() {
             if(requiredCache!=null) return requiredCache;
-            var result=new HashSet<PlacementChunk>();
-            original.operations().forEach(op->result.add(PlacementChunk.containing(op.point().x(),op.point().z())));
-            for(var e:blueprint.envelopes()) for(int z=Math.floorDiv(e.bounds().minZ(),16);z<=Math.floorDiv(e.bounds().maxZExclusive()-1,16);z++)
-                for(int x=Math.floorDiv(e.bounds().minX(),16);x<=Math.floorDiv(e.bounds().maxXExclusive()-1,16);x++) result.add(new PlacementChunk(x,z));
-            if(edgeMode(blueprint) && blueprint.recipe()!=null) {
-                var b=blueprint.recipe().bounds();
-                for(int z=Math.floorDiv(b.minZ(),16);z<=Math.floorDiv(b.maxZExclusive()-1,16);z++)
-                    for(int x=Math.floorDiv(b.minX(),16);x<=Math.floorDiv(b.maxXExclusive()-1,16);x++) result.add(new PlacementChunk(x,z));
-            }
-            requiredCache=Set.copyOf(result);return requiredCache;
+            requiredCache=blueprint.requiredChunks(original.toPlacementPlan());return requiredCache;
         }
     }
     static PendingStructuralPlacement get(ServerLevel level) {
@@ -121,10 +112,13 @@ final class PendingStructuralPlacement extends SavedData {
                     }
                 } else {
                     if(e.required().stream().anyMatch(c->level.getChunkSource().getChunkNow(c.x(),c.z())==null)) continue;
-                    result=StructuralSupportPlacement.resolve(e.original.toPlacementPlan(),e.blueprint,new com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Ground() {
+                    try { result=StructuralSupportPlacement.resolve(e.original.toPlacementPlan(),e.blueprint,new com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Ground() {
                         public boolean solid(int x,int y,int z) {return PendingStructuralPlacement.solid(level,x,y,z);}
-                        public boolean fluid(int x,int y,int z) {return !level.getFluidState(new BlockPos(x,y,z)).isEmpty();}
-                    });
+                        public boolean fluid(int x,int y,int z) {return !loadedChunk(level,x,z).getFluidState(new BlockPos(x,y,z)).isEmpty();}
+                    }); } catch(UnloadedStructuralTerrain waiting) {
+                        var required=new HashSet<>(e.required());required.add(waiting.chunk());e.requiredCache=Set.copyOf(required);
+                        continue; // No writes or budget charges have occurred; retry when this chunk is ready.
+                    }
                 }
                 if(result.plan().isPresent() && e.blueprint.sharedBudget()) {
                     String city=e.parent==null?e.id:e.parent.planId();
@@ -178,10 +172,14 @@ final class PendingStructuralPlacement extends SavedData {
     }
     static boolean solid(ServerLevel level,int x,int y,int z) {
         if(y<level.getMinBuildHeight() || y>=level.getMaxBuildHeight()) return false;
-        if(level.getChunkSource().getChunkNow(x>>4,z>>4)==null) throw new IllegalStateException("Unloaded structural terrain");
-        var p=new BlockPos(x,y,z);var state=level.getBlockState(p);
+        var p=new BlockPos(x,y,z);var state=loadedChunk(level,x,z).getBlockState(p);
         return state.blocksMotion() && state.getFluidState().isEmpty() && !state.hasBlockEntity()
                 && !state.is(net.minecraft.tags.BlockTags.LOGS) && !state.is(net.minecraft.tags.BlockTags.LEAVES);
+    }
+    static net.minecraft.world.level.chunk.LevelChunk loadedChunk(ServerLevel level,int x,int z) {
+        var chunk=level.getChunkSource().getChunkNow(x>>4,z>>4);
+        if(chunk==null)throw new UnloadedStructuralTerrain(x,z);
+        return chunk;
     }
     static PendingStructuralPlacement load(CompoundTag tag) {
         if(tag.getInt("Version")!=1) throw new IllegalArgumentException("Unsupported structural placement version");

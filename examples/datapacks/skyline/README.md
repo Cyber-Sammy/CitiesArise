@@ -33,7 +33,7 @@ short facade. Piers and cornices project one block beyond the recessed wall.
 Upper floors close the ground-floor lobby entrance instead of repeating exterior
 doorways. Floors use single-block partitions.
 
-Plots are **39 x 39**, with a four-block building margin, five-block-wide roads
+Plots are **39 x 39**, with a four-block building margin, eleven-block carriageways (5 + 1 + 5), separate modular sidewalks
 and paved plazas instead of garden fencing. The profile surveys **540 x 540** blocks,
 about five times the previous survey area, and targets **80 plots in 20 blocks**.
 Each block contains four plots in a 2 x 2 arrangement. Streets share an orthogonal
@@ -121,3 +121,11 @@ height, footprint and full-city selection checks. Run
 material validation, frozen profile/snapshot round trips, reverse chunk placement
 ladder survival, coordinated local structure starts, deferred placement after save/load
 and bridge continuity across ownership boundaries in an isolated test world under `build`.
+
+## Modular sidewalks
+
+The matching mod build reads "planning.streets" from the settlement profile. Skyline uses smooth-stone sidewalks, a yellow one-block centre line, and weighted standard (2 + 2), wide (3 + 3) and asymmetric (1 + 3) sidewalk widths. Sidewalks share the local road surface elevation and are additional to the eleven-block carriageway. Their maximum reservation makes the whole street corridor 17 blocks wide. Narrower sections leave grass verges inside that reservation; widths change gradually between modules. Intersections reserve full pedestrian corners and interrupt the centre line.
+
+Courtyard access starts at the actual sidewalk edge. A height difference uses stone-brick stairs followed by a level landing and yard path. The first block at the sidewalk remains level. Routes that cannot fit the required rise and landing are rejected. Building entrance groups and kiosk placement zones are separate planned stages.
+
+Use this updated ZIP together with the updated JAR. Existing saved city layouts remain frozen; test the new layout in a new world or newly generated city area.

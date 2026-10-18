@@ -56,7 +56,8 @@ final class RegionalElevationPlanner {
                         .mapToInt(p->TerrainPlatform.requiredElevation(p.properties())).sorted().findFirst().orElse(0));
     }
     static RegionalElevationPlanningResult atLevel(SuburbPlanningRequest request,SettlementPlan settlementPlan,boolean fitEarthworks,Integer target) {
-        RoadGraph elevatedRoadGraph = RoadElevationPlanner.apply(request, settlementPlan.roadGraph(),
+        RoadGraph elevatedRoadGraph = RoadElevationPlanner.apply(request, com.cybersammy.citiesarise.core.road.StreetSectionGeometry.annotate(settlementPlan.roadGraph(),
+                request.settings().terrainTransitions().streets(),request.settings().roadWidth(),request.seed()),
                 settlementPlan.parcels().stream().map(Parcel::bounds).toList(),fitEarthworks,target);
         ParcelElevationResult parcelElevations = elevateParcelsAndBuildings(request, settlementPlan, elevatedRoadGraph,target);
         SettlementPlan elevatedPlan = new SettlementPlan(
@@ -119,12 +120,14 @@ final class RegionalElevationPlanner {
             RoadGraph elevatedRoadGraph,Integer target
     ) {
         Map<PlanElementId, Integer> elevations = new HashMap<>();
+        var streetSections=new HashMap<PlanElementId,com.cybersammy.citiesarise.core.road.StreetSectionGeometry.Section>();
+        com.cybersammy.citiesarise.core.road.StreetSectionGeometry.sections(elevatedRoadGraph).forEach(section->streetSections.put(section.road().id(),section));
         var limits=new HashMap<PlanElementId,NeighborhoodLevels.Interval>();
         Map<PlanElementId, RoadNode> nodes = nodesById(elevatedRoadGraph);
         List<ElevationZone> roads = sortedSegments(elevatedRoadGraph.segments()).stream().map(road ->
                 new ElevationZone(road.id(), ElevationZoneType.ROAD_SEGMENT,
-                        AxisAlignedGridCorridor.bounds(nodes.get(road.startNodeId()).point(),
-                                nodes.get(road.endNodeId()).point(), road.width()),
+                        com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(nodes.get(road.startNodeId()).point(),
+                                nodes.get(road.endNodeId()).point(), road.width(), road.properties()),
                         TerrainPlatform.requiredElevation(road.properties()))).toList();
         for (Parcel parcel : plan.parcels()) {
             int minimum = Integer.MIN_VALUE;
@@ -140,7 +143,14 @@ final class RegionalElevationPlanner {
                     access = BuildingAccessResolver.resolve(roads,buildingZone,
                             request.settings().terrainTransitions().buildingAccessRunPerRise(),terrain.minimum(),terrain.maximum());
                 }
-                int rise = access.distance() / request.settings().terrainTransitions().buildingAccessRunPerRise();
+                int distance=access.distance();
+                var streets=request.settings().terrainTransitions().streets();
+                if(streets.enabled()) {
+                    var section=streetSections.get(access.roadZone().sourceElementId());
+                    var start=section.accessStart(access.anchor());distance=Math.abs(start.x()-access.anchor().x())+Math.abs(start.z()-access.anchor().z());
+                    if(streets.stairAccess())distance=Math.max(0,distance-1-streets.landingLength());
+                }
+                int rise = distance / request.settings().terrainTransitions().buildingAccessRunPerRise();
                 minimum = Math.max(minimum, access.roadZone().targetElevation() - rise);
                 maximum = Math.min(maximum, access.roadZone().targetElevation() + rise);
             }
@@ -162,7 +172,7 @@ final class RegionalElevationPlanner {
         }
         if(target!=null) {
             var adjacency=new ArrayList<NeighborhoodLevels.Edge>();var parcels=sortedParcels(plan.parcels());
-            int reach=request.settings().roadWidth()+2*request.settings().terrainTransitions().roadShoulderRadius()+2;
+            int reach=request.settings().corridorWidth()+2*request.settings().terrainTransitions().roadShoulderRadius()+2;
             for(int i=0;i<parcels.size();i++)for(int j=i+1;j<parcels.size();j++) {
                 var a=parcels.get(i).bounds();var b=parcels.get(j).bounds();
                 int dx=Math.max(0,Math.max(a.minX()-b.maxXExclusive(),b.minX()-a.maxXExclusive()));
@@ -194,7 +204,7 @@ final class RegionalElevationPlanner {
             zones.add(new ElevationZone(
                     segment.id(),
                     ElevationZoneType.ROAD_SEGMENT,
-                    AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width()),
+                    com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(start.point(), end.point(), segment.width(), segment.properties()),
                     TerrainPlatform.requiredElevation(segment.properties())
             ));
         }
@@ -230,6 +240,17 @@ final class RegionalElevationPlanner {
                 request.settings().terrainTransitions().buildingAccessRunPerRise(),
                 transitions, request.settings().districts().grid().enabled()
         );
+        var streets=request.settings().terrainTransitions().streets();
+        if(streets.enabled()) {
+            var sections=new HashMap<PlanElementId,com.cybersammy.citiesarise.core.road.StreetSectionGeometry.Section>();
+            com.cybersammy.citiesarise.core.road.StreetSectionGeometry.sections(plan.roadGraph()).forEach(section->sections.put(section.road().id(),section));
+            for(int i=0;i<transitions.size();i++) {
+                var t=transitions.get(i);if(t.type()!=ElevationTransitionType.BUILDING_ACCESS)continue;
+                var section=sections.get(t.sourceZoneId());if(section==null)continue;
+                transitions.set(i,new ElevationTransition(t.type(),t.sourceZoneId(),t.targetZoneId(),t.anchor(),t.sourceElevation(),t.targetElevation(),
+                        t.minimumRunPerRise(),section.accessStart(t.anchor()),streets.stairAccess(),streets.landingLength()));
+            }
+        }
         return List.copyOf(transitions);
     }
 

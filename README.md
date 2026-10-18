@@ -1,9 +1,63 @@
 # Cities Arise
 
+Optional `planning.streets` describes independently configured pedestrian sections:
+
+```json
+"streets": {
+  "sectionLength": 32,
+  "centerMaterial": "minecraft:yellow_concrete",
+  "vergeMaterial": "minecraft:grass_block",
+  "access": {
+    "mode": "stairs_landing",
+    "landingLength": 1,
+    "stepMaterial": "minecraft:stone_brick_stairs"
+  },
+  "modules": [
+    {"id": "example:standard", "weight": 6, "leftWidth": 2, "rightWidth": 2, "material": "minecraft:smooth_stone"},
+    {"id": "example:asymmetric", "weight": 1, "leftWidth": 1, "rightWidth": 3, "material": "minecraft:stone_bricks"}
+  ]
+}
+```
+
+`planning.roadWidth` remains the carriageway width. Left means north on east–west
+streets and west on north–south streets, independent of segment direction. Widths
+range from 0 to 8; the complete reserved corridor is bounded at 32 blocks. Set both
+widths to zero to omit sidewalks. A module with `"carriageway": false, "pathWidth": 5`
+creates a pedestrian-only section instead of a vehicle lane. Module selection is
+weighted and deterministic along the street; lengths range from 4 to 128 blocks.
+Widths interpolate inside the reserved corridor. Pedestrian sections widen at
+connections to preserve walking continuity. Modules are cross-section/material
+rules; they do not import NBT sidewalk structures.
+
+`stairs_landing` uses the profile's `buildingAccessRunPerRise`, reserves a flat
+sidewalk edge and the configured 1–8 block landing, then keeps the remaining yard
+path level. `stepMaterial` must name a Minecraft stair block. `gradual` retains the
+older distributed access slope. Omitting `streets` preserves legacy geometry and
+materials. Street choices and placed blocks survive saved recipes and chunk reloads.
+
+New modular streets reserve square junction corners before grading and terrain
+preparation. Sidewalks continue around turns; suspended-road rails follow the
+combined street perimeter rather than each short grade segment. Frozen streets
+from older saves retain their original footprint.
+
+In Big Globe worlds, `#cities_arise:yield_to_city` controls which structures yield
+to a city during structure collision selection. It includes the existing terrain
+features and vanilla mineshafts (including badlands mineshafts): a conservative
+foundation reservation must not let one underground shaft delete individual city
+owners. A colliding shaft can therefore be omitted. Other structure priorities
+are unchanged. Datapacks may replace this tag to choose a different policy. This
+affects new structure starts; it does not reconstruct missing starts in explored
+chunks of an existing city.
+
+Final terrain placement also waits for unwritten columns used to check the
+connection between an outer bank and its platform. Missing chunks keep that
+settlement pending across saves; readiness checks do not force-load them or spend
+the construction budget before placement can be resolved.
+
 The [Skyline datapack](examples/datapacks/skyline/README.md) adds broad 29 x 25 block
 towers with 10, 12, 14 or 16 floors, two low-rise recipes, recessed two-block windows,
 projecting facades, setbacks, flat roofs and crowns. It uses 39 x 39 plots and
-five-block-wide roads. Its large-city profile targets 80 buildings in 20 orthogonal
+eleven-block carriageways (5 + 1 + 5) with separate modular sidewalks. Its large-city profile targets 80 buildings in 20 orthogonal
 blocks over a 540 x 540 survey, with coordinated elevations within each block.
 Skyline prefers up to eight blocks of cut/fill for shared terraces, within hard
 limits of sixteen blocks of cut/fill and one million earthwork blocks. Partial
@@ -971,7 +1025,7 @@ Integer ranges: minimumDepth 4..16, maximumFillDepth 4..48, maximumFillVolume 1.
 
 Follow_edge captures an immutable bounded final-terrain survey from already FULL chunks before placing any city blocks, then plans on one background worker (three admitted jobs). The complete survey reservation must be loaded together; it never forces chunks. Captured inputs and resolved operations survive reload. Debug command resolution is synchronous. Survey limits are 240x240 and 512 vertical blocks; attempts and detours are bounded. Opposed exposed banks and voids exposed by the planned corridor cut are considered; four-layer intact roofs and ordinary water crossings are preserved. This is conservative terrain inference, not stored cave identity. A detour may relocate the whole layout. Base-generator locate acceptance cannot guarantee final follow_edge acceptance.
 
-Use the matching new JAR and zoning_fixture ZIP before generating fresh settlements. Earlier saved resolved snapshots retain their recorded operations. Clearance or construction-limit failures reject a local owner before it writes blocks. In partitioned cities, other owners may already be placed. Clearance checks only the owned columns, so the read-only seam halo cannot mistake a neighboring tower for a mountain. New local owners share the parent construction ceiling through a persisted actual-work ledger instead of fixed area-proportional shares; the shared ceiling is never multiplied by the number of owners. The remaining earthwork budget pays for all added work, including clearance; structural geometry is also charged against a separate shared `structuralSupports.maximumVolume` ceiling. The structural ceiling does not truncate the earthwork pool. Existing v1�v4 blueprints retain their saved budget policy. Original substrate chunks with no remaining operations are recorded as complete without forcing a load. Completed native starts can re-publish parent progress without rebuilding blocks, with the template dimension normalized to the current level. Previously rejected owners are not automatically regenerated.
+Use the matching new JAR and zoning_fixture ZIP before generating fresh settlements. Earlier saved resolved snapshots retain their recorded operations. Clearance or construction-limit failures reject a local owner before it writes blocks. In partitioned cities, other owners may already be placed. Clearance checks only the owned columns, so the read-only seam halo cannot mistake a neighboring tower for a mountain. New local owners share the parent construction ceiling through a persisted actual-work ledger instead of fixed area-proportional shares; the shared ceiling is never multiplied by the number of owners. The remaining earthwork budget pays for all added work, including clearance; structural geometry is also charged against a separate shared `structuralSupports.maximumVolume` ceiling. The structural ceiling does not truncate the earthwork pool. Existing v1�v4 blueprints retain their saved budget policy. Original substrate chunks with no remaining operations are recorded as complete without forcing a load. Completed native starts can re-publish parent progress without rebuilding blocks, with the template dimension normalized to the current level. Previously rejected owners are not automatically regenerated.
 
 ## Shared module walls and floor slabs
 

@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "#cities_arise:terrain_features",
+    "minecraft:mineshaft",
+    "minecraft:mineshaft_mesa"
+  ]
+}

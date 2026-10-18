@@ -140,4 +140,20 @@ class CityGridPlannerTest {
         assertTrue(result.parcels().stream().noneMatch(a->a.id().equals(nominal.parcels().getFirst().id())));
         assertTrue(new com.cybersammy.citiesarise.core.validation.PlanValidator().validate(result).isEmpty());
     }
+    @Test void unsupportedOuterSidewalkCornerTrimsItsStreetInsteadOfRejectingTheCity() throws Exception {
+        var p=profile();var bounds=new GridBounds(new GridPoint(0,0),p.surveySize());
+        var survey=TerrainSurvey.sample(bounds,point->Optional.of(new TerrainCell(point,65,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var request=new SuburbPlanningRequest(new PlanElementId("test:late-junction-support"),survey,42,p.suburbPlanningSettings(),p.terrainResponsePolicy());
+        var nominal=CityGridLayout.create(request).orElseThrow();
+        int minX=nominal.roadGraph().nodes().stream().mapToInt(n->n.point().x()).min().orElseThrow();
+        int minZ=nominal.roadGraph().nodes().stream().mapToInt(n->n.point().z()).min().orElseThrow();
+        int half=p.suburbPlanningSettings().corridorWidth()/2;var point=new GridPoint(minX-half,minZ-half);
+        var result=SuburbPlanner.defaults().plan(request,(r,candidate)->{
+            if(!com.cybersammy.citiesarise.core.road.StreetSectionGeometry.surfaces(candidate.plan().orElseThrow().roadGraph()).containsKey(point))return candidate;
+            return SuburbPlanningResult.rejectedTerrain(new SuburbTerrainDiagnostic(survey.findCell(point).orElseThrow(),
+                    new com.cybersammy.citiesarise.core.terrain.scoring.TerrainSuitability(0,Set.of(com.cybersammy.citiesarise.core.terrain.scoring.TerrainRejectionReason.UNSUPPORTED_TERRAIN),List.of())));
+        });
+        assertTrue(result.successful(),result.toString());assertEquals(15,result.plan().orElseThrow().parcels().size());
+        assertFalse(com.cybersammy.citiesarise.core.road.StreetSectionGeometry.surfaces(result.plan().orElseThrow().roadGraph()).containsKey(point));
+    }
 }

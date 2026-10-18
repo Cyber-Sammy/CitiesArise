@@ -153,7 +153,7 @@ for name, wall, trim, glass, accent in [
 profile = json.loads((SOURCE / 'cities_arise/settlement_profiles/suburb.json').read_text(encoding='utf-8'))
 p = profile['planning']
 profile['survey'] = dict(width=540, depth=540)
-p.update(roadWidth=5, parcelWidth=39, parcelDepth=39, buildingMargin=4,
+p.update(roadWidth=11, parcelWidth=39, parcelDepth=39, buildingMargin=4,
          minimumParcelCount=24, targetParcelCount=80, maximumParcelCount=80, maxEarthworkVolume=1000000,
          maxBuildableSlope=4.0, maxElevationRange=28, preferredMaxCutDepth=8, preferredMaxFillDepth=8,
          maxCutDepth=16, maxFillDepth=16, maxBuildingFoundationDepth=16)
@@ -161,6 +161,12 @@ p['districts'].update(targetParcels=4, parcelSizes=[dict(id='skyline:large', wid
 p['districts']['grid'] = dict(enabled=True, columns=5, rows=4, parcelsAcross=2, parcelsDeep=2)
 p['districts']['elevation'].update(preferredDepth=8, maximumTerraces=16, levelChangeCost=160, roadRunPerRise=12)
 # Dense paved blocks use retaining faces and bounded slope aprons rather than mandatory shallow grass verges.
+p['streets'] = dict(sectionLength=32, centerMaterial='minecraft:yellow_concrete', vergeMaterial='minecraft:grass_block',
+                    access=dict(mode='stairs_landing', landingLength=1, stepMaterial='minecraft:stone_brick_stairs'),
+                    modules=[dict(id='skyline:standard_sidewalk', weight=6, leftWidth=2, rightWidth=2, material='minecraft:smooth_stone'),
+                             dict(id='skyline:wide_sidewalk', weight=2, leftWidth=3, rightWidth=3, material='minecraft:smooth_stone'),
+                             dict(id='skyline:asymmetric_sidewalk', weight=1, leftWidth=1, rightWidth=3, material='minecraft:smooth_stone')])
+p['terrainTransitions']['buildingAccessRunPerRise'] = 1
 p['terrainTransitions']['roadShoulderRadius'] = 0
 p['structuralSupports']['maximumVolume'] = 100000
 profile['terrainPolicy']['adaptation'].update(maxTerraformArea=128, maxTerraformRelief=8, maxTerraformVolume=1024)
@@ -180,7 +186,7 @@ def write(relative, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2)+'\n', encoding='utf-8')
 
-write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad 10-16 floor towers, setbacks and five-block roads')))
+write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad 10-16 floor towers, setbacks, eleven-block carriageways and modular sidewalks')))
 write('data/skyline/content_catalogs/city.json', catalog)
 write('data/cities_arise/settlement_profiles/suburb.json', profile)
 # Every local owner must have the same deterministic start opportunity. Per-owner

@@ -62,7 +62,7 @@ final class GradeAwareRoadPlanner {
             var graph=routed.orElseThrow();var points=new HashMap<PlanElementId,GridPoint>();graph.nodes().forEach(n->points.put(n.id(),n.point()));
             long length=graph.segments().stream().mapToLong(s->distance(points.get(s.startNodeId()),points.get(s.endNodeId()))).sum();
             if(path.size()>2 && length>maximum || length<(long)Math.abs((long)startY-endY)*policy.roadRunPerRise())continue;
-            var graded=TerrainConnectorGrader.grade(request,RoadGraphSegmenter.splitLongSegments(graph,6),startY,endY,reserved);
+            var graded=TerrainConnectorGrader.grade(request,RoadGraphSegmenter.splitStreetSegments(request,graph,6),startY,endY,reserved);
             if(graded.isPresent()) {
                 var accepted=graded.orElseThrow();
                 var candidateGraph=new RoadGraph(accepted.nodes(),accepted.segments().stream().map(s->new RoadSegment(s.id(),s.startNodeId(),s.endNodeId(),s.width(),s.tags(),
@@ -78,8 +78,8 @@ final class GradeAwareRoadPlanner {
             var a=graph.segments().get(i);var b=graph.segments().get(j);
             if(a.startNodeId().equals(b.startNodeId()) || a.startNodeId().equals(b.endNodeId())
                     || a.endNodeId().equals(b.startNodeId()) || a.endNodeId().equals(b.endNodeId()))continue;
-            var x=AxisAlignedGridCorridor.bounds(nodes.get(a.startNodeId()),nodes.get(a.endNodeId()),a.width());
-            var y=AxisAlignedGridCorridor.bounds(nodes.get(b.startNodeId()),nodes.get(b.endNodeId()),b.width());
+            var x=com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(nodes.get(a.startNodeId()),nodes.get(a.endNodeId()), a.width(), a.properties());
+            var y=com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(nodes.get(b.startNodeId()),nodes.get(b.endNodeId()), b.width(), b.properties());
             if(x.minX()<y.maxXExclusive() && y.minX()<x.maxXExclusive() && x.minZ()<y.maxZExclusive() && y.minZ()<x.maxZExclusive())return false;
         }
         return true;

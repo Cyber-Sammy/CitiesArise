@@ -42,7 +42,7 @@ final class SettlementPlanFootprint {
         for (RoadSegment segment : roadGraph.segments()) {
             GridPoint start = requiredNodePoint(nodePoints, segment.startNodeId());
             GridPoint end = requiredNodePoint(nodePoints, segment.endNodeId());
-            addBounds(points, AxisAlignedGridCorridor.bounds(start, end, segment.width()));
+            addBounds(points, com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(start, end, segment.width(), segment.properties()));
         }
     }
 

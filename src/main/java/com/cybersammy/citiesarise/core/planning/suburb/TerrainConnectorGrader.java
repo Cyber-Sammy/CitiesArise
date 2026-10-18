@@ -18,8 +18,8 @@ final class TerrainConnectorGrader {
         var points = new HashMap<PlanElementId, GridPoint>();
         graph.nodes().forEach(n -> points.put(n.id(), n.point()));
         var preparedBounds = new ArrayList<>(occupied);
-        graph.segments().forEach(s -> preparedBounds.add(AxisAlignedGridCorridor.bounds(
-                points.get(s.startNodeId()),points.get(s.endNodeId()),s.width())));
+        graph.segments().forEach(s -> preparedBounds.add(com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(
+                points.get(s.startNodeId()),points.get(s.endNodeId()), s.width(), s.properties())));
         var profiles = new ArrayList<int[]>();
         var lengths = new ArrayList<Integer>();
         var shoulderCeilings = new ArrayList<Integer>();
@@ -29,7 +29,7 @@ final class TerrainConnectorGrader {
         var endJunction=junction(points.get(lastSegment.endNodeId()),lastSegment.width());
         for (var segment : graph.segments()) {
             var a = points.get(segment.startNodeId()); var b = points.get(segment.endNodeId());
-            var bounds = AxisAlignedGridCorridor.bounds(a, b, segment.width());
+            var bounds = com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(a, b, segment.width(), segment.properties());
             boolean startOverlap=bounds.intersects(startJunction),endOverlap=bounds.intersects(endJunction);
             if(request.settings().districts().elevation().enabled() && startOverlap && endOverlap && startY!=endY)return Optional.empty();
             endpointLevels.add(!request.settings().districts().elevation().enabled()?OptionalInt.empty():

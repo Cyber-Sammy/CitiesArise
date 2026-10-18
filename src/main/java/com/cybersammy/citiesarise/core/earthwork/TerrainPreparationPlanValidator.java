@@ -87,7 +87,7 @@ public final class TerrainPreparationPlanValidator {
             if (end == null) {
                 continue;
             }
-            GridBounds bounds = AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
+            GridBounds bounds = com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(start.point(), end.point(), segment.width(), segment.properties());
             validateElement(
                     segment.id(),
                     ElevationZoneType.ROAD_SEGMENT,
@@ -710,6 +710,8 @@ public final class TerrainPreparationPlanValidator {
             errors.add(error(transition.targetZoneId(), "building access anchor must be on the building perimeter"));
         }
 
+        if(transition.startOverride()!=null && !source.bounds().contains(transition.startOverride()))
+            errors.add(error(transition.targetZoneId(),"building access start is outside its street corridor"));
         BuildingAccessResolver.BuildingAccess expected = BuildingAccessResolver.resolve(List.of(source), target);
         // The transition explicitly owns its street; later city links must not rotate an entrance.
         if (!transition.anchor().equals(expected.anchor())) {

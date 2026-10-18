@@ -54,7 +54,7 @@
         "parcelsDeep": 2
       }
     },
-    "roadWidth": 5,
+    "roadWidth": 11,
     "maxBuildableSlope": 4.0,
     "minimumParcelCount": 24,
     "targetParcelCount": 80,
@@ -123,7 +123,7 @@
       ]
     },
     "terrainTransitions": {
-      "buildingAccessRunPerRise": 2,
+      "buildingAccessRunPerRise": 1,
       "roadShoulderRadius": 0,
       "roadShoulderMaxFillDepth": 3,
       "parcelShoulderRadius": 1,
@@ -152,6 +152,39 @@
       "edgeClearance": 2,
       "maximumDetour": 24,
       "maximumRoutingAttempts": 2
+    },
+    "streets": {
+      "sectionLength": 32,
+      "centerMaterial": "minecraft:yellow_concrete",
+      "vergeMaterial": "minecraft:grass_block",
+      "access": {
+        "mode": "stairs_landing",
+        "landingLength": 1,
+        "stepMaterial": "minecraft:stone_brick_stairs"
+      },
+      "modules": [
+        {
+          "id": "skyline:standard_sidewalk",
+          "weight": 6,
+          "leftWidth": 2,
+          "rightWidth": 2,
+          "material": "minecraft:smooth_stone"
+        },
+        {
+          "id": "skyline:wide_sidewalk",
+          "weight": 2,
+          "leftWidth": 3,
+          "rightWidth": 3,
+          "material": "minecraft:smooth_stone"
+        },
+        {
+          "id": "skyline:asymmetric_sidewalk",
+          "weight": 1,
+          "leftWidth": 1,
+          "rightWidth": 3,
+          "material": "minecraft:smooth_stone"
+        }
+      ]
     }
   },
   "terrainPolicy": {

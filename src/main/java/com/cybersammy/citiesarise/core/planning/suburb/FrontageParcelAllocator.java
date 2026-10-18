@@ -210,7 +210,7 @@ final class FrontageParcelAllocator {
         for (RoadSegment segment : segments) {
             RoadNode start = requiredNode(nodes, segment.startNodeId());
             RoadNode end = requiredNode(nodes, segment.endNodeId());
-            GridBounds corridor = AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
+            GridBounds corridor = com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(start.point(), end.point(), segment.width(), segment.properties());
             for (ParcelSide side : ParcelSide.values()) {
                 for (GridBounds bounds : candidates(corridor, side, settings)) {
                     if (!isAvailable(bounds, districtFootprint, roadReservations)) {
@@ -370,7 +370,7 @@ final class FrontageParcelAllocator {
         for (RoadSegment segment : graph.segments()) {
             RoadNode start = requiredNode(nodes, segment.startNodeId());
             RoadNode end = requiredNode(nodes, segment.endNodeId());
-            corridors.add(AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width()));
+            corridors.add(com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(start.point(), end.point(), segment.width(), segment.properties()));
         }
         return List.copyOf(corridors);
     }

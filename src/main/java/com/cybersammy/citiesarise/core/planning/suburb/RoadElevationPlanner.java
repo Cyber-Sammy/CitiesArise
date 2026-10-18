@@ -45,7 +45,7 @@ final class RoadElevationPlanner {
             var limits=new HashMap<PlanElementId,NeighborhoodLevels.Interval>();
             int depth=request.settings().districts().elevation().preferredDepth();
             for(var segment:roadGraph.segments()) {
-                var bounds=AxisAlignedGridCorridor.bounds(nodesById.get(segment.startNodeId()).point(),nodesById.get(segment.endNodeId()).point(),segment.width());
+                var bounds=com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(nodesById.get(segment.startNodeId()).point(),nodesById.get(segment.endNodeId()).point(), segment.width(), segment.properties());
                 int low=Integer.MIN_VALUE,high=Integer.MAX_VALUE;
                 for(int z=bounds.minZ();z<bounds.maxZExclusive();z++)for(int x=bounds.minX();x<bounds.maxXExclusive();x++) {
                     var cell=request.survey().findCell(new com.cybersammy.citiesarise.core.geometry.GridPoint(x,z));
@@ -91,7 +91,7 @@ final class RoadElevationPlanner {
         for (RoadSegment segment : graph.segments()) {
             RoadNode start = requiredNode(nodesById, segment.startNodeId());
             RoadNode end = requiredNode(nodesById, segment.endNodeId());
-            GridBounds bounds = AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
+            GridBounds bounds = com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(start.point(), end.point(), segment.width(), segment.properties());
             elevations.put(segment.id(), TerrainPlatform.medianElevation(request, bounds));
         }
         return Map.copyOf(elevations);
@@ -132,8 +132,8 @@ final class RoadElevationPlanner {
     private static Map<PlanElementId,Interval> feasibleElevations(SuburbPlanningRequest request,RoadGraph graph,
             Map<PlanElementId,RoadNode> nodes,List<GridBounds> pads) {
         var roads=new HashMap<PlanElementId,GridBounds>();
-        graph.segments().forEach(s -> roads.put(s.id(),AxisAlignedGridCorridor.bounds(
-                nodes.get(s.startNodeId()).point(),nodes.get(s.endNodeId()).point(),s.width())));
+        graph.segments().forEach(s -> roads.put(s.id(),com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(
+                nodes.get(s.startNodeId()).point(),nodes.get(s.endNodeId()).point(), s.width(), s.properties())));
         var occupied=new ArrayList<>(pads); occupied.addAll(roads.values());
         var result=new HashMap<PlanElementId,Interval>();
         int radius=request.settings().terrainTransitions().roadShoulderRadius();

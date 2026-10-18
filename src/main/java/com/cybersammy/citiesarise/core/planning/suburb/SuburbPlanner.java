@@ -99,7 +99,7 @@ public final class SuburbPlanner {
                 if(routed.isEmpty())return SuburbPlanningResult.rejected(SuburbPlanningFailureReason.DISTRICT_CONNECTION_FAILED);
                 var accepted=routed.orElseThrow();
                 plan=accepted;
-                var elevated=new SettlementPlan(accepted.id(),RoadGraphSegmenter.splitLongSegments(accepted.roadGraph(),MAX_ROAD_ELEVATION_NODE_DISTANCE),
+                var elevated=new SettlementPlan(accepted.id(),RoadGraphSegmenter.splitStreetSegments(request,accepted.roadGraph(),MAX_ROAD_ELEVATION_NODE_DISTANCE),
                         accepted.parcels(),accepted.buildingSlots(),accepted.tags(),accepted.properties(),accepted.districts());
                 result=complete(request,elevated,acceptance,true,true,adaptation);
                 if(result.successful())result=acceptance.validate(request,result);
@@ -111,8 +111,10 @@ public final class SuburbPlanner {
                 });
                 var nominal=plan;
                 var nodes=new java.util.HashMap<PlanElementId,GridPoint>();nominal.roadGraph().nodes().forEach(n->nodes.put(n.id(),n.point()));
-                var failedRoads=nominal.roadGraph().segments().stream().filter(r->ids.stream().anyMatch(id->id.equals(r.id()) || id.value().startsWith(r.id().value()+"/"))
-                        || AxisAlignedGridCorridor.bounds(nodes.get(r.startNodeId()),nodes.get(r.endNodeId()),r.width()).contains(diagnostic.cell().point())).toList();
+                var junctionGraph=com.cybersammy.citiesarise.core.road.StreetSectionGeometry.annotate(nominal.roadGraph(),
+                        request.settings().terrainTransitions().streets(),request.settings().roadWidth(),request.seed());
+                var failedRoads=junctionGraph.segments().stream().filter(r->ids.stream().anyMatch(id->id.equals(r.id()) || id.value().startsWith(r.id().value()+"/"))
+                        || com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(nodes.get(r.startNodeId()),nodes.get(r.endNodeId()), r.width(), r.properties()).contains(diagnostic.cell().point())).toList();
                 var failed=accepted.districts().stream().filter(b->b.parcels().stream().anyMatch(ids::contains) || b.bounds().contains(diagnostic.cell().point())
                                 || failedRoads.stream().anyMatch(r->CityGridLayout.borders(nominal,r,b)))
                         .map(com.cybersammy.citiesarise.core.model.DistrictPlan::id).collect(java.util.stream.Collectors.toSet());
@@ -276,23 +278,23 @@ public final class SuburbPlanner {
     }
 
     private static int minimumSurveyWidth(SuburbPlanningSettings settings) {
-        return settings.roadWidth() + settings.parcelWidth();
+        return settings.corridorWidth() + settings.parcelWidth();
     }
 
     private static int minimumSurveyDepth(SuburbPlanningSettings settings) {
         return 2 * (
-                settings.roadWidth()
+                settings.corridorWidth()
                         + settings.terrainTransitions().roadShoulderRadius()
                         + settings.parcelDepth()
         );
     }
 
     private boolean roadFitsSurvey(SuburbPlanningSettings settings, GridBounds bounds) {
-        if (settings.roadWidth() > bounds.size().width()) {
+        if (settings.corridorWidth() > bounds.size().width()) {
             return false;
         }
 
-        if (settings.roadWidth() > bounds.size().depth()) {
+        if (settings.corridorWidth() > bounds.size().depth()) {
             return false;
         }
 
@@ -653,7 +655,7 @@ public final class SuburbPlanner {
         SuburbLayout layout = selection.layout();
         RoadGraph roadGraph = layout.routedRoadGraph()
                 .orElseThrow(() -> new IllegalStateException("selected layout has no routed road graph"));
-        roadGraph = RoadGraphSegmenter.splitLongSegments(roadGraph, MAX_ROAD_ELEVATION_NODE_DISTANCE);
+        roadGraph = RoadGraphSegmenter.splitStreetSegments(request,roadGraph, MAX_ROAD_ELEVATION_NODE_DISTANCE);
         List<Parcel> parcels = createParcels(request, layout.parcelBounds());
         List<BuildingSlot> buildingSlots = createBuildingSlots(request, parcels);
 
@@ -738,7 +740,7 @@ public final class SuburbPlanner {
         for (RoadSegment segment : roadGraph.segments()) {
             RoadNode start = requiredRoadNode(nodes, segment.startNodeId());
             RoadNode end = requiredRoadNode(nodes, segment.endNodeId());
-            corridors.add(AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width()));
+            corridors.add(com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(start.point(), end.point(), segment.width(), segment.properties()));
         }
         return List.copyOf(corridors);
     }

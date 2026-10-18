@@ -104,7 +104,7 @@ final class DistrictCityPlanner {
         for (int attempt=0; attempt<3; attempt++) {
             // Include the surroundings so shoulder/water checks cannot disappear at a cropped edge.
             int margin = Math.max(settings.terrainTransitions().buildingShoulderRadius(),
-                    Math.max(settings.terrainTransitions().parcelShoulderRadius(), settings.terrainTransitions().roadShoulderRadius())) + settings.roadWidth();
+                    Math.max(settings.terrainTransitions().parcelShoulderRadius(), settings.terrainTransitions().roadShoulderRadius())) + settings.corridorWidth();
             var outer = request.survey().bounds();
             int minX = Math.max(outer.minX(), region.bounds().minX()-margin), minZ = Math.max(outer.minZ(), region.bounds().minZ()-margin);
             var samplingBounds = new GridBounds(new GridPoint(minX,minZ), new GridSize(
@@ -145,8 +145,8 @@ final class DistrictCityPlanner {
                 settings.districts().parcelSizes().stream().mapToInt(DistrictParcelSize::width).max().orElse(settings.parcelWidth());
         int parcelDepth=settings.districts().allowsParcelSizeFallback()?settings.parcelDepth():
                 settings.districts().parcelSizes().stream().mapToInt(DistrictParcelSize::depth).max().orElse(settings.parcelDepth());
-        int minimumWidth = settings.roadWidth() + parcelWidth * 2;
-        int minimumDepth = 2 * (settings.roadWidth() + settings.terrainTransitions().roadShoulderRadius() + parcelDepth);
+        int minimumWidth = settings.corridorWidth() + parcelWidth * 2;
+        int minimumDepth = 2 * (settings.corridorWidth() + settings.terrainTransitions().roadShoulderRadius() + parcelDepth);
         List<GridBounds> bounds = new ArrayList<>(List.of(request.survey().bounds()));
         while (bounds.size() < settings.districts().maxCount()) {
             GridBounds split = bounds.stream().filter(b -> b.size().width() >= minimumWidth * 2
@@ -182,8 +182,8 @@ final class DistrictCityPlanner {
             for(int i=0;i<ordered.size();i++) {
                 var size=settings.districts().parcelSize(request.seed(),request.settlementId().value(),i);
                 if(size.isEmpty())continue;
-                int w=settings.roadWidth()+2*size.orElseThrow().width();
-                int d=2*(settings.roadWidth()+settings.terrainTransitions().roadShoulderRadius()+size.orElseThrow().depth());
+                int w=settings.corridorWidth()+2*size.orElseThrow().width();
+                int d=2*(settings.corridorWidth()+settings.terrainTransitions().roadShoulderRadius()+size.orElseThrow().depth());
                 var a=ordered.get(i);if(a.size().width()>=w && a.size().depth()>=d)continue;
                 for(int j=i+1;j<ordered.size();j++) {
                     var b=ordered.get(j);int x=Math.min(a.minX(),b.minX()),z=Math.min(a.minZ(),b.minZ());
@@ -236,9 +236,9 @@ final class DistrictCityPlanner {
             var preparedColumns = preparation.plan().orElseThrow().columns();
             var ports = ports(bridged.roadGraph()).stream().filter(port -> {
                 if (!request.settings().districts().elevation().enabled()) return true;
-                int half = request.settings().roadWidth()/2;
+                int half = request.settings().corridorWidth()/2;
                 var junction = new GridBounds(new GridPoint(port.node().point().x()-half,
-                        port.node().point().z()-half),new GridSize(request.settings().roadWidth(),request.settings().roadWidth()));
+                        port.node().point().z()-half),new GridSize(request.settings().corridorWidth(),request.settings().corridorWidth()));
                 // A segment's nominal level is not necessarily its level at a nearby stair.
                 // Join only where the complete junction deck agrees with the port height.
                 return preparedColumns.stream().noneMatch(column -> junction.contains(column.point())
@@ -315,7 +315,7 @@ final class DistrictCityPlanner {
         var proposedGraph=new RoadGraph(proposedNodes,proposedSegments,base.roadGraph().bridges());
         var proposedZones=new ArrayList<>(zones);var byId=new HashMap<PlanElementId,RoadNode>();proposedNodes.forEach(n->byId.put(n.id(),n));
         graph.segments().forEach(segment->proposedZones.add(new ElevationZone(segment.id(),ElevationZoneType.ROAD_SEGMENT,
-                AxisAlignedGridCorridor.bounds(byId.get(segment.startNodeId()).point(),byId.get(segment.endNodeId()).point(),segment.width()),elevation(segment))));
+                com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(byId.get(segment.startNodeId()).point(),byId.get(segment.endNodeId()).point(), segment.width(), segment.properties()),elevation(segment))));
         var proposedTransitions=new ArrayList<>(transitions);RegionalElevationPlanner.addRoadTransitions(proposedGraph,byId,proposedTransitions);
         proposedTransitions=new ArrayList<>(new LinkedHashSet<>(proposedTransitions));
         var prepared=prepare(request,new RegionalElevationPlan(proposedZones,proposedTransitions),adaptation);
@@ -331,12 +331,12 @@ final class DistrictCityPlanner {
     private static Optional<RoadGraph> connector(SuburbPlanningRequest request, SettlementPlan plan, Pair pair, int index, java.util.function.Predicate<RoadGraph> acceptance,TerrainAdaptationPlan adaptation) {
         var id = request.settlementId().child("district-link-" + index);
         var source = new RoadGraph(List.of(pair.a().node(), pair.b().node()), List.of(new RoadSegment(id,
-                pair.a().node().id(), pair.b().node().id(), request.settings().roadWidth(), Set.of(), PlanProperties.empty())));
+                pair.a().node().id(), pair.b().node().id(), request.settings().corridorWidth(), Set.of(), PlanProperties.empty())));
         var reserved = new ArrayList<GridBounds>(plan.parcels().stream().map(Parcel::bounds).toList());
         reserved.addAll(plan.roadGraph().bridges().stream().map(BridgePlan::bounds).toList());
         var nodeMap = new HashMap<PlanElementId, RoadNode>(); plan.roadGraph().nodes().forEach(n -> nodeMap.put(n.id(), n));
-        for (var road : plan.roadGraph().segments()) reserved.add(AxisAlignedGridCorridor.bounds(
-                nodeMap.get(road.startNodeId()).point(), nodeMap.get(road.endNodeId()).point(), road.width()));
+        for (var road : plan.roadGraph().segments()) reserved.add(com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(
+                nodeMap.get(road.startNodeId()).point(), nodeMap.get(road.endNodeId()).point(), road.width(), road.properties()));
         var routingBounds=request.survey().bounds();
         if(routingBounds.size().width()>128 || routingBounds.size().depth()>128) {
             var a=pair.a().node().point();var b=pair.b().node().point();
@@ -361,13 +361,13 @@ final class DistrictCityPlanner {
             if(oldBounds.size().width()>128 || oldBounds.size().depth()>128)return Optional.empty();
             var router=new TerrainAwareRoadGraphRouter();
             var reverse=new RoadGraph(source.nodes(),List.of(new RoadSegment(id,pair.b().node().id(),pair.a().node().id(),
-                    request.settings().roadWidth(),Set.of(),PlanProperties.empty())));
+                    request.settings().corridorWidth(),Set.of(),PlanProperties.empty())));
             var oldRoute=router.routePlanar(request,oldBounds,reverse,reserved,router.routingContext(request.terrainResponsePolicy(),adaptation),new com.cybersammy.citiesarise.core.road.RoadTerrainEvaluationCache());
-            return oldRoute.flatMap(g->TerrainConnectorGrader.grade(request,RoadGraphSegmenter.splitLongSegments(g,6),pair.b().y(),pair.a().y(),reserved)).filter(acceptance);
+            return oldRoute.flatMap(g->TerrainConnectorGrader.grade(request,RoadGraphSegmenter.splitStreetSegments(request,g,6),pair.b().y(),pair.a().y(),reserved)).filter(acceptance);
         }
         var routed = new TerrainAwareRoadGraphRouter().route(request, routingBounds, source, reserved);
         if (routed.isEmpty()) return Optional.empty();
-        var split = RoadGraphSegmenter.splitLongSegments(routed.orElseThrow(), 6);
+        var split = RoadGraphSegmenter.splitStreetSegments(request,routed.orElseThrow(), 6);
         return TerrainConnectorGrader.grade(request, split, pair.a().y(), pair.b().y(), reserved).filter(acceptance);
     }
 

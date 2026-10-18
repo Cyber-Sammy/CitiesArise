@@ -15,23 +15,21 @@ public final class StructuralSupportPlacement {
     }
     private StructuralSupportPlacement() { }
     public static Resolution resolveReady(net.minecraft.server.level.ServerLevel level,DebugPlacementPlan original,StructuralSupportBlueprint blueprint) {
-        if(blueprint.ravines().enabled() && blueprint.ravines().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE) {
-            if(blueprint.recipe()==null) return new Resolution(Optional.empty(),"MISSING_RAVINE_RECIPE",0,0);
-            var bounds=blueprint.recipe().bounds();
-            for(int z=Math.floorDiv(bounds.minZ(),16);z<=Math.floorDiv(bounds.maxZExclusive()-1,16);z++)
-                for(int x=Math.floorDiv(bounds.minX(),16);x<=Math.floorDiv(bounds.maxXExclusive()-1,16);x++)
-                    if(level.getChunkSource().getChunkNow(x,z)==null) return new Resolution(Optional.empty(),"WAITING_FOR_LOADED_TERRAIN",0,0);
-            return FinalTerrainReplanning.resolve(original,blueprint,FinalTerrainSnapshot.capture(level,bounds));
-        }
-        for(var op:original.operations()) if(level.getChunkSource().getChunkNow(Math.floorDiv(op.point().x(),16),Math.floorDiv(op.point().z(),16))==null)
+        for(var chunk:blueprint.requiredChunks(original))
+            if(level.getChunkSource().getChunkNow(chunk.x(),chunk.z())==null)
+                return new Resolution(Optional.empty(),"WAITING_FOR_LOADED_TERRAIN",0,0);
+        try {
+            if(blueprint.ravines().enabled() && blueprint.ravines().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE) {
+                if(blueprint.recipe()==null)return new Resolution(Optional.empty(),"MISSING_RAVINE_RECIPE",0,0);
+                return FinalTerrainReplanning.resolve(original,blueprint,FinalTerrainSnapshot.capture(level,blueprint.recipe().bounds()));
+            }
+            return resolve(original,blueprint,new StructuralSupportPlanner.Ground() {
+                public boolean solid(int x,int y,int z) {return PendingStructuralPlacement.solid(level,x,y,z);}
+                public boolean fluid(int x,int y,int z) {return !PendingStructuralPlacement.loadedChunk(level,x,z).getFluidState(new net.minecraft.core.BlockPos(x,y,z)).isEmpty();}
+            });
+        } catch(UnloadedStructuralTerrain waiting) {
             return new Resolution(Optional.empty(),"WAITING_FOR_LOADED_TERRAIN",0,0);
-        for(var e:blueprint.envelopes()) for(int z=Math.floorDiv(e.bounds().minZ(),16);z<=Math.floorDiv(e.bounds().maxZExclusive()-1,16);z++)
-            for(int x=Math.floorDiv(e.bounds().minX(),16);x<=Math.floorDiv(e.bounds().maxXExclusive()-1,16);x++)
-                if(level.getChunkSource().getChunkNow(x,z)==null) return new Resolution(Optional.empty(),"WAITING_FOR_LOADED_TERRAIN",0,0);
-        return resolve(original,blueprint,new StructuralSupportPlanner.Ground() {
-            public boolean solid(int x,int y,int z) {return PendingStructuralPlacement.solid(level,x,y,z);}
-            public boolean fluid(int x,int y,int z) {return !level.getFluidState(new net.minecraft.core.BlockPos(x,y,z)).isEmpty();}
-        });
+        }
     }
     public static Resolution resolve(DebugPlacementPlan original,StructuralSupportBlueprint blueprint,StructuralSupportPlanner.Ground ground) {
         var originalPositions=blueprint.ownership()==null?Set.<String>of():original.operations().stream().map(StructuralSupportPlacement::key).collect(java.util.stream.Collectors.toSet());

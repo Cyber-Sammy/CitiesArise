@@ -11,8 +11,15 @@ public record ElevationTransition(
         GridPoint anchor,
         int sourceElevation,
         int targetElevation,
-        int minimumRunPerRise
+        int minimumRunPerRise,
+        GridPoint startOverride,
+        boolean concentratedStairs,
+        int landingLength
 ) {
+    public ElevationTransition(ElevationTransitionType type,PlanElementId source,PlanElementId target,GridPoint anchor,
+            int sourceElevation,int targetElevation,int minimumRunPerRise) {
+        this(type,source,target,anchor,sourceElevation,targetElevation,minimumRunPerRise,null,false,0);
+    }
     public ElevationTransition(
             ElevationTransitionType type,
             PlanElementId sourceZoneId,
@@ -25,6 +32,7 @@ public record ElevationTransition(
     }
 
     public ElevationTransition {
+        if(landingLength<0 || landingLength>8)throw new IllegalArgumentException("Invalid access landing length");
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(sourceZoneId, "sourceZoneId");
         Objects.requireNonNull(targetZoneId, "targetZoneId");

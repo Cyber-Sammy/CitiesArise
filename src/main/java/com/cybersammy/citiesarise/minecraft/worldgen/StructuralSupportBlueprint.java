@@ -82,6 +82,37 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
                 policy.enabled() && policy.mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE?recipe:null,ownership,
                 Math.max(12,recipe.profile().suburbPlanningSettings().maxCutDepth()),sharedBudget);
     }
+    /** Includes terrain read between an outer apron and its platform, not only written columns. */
+    Set<com.cybersammy.citiesarise.minecraft.placement.PlacementChunk> requiredChunks(
+            com.cybersammy.citiesarise.minecraft.placement.DebugPlacementPlan plan) {
+        var chunks=new HashSet<com.cybersammy.citiesarise.minecraft.placement.PlacementChunk>();
+        var bySource=new HashMap<PlanElementId,StructuralSupportPlanner.Envelope>();
+        for(var envelope:envelopes) {bySource.put(envelope.source(),envelope);addChunks(chunks,envelope.bounds());}
+        for(var op:plan.operations()) {
+            chunks.add(com.cybersammy.citiesarise.minecraft.placement.PlacementChunk.containing(op.point()));
+            var envelope=bySource.get(op.sourceElementId());
+            if(envelope==null || op.platformY().isEmpty() || envelope.bounds().contains(op.point()))continue;
+            if(op.role()!=com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.TERRAIN_SURFACE
+                    && !(op.role()==com.cybersammy.citiesarise.minecraft.placement.DebugPlacementRole.TERRAIN_RETAINING_WALL
+                    && envelope.kind()==StructuralSupportPlanner.Kind.PARCEL))continue;
+            var bounds=envelope.bounds();var point=op.point();
+            int edgeX=Math.clamp(point.x(),bounds.minX(),bounds.maxXExclusive()-1);
+            int edgeZ=Math.clamp(point.z(),bounds.minZ(),bounds.maxZExclusive()-1);
+            int x=point.x(),z=point.z();
+            while(x!=edgeX || z!=edgeZ) {
+                x+=Integer.compare(edgeX,x);z+=Integer.compare(edgeZ,z);
+                chunks.add(com.cybersammy.citiesarise.minecraft.placement.PlacementChunk.containing(x,z));
+            }
+        }
+        if(ravines.enabled() && ravines.mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE && recipe!=null)
+            addChunks(chunks,recipe.bounds());
+        return Set.copyOf(chunks);
+    }
+    private static void addChunks(Set<com.cybersammy.citiesarise.minecraft.placement.PlacementChunk> chunks,GridBounds bounds) {
+        for(int z=Math.floorDiv(bounds.minZ(),16);z<=Math.floorDiv(bounds.maxZExclusive()-1,16);z++)
+            for(int x=Math.floorDiv(bounds.minX(),16);x<=Math.floorDiv(bounds.maxXExclusive()-1,16);x++)
+                chunks.add(new com.cybersammy.citiesarise.minecraft.placement.PlacementChunk(x,z));
+    }
     CompoundTag save() {
         var tag=new CompoundTag();tag.putInt("Version",5);tag.putBoolean("SharedBudget",sharedBudget);tag.putInt("ClearanceHeight",clearanceHeight);tag.putInt("Allowance",constructionAllowance);tag.putBoolean("Enabled",settings.enabled());
         if(ownership!=null)tag.putIntArray("Owner",new int[]{ownership.minX(),ownership.minZ(),ownership.size().width(),ownership.size().depth()});

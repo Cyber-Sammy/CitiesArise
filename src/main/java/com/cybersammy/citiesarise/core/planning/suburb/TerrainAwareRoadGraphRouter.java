@@ -137,7 +137,7 @@ final class TerrainAwareRoadGraphRouter {
                         var g=graded.orElseThrow();
                         routedNodes.addAll(g.nodes().stream().filter(n->!sourceNodes.containsKey(n.id())).toList());routedSegments.addAll(g.segments());
                         var byId=new HashMap<PlanElementId,RoadNode>();g.nodes().forEach(n->byId.put(n.id(),n));
-                        g.segments().forEach(s->dynamicReservations.add(AxisAlignedGridCorridor.bounds(byId.get(s.startNodeId()).point(),byId.get(s.endNodeId()).point(),s.width())));
+                        g.segments().forEach(s->dynamicReservations.add(com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(byId.get(s.startNodeId()).point(),byId.get(s.endNodeId()).point(), s.width(), s.properties())));
                         continue;
                     }
                 }

@@ -21,6 +21,28 @@ import org.junit.jupiter.api.Test;
 
 final class MinecraftSettlementProfileJsonParserTest {
     private final MinecraftSettlementProfileJsonParser parser = new MinecraftSettlementProfileJsonParser();
+    @Test void streetsAreOptionalIndependentAndBounded() {
+        var data=validJson();
+        var legacy=parser.parse(id(),data).suburbPlanningSettings();
+        assertEquals(legacy.roadWidth(),legacy.corridorWidth());
+        var streets=JsonParser.parseString("""
+                {"sectionLength":32,"centerMaterial":"minecraft:yellow_concrete",
+                 "access":{"mode":"stairs_landing","landingLength":2,"stepMaterial":"minecraft:stone_brick_stairs"},
+                 "modules":[{"id":"test:paving","leftWidth":0,"rightWidth":3,"material":"minecraft:smooth_stone"},
+                            {"id":"test:pedestrian","carriageway":false,"pathWidth":5}]}
+                """).getAsJsonObject();
+        data.getAsJsonObject("planning").add("streets",streets);
+        var settings=parser.parse(id(),data).suburbPlanningSettings();
+        assertEquals(legacy.roadWidth()+6,settings.corridorWidth());
+        assertTrue(settings.terrainTransitions().streets().stairAccess());
+        assertEquals(2,settings.terrainTransitions().streets().landingLength());
+        assertEquals(settings.terrainTransitions().streets(),settings.withDistricts(settings.districts()).terrainTransitions().streets());
+        streets.getAsJsonObject("access").addProperty("mode","invalid");
+        assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+        streets.getAsJsonObject("access").addProperty("mode","gradual");
+        streets.getAsJsonArray("modules").get(0).getAsJsonObject().addProperty("leftWidth",9);
+        assertThrows(IllegalArgumentException.class,()->parser.parse(id(),data));
+    }
     @Test void parcelBoundariesAreOptInBoundedAndValidateStyleReferences() {
         var data=validJson();
         assertEquals(com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings.disabled(),parser.parse(id(),data).suburbPlanningSettings().parcelLayout());

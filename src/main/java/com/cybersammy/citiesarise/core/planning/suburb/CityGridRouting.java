@@ -21,7 +21,7 @@ final class CityGridRouting {
                     new GridSize(Math.abs(a.x()-b.x())+road.width(),Math.abs(a.z()-b.z())+road.width()));
             // Fixed axes keep the broad-building entrance at the centre of its frontage.
             if(router.routeCorridor(request,corridor,edge,reserved,context,cache).isEmpty())continue;
-            allowed.add(road.id());reserved.add(AxisAlignedGridCorridor.bounds(a,b,road.width()));
+            allowed.add(road.id());reserved.add(com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(a,b, road.width(), road.properties()));
         }
         var retained=CityGridLayout.retainRoads(source,allowed,request.settings().terrainTransitions().roadShoulderRadius());
         return retained.parcels().size()<request.settings().minimumParcelCount()?Optional.empty():Optional.of(retained);

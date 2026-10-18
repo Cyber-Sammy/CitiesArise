@@ -93,8 +93,10 @@ public final class StructuralSupportPlanner {
                         || p.x()==b.maxXExclusive()-1 || p.z()==b.maxZExclusive()-1;
                 if(beam) put(cells,envelope,p,envelope.platformY()-1,Role.BEAM);
                 if(envelope.kind()==Kind.ROAD) {
-                    boolean alongX=b.size().width()>=b.size().depth();
-                    if(alongX ? p.z()==b.minZ() || p.z()==b.maxZExclusive()-1 : p.x()==b.minX() || p.x()==b.maxXExclusive()-1)
+                    boolean edge=false;
+                    for(int[] d:new int[][]{{1,0},{-1,0},{0,1},{0,-1}})
+                        edge|=!roadSites.containsKey(new GridPoint(p.x()+d[0],p.z()+d[1]));
+                    if(edge)
                         put(cells,envelope,p,envelope.platformY()+1,Role.RAIL);
                 }
             }

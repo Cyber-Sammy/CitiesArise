@@ -16,6 +16,11 @@ final class RoadGraphSegmenter {
     private RoadGraphSegmenter() {
     }
 
+    static RoadGraph splitStreetSegments(SuburbPlanningRequest request,RoadGraph graph,int maxNodeDistance) {
+        return splitLongSegments(com.cybersammy.citiesarise.core.road.StreetSectionGeometry.annotate(graph,
+                request.settings().terrainTransitions().streets(),request.settings().roadWidth(),request.seed()),maxNodeDistance);
+    }
+
     static RoadGraph splitLongSegments(RoadGraph graph, int maxNodeDistance) {
         if (maxNodeDistance <= 0) {
             throw new IllegalArgumentException("maxNodeDistance must be positive");

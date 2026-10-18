@@ -315,7 +315,7 @@ final class DistrictCityPlanner {
         var proposedGraph=new RoadGraph(proposedNodes,proposedSegments,base.roadGraph().bridges());
         var proposedZones=new ArrayList<>(zones);var byId=new HashMap<PlanElementId,RoadNode>();proposedNodes.forEach(n->byId.put(n.id(),n));
         graph.segments().forEach(segment->proposedZones.add(new ElevationZone(segment.id(),ElevationZoneType.ROAD_SEGMENT,
-                AxisAlignedGridCorridor.bounds(byId.get(segment.startNodeId()).point(),byId.get(segment.endNodeId()).point(),segment.width()),elevation(segment))));
+                com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(byId.get(segment.startNodeId()).point(),byId.get(segment.endNodeId()).point(), segment.width(), segment.properties()),elevation(segment))));
         var proposedTransitions=new ArrayList<>(transitions);RegionalElevationPlanner.addRoadTransitions(proposedGraph,byId,proposedTransitions);
         proposedTransitions=new ArrayList<>(new LinkedHashSet<>(proposedTransitions));
         var prepared=prepare(request,new RegionalElevationPlan(proposedZones,proposedTransitions),adaptation);
@@ -335,8 +335,8 @@ final class DistrictCityPlanner {
         var reserved = new ArrayList<GridBounds>(plan.parcels().stream().map(Parcel::bounds).toList());
         reserved.addAll(plan.roadGraph().bridges().stream().map(BridgePlan::bounds).toList());
         var nodeMap = new HashMap<PlanElementId, RoadNode>(); plan.roadGraph().nodes().forEach(n -> nodeMap.put(n.id(), n));
-        for (var road : plan.roadGraph().segments()) reserved.add(AxisAlignedGridCorridor.bounds(
-                nodeMap.get(road.startNodeId()).point(), nodeMap.get(road.endNodeId()).point(), road.width()));
+        for (var road : plan.roadGraph().segments()) reserved.add(com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(
+                nodeMap.get(road.startNodeId()).point(), nodeMap.get(road.endNodeId()).point(), road.width(), road.properties()));
         var routingBounds=request.survey().bounds();
         if(routingBounds.size().width()>128 || routingBounds.size().depth()>128) {
             var a=pair.a().node().point();var b=pair.b().node().point();
@@ -363,11 +363,11 @@ final class DistrictCityPlanner {
             var reverse=new RoadGraph(source.nodes(),List.of(new RoadSegment(id,pair.b().node().id(),pair.a().node().id(),
                     request.settings().corridorWidth(),Set.of(),PlanProperties.empty())));
             var oldRoute=router.routePlanar(request,oldBounds,reverse,reserved,router.routingContext(request.terrainResponsePolicy(),adaptation),new com.cybersammy.citiesarise.core.road.RoadTerrainEvaluationCache());
-            return oldRoute.flatMap(g->TerrainConnectorGrader.grade(request,RoadGraphSegmenter.splitLongSegments(g,6),pair.b().y(),pair.a().y(),reserved)).filter(acceptance);
+            return oldRoute.flatMap(g->TerrainConnectorGrader.grade(request,RoadGraphSegmenter.splitStreetSegments(request,g,6),pair.b().y(),pair.a().y(),reserved)).filter(acceptance);
         }
         var routed = new TerrainAwareRoadGraphRouter().route(request, routingBounds, source, reserved);
         if (routed.isEmpty()) return Optional.empty();
-        var split = RoadGraphSegmenter.splitLongSegments(routed.orElseThrow(), 6);
+        var split = RoadGraphSegmenter.splitStreetSegments(request,routed.orElseThrow(), 6);
         return TerrainConnectorGrader.grade(request, split, pair.a().y(), pair.b().y(), reserved).filter(acceptance);
     }
 

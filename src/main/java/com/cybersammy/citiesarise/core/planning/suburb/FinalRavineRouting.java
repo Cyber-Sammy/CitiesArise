@@ -43,7 +43,7 @@ public final class FinalRavineRouting {
             if(!result.successful()) continue;
             var city=result.plan().orElseThrow();var nodes=new HashMap<PlanElementId,GridPoint>();city.roadGraph().nodes().forEach(n->nodes.put(n.id(),n.point()));
             boolean nearby=city.roadGraph().segments().stream().allMatch(s->{
-                var b=com.cybersammy.citiesarise.core.geometry.AxisAlignedGridCorridor.bounds(nodes.get(s.startNodeId()),nodes.get(s.endNodeId()),s.width());
+                var b=com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(nodes.get(s.startNodeId()),nodes.get(s.endNodeId()),s.width(),s.properties());
                 for(int z=b.minZ();z<b.maxZExclusive();z++) for(int x=b.minX();x<b.maxXExclusive();x++) if(!allowed.contains(new GridPoint(x,z))) return false;
                 return true;
             });

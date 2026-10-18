@@ -29,7 +29,7 @@ public final class ParcelBoundaryPlanner {
         var nodes=new HashMap<PlanElementId,RoadNode>(); plan.roadGraph().nodes().forEach(n -> nodes.put(n.id(),n));
         for(var r:plan.roadGraph().segments()) {
             var a=nodes.get(r.startNodeId()).point(); var b=nodes.get(r.endNodeId()).point();
-            rectangle(network,AxisAlignedGridCorridor.bounds(a,b,r.width()));
+            rectangle(network,com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(a,b, r.width(), r.properties()));
         }
         for(var b:plan.roadGraph().bridges()) rectangle(blocked,b.bounds());
         for(var b:plan.buildingSlots()) rectangle(blocked,b.bounds());

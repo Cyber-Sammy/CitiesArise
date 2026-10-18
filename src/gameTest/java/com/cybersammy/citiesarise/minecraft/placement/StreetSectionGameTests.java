@@ -18,6 +18,54 @@ import net.neoforged.neoforge.gametest.*;
 @PrefixGameTestTemplate(false)
 public final class StreetSectionGameTests {
     @GameTest(template="empty",timeoutTicks=200)
+    public static void suspendedGradedTurnHasPavedOuterCornerAndOnlyPerimeterRails(GameTestHelper helper) {
+        var level=helper.getLevel();int x=Math.floorDiv(helper.absolutePos(BlockPos.ZERO).getX(),16)*16+65536,z=0;
+        var a=new PlanElementId("test:turn-a");var b=new PlanElementId("test:turn-b");var c=new PlanElementId("test:turn-c");
+        var properties=PlanProperties.of(PlanPropertyKeys.PLATFORM_Y,"65");
+        var settings=new StreetSectionSettings(32,List.of(new StreetSectionSettings.Module("test:walk",1,3,3,true,3,
+                "minecraft:smooth_stone")),"minecraft:yellow_concrete","minecraft:grass_block",false,1);
+        var original=StreetSectionGeometry.annotate(new RoadGraph(List.of(
+                new RoadNode(a,new GridPoint(x-30,z),Set.of(),properties),new RoadNode(b,new GridPoint(x,z),Set.of(),properties),
+                new RoadNode(c,new GridPoint(x,z+30),Set.of(),properties)),List.of(
+                new RoadSegment(new PlanElementId("test:turn-x"),a,b,17,Set.of(),properties),
+                new RoadSegment(new PlanElementId("test:turn-z"),b,c,17,Set.of(),properties))),settings,11,42);
+        var nodes=new ArrayList<>(original.nodes());var roads=new ArrayList<RoadSegment>();
+        var byId=new HashMap<PlanElementId,GridPoint>();nodes.forEach(n->byId.put(n.id(),n.point()));
+        for(var road:original.segments()) {
+            var start=byId.get(road.startNodeId());var end=byId.get(road.endNodeId());var previous=road.startNodeId();
+            for(int d=6;d<=30;d+=6) {
+                var next=d==30?road.endNodeId():road.id().child("node-"+d);
+                if(d<30)nodes.add(new RoadNode(next,new GridPoint(start.x()+Integer.signum(end.x()-start.x())*d,
+                        start.z()+Integer.signum(end.z()-start.z())*d),Set.of(),properties));
+                roads.add(new RoadSegment(road.id().child("part-"+d),previous,next,17,Set.of(),road.properties()));previous=next;
+            }
+        }
+        var graph=new RoadGraph(nodes,roads);var plan=new SettlementPlan(new PlanElementId("test:turn-city"),graph,List.of(),List.of(),Set.of(),PlanProperties.empty());
+        var surfaces=StreetSectionGeometry.surfaces(graph);
+        surfaces.keySet().stream().map(PlacementChunk::containing).distinct().forEach(chunk->level.getChunk(chunk.x(),chunk.z()));
+        for(var point:surfaces.keySet())for(int y=40;y<=44;y++)level.setBlock(new BlockPos(point.x(),y,point.z()),
+                net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(),2);
+        var envelopes=new ArrayList<StructuralSupportPlanner.Envelope>();var points=new HashMap<PlanElementId,GridPoint>();nodes.forEach(n->points.put(n.id(),n.point()));
+        roads.forEach(r->envelopes.add(new StructuralSupportPlanner.Envelope(r.id(),RoadCorridor.bounds(points.get(r.startNodeId()),
+                points.get(r.endNodeId()),r.width(),r.properties()),65,StructuralSupportPlanner.Kind.ROAD)));
+        var blueprint=new com.cybersammy.citiesarise.minecraft.worldgen.StructuralSupportBlueprint(new StructuralSupportSettings(true,32,12,4,20000),envelopes,Map.of());
+        var resolved=com.cybersammy.citiesarise.minecraft.worldgen.StructuralSupportPlacement.resolveReady(level,new DebugPlacementPlanConverter().convert(plan),blueprint);
+        helper.assertTrue(resolved.plan().isPresent(),resolved.reason());var placed=resolved.plan().orElseThrow();
+        helper.assertTrue(placed.operations().stream().anyMatch(op->op.role()==DebugPlacementRole.BRIDGE_RAIL),"Suspended fixture must exercise rails");
+        for(var op:placed.operations())if(op.role()==DebugPlacementRole.BRIDGE_RAIL) {
+            boolean perimeter=false;
+            for(int[] d:new int[][]{{1,0},{-1,0},{0,1},{0,-1}})perimeter|=!surfaces.containsKey(new GridPoint(op.point().x()+d[0],op.point().z()+d[1]));
+            helper.assertTrue(perimeter,"Rail inside a turn or grade seam at "+op.point());
+        }
+        var tag=new CompoundTag();SuburbStructurePlacementSnapshot.from(placed).save(tag);
+        var restored=SuburbStructurePlacementSnapshot.load(tag).toPlacementPlan();var slices=new DebugPlacementChunkProjector().partition(restored);
+        var chunks=restored.operations().stream().map(o->PlacementChunk.containing(o.point())).distinct().sorted(Comparator.comparingInt(PlacementChunk::x).thenComparingInt(PlacementChunk::z).reversed()).toList();
+        for(var chunk:chunks)new WorldgenPlacementApplier().apply(level,slices.slice(chunk));
+        helper.assertTrue(level.getBlockState(new BlockPos(x+8,65,z-8)).is(net.minecraft.world.level.block.Blocks.SMOOTH_STONE),"Outer sidewalk corner is missing");
+        helper.assertTrue(level.getBlockState(new BlockPos(x-12,66,z)).isAir(),"Grade seam blocks the carriageway");
+        helper.succeed();
+    }
+    @GameTest(template="empty",timeoutTicks=200)
     public static void slopingBlockProducesFlatSidewalkEdgesAndLevelYardLandings(GameTestHelper helper) throws Exception {
         var root=java.nio.file.Path.of(System.getProperty("citiesarise.skylineData"));
         var json=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(root.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject();

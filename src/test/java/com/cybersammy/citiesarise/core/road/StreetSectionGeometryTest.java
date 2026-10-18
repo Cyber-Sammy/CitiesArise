@@ -54,6 +54,7 @@ class StreetSectionGeometryTest {
         var split=new RoadGraph(nodes,List.of(new RoadSegment(new PlanElementId("test:part-a"),road.startNodeId(),middle,road.width(),road.tags(),road.properties()),
                 new RoadSegment(new PlanElementId("test:part-b"),middle,road.endNodeId(),road.width(),road.tags(),road.properties())));
         assertEquals(StreetSectionGeometry.surfaces(original),StreetSectionGeometry.surfaces(split));
+        assertEquals(split,StreetSectionGeometry.annotate(split,settings(module("other",0,0,true)),11,999));
     }
     @Test void crossingCarriagewayWinsSidewalkRegardlessOfRoadOrder() {
         var settings=settings(module("paving",2,2,true));var horizontal=graph(settings,false);
@@ -68,5 +69,41 @@ class StreetSectionGeometryTest {
         assertEquals(first,StreetSectionGeometry.surfaces(new RoadGraph(nodes,roads)));
         assertEquals(StreetSectionGeometry.Kind.CARRIAGEWAY,first.get(new GridPoint(100,7)).kind());
         assertEquals(StreetSectionGeometry.Kind.SIDEWALK,first.get(new GridPoint(103,7)).kind());
+    }
+    @Test void lTurnsReserveAndPaveTheirOuterCornerInEveryOrientation() {
+        var settings=settings(module("wide",3,3,true));
+        for(int dx:new int[]{-1,1})for(int dz:new int[]{-1,1}) {
+            var a=new PlanElementId("test:a");var b=new PlanElementId("test:b");var c=new PlanElementId("test:c");
+            var graph=StreetSectionGeometry.annotate(new RoadGraph(List.of(
+                    new RoadNode(a,new GridPoint(dx*64,0),Set.of(),PlanProperties.empty()),
+                    new RoadNode(b,new GridPoint(0,0),Set.of(),PlanProperties.empty()),
+                    new RoadNode(c,new GridPoint(0,dz*64),Set.of(),PlanProperties.empty())),List.of(
+                    new RoadSegment(new PlanElementId("test:x"),a,b,17,Set.of(),PlanProperties.empty()),
+                    new RoadSegment(new PlanElementId("test:z"),b,c,17,Set.of(),PlanProperties.empty()))),settings,11,42);
+            var surfaces=StreetSectionGeometry.surfaces(graph);
+            for(int x=-8;x<=8;x++)for(int z=-8;z<=8;z++)assertNotNull(surfaces.get(new GridPoint(x,z)),"Junction hole");
+            assertEquals(StreetSectionGeometry.Kind.SIDEWALK,surfaces.get(new GridPoint(-dx*8,-dz*8)).kind());
+            assertEquals(StreetSectionGeometry.Kind.CARRIAGEWAY,surfaces.get(new GridPoint(-dx*5,-dz*5)).kind());
+        }
+    }
+    @Test void olderFrozenStreetKeepsOriginalUncappedReservation() {
+        var graph=graph(settings(module("wide",3,3,true)),false);var road=graph.segments().getFirst();
+        var old=new HashMap<>(road.properties().values());old.remove(StreetSectionSettings.key("caps"));
+        var legacy=new RoadGraph(graph.nodes(),List.of(new RoadSegment(road.id(),road.startNodeId(),road.endNodeId(),road.width(),road.tags(),new PlanProperties(old))));
+        assertFalse(StreetSectionGeometry.surfaces(legacy).containsKey(new GridPoint(-1,0)));
+    }
+    @Test void straightStreetEndsDoNotClaimUnconnectedTerrain() {
+        var cells=StreetSectionGeometry.surfaces(graph(settings(module("wide",3,3,true)),false));
+        assertFalse(cells.containsKey(new GridPoint(-1,0)));
+        assertFalse(cells.containsKey(new GridPoint(257,0)));
+    }
+    @Test void evenCarriagewayUsesItsExactWidthAlongJunctionCaps() {
+        var s=settings(module("wide",3,3,true));
+        var road=new RoadSegment(new PlanElementId("test:even"),new PlanElementId("test:a"),new PlanElementId("test:b"),16,Set.of(),PlanProperties.empty());
+        var section=new StreetSectionGeometry.Section(road,new GridPoint(0,0),new GridPoint(100,0),s,10,42,0,100);
+        assertEquals(StreetSectionGeometry.Kind.CARRIAGEWAY,section.sample(new GridPoint(-5,0)).kind());
+        assertEquals(StreetSectionGeometry.Kind.SIDEWALK,section.sample(new GridPoint(-6,0)).kind());
+        assertEquals(StreetSectionGeometry.Kind.CARRIAGEWAY,section.sample(new GridPoint(104,0)).kind());
+        assertEquals(StreetSectionGeometry.Kind.SIDEWALK,section.sample(new GridPoint(105,0)).kind());
     }
 }

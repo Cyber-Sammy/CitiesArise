@@ -32,7 +32,7 @@ public record StreetSectionSettings(int sectionLength,List<Module> modules,Strin
     }
     static PlanPropertyKey key(String name) {return new PlanPropertyKey("cities_arise:street/"+name);}
     public PlanProperties annotate(PlanProperties base,int carriageway,long seed,int from,int to) {
-        var p=base.with(key("count"),""+modules.size()).with(key("length"),""+sectionLength)
+        var p=base.with(key("caps"),"1").with(key("count"),""+modules.size()).with(key("length"),""+sectionLength)
                 .with(key("carriageway"),""+carriageway).with(key("seed"),""+seed).with(key("from"),""+Math.min(from,to))
                 .with(key("to"),""+Math.max(from,to)).with(key("center"),centerMaterial).with(key("verge"),vergeMaterial);
         for(int i=0;i<modules.size();i++) {

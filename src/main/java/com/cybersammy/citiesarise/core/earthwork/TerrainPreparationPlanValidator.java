@@ -87,7 +87,7 @@ public final class TerrainPreparationPlanValidator {
             if (end == null) {
                 continue;
             }
-            GridBounds bounds = AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width());
+            GridBounds bounds = com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(start.point(), end.point(), segment.width(), segment.properties());
             validateElement(
                     segment.id(),
                     ElevationZoneType.ROAD_SEGMENT,

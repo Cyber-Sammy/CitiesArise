@@ -35,6 +35,20 @@ path level. `stepMaterial` must name a Minecraft stair block. `gradual` retains 
 older distributed access slope. Omitting `streets` preserves legacy geometry and
 materials. Street choices and placed blocks survive saved recipes and chunk reloads.
 
+New modular streets reserve square junction corners before grading and terrain
+preparation. Sidewalks continue around turns; suspended-road rails follow the
+combined street perimeter rather than each short grade segment. Frozen streets
+from older saves retain their original footprint.
+
+In Big Globe worlds, `#cities_arise:yield_to_city` controls which structures yield
+to a city during structure collision selection. It includes the existing terrain
+features and vanilla mineshafts (including badlands mineshafts): a conservative
+foundation reservation must not let one underground shaft delete individual city
+owners. A colliding shaft can therefore be omitted. Other structure priorities
+are unchanged. Datapacks may replace this tag to choose a different policy. This
+affects new structure starts; it does not reconstruct missing starts in explored
+chunks of an existing city.
+
 Final terrain placement also waits for unwritten columns used to check the
 connection between an outer bank and its platform. Missing chunks keep that
 settlement pending across saves; readiness checks do not force-load them or spend

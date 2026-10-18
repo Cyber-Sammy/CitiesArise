@@ -26,6 +26,9 @@ public final class StreetSectionGeometry {
                     right=width(first.rightWidth(),next.carriageway()?next.rightWidth():settings.sideReservation(),run);
             int endpointDistance=Math.min(Math.abs(along-from),Math.abs(along-to));
             if(endpointDistance<=road.width()/2)left=right=settings.sideReservation();
+            boolean sidewalkCap=along<from?from-along>carriageway/2:along-to>carriageway-carriageway/2-1;
+            if(sidewalkCap && settings.sideReservation()>0)
+                return new Cell(Kind.SIDEWALK,first.id(),first.material());
             int low=-carriageway/2,high=low+carriageway-1;
             if(cross>=low && cross<=high) {
                 boolean mark=cross==0 && !settings.centerMaterial().isEmpty() && endpointDistance>road.width()/2;
@@ -43,7 +46,7 @@ public final class StreetSectionGeometry {
             for(var m:settings.modules()) {if(value<m.weight())return m;value-=m.weight();}throw new IllegalStateException();
         }
         public GridPoint accessStart(GridPoint anchor) {
-            var b=AxisAlignedGridCorridor.bounds(start,end,road.width());
+            var b=RoadCorridor.bounds(start,end,road.width(),road.properties());
             var edge=new GridPoint(Math.clamp(anchor.x(),b.minX(),b.maxXExclusive()-1),Math.clamp(anchor.z(),b.minZ(),b.maxZExclusive()-1));
             int dx=alongX()?0:Integer.signum(start.x()-edge.x()),dz=alongX()?Integer.signum(start.z()-edge.z()):0;
             for(int n=0;n<road.width();n++) {
@@ -57,9 +60,20 @@ public final class StreetSectionGeometry {
     public static RoadGraph annotate(RoadGraph graph,StreetSectionSettings settings,int carriageway,long seed) {
         if(!settings.enabled())return graph;
         var nodes=new HashMap<PlanElementId,GridPoint>();graph.nodes().forEach(n->nodes.put(n.id(),n.point()));
+        var axes=new HashMap<PlanElementId,Integer>();
+        for(var road:graph.segments()) {
+            int axis=nodes.get(road.startNodeId()).z()==nodes.get(road.endNodeId()).z()?1:2;
+            axes.merge(road.startNodeId(),axis,(a,b)->a|b);axes.merge(road.endNodeId(),axis,(a,b)->a|b);
+        }
         return new RoadGraph(graph.nodes(),graph.segments().stream().map(r->{
+            if(r.properties().find(StreetSectionSettings.key("count")).isPresent())return r;
             var a=nodes.get(r.startNodeId());var b=nodes.get(r.endNodeId());boolean x=a.z()==b.z();
-            return new RoadSegment(r.id(),r.startNodeId(),r.endNodeId(),r.width(),r.tags(),settings.annotate(r.properties(),carriageway,seed,x?a.x():a.z(),x?b.x():b.z()));
+            int first=x?a.x():a.z(),last=x?b.x():b.z();
+            var low=first<=last?r.startNodeId():r.endNodeId();var high=first<=last?r.endNodeId():r.startNodeId();
+            var properties=settings.annotate(r.properties(),carriageway,seed,first,last)
+                    .with(StreetSectionSettings.key("cap-from"),""+(axes.get(low)==3))
+                    .with(StreetSectionSettings.key("cap-to"),""+(axes.get(high)==3));
+            return new RoadSegment(r.id(),r.startNodeId(),r.endNodeId(),r.width(),r.tags(),properties);
         }).toList(),graph.bridges());
     }
     public static List<Section> sections(RoadGraph graph) {
@@ -91,7 +105,7 @@ public final class StreetSectionGeometry {
     public static Map<GridPoint,Cell> surfaces(RoadGraph graph) {
         var result=new HashMap<GridPoint,Cell>();
         for(var section:sections(graph)) {
-            var b=AxisAlignedGridCorridor.bounds(section.start(),section.end(),section.road().width());
+            var b=RoadCorridor.bounds(section.start(),section.end(),section.road().width(),section.road().properties());
             for(int z=b.minZ();z<b.maxZExclusive();z++)for(int x=b.minX();x<b.maxXExclusive();x++) {
                 var p=new GridPoint(x,z);var cell=section.sample(p);var old=result.get(p);
                 if(old==null || cell.kind().ordinal()>old.kind().ordinal())result.put(p,cell);

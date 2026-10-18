@@ -126,8 +126,8 @@ final class RegionalElevationPlanner {
         Map<PlanElementId, RoadNode> nodes = nodesById(elevatedRoadGraph);
         List<ElevationZone> roads = sortedSegments(elevatedRoadGraph.segments()).stream().map(road ->
                 new ElevationZone(road.id(), ElevationZoneType.ROAD_SEGMENT,
-                        AxisAlignedGridCorridor.bounds(nodes.get(road.startNodeId()).point(),
-                                nodes.get(road.endNodeId()).point(), road.width()),
+                        com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(nodes.get(road.startNodeId()).point(),
+                                nodes.get(road.endNodeId()).point(), road.width(), road.properties()),
                         TerrainPlatform.requiredElevation(road.properties()))).toList();
         for (Parcel parcel : plan.parcels()) {
             int minimum = Integer.MIN_VALUE;
@@ -204,7 +204,7 @@ final class RegionalElevationPlanner {
             zones.add(new ElevationZone(
                     segment.id(),
                     ElevationZoneType.ROAD_SEGMENT,
-                    AxisAlignedGridCorridor.bounds(start.point(), end.point(), segment.width()),
+                    com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(start.point(), end.point(), segment.width(), segment.properties()),
                     TerrainPlatform.requiredElevation(segment.properties())
             ));
         }

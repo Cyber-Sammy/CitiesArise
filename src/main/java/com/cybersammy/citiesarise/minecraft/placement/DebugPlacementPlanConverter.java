@@ -380,7 +380,7 @@ public final class DebugPlacementPlanConverter {
             RoadSegment segment,
             Map<DebugPlacementPosition, DebugBlockPlacementOperation> operationsByPosition
     ) {
-        GridBounds roadBounds = AxisAlignedGridCorridor.bounds(endpoint, connectedPoint, segment.width());
+        GridBounds roadBounds = com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(endpoint, connectedPoint, segment.width(), segment.properties());
         if (endpoint.z() == connectedPoint.z()) {
             for (int z = roadBounds.minZ(); z < roadBounds.maxZExclusive(); z++) {
                 addOperation(
@@ -421,7 +421,7 @@ public final class DebugPlacementPlanConverter {
     ) {
         RoadNode startNode = requiredNode(nodesById, segment.startNodeId());
         RoadNode endNode = requiredNode(nodesById, segment.endNodeId());
-        GridBounds roadBounds = AxisAlignedGridCorridor.bounds(startNode.point(), endNode.point(), segment.width());
+        GridBounds roadBounds = com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(startNode.point(), endNode.point(), segment.width(), segment.properties());
         DebugPlacementRole roadSurfaceRole = roadSurfaceRole(segment);
 
         addFilledBoundsOperations(

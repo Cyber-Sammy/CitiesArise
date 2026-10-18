@@ -106,7 +106,13 @@ public final class SettlementPlanJsonExporter {
             json.numberField("x",prop.origin().x()); json.numberField("y",prop.platformY()+prop.origin().y()); json.numberField("z",prop.origin().z());
             json.stringField("modules",String.join(",",prop.composition().modules().stream().map(m -> m.id()+"/"+m.variant()).toList()));
             json.stringField("caps",String.join("; ",prop.composition().cappedJoints()));
+            prop.zonePlacement().ifPresent(zone->{json.stringField("zone",zone.zone());json.stringField("host",zone.host().name());json.numberField("accessCells",zone.path().size());});
             json.stringField("damage",String.join("; ",prop.composition().damageDecisions())); json.endObject();
+        })));
+        if(!content.placementZones().isEmpty())json.arrayField("placementZones",()->content.placementZones().forEach(zone->json.arrayValue(()->{
+            json.beginObject();json.stringField("id",zone.rule().id());json.stringField("host",zone.rule().host().name());json.stringField("source",zone.source().value());
+            json.numberField("minX",zone.bounds().minX());json.numberField("minZ",zone.bounds().minZ());json.numberField("width",zone.bounds().size().width());
+            json.numberField("depth",zone.bounds().size().depth());json.numberField("allowedCells",zone.allowed().size());json.endObject();
         })));
         json.arrayField("surfaceTemplates", () -> content.surfaceTemplates().keySet().stream().sorted().forEach(json::arrayStringValue));
         if(!content.boundaries().edges().isEmpty()) json.objectField("boundaries", () -> {

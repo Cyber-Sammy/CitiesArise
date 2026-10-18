@@ -20,7 +20,8 @@ public final class EntranceTerrainValidation {
             int x=Integer.getInteger("citiesarise.entranceAuditX",2696),z=Integer.getInteger("citiesarise.entranceAuditZ",-9592);
             var result=planning.planForWorldgen(context,new BlockPos(x,0,z));
             String details=result.successful()?"\nbuildings="+result.plan().buildingSlots().size()
-                    +"; mainEntrances="+result.content().buildings().values().stream().flatMap(b->b.resolvedEntrances().stream()).filter(e->e.role().equals("main")).count():"";
+                    +"; mainEntrances="+result.content().buildings().values().stream().flatMap(b->b.resolvedEntrances().stream()).filter(e->e.role().equals("main")).count()
+                    +"; hostedStructures="+result.content().props().stream().filter(p->p.zonePlacement().isPresent()).count():"";
             Files.writeString(Path.of(output),"worldSeed="+level.getSeed()+"\n"+result.summary()+details);
         } catch(Exception failure) {
             try {Files.writeString(Path.of(output),failure.toString());}catch(Exception ignored) { }

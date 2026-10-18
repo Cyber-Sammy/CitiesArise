@@ -12,7 +12,7 @@ public final class ContentCatalogParser {
     public record Catalog(Map<String,BuildingAsset> assets, Map<String,Map<String,String>> palettes,
             Map<String,CompositionSettings> compositions, Map<String,String> surfaces, List<PropRule> props,
             MaterialRules materialRules, Map<String,ModuleDefinition> modules, Map<String,SurfaceTemplate> surfaceTemplates, List<ParcelContentRule> parcelRules,
-            Map<String,EntranceSettings> entrances) { }
+            Map<String,EntranceSettings> entrances,List<PlacementZoneRule> placementZones) { }
     private final ContentResources resources;
     public ContentCatalogParser(ContentResources resources) { this.resources=Objects.requireNonNull(resources); }
     public Catalog load(String id) {
@@ -166,17 +166,17 @@ public final class ContentCatalogParser {
             }
             String air=text(p,"airMaterial","minecraft:air"); resources.validateMaterial(air);
             props.add(new PropRule(entry.getKey(),string(p,"anchor"),pool,palette,strings(p,"requiredTags"),
-                    strings(p,"forbiddenTags"),integer(p,"inset",1),integer(p,"spacing",8),integer(p,"damageSeverity",0),air,
+                    strings(p,"forbiddenTags"),integer(p,"inset",string(p,"anchor").equals("host_zone")?0:1),integer(p,"spacing",8),integer(p,"damageSeverity",0),air,
                     reachableModules(modules,pool.stream().map(ModuleDefinition::id).toList()),materialRules,
-                    integer(p,"maxCount",1),integer(p,"chance",100),integer(p,"clearance",0)));
+                    integer(p,"maxCount",1),integer(p,"chance",100),integer(p,"clearance",0),hostZoneOptions(p)));
         }
         if(props.size()>16) throw new IllegalArgumentException("Too many prop rules");
-        // One shared reachable prop dictionary keeps richer catalogs within the existing frozen-table budget.
+        // Legacy decoration shares a table; hosted pools keep only their own reachable modules to avoid repeated expansion.
         var propDefinitions=new LinkedHashMap<String,ModuleDefinition>();
         props.forEach(p -> propDefinitions.putAll(p.definitions()));
         var sharedPropDefinitions=Map.copyOf(propDefinitions);
         props=props.stream().map(p -> new PropRule(p.id(),p.anchor(),p.pool(),p.materials(),p.requiredTags(),p.forbiddenTags(),
-                p.inset(),p.spacing(),p.severity(),p.airMaterial(),sharedPropDefinitions,p.materialRules(),p.maxCount(),p.chance(),p.clearance())).toList();
+                p.inset(),p.spacing(),p.severity(),p.airMaterial(),p.zoneAnchor()?p.definitions():sharedPropDefinitions,p.materialRules(),p.maxCount(),p.chance(),p.clearance(),p.hostZone())).toList();
         Map<String,SurfaceTemplate> templates=parseSurfaceTemplates(json,false);
         List<ParcelContentRule> parcelRules=new ArrayList<>();
         for(var element:ZoningJsonParser.array(json,"parcelRules",64)) {
@@ -201,7 +201,40 @@ public final class ContentCatalogParser {
         if(surfaces.containsKey("BRIDGE_STEP")) resources.validateBridgeSurface(surfaces.get("BRIDGE_STEP"),true);
         if(surfaces.containsKey("BRIDGE_DECK")) resources.validateWalkingSurface(surfaces.get("BRIDGE_DECK"));
         if(surfaces.containsKey("BRIDGE_CLEARANCE")) throw new IllegalArgumentException("Bridge clearance is reserved air, not a surface material");
-        return new Catalog(Map.copyOf(assets),Map.copyOf(palettes),Map.copyOf(compositions),Map.copyOf(surfaces),List.copyOf(props),materialRules,Map.copyOf(modules),Map.copyOf(templates),List.copyOf(parcelRules),entrances);
+        var placementZones=placementZones(json);
+        for(var prop:props)if(prop.zoneAnchor()) {
+            var options=prop.hostZone();
+            String path=options.pathMaterial().contains(":")?options.pathMaterial():prop.materials().get(options.pathMaterial());
+            if(path==null)throw new IllegalArgumentException("Unknown host-zone path material");resources.validateWalkingSurface(path);
+            for(String id:options.zones()) {
+                var zone=placementZones.stream().filter(z->z.id().equals(id)).findFirst().orElseThrow(()->new IllegalArgumentException("Unknown placement zone: "+id));
+                if(!zone.categories().contains(options.category()))throw new IllegalArgumentException("Placement zone rejects prop category: "+id);
+            }
+        }
+        return new Catalog(Map.copyOf(assets),Map.copyOf(palettes),Map.copyOf(compositions),Map.copyOf(surfaces),List.copyOf(props),materialRules,Map.copyOf(modules),Map.copyOf(templates),List.copyOf(parcelRules),entrances,placementZones);
+    }
+    private static HostZoneOptions hostZoneOptions(JsonObject json) {
+        if(!json.has("hostZone"))return null;
+        try {
+        var data=object(json,"hostZone");var weights=new LinkedHashMap<String,Integer>();
+        object(data,"weights").entrySet().forEach(e->weights.put(e.getKey(),number(e.getValue())));
+        return new HostZoneOptions(list(data,"zones"),string(data,"category"),weights,text(data,"accessJoint","access"),
+                string(data,"pathMaterial"),integer(data,"maximumHeight",8),integer(data,"maximumPathLength",32));
+        } catch(ArithmeticException error) {throw new IllegalArgumentException("Host-zone weights and limits must be integers",error);}
+    }
+    private static List<PlacementZoneRule> placementZones(JsonObject json) {
+        try {
+        var result=new ArrayList<PlacementZoneRule>();
+        for(var item:ZoningJsonParser.array(json,"placementZones",32)) {
+            var z=ZoningJsonParser.object(item);
+            result.add(new PlacementZoneRule(string(z,"id"),PlacementZoneRule.Host.valueOf(string(z,"host").toUpperCase(Locale.ROOT)),
+                    z.has("match")?ZoningJsonParser.metadata(object(z,"match")):com.cybersammy.citiesarise.core.model.MetadataSelector.ANY,
+                    integer(z,"minX",0),integer(z,"minZ",0),integer(z,"maxX",100),integer(z,"maxZ",100),strings(z,"categories"),
+                    integer(z,"setback",0),integer(z,"edgeDepth",4),integer(z,"maximumHeight",8),integer(z,"maximumCount",1),integer(z,"minimumWalkWidth",2)));
+        }
+        if(result.stream().map(PlacementZoneRule::id).distinct().count()!=result.size())throw new IllegalArgumentException("Duplicate placement zone ids");
+        return List.copyOf(result);
+        } catch(ArithmeticException error) {throw new IllegalArgumentException("Placement zone bounds and limits must be integers",error);}
     }
     private Map<String,EntranceSettings> entrances(JsonObject json,Map<String,ModuleDefinition> modules,MaterialRules rules) {
         var result=new LinkedHashMap<String,EntranceSettings>();

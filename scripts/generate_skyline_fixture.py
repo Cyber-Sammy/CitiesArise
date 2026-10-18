@@ -174,6 +174,43 @@ catalog['entranceGroups'] = {'skyline:residential': dict(requests=[
     dict(id='service', role='service', socket='service', required=False, pathMaterial='floor', capMaterial='wall',
          pool=[dict(module='skyline:entrance_portal', weight=1)])])}
 
+# Hosted one-storey modules share the ordinary prop pipeline and do not allocate parcels.
+catalog['materialRules']['supportive'].append('minecraft:smooth_stone')
+for name, roof_material in [('kiosk_brick', 'minecraft:brick_slab'), ('kiosk_light', 'minecraft:smooth_quartz')]:
+    catalog['modules']['skyline:'+name] = dict(size=[5, 5, 3], tags=['skyline:retail'],
+        fills=[fill([0, 0, 0], [4, 0, 2], 'floor'), fill([0, 1, 0], [4, 3, 2], 'wall'),
+               fill([1, 1, 1], [3, 3, 1], 'minecraft:air'), fill([0, 4, 0], [4, 4, 2], roof_material),
+               fill([2, 1, 0], [2, 1, 0], 'door_lower'), fill([2, 2, 0], [2, 2, 0], 'door_upper'),
+               fill([1, 2, 0], [1, 2, 0], 'glass'), fill([3, 2, 0], [3, 2, 0], 'glass'),
+               fill([1, 2, 2], [3, 2, 2], 'glass')],
+        joints=[dict(id='access', type='skyline:public_access', at=[2, 1, 0], face='north', height=2, external=True)],
+        contract={'routes': [route('customer_access', [2, 1, 0], [2, 1, 1])]})
+for name, width, depth in [('gazebo', 3, 3), ('bus_shelter', 3, 1)]:
+    catalog['modules']['skyline:'+name] = dict(size=[width, 4, depth], tags=['skyline:shelter'],
+        fills=[fill([0, 0, 0], [width-1, 0, depth-1], 'floor'),
+               fill([0, 1, 0], [width-1, 2, depth-1], 'minecraft:air'),
+               fill([0, 1, depth-1], [0, 2, depth-1], 'trim'),
+               fill([width-1, 1, depth-1], [width-1, 2, depth-1], 'trim'),
+               fill([0, 3, 0], [width-1, 3, depth-1], 'accent')],
+        joints=[dict(id='access', type='skyline:public_access', at=[1, 1, 0], face='north', height=2, external=True)],
+        contract={'routes': [route('public_access', [1, 1, 0], [1, 1, depth-1])]})
+catalog['placementZones'] = [
+    dict(id='skyline:forecourt', host='parcel', maxZ=25, categories=['retail'], maximumHeight=6, maximumCount=1),
+    dict(id='skyline:edge', host='parcel_edge', categories=['shelter'], edgeDepth=4, maximumHeight=4, maximumCount=1),
+    dict(id='skyline:communal', host='public', maxX=25, categories=['shelter'], maximumHeight=4, maximumCount=1),
+    dict(id='skyline:sidewalk_furniture', host='sidewalk', categories=['shelter'], maximumHeight=4, minimumWalkWidth=2, maximumCount=1)]
+catalog['props'] = {
+    'skyline:kiosks': dict(anchor='host_zone', pool=['skyline:kiosk_brick', 'skyline:kiosk_light'], palette='skyline:brick',
+        requiredTags=['skyline:retail'], spacing=1, maxCount=1, chance=55,
+        hostZone=dict(zones=['skyline:forecourt'], category='retail', pathMaterial='minecraft:smooth_stone',
+                      weights={'skyline:kiosk_brick': 3, 'skyline:kiosk_light': 2}, maximumHeight=6)),
+    'skyline:gazebos': dict(anchor='host_zone', pool=['skyline:gazebo'], palette='skyline:ivory',
+        requiredTags=['skyline:shelter'], spacing=1, maxCount=1, chance=35,
+        hostZone=dict(zones=['skyline:edge', 'skyline:communal'], category='shelter', pathMaterial='minecraft:smooth_stone', maximumHeight=4)),
+    'skyline:bus_shelters': dict(anchor='host_zone', pool=['skyline:bus_shelter'], palette='skyline:slate',
+        requiredTags=['skyline:shelter'], spacing=1, maxCount=1, chance=20,
+        hostZone=dict(zones=['skyline:sidewalk_furniture'], category='shelter', pathMaterial='minecraft:smooth_stone', maximumHeight=4))}
+
 profile = json.loads((SOURCE / 'cities_arise/settlement_profiles/suburb.json').read_text(encoding='utf-8'))
 p = profile['planning']
 profile['survey'] = dict(width=540, depth=540)
@@ -210,7 +247,7 @@ def write(relative, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2)+'\n', encoding='utf-8')
 
-write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad towers, eleven-block carriageways, modular sidewalks and independent entrance groups')))
+write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad towers, modular sidewalks, entrance groups and hosted kiosks, gazebos and shelters')))
 write('data/skyline/content_catalogs/city.json', catalog)
 write('data/cities_arise/settlement_profiles/suburb.json', profile)
 # Every local owner must have the same deterministic start opportunity. Per-owner

@@ -71,7 +71,8 @@ public final class PlacementReadinessGameTests {
     }
     private static void verifySharedBudget(GameTestHelper helper,boolean structuralLimit) {
         var level=helper.getLevel();var origin=helper.absolutePos(new BlockPos(0,4,0));
-        int x=origin.getX(),z=origin.getZ(),y=origin.getY();level.getChunk(x>>4,z>>4);
+        int x=Math.floorDiv(origin.getX(),16)*16+15,z=origin.getZ(),y=origin.getY();
+        level.getChunk(x>>4,z>>4);level.getChunk((x+2)>>4,z>>4);
         for(int xx=x;xx<x+3;xx++)for(int yy=y-8;yy<=y+20;yy++)
             level.setBlock(new BlockPos(xx,yy,z),(yy<y-3?Blocks.STONE:Blocks.AIR).defaultBlockState(),2);
         // First owner needs three cells; the second only one. Both borrow from the same four-cell pool.
@@ -79,8 +80,10 @@ public final class PlacementReadinessGameTests {
         level.setBlock(new BlockPos(x+1,y-2,z),Blocks.STONE.defaultBlockState(),2);
         level.setBlock(new BlockPos(x+2,y-3,z),Blocks.STONE.defaultBlockState(),2);
         level.setBlock(new BlockPos(x+2,y-2,z),Blocks.STONE.defaultBlockState(),2);
+        // Always cross a chunk boundary, independently of the randomized test origin.
+        var chunks=new HashSet<Long>();for(int i=0;i<3;i++)chunks.add(net.minecraft.world.level.ChunkPos.asLong((x+i)>>4,z>>4));
         var parent=new com.cybersammy.citiesarise.core.registry.SettlementIndex.Metadata(level.dimension().location().toString(),
-                "test:budget","test:budget-city",x,z,x,z,x+2,z,Set.of(net.minecraft.world.level.ChunkPos.asLong(x>>4,z>>4)));
+                "test:budget","test:budget-city",x,z,x,z,x+2,z,chunks);
         var queue=new PendingStructuralPlacement();
         for(int i=0;i<3;i++) {
             var point=new GridPoint(x+i,z);var source=new PlanElementId("test:budget-owner-"+i);

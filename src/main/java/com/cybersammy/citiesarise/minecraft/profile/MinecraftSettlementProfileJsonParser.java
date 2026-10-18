@@ -140,7 +140,7 @@ public final class MinecraftSettlementProfileJsonParser {
             if(id!=null)compositions.put(id,catalog.compositions().get(id));
         }
         var settings=new BuildingContentSettings(pool, palettes,
-                fallback, catalog.palettes(), compositions, catalog.surfaces(), catalog.props(), catalog.surfaceTemplates(),rules,catalog.parcelRules(),catalog.entrances());
+                fallback, catalog.palettes(), compositions, catalog.surfaces(), catalog.props(), catalog.surfaceTemplates(),rules,catalog.parcelRules(),catalog.entrances(),catalog.placementZones());
         validateBinding(pool,palettes,settings.fallback(),catalog);
         for(var rule:rules) validateBinding(rule.pool(),rule.palettes(),rule.fallback(),catalog);
         return settings;

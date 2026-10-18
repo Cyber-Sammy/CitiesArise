@@ -1,5 +1,11 @@
 # Cities Arise
 
+Datapack-defined placement zones let kiosks, small shops, gazebos and shelters
+share existing parcels and streets. Hosted structures use ordinary modules and
+palettes, with category, height, count, probability and setback rules. Sidewalk
+furniture preserves a configurable walking strip; inaccessible or oversized
+optional objects are skipped. See [authoring hosted structures](examples/datapacks/composition_fixture/HOSTED_STRUCTURES.md).
+
 Building assets can bind independent datapack entrance modules through an
 `entrances` parameter. Entrance groups select weighted modules for the main,
 secondary, service or emergency facade sockets. Their doors, canopies, vestibules,

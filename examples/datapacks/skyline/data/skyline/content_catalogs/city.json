@@ -3255,6 +3255,546 @@
           }
         ]
       }
+    },
+    "skyline:kiosk_brick": {
+      "size": [
+        5,
+        5,
+        3
+      ],
+      "tags": [
+        "skyline:retail"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            0,
+            2
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            4,
+            3,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            1,
+            1,
+            1
+          ],
+          "to": [
+            3,
+            3,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            2
+          ],
+          "material": "minecraft:brick_slab"
+        },
+        {
+          "from": [
+            2,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            1,
+            0
+          ],
+          "material": "door_lower"
+        },
+        {
+          "from": [
+            2,
+            2,
+            0
+          ],
+          "to": [
+            2,
+            2,
+            0
+          ],
+          "material": "door_upper"
+        },
+        {
+          "from": [
+            1,
+            2,
+            0
+          ],
+          "to": [
+            1,
+            2,
+            0
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            3,
+            2,
+            0
+          ],
+          "to": [
+            3,
+            2,
+            0
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            1,
+            2,
+            2
+          ],
+          "to": [
+            3,
+            2,
+            2
+          ],
+          "material": "glass"
+        }
+      ],
+      "joints": [
+        {
+          "id": "access",
+          "type": "skyline:public_access",
+          "at": [
+            2,
+            1,
+            0
+          ],
+          "face": "north",
+          "height": 2,
+          "external": true
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "customer_access",
+            "from": [
+              2,
+              1,
+              0
+            ],
+            "to": [
+              2,
+              1,
+              1
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "skyline:kiosk_light": {
+      "size": [
+        5,
+        5,
+        3
+      ],
+      "tags": [
+        "skyline:retail"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            4,
+            0,
+            2
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            4,
+            3,
+            2
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            1,
+            1,
+            1
+          ],
+          "to": [
+            3,
+            3,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            4,
+            4,
+            2
+          ],
+          "material": "minecraft:smooth_quartz"
+        },
+        {
+          "from": [
+            2,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            1,
+            0
+          ],
+          "material": "door_lower"
+        },
+        {
+          "from": [
+            2,
+            2,
+            0
+          ],
+          "to": [
+            2,
+            2,
+            0
+          ],
+          "material": "door_upper"
+        },
+        {
+          "from": [
+            1,
+            2,
+            0
+          ],
+          "to": [
+            1,
+            2,
+            0
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            3,
+            2,
+            0
+          ],
+          "to": [
+            3,
+            2,
+            0
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            1,
+            2,
+            2
+          ],
+          "to": [
+            3,
+            2,
+            2
+          ],
+          "material": "glass"
+        }
+      ],
+      "joints": [
+        {
+          "id": "access",
+          "type": "skyline:public_access",
+          "at": [
+            2,
+            1,
+            0
+          ],
+          "face": "north",
+          "height": 2,
+          "external": true
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "customer_access",
+            "from": [
+              2,
+              1,
+              0
+            ],
+            "to": [
+              2,
+              1,
+              1
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "skyline:gazebo": {
+      "size": [
+        3,
+        4,
+        3
+      ],
+      "tags": [
+        "skyline:shelter"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            0,
+            2
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            2,
+            2
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            2
+          ],
+          "to": [
+            0,
+            2,
+            2
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            2,
+            1,
+            2
+          ],
+          "to": [
+            2,
+            2,
+            2
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            3,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            2
+          ],
+          "material": "accent"
+        }
+      ],
+      "joints": [
+        {
+          "id": "access",
+          "type": "skyline:public_access",
+          "at": [
+            1,
+            1,
+            0
+          ],
+          "face": "north",
+          "height": 2,
+          "external": true
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "public_access",
+            "from": [
+              1,
+              1,
+              0
+            ],
+            "to": [
+              1,
+              1,
+              2
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
+    "skyline:bus_shelter": {
+      "size": [
+        3,
+        4,
+        1
+      ],
+      "tags": [
+        "skyline:shelter"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            2,
+            0,
+            0
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            2,
+            0
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            0,
+            2,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            2,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            2,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            3,
+            0
+          ],
+          "to": [
+            2,
+            3,
+            0
+          ],
+          "material": "accent"
+        }
+      ],
+      "joints": [
+        {
+          "id": "access",
+          "type": "skyline:public_access",
+          "at": [
+            1,
+            1,
+            0
+          ],
+          "face": "north",
+          "height": 2,
+          "external": true
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "public_access",
+            "from": [
+              1,
+              1,
+              0
+            ],
+            "to": [
+              1,
+              1,
+              0
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
     }
   },
   "compositions": {
@@ -4133,7 +4673,8 @@
     "supportive": [
       "floor",
       "wall",
-      "minecraft:stone_bricks"
+      "minecraft:stone_bricks",
+      "minecraft:smooth_stone"
     ],
     "climbable": [
       "minecraft:ladder[facing=west]"
@@ -4198,6 +4739,119 @@
           ]
         }
       ]
+    }
+  },
+  "placementZones": [
+    {
+      "id": "skyline:forecourt",
+      "host": "parcel",
+      "maxZ": 25,
+      "categories": [
+        "retail"
+      ],
+      "maximumHeight": 6,
+      "maximumCount": 1
+    },
+    {
+      "id": "skyline:edge",
+      "host": "parcel_edge",
+      "categories": [
+        "shelter"
+      ],
+      "edgeDepth": 4,
+      "maximumHeight": 4,
+      "maximumCount": 1
+    },
+    {
+      "id": "skyline:communal",
+      "host": "public",
+      "maxX": 25,
+      "categories": [
+        "shelter"
+      ],
+      "maximumHeight": 4,
+      "maximumCount": 1
+    },
+    {
+      "id": "skyline:sidewalk_furniture",
+      "host": "sidewalk",
+      "categories": [
+        "shelter"
+      ],
+      "maximumHeight": 4,
+      "minimumWalkWidth": 2,
+      "maximumCount": 1
+    }
+  ],
+  "props": {
+    "skyline:kiosks": {
+      "anchor": "host_zone",
+      "pool": [
+        "skyline:kiosk_brick",
+        "skyline:kiosk_light"
+      ],
+      "palette": "skyline:brick",
+      "requiredTags": [
+        "skyline:retail"
+      ],
+      "spacing": 1,
+      "maxCount": 1,
+      "chance": 55,
+      "hostZone": {
+        "zones": [
+          "skyline:forecourt"
+        ],
+        "category": "retail",
+        "pathMaterial": "minecraft:smooth_stone",
+        "weights": {
+          "skyline:kiosk_brick": 3,
+          "skyline:kiosk_light": 2
+        },
+        "maximumHeight": 6
+      }
+    },
+    "skyline:gazebos": {
+      "anchor": "host_zone",
+      "pool": [
+        "skyline:gazebo"
+      ],
+      "palette": "skyline:ivory",
+      "requiredTags": [
+        "skyline:shelter"
+      ],
+      "spacing": 1,
+      "maxCount": 1,
+      "chance": 35,
+      "hostZone": {
+        "zones": [
+          "skyline:edge",
+          "skyline:communal"
+        ],
+        "category": "shelter",
+        "pathMaterial": "minecraft:smooth_stone",
+        "maximumHeight": 4
+      }
+    },
+    "skyline:bus_shelters": {
+      "anchor": "host_zone",
+      "pool": [
+        "skyline:bus_shelter"
+      ],
+      "palette": "skyline:slate",
+      "requiredTags": [
+        "skyline:shelter"
+      ],
+      "spacing": 1,
+      "maxCount": 1,
+      "chance": 20,
+      "hostZone": {
+        "zones": [
+          "skyline:sidewalk_furniture"
+        ],
+        "category": "shelter",
+        "pathMaterial": "minecraft:smooth_stone",
+        "maximumHeight": 4
+      }
     }
   }
 }

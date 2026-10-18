@@ -55,13 +55,18 @@ public final class SettlementContentComposer {
             throw new IllegalArgumentException("Settlement outdoor reservation budget exceeded");
         var reservations=new java.util.HashSet<>(boundaries.reserved());
         parcels.values().forEach(p -> reservations.addAll(p.outdoor().free()));
-        var props=SurfacePropPlanner.plan(plan,preparation,settings.props(),seed,parcels,reservations).stream().filter(prop ->
+        var zoneContext=PlacementZonePlanner.resolve(plan,preparation,settings.placementZones());
+        reservations.addAll(zoneContext.walking());
+        var hosted=HostZonePropPlanner.plan(plan,preparation,settings.props(),zoneContext,buildings,parcels,boundaries,seed);
+        hosted.forEach(p->reservations.addAll(p.zonePlacement().orElseThrow().reserved()));
+        var props=new ArrayList<>(SurfacePropPlanner.plan(plan,preparation,settings.props(),seed,parcels,reservations).stream().filter(prop ->
                 prop.composition().cells().stream().noneMatch(cell -> {
                     var world=prop.origin().add(cell.position());
                     return plan.roadGraph().bridges().stream().anyMatch(b -> b.bounds().contains(
                             new com.cybersammy.citiesarise.core.geometry.GridPoint(world.x(),world.z())));
-                })).toList();
-        var result=new ResolvedSettlementContent(buildings,settings.surfaces(),props,settings.surfaceTemplates(),decisions,parcels,boundaries);
+                })).toList());
+        props.addAll(hosted);
+        var result=new ResolvedSettlementContent(buildings,settings.surfaces(),props,settings.surfaceTemplates(),decisions,parcels,boundaries,zoneContext.zones());
         result.validateAgainst(plan);
         return result;
     }

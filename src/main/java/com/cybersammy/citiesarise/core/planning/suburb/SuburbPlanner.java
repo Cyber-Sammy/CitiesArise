@@ -113,8 +113,9 @@ public final class SuburbPlanner {
                 var nodes=new java.util.HashMap<PlanElementId,GridPoint>();nominal.roadGraph().nodes().forEach(n->nodes.put(n.id(),n.point()));
                 var junctionGraph=com.cybersammy.citiesarise.core.road.StreetSectionGeometry.annotate(nominal.roadGraph(),
                         request.settings().terrainTransitions().streets(),request.settings().roadWidth(),request.seed());
+                boolean conflictingTransitions=diagnostic.primaryRejectionReason().orElse(null)==TerrainRejectionReason.CONFLICTING_ROAD_TRANSITIONS;
                 var failedRoads=junctionGraph.segments().stream().filter(r->ids.stream().anyMatch(id->id.equals(r.id()) || id.value().startsWith(r.id().value()+"/"))
-                        || com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(nodes.get(r.startNodeId()),nodes.get(r.endNodeId()), r.width(), r.properties()).contains(diagnostic.cell().point())).toList();
+                        || !conflictingTransitions && com.cybersammy.citiesarise.core.road.RoadCorridor.bounds(nodes.get(r.startNodeId()),nodes.get(r.endNodeId()), r.width(), r.properties()).contains(diagnostic.cell().point())).toList();
                 var failed=accepted.districts().stream().filter(b->b.parcels().stream().anyMatch(ids::contains) || b.bounds().contains(diagnostic.cell().point())
                                 || failedRoads.stream().anyMatch(r->CityGridLayout.borders(nominal,r,b)))
                         .map(com.cybersammy.citiesarise.core.model.DistrictPlan::id).collect(java.util.stream.Collectors.toSet());

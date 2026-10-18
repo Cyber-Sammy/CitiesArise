@@ -9,7 +9,16 @@ public record BuildingContentSettings(List<Entry> pool, List<String> palettes, B
         java.util.Map<String,String> surfaces,
         List<com.cybersammy.citiesarise.core.content.PropRule> props,
         java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> surfaceTemplates, List<BuildingContentRule> rules,
-        List<com.cybersammy.citiesarise.core.content.ParcelContentRule> parcelRules) {
+        List<com.cybersammy.citiesarise.core.content.ParcelContentRule> parcelRules,
+        java.util.Map<String,com.cybersammy.citiesarise.core.content.EntranceSettings> entrances) {
+    public BuildingContentSettings(List<Entry> pool,List<String> palettes,BuildingAsset fallback,
+            java.util.Map<String,java.util.Map<String,String>> definitions,
+            java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions,
+            java.util.Map<String,String> surfaces,List<com.cybersammy.citiesarise.core.content.PropRule> props,
+            java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> templates,List<BuildingContentRule> rules,
+            List<com.cybersammy.citiesarise.core.content.ParcelContentRule> parcelRules) {
+        this(pool,palettes,fallback,definitions,compositions,surfaces,props,templates,rules,parcelRules,java.util.Map.of());
+    }
     public BuildingContentSettings(List<Entry> pool,List<String> palettes,BuildingAsset fallback,
             java.util.Map<String,java.util.Map<String,String>> definitions,
             java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions,
@@ -36,6 +45,12 @@ public record BuildingContentSettings(List<Entry> pool, List<String> palettes, B
         this(pool,palettes,fallback,definitions,compositions,surfaces,List.of());
     }
     public BuildingContentSettings {
+        entrances=entrances==null?java.util.Map.of():java.util.Map.copyOf(entrances);
+        if(entrances.size()>64)throw new IllegalArgumentException("Too many entrance groups");
+        var allAssets=new java.util.ArrayList<BuildingAsset>();pool.forEach(e->allAssets.add(e.asset()));allAssets.add(fallback);
+        rules.forEach(r->{r.pool().forEach(e->allAssets.add(e.asset()));allAssets.add(r.fallback());});
+        for(var asset:allAssets)if(asset.parameters().containsKey("entrances") && (!asset.provider().equals("modules")
+                || !entrances.containsKey(asset.parameters().get("entrances"))))throw new IllegalArgumentException("Unknown entrance group or unsupported building provider");
         parcelRules=List.copyOf(parcelRules);
         if(parcelRules.size()>64 || parcelRules.stream().map(com.cybersammy.citiesarise.core.content.ParcelContentRule::id).distinct().count()!=parcelRules.size())
             throw new IllegalArgumentException("Parcel rules allow at most 64 unique ids");

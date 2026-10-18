@@ -19,7 +19,7 @@ def fill(a, b, material):
 
 def joint(name, at, face, external=False):
     return dict(id=name, type='skyline:entry' if external else 'skyline:stairs',
-                accepts=[] if external else ['skyline:stairs'], at=at, face=face,
+                accepts=['skyline:entrance'] if external else ['skyline:stairs'], at=at, face=face,
                 external=external, height=2 if external else 1)
 
 
@@ -60,6 +60,8 @@ def floor(w, d, ground=False):
             fs.append(fill([(a+b)//2, 1, z], [(a+b)//2+1, 2, z], 'minecraft:air'))
     fs.append(fill([2, 1, cz-1], [w-3, 2, cz+1], 'minecraft:air'))
     fs.append(fill([cx, 1, 2], [cx, 2, d-3], 'minecraft:air'))
+    # One explicit bypass around the backed ladder connects the rear corridor.
+    fs.append(fill([cx+1, 1, cz+2], [cx+1, 2, cz+2], 'minecraft:air'))
     # Support behind every ladder segment, including the shared floor/ceiling slab.
     fs += [fill([cx, 0, cz+1], [cx, 4, cz+1], 'wall'),
            fill([cx-1, 0, cz+1], [cx-1, 4, cz+1], 'minecraft:ladder[facing=west]')]
@@ -73,13 +75,16 @@ def floor(w, d, ground=False):
     js = [joint('down', [cx-1, 0, cz+1], 'down'), joint('up', [cx-1, 5, cz+1], 'up')]
     fs.append(fill([cx, 1, 0], [cx, 2, 1], 'minecraft:air'))
     js.append(joint('entry', [cx, 1, 0], 'north', True))
+    # Only the facade socket belongs to the floor. The complete entrance is a separate module.
+    fs.append(fill([cx, 1, d-2], [cx, 2, d-1], 'minecraft:air'))
+    js.append(joint('service', [cx, 1, d], 'south', True))
     facade = dict(id='upper_facade', type='skyline:upper_facade', at=[cx, 1, 0], face='north', external=True)
     catalog['modules'][module] = dict(size=[w, 5, d], tags=['skyline:building'], fills=fs, joints=js,
-        layouts=[dict(id='lobby', weight=1), dict(id='upper', weight=1, closedJoints=['entry'],
-            addedJoints=[facade], fills=[fill([cx, 1, 1], [cx, 2, 1], 'wall')])],
+        layouts=[dict(id='lobby', weight=1), dict(id='upper', weight=1, closedJoints=['entry', 'service'],
+            addedJoints=[facade], fills=[fill([cx, 1, 1], [cx, 2, 1], 'wall'), fill([cx, 1, d-2], [cx, 2, d-1], 'wall')])],
         contract={'routes': [route('lobby', [cx, 1, 2], [cx, 1, cz]),
                              route('landing', [cx, 1, cz], [cx-2, 1, cz+1])]})
-    ports = [dict(id=j['id'], type=j['type'], at=j['at'], face=j['face'], height=j['height'], walkable=True) for j in js if ground or j['id'] != 'entry']
+    ports = [dict(id=j['id'], type=j['type'], at=j['at'], face=j['face'], height=j['height'], walkable=True) for j in js if ground or j['id'] not in ['entry', 'service']]
     if not ground:
         ports.append(dict(id='upper_facade', type=facade['type'], at=facade['at'], face='north', walkable=False))
     catalog['compositions'][name] = dict(roots=[module], attachments=[], entranceJoint='entry' if ground else 'down',
@@ -141,7 +146,7 @@ for name, tiers, crown in BUILDINGS:
         buildingSections=dict(bottomCap='minecraft:stone_bricks', topCap='minecraft:stone_bricks', sections=sections,
                               roof=roof(*tiers[-1][:2], crown)))
     catalog['assets'][identifier] = dict(provider='modules', minimumSize=max(tiers[0][:2]), maximumSize=64, height=height,
-                                        parameters={'composition': identifier})
+                                        parameters={'composition': identifier, 'entrances': 'skyline:residential'})
 
 for name, wall, trim, glass, accent in [
     ('limestone', 'smooth_sandstone', 'cut_sandstone', 'light_blue_stained_glass', 'gold_block'),
@@ -149,6 +154,25 @@ for name, wall, trim, glass, accent in [
     ('ivory', 'smooth_quartz', 'quartz_pillar', 'light_gray_stained_glass', 'gold_block'),
     ('slate', 'polished_deepslate', 'deepslate_bricks', 'cyan_stained_glass', 'oxidized_copper')]:
     catalog['palettes']['skyline:'+name] = {k: 'minecraft:'+v for k, v in dict(wall=wall, trim=trim, glass=glass, accent=accent, floor='stone_bricks').items()}
+    catalog['palettes']['skyline:'+name].update(door_lower='minecraft:oak_door[facing=north,half=lower,hinge=left]',
+                                              door_upper='minecraft:oak_door[facing=north,half=upper,hinge=left]')
+
+catalog['materialRules']['operable'] = ['door_lower', 'door_upper']
+for name, depth in [('portal', 2), ('canopy', 3)]:
+    catalog['modules']['skyline:entrance_'+name] = dict(size=[5, 4, depth], tags=['skyline:entrance'],
+        fills=[fill([0, 0, 0], [4, 0, depth-1], 'floor'), fill([0, 1, 0], [4, 2, depth-1], 'minecraft:air'),
+               fill([0, 1, 0], [0, 2, depth-1], 'trim'), fill([4, 1, 0], [4, 2, depth-1], 'trim'),
+               fill([0, 3, 0], [4, 3, depth-1], 'trim'),
+               fill([1, 1, depth-1], [1, 2, depth-1], 'glass'), fill([3, 1, depth-1], [3, 2, depth-1], 'glass'),
+               fill([2, 1, depth-1], [2, 1, depth-1], 'door_lower'), fill([2, 2, depth-1], [2, 2, depth-1], 'door_upper')],
+        joints=[dict(id='building', type='skyline:entrance', accepts=['skyline:entry'], at=[2, 1, depth], face='south', height=2),
+                dict(id='outside', type='skyline:outside', at=[2, 1, 0], face='north', height=2, external=True)],
+        contract={'routes': [route('threshold', [2, 1, 0], [2, 1, depth-1])]})
+catalog['entranceGroups'] = {'skyline:residential': dict(requests=[
+    dict(id='main', role='main', socket='primary', required=True, pathMaterial='floor', capMaterial='wall',
+         pool=[dict(module='skyline:entrance_canopy', weight=2), dict(module='skyline:entrance_portal', weight=3)]),
+    dict(id='service', role='service', socket='service', required=False, pathMaterial='floor', capMaterial='wall',
+         pool=[dict(module='skyline:entrance_portal', weight=1)])])}
 
 profile = json.loads((SOURCE / 'cities_arise/settlement_profiles/suburb.json').read_text(encoding='utf-8'))
 p = profile['planning']
@@ -186,7 +210,7 @@ def write(relative, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2)+'\n', encoding='utf-8')
 
-write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad 10-16 floor towers, setbacks, eleven-block carriageways and modular sidewalks')))
+write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad towers, eleven-block carriageways, modular sidewalks and independent entrance groups')))
 write('data/skyline/content_catalogs/city.json', catalog)
 write('data/cities_arise/settlement_profiles/suburb.json', profile)
 # Every local owner must have the same deterministic start opportunity. Per-owner

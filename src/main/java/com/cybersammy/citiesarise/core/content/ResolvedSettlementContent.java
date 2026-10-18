@@ -65,6 +65,15 @@ public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buil
                         || c.position().x()>=slot.bounds().size().width() || c.position().z()>=slot.bounds().size().depth()))
                     throw new IllegalArgumentException("Resolved building exceeds semantic slot: " + id.value());
             });
+            for(var entrance:content.resolvedEntrances()) {
+                var parcel=plan.parcels().stream().filter(p->p.id().equals(slot.parcelId())).findFirst().orElseThrow();
+                if(entrance.reserved().stream().anyMatch(p->!parcel.bounds().contains(p))
+                        || entrance.composition().cells().stream().anyMatch(c->!parcel.bounds().contains(new com.cybersammy.citiesarise.core.geometry.GridPoint(
+                                slot.bounds().minX()+c.position().x(),slot.bounds().minZ()+c.position().z())))
+                        || entrance.path().stream().anyMatch(p->!parcel.bounds().contains(p.point())
+                                || (long)p.elevation()<entrance.platformY() || (long)p.elevation()>entrance.platformY()+1L))
+                    throw new IllegalArgumentException("Entrance exceeds its prepared host parcel");
+            }
         });
         for (var prop : props) if (!ids.contains(prop.source()))
             throw new IllegalArgumentException("Unknown prop source: " + prop.source().value());

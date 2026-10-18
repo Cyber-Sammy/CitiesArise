@@ -140,7 +140,7 @@ public final class MinecraftSettlementProfileJsonParser {
             if(id!=null)compositions.put(id,catalog.compositions().get(id));
         }
         var settings=new BuildingContentSettings(pool, palettes,
-                fallback, catalog.palettes(), compositions, catalog.surfaces(), catalog.props(), catalog.surfaceTemplates(),rules,catalog.parcelRules());
+                fallback, catalog.palettes(), compositions, catalog.surfaces(), catalog.props(), catalog.surfaceTemplates(),rules,catalog.parcelRules(),catalog.entrances());
         validateBinding(pool,palettes,settings.fallback(),catalog);
         for(var rule:rules) validateBinding(rule.pool(),rule.palettes(),rule.fallback(),catalog);
         return settings;
@@ -154,6 +154,12 @@ public final class MinecraftSettlementProfileJsonParser {
             var palette=catalog.palettes().get(paletteId);
             if(palette==null) throw new IllegalArgumentException("Unknown palette: "+paletteId);
             if(asset.provider().equals("modules")) {
+                var entranceGroup=asset.parameters().get("entrances");var entrances=entranceGroup==null?null:catalog.entrances().get(entranceGroup);
+                if(entrances!=null) {
+                    for(var module:entrances.modules().values())ContentCatalogParser.validatePaletteTree(module,entrances.modules(),palette);
+                    for(var request:entrances.requests())for(String material:java.util.List.of(request.pathMaterial(),request.capMaterial()))
+                        if(!material.contains(":") && !palette.containsKey(material))throw new IllegalArgumentException("Palette missing entrance token "+material);
+                }
                 var recipe=catalog.compositions().get(asset.parameters().get("composition"));
                 var moduleIds=new java.util.HashSet<>(recipe.roots()); moduleIds.addAll(recipe.attachments());
                 if(recipe.buildingSections()!=null)moduleIds.addAll(recipe.buildingSections().moduleIds());

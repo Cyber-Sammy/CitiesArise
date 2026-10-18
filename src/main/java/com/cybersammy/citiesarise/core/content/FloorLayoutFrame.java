@@ -117,7 +117,7 @@ final class FloorLayoutFrame {
             for(int dy:new int[]{-1,1}) {var q=p.add(new Vec(0,dy,0));if(climbable(cells,p,settings) && climbable(cells,q,settings))enqueue(cells,q,settings,reachable,queue);}
         }
         if(reachable.size()>16384)return Optional.of("Floor circulation budget exceeded");
-        if(!reachable.containsAll(targets))return Optional.of("Floor room or connector disconnected from entrance");
+        if(!reachable.containsAll(targets))return Optional.of("Floor room or connector disconnected from entrance: "+targets.stream().filter(p->!reachable.contains(p)).limit(8).toList());
         return Optional.empty();
     }
     private void enqueue(Map<Vec,PlacedCell> cells,Vec p,CompositionSettings cfg,Set<Vec> seen,ArrayDeque<Vec> queue) {

@@ -82,8 +82,20 @@ class SkylineCatalogTest {
         var counts=new TreeMap<String,Long>();
         result.content().selections().values().forEach(s->counts.merge(s.asset(),1L,Long::sum));
         assertTrue(result.content().buildings().values().stream().allMatch(b->b.resolved().isPresent()));
+        assertTrue(result.content().buildings().values().stream().allMatch(b->b.resolvedEntrances().stream().filter(e->e.role().equals("main")).count()==1));
+        assertTrue(result.content().buildings().values().stream().anyMatch(b->b.resolvedEntrances().stream().anyMatch(e->e.role().equals("service"))),"No reachable service entrances");
+        for(var building:result.content().buildings().values())for(var entry:building.resolvedEntrances())
+            assertTrue(entry.composition().modules().stream().noneMatch(m->building.composition().orElseThrow().modules().containsKey(m.id())),"Entrance module belongs to a floor recipe");
         long low=result.content().selections().values().stream().filter(s->s.rule().equals("skyline:lowrise")).count();
         assertEquals(2,low,counts.toString());
         Files.writeString(Path.of("build/skyline-city-summary.txt"),"Parcels: "+city.parcels().size()+"; districts: "+city.districts().size()+"; buildings: "+counts);
+    }
+    @Test void entranceBindingsRejectUnknownGroupsAndMissingModulePorts() throws Exception {
+        var json=JsonParser.parseString(Files.readString(DATA.resolve("skyline/content_catalogs/city.json"))).getAsJsonObject();
+        var parser=new ContentCatalogParser((id,dir,ext)->{throw new java.io.IOException("No external resources expected");});
+        var badGroup=json.deepCopy();badGroup.getAsJsonObject("assets").getAsJsonObject("skyline:crown").getAsJsonObject("parameters").addProperty("entrances","unknown:group");
+        assertThrows(IllegalArgumentException.class,()->parser.parse(badGroup));
+        var badPort=json.deepCopy();badPort.getAsJsonObject("entranceGroups").getAsJsonObject("skyline:residential").getAsJsonArray("requests").get(0).getAsJsonObject().addProperty("outsideJoint","missing");
+        assertThrows(IllegalArgumentException.class,()->parser.parse(badPort));
     }
 }

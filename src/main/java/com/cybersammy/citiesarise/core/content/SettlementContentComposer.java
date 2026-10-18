@@ -13,7 +13,6 @@ public final class SettlementContentComposer {
     public static ResolvedSettlementContent compose(SettlementPlan plan,TerrainPreparationPlan preparation,long seed,
             com.cybersammy.citiesarise.core.building.BuildingContentSettings settings,
             com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings layout) {
-        var boundaries=com.cybersammy.citiesarise.core.parcel.ParcelBoundaryPlanner.plan(plan,preparation,layout);
         Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingContent> buildings=new LinkedHashMap<>();
         var context=new com.cybersammy.citiesarise.core.building.BuildingSelectionContext(plan);
         var decisions=new LinkedHashMap<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection>();
@@ -33,8 +32,18 @@ public final class SettlementContentComposer {
             var resolved=assembler.assemble(content.composition().get(),b.size().width(),b.size().depth(),entrance,face,
                     seed ^ slot.id().value().hashCode()).orElseThrow(() -> new IllegalArgumentException(
                             assembler.failure()+": "+slot.id().value()+" asset="+content.asset().id()));
-            buildings.put(slot.id(),content.resolved(resolved));
+            var built=content.resolved(resolved);
+            if(content.entrances().isPresent()) {
+                var parcel=plan.parcels().stream().filter(p->p.id().equals(slot.parcelId())).findFirst().orElseThrow();
+                var entries=EntranceAssembler.assemble(content.entrances().orElseThrow(),content.composition().orElseThrow(),resolved,
+                        slot,parcel,plan,preparation,entrance,face,seed^slot.id().value().hashCode());
+                built=content.withResolvedEntrances(entries.building(),entries.entrances());
+            }
+            buildings.put(slot.id(),built);
         }
+        var entranceReservations=new HashSet<com.cybersammy.citiesarise.core.geometry.GridPoint>();
+        buildings.values().forEach(b->b.resolvedEntrances().forEach(e->entranceReservations.addAll(e.reserved())));
+        var boundaries=com.cybersammy.citiesarise.core.parcel.ParcelBoundaryPlanner.plan(plan,preparation,layout,entranceReservations);
         Map<PlanElementId,ResolvedParcelContent> parcels=new LinkedHashMap<>();
         for(var parcel:plan.parcels()) {
             var metadata=context.forParcel(parcel.id());

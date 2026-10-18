@@ -37,6 +37,28 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 final class TerrainPreparationPlannerTest {
+    @Test void overlappingRoadTransitionsMustAgreeBeforeAnyCityContentIsComposed() {
+        var bounds=new GridBounds(new GridPoint(4,4),new GridSize(3,3));
+        var low=new ElevationZone(id("low"),ElevationZoneType.ROAD_SEGMENT,bounds,64);
+        var middle=new ElevationZone(id("middle"),ElevationZoneType.ROAD_SEGMENT,bounds,65);
+        var high=new ElevationZone(id("high"),ElevationZoneType.ROAD_SEGMENT,bounds,66);
+        var first=new ElevationTransition(ElevationTransitionType.ROAD_CONNECTION,low.sourceElementId(),middle.sourceElementId(),bounds.origin(),64,65);
+        var second=new ElevationTransition(ElevationTransitionType.ROAD_CONNECTION,middle.sourceElementId(),high.sourceElementId(),bounds.origin(),65,66);
+        var survey=TerrainSurvey.sample(new GridBounds(new GridPoint(0,0),new GridSize(12,12)),
+                p->Optional.of(new TerrainCell(p,65,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
+        var settings=new SuburbPlanningSettings(1,1.0,1,3,3,0,20,1,1,3,3,1000L)
+                .withTerrainTransitions(new TerrainTransitionSettings(1,0,0,0,0,0,0,false,2));
+        var request=new SuburbPlanningRequest(id("overlapping-junction"),survey,42,settings);
+        for(var transitions:List.of(List.of(first,second),List.of(second,first))) {
+            var result=TerrainPreparationPlanner.plan(request,new RegionalElevationPlan(List.of(low,middle,high),transitions));
+            assertTrue(result.plan().isEmpty());
+            var diagnostic=result.diagnostic().orElseThrow();
+            assertEquals(TerrainRejectionReason.CONFLICTING_ROAD_TRANSITIONS,diagnostic.primaryRejectionReason().orElseThrow());
+            assertEquals(1,diagnostic.optionalPreparationLimit().orElseThrow().excessOverMaximum());
+        }
+        var equal=new ElevationTransition(ElevationTransitionType.ROAD_CONNECTION,middle.sourceElementId(),low.sourceElementId(),bounds.origin(),65,64);
+        assertTrue(TerrainPreparationPlanner.plan(request,new RegionalElevationPlan(List.of(low,middle),List.of(first,equal))).plan().isPresent());
+    }
     @Test void fillBankCannotRestartBeyondAnUnfilledInnerTrench() {
         var source = id("trench-pad");
         var bounds = new GridBounds(new GridPoint(4,4),new GridSize(2,2));

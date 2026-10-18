@@ -17,6 +17,7 @@ public interface ContentResources {
     }
     default void validateTraits(String material,boolean passable,boolean supportive,boolean climbable) { validateMaterial(material); }
     default void validateWalkingSurface(String material) { validateMaterial(material); }
+    default void validateOperable(String material) {validateMaterial(material);}
     default void validateBridgeSurface(String material, boolean halfStep) { validateMaterial(material); }
     static ContentResources classpath() {
         return (id,directory,extension) -> {
@@ -51,6 +52,12 @@ public interface ContentResources {
                     throw new IllegalArgumentException("Material does not support the upper face: "+material);
                 if(climbable && !state.is(net.minecraft.tags.BlockTags.CLIMBABLE))
                     throw new IllegalArgumentException("Material is not climbable: "+material);
+            }
+            @Override public void validateOperable(String material) {
+                validateMaterial(material);
+                var state=com.cybersammy.citiesarise.minecraft.placement.MinecraftContentMaterials.resolve(material,0);
+                if(!(state.getBlock() instanceof net.minecraft.world.level.block.DoorBlock door) || !door.type().canOpenByHand()
+                        || !state.getFluidState().isEmpty())throw new IllegalArgumentException("Operable route requires a dry door which opens by hand: "+material);
             }
             @Override public void validateBridgeSurface(String material, boolean halfStep) {
                 validateMaterial(material);

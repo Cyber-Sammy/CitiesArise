@@ -263,6 +263,17 @@ final class TerrainPreparationPlanner {
                 ));
             }
             TerrainPreparationColumn existing = columns.get(point.point());
+            // Wide graded junctions can overlap more than one neighboring transition.
+            // Report the conflict before one transition silently overwrites the other,
+            // so grid planning can remove the offending street and retain reachable plots.
+            if (transition.type() == ElevationTransitionType.ROAD_CONNECTION && existing != null
+                    && existing.type() == TerrainPreparationColumnType.ROAD_TRANSITION_STEP
+                    && existing.targetElevation() != point.targetElevation()) {
+                var diagnostic=rejectionDiagnostic(cell,TerrainRejectionReason.CONFLICTING_ROAD_TRANSITIONS);
+                return Optional.of(new SuburbTerrainDiagnostic(cell,diagnostic.suitability(),
+                        new TerrainPreparationLimitDiagnostic(owner,
+                                Math.abs((long)existing.targetElevation()-point.targetElevation()),0,0)));
+            }
             // An access starts on the road: keep its shared step and road ownership.
             if (transition.type() == ElevationTransitionType.BUILDING_ACCESS
                     && source.bounds().contains(point.point())

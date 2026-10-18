@@ -34,6 +34,10 @@ public final class CompositionGeometryValidator {
     private static Vec world(Vec p, ModuleDefinition module, PlacedModule placed) {
         return CompositionAssembler.rotateCell(p,module.size(),placed.rotation()).add(placed.origin());
     }
+    static boolean connects(ResolvedComposition plan,ModuleDefinition module,PlacedModule placed,ModuleContract.Route route,MaterialRules rules,String air) {
+        var cells=new HashMap<Vec,String>();plan.cells().forEach(c->cells.put(c.position(),c.material()));
+        return connected(cells,module,placed,route,rules,air);
+    }
     private static boolean passable(Map<Vec,String> cells, Vec p, MaterialRules rules, String air) {
         String value=cells.get(p);
         return value!=null && rules.isPassable(value,air);

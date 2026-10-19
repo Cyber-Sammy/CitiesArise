@@ -23,6 +23,7 @@ public final class NoiseTerrainGameTests {
             var random=RandomState.create(settings.value(),registry.lookupOrThrow(Registries.NOISE),1160011880237027703L);
             var height=LevelHeightAccessor.create(generator.getMinY(),generator.getGenDepth());
             var batch=BatchedNoiseTerrain.create(generator,random,height);
+            var provider=new MinecraftWorldgenTerrainProvider(generator,random,height.getMinBuildHeight(),height.getHeight());
             helper.assertTrue(batch!=null,"Batch path disabled for vanilla generator");
             int width=settings.value().noiseSettings().getCellWidth();
             for(var origin:List.of(new GridPoint(-width,-width),new GridPoint(1868,-1604),new GridPoint(1700,-1500))) {
@@ -31,6 +32,8 @@ public final class NoiseTerrainGameTests {
                     var point=new GridPoint(x0+dx,z0+dz);
                     int surface=generator.getBaseHeight(point.x(),point.z(),Heightmap.Types.WORLD_SURFACE_WG,height,random);
                     int floor=generator.getBaseHeight(point.x(),point.z(),Heightmap.Types.OCEAN_FLOOR_WG,height,random);
+                    var preliminary=provider.preliminarySample(point).orElseThrow();
+                    helper.assertTrue(preliminary.height()==floor && preliminary.water()==(surface>floor),"Sparse preliminary sample differs from generator API");
                     helper.assertTrue(batch.surface(point)==surface && batch.support(point)==floor,
                             "Vanilla height/water differs at "+point+" in "+noiseKey);
                     var column=generator.getBaseColumn(point.x(),point.z(),height,random);

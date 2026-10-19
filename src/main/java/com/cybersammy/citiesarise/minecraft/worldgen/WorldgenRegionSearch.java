@@ -31,6 +31,13 @@ final class WorldgenRegionSearch {
     <T> CompletableFuture<Outcome<T>> findBestAsync(int originX,int originZ,int searchRadius,int maxCandidateAttempts,
             int improvementCandidateAttempts,Predicate<SettlementRegion> candidatePredicate,
             Function<SettlementRegion,Optional<T>> evaluator,Comparator<T> comparator,Executor executor,long timeLimitNanos) {
+        return findBestAsync(originX,originZ,searchRadius,maxCandidateAttempts,improvementCandidateAttempts,candidatePredicate,evaluator,
+                comparator,executor,timeLimitNanos,null);
+    }
+    <T> CompletableFuture<Outcome<T>> findBestAsync(int originX,int originZ,int searchRadius,int maxCandidateAttempts,
+            int improvementCandidateAttempts,Predicate<SettlementRegion> candidatePredicate,
+            Function<SettlementRegion,Optional<T>> evaluator,Comparator<T> comparator,Executor executor,long timeLimitNanos,
+            WorldgenRegionPreselection.Estimator estimator) {
         Objects.requireNonNull(executor, "executor");
         return CompletableFuture.supplyAsync(
                 () -> findBest(
@@ -43,7 +50,7 @@ final class WorldgenRegionSearch {
                         evaluator,
                         comparator,
                         timeLimitNanos,
-                        System::nanoTime
+                        System::nanoTime,estimator
                 ),
                 executor
         );
@@ -67,6 +74,13 @@ final class WorldgenRegionSearch {
             int improvementCandidateAttempts,Predicate<SettlementRegion> candidatePredicate,
             Function<SettlementRegion,Optional<T>> evaluator,Comparator<T> comparator,long timeLimitNanos,
             java.util.function.LongSupplier clock) {
+        return findBest(originX,originZ,searchRadius,maxCandidateAttempts,improvementCandidateAttempts,candidatePredicate,evaluator,
+                comparator,timeLimitNanos,clock,null);
+    }
+    <T> Outcome<T> findBest(int originX,int originZ,int searchRadius,int maxCandidateAttempts,
+            int improvementCandidateAttempts,Predicate<SettlementRegion> candidatePredicate,
+            Function<SettlementRegion,Optional<T>> evaluator,Comparator<T> comparator,long timeLimitNanos,
+            java.util.function.LongSupplier clock,WorldgenRegionPreselection.Estimator estimator) {
         if(timeLimitNanos<=0) throw new IllegalArgumentException("timeLimitNanos must be positive");
         long started=clock.getAsLong();
         requirePositive(searchRadius, "searchRadius");
@@ -78,6 +92,14 @@ final class WorldgenRegionSearch {
 
         rejectInterruptedSearch();
         List<SettlementRegion> regions = orderedRegions(originX, originZ, searchRadius);
+        int preliminaryCandidates=0;
+        if(estimator!=null) {
+            long allowance=Math.min(java.util.concurrent.TimeUnit.SECONDS.toNanos(8),timeLimitNanos/5);
+            var selection=WorldgenRegionPreselection.order(regions,candidatePredicate,estimator,()->clock.getAsLong()-started<allowance);
+            regions=selection.regions();preliminaryCandidates=selection.sampledSites();
+            System.getLogger(WorldgenRegionSearch.class.getName()).log(System.Logger.Level.INFO,
+                    "Diagnostic terrain preselection: screened="+preliminaryCandidates+", elapsedMs="+(clock.getAsLong()-started)/1_000_000.0);
+        }
         Optional<Candidate<T>> bestCandidate = Optional.empty();
         int attempts = 0;
         int firstAcceptedAttempt = -1;
@@ -93,7 +115,7 @@ final class WorldgenRegionSearch {
             rejectInterruptedSearch();
             if (evaluation.isPresent()) {
                 Candidate<T> candidate = new Candidate<>(region, evaluation.orElseThrow());
-                bestCandidate = selectBetter(bestCandidate, candidate, comparator);
+                bestCandidate = selectBetter(bestCandidate, candidate, comparator,originX,originZ);
                 if (firstAcceptedAttempt < 0) {
                     firstAcceptedAttempt = attempts;
                 }
@@ -108,19 +130,22 @@ final class WorldgenRegionSearch {
             }
         }
         var result=outcome(bestCandidate, attempts);
-        return new Outcome<>(result.result(),attempts,timedOut);
+        return new Outcome<>(result.result(),attempts,timedOut,preliminaryCandidates);
     }
 
     private static <T> Optional<Candidate<T>> selectBetter(
             Optional<Candidate<T>> current,
             Candidate<T> candidate,
-            Comparator<T> comparator
+            Comparator<T> comparator,int originX,int originZ
     ) {
         if (current.isEmpty()) {
             return Optional.of(candidate);
         }
         Candidate<T> currentCandidate = current.orElseThrow();
-        if (comparator.compare(candidate.evaluation(), currentCandidate.evaluation()) < 0) {
+        int compared=comparator.compare(candidate.evaluation(),currentCandidate.evaluation());
+        var geographic=Comparator.comparingLong((SettlementRegion r)->distanceSquared(originX,originZ,r))
+                .thenComparingInt(SettlementRegion::x).thenComparingInt(SettlementRegion::z);
+        if (compared<0 || compared==0 && geographic.compare(candidate.region(),currentCandidate.region())<0) {
             return Optional.of(candidate);
         }
         return current;
@@ -208,11 +233,12 @@ final class WorldgenRegionSearch {
         }
     }
 
-    record Outcome<T>(Optional<Result<T>> result, int attemptedCandidates,boolean timeLimitReached) {
-        Outcome(Optional<Result<T>> result,int attemptedCandidates) { this(result,attemptedCandidates,false); }
+    record Outcome<T>(Optional<Result<T>> result, int attemptedCandidates,boolean timeLimitReached,int preliminaryCandidates) {
+        Outcome(Optional<Result<T>> result,int attemptedCandidates) { this(result,attemptedCandidates,false,0); }
+        Outcome(Optional<Result<T>> result,int attemptedCandidates,boolean timeLimitReached) { this(result,attemptedCandidates,timeLimitReached,0); }
         Outcome {
             Objects.requireNonNull(result, "result");
-            if (attemptedCandidates < 0) {
+            if (attemptedCandidates < 0 || preliminaryCandidates<0) {
                 throw new IllegalArgumentException("attemptedCandidates must not be negative");
             }
         }

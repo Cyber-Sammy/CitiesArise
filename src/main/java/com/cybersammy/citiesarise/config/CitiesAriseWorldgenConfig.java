@@ -12,6 +12,7 @@ public final class CitiesAriseWorldgenConfig {
     private static final ModConfigSpec.IntValue LOCATE_MAX_CANDIDATE_ATTEMPTS;
     private static final ModConfigSpec.IntValue LOCATE_IMPROVEMENT_CANDIDATE_ATTEMPTS;
     private static final ModConfigSpec.IntValue LOCATE_TIME_LIMIT_SECONDS;
+    private static final ModConfigSpec.BooleanValue LOCATE_TERRAIN_RANKING;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -42,6 +43,9 @@ public final class CitiesAriseWorldgenConfig {
         LOCATE_TIME_LIMIT_SECONDS = builder
                 .comment("Diagnostic search time budget, checked between candidates. A running candidate may finish after this budget.")
                 .defineInRange("locateTimeLimitSeconds", 60, 1, 3600);
+        LOCATE_TERRAIN_RANKING = builder
+                .comment("Orders diagnostic candidates by sparse generator heights and water before full validation. Does not affect natural city generation or potential locate.")
+                .define("locateTerrainRanking",true);
         builder.pop();
 
         SPEC = builder.build();
@@ -71,6 +75,7 @@ public final class CitiesAriseWorldgenConfig {
     }
 
     public static int locateTimeLimitSeconds() { return LOCATE_TIME_LIMIT_SECONDS.get(); }
+    public static boolean locateTerrainRanking() { return LOCATE_TERRAIN_RANKING.get(); }
 
     public static int locateImprovementCandidateAttempts() {
         return LOCATE_IMPROVEMENT_CANDIDATE_ATTEMPTS.get();

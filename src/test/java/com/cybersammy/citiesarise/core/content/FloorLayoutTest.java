@@ -7,6 +7,44 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FloorLayoutTest {
+    private static FloorLayout authored(FloorLayout f,FloorLayout.Mode mode,List<FloorLayout.Placement> placements) {
+        return new FloorLayout(f.size(),f.footprint(),f.rooms(),f.fillers(),f.rotations(),f.ports(),f.entrance(),f.minimumCounts(),f.maximumCounts(),mode,placements,List.of());
+    }
+    @Test void fixedAndMixedLayoutsPreserveAuthoredSharedWallPosesInEveryOrientation() {
+        var original=rectangular();
+        for(var mode:List.of(FloorLayout.Mode.FIXED,FloorLayout.Mode.MIXED)) {
+            var poses=new ArrayList<FloorLayout.Placement>();
+            if(mode==FloorLayout.Mode.FIXED)poses.add(new FloorLayout.Placement("a",new Vec(0,0,0),0,"base"));
+            poses.add(new FloorLayout.Placement("b",new Vec(2,0,0),0,"base"));
+            var cfg=cfg(original.modules(),original.attachments(),2,authored(original.floorLayout(),mode,poses));
+            for(int turn=0;turn<4;turn++)for(long seed:List.of(1L,42L,939L)) {
+                var entry=CompositionAssembler.rotate(ENTRY,cfg.floorLayout().size(),turn);
+                var assembler=new CompositionAssembler();var result=assembler.assemble(cfg,5,5,entry.position(),entry.face(),seed);
+                assertTrue(result.isPresent(),mode+"/"+turn+": "+assembler.failure());
+                assertEquals(2,result.orElseThrow().modules().size());
+                assertEquals(75,result.orElseThrow().cells().size());
+                assertEquals(turn,result.orElseThrow().modules().get(1).rotation());
+                assertEquals(result,new CompositionAssembler().assemble(cfg,5,5,entry.position(),entry.face(),seed));
+            }
+        }
+    }
+    @Test void incompatibleAuthoredCoordinatesHaveNoRandomFallback() {
+        var original=rectangular();var f=authored(original.floorLayout(),FloorLayout.Mode.FIXED,List.of(
+                new FloorLayout.Placement("a",new Vec(0,0,0),0,"base"),new FloorLayout.Placement("b",new Vec(1,0,0),0,"base")));
+        var assembler=new CompositionAssembler();assertTrue(assembler.assemble(cfg(original.modules(),original.attachments(),2,f),5,3,new Vec(1,1,0),Face.NORTH,42).isEmpty());
+        assertTrue(assembler.failure().contains("authored"),assembler.failure());
+    }
+    @Test void authoredRoomsCanSelectAnExactAlternativeOrTheBase() {
+        var original=rectangular();var b=original.modules().get("b");
+        var alternative=new RoomLayout("chosen",1,List.of(),Set.of(),List.of(),Optional.empty(),null,Map.of());
+        var variants=new ModuleDefinition(b.id(),b.size(),b.cells(),b.joints(),b.tags(),b.variants(),b.damage(),b.contract(),b.boundaries(),List.of(alternative),List.of());
+        for(var choice:List.of("chosen","base")) {
+            var f=authored(original.floorLayout(),FloorLayout.Mode.FIXED,List.of(new FloorLayout.Placement("a",new Vec(0,0,0),0,"base"),
+                    new FloorLayout.Placement("b",new Vec(2,0,0),0,choice)));
+            var assembler=new CompositionAssembler();var result=assembler.assemble(cfg(Map.of("a",original.modules().get("a"),"b",variants),List.of("b"),2,f),5,3,new Vec(1,1,0),Face.NORTH,42);
+            assertTrue(result.isPresent(),assembler.failure());assertEquals(choice,result.orElseThrow().modules().get(1).layout());
+        }
+    }
     private static final Vec SIZE=new Vec(3,5,3);
     private static final MaterialRules RULES=new MaterialRules(Set.of("ladder"),Set.of("floor","wall"),Set.of("ladder"));
     private static Joint joint(String id,String type,String other,Vec at,Face face,boolean external){return new Joint(id,type,other.isEmpty()?Set.of():Set.of(other),at,face,1,face.ordinal()<4?2:1,false,external,"");}

@@ -70,7 +70,7 @@ public final class CompositionAssembler {
         var candidates=new ArrayList<Candidate>();var state=empty();
         for(var id:cfg.roots().stream().distinct().sorted().toList()) {
             var module=cfg.modules().get(id);if(!cfg.permits(module))continue;
-            for(var e:options(module,cfg.damageSeverity(),cfg.airMaterial(),seed))for(int turn=0;turn<4;turn++) {
+            for(var e:floorOptions(module,cfg,seed))for(int turn=0;turn<4;turn++) {
                 if(++enumerated>4096){failure="Room candidate enumeration budget exceeded";return Optional.empty();}
                 var entry=e.joints.stream().filter(j->j.id().equals(cfg.entranceJoint())).findFirst();if(entry.isEmpty() || contactOnly(e,cfg.entranceJoint()))continue;
                 var joint=rotate(entry.orElseThrow(),module.size(),turn);if(joint.face()!=face)continue;var at=entrance.subtract(joint.position());
@@ -90,7 +90,7 @@ public final class CompositionAssembler {
         var source=state.selected.get(ownerIndex);var sourcePose=state.modules.get(ownerIndex);
         for(var id:cfg.attachments().stream().distinct().sorted().toList()) {
             var module=cfg.modules().get(id);if(!cfg.permits(module))continue;
-            for(var e:options(module,cfg.damageSeverity(),cfg.airMaterial(),seed+state.modules.size()*31L))for(int turn=0;turn<4;turn++)for(var j:e.joints) {
+            for(var e:floorOptions(module,cfg,seed+state.modules.size()*31L))for(int turn=0;turn<4;turn++)for(var j:e.joints) {
                 if(j.external() || contactOnly(e,j.id()))continue;var rotated=rotate(j,module.size(),turn);if(!target.joint.matches(rotated))continue;
                 if(++enumerated>4096){failure="Room candidate enumeration budget exceeded";return null;}
                 var aligned=target.joint.position().subtract(rotated.position());var at=aligned;
@@ -129,7 +129,7 @@ public final class CompositionAssembler {
     private boolean fits(Effective e,Vec at,int turn,State state,CompositionSettings cfg,int width,int depth) {
         var size=rotatedSize(e.base.size(),turn);
         if(at.x()<0 || at.y()<0 || at.z()<0 || at.x()+size.x()>width || at.z()+size.z()>depth || at.y()+size.y()>cfg.maximumHeight())return false;
-        if(floor!=null && (!floor.permits(e.base,at,turn,state.modules) || !floor.preservesFixedPorts(e.base,e.joints,at,turn)
+        if(floor!=null && (!floor.permits(e.base,at,turn,state.modules) || !floor.permitsAuthored(e.base,at,turn,e.layout,cfg.modules()) || !floor.preservesFixedPorts(e.base,e.joints,at,turn)
                 || e.joints.stream().filter(Joint::external).anyMatch(j->!floor.facade(translate(rotate(j,e.base.size(),turn),at)))))return false;
         return true;
     }
@@ -160,6 +160,13 @@ public final class CompositionAssembler {
             var e=effective(module.forLayout(l.id()),severity,air,seed);
             result.add(new Effective(e.base,e.variant,e.cells,e.joints,e.damage,l.id(),l.weight(),l.choices()));
         }return result;
+    }
+    private List<Effective> floorOptions(ModuleDefinition module,CompositionSettings cfg,long seed) {
+        var result=options(module,cfg.damageSeverity(),cfg.airMaterial(),seed);
+        if(floor!=null && !module.layouts().isEmpty() && floor.layout.placements().stream().anyMatch(p->p.module().equals(module.id()) && p.layout().equals("base"))) {
+            result=new ArrayList<>(result);result.add(effective(module,cfg.damageSeverity(),cfg.airMaterial(),seed));
+        }
+        return result;
     }
 
     private Optional<ResolvedComposition> search(State state, CompositionSettings settings, int width, int depth, long seed) {
@@ -243,7 +250,7 @@ public final class CompositionAssembler {
                 negotiated=proposal.orElseThrow();origin=negotiated.origin();
             }
         }
-        if(floor!=null && (!floor.permits(effective.base,origin,turn,state.modules) || !floor.preservesFixedPorts(effective.base,effective.joints,origin,turn))) {failure="Room violates floor footprint, count, rotation or fixed port reservation";return null;}
+        if(floor!=null && (!floor.permits(effective.base,origin,turn,state.modules) || !floor.permitsAuthored(effective.base,origin,turn,effective.layout,settings.modules()) || !floor.preservesFixedPorts(effective.base,effective.joints,origin,turn))) {failure="Room violates floor footprint, authored placement, count, rotation or fixed port reservation";return null;}
         Vec size=rotatedSize(effective.base.size(),turn);
         if(origin.x()<0 || origin.y()<0 || origin.z()<0 || origin.x()+size.x()>width
                 || origin.z()+size.z()>depth || origin.y()+size.y()>settings.maximumHeight()) return null;

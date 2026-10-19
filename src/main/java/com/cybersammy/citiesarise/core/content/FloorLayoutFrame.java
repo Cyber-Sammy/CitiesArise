@@ -29,6 +29,31 @@ final class FloorLayoutFrame {
         for(int x=at.x();x<at.x()+size.x();x++)for(int z=at.z();z<at.z()+size.z();z++)if(!mask.contains(new GridPoint(x,z)))return false;
         return true;
     }
+    private Vec position(Vec local) {return CompositionAssembler.rotateCell(local,layout.size(),rotation).add(origin);}
+    private Vec placementOrigin(FloorLayout.Placement p,ModuleDefinition module) {
+        var extent=CompositionAssembler.rotatedSize(module.size(),p.rotation());
+        var a=position(p.at());var b=position(p.at().add(extent).subtract(new Vec(1,1,1)));
+        return new Vec(Math.min(a.x(),b.x()),origin.y(),Math.min(a.z(),b.z()));
+    }
+    private boolean matches(FloorLayout.Placement p,ModuleDefinition module,Vec at,int turn,String choice) {
+        return p.module().equals(module.id()) && placementOrigin(p,module).equals(at) && turn==Math.floorMod(p.rotation()+rotation,4)
+                && (p.layout().isEmpty() || p.layout().equals(choice));
+    }
+    boolean permitsAuthored(ModuleDefinition module,Vec at,int turn,String choice,Map<String,ModuleDefinition> definitions) {
+        if(layout.mode()==FloorLayout.Mode.AUTOMATIC)return true;
+        if(layout.placements().stream().anyMatch(p->matches(p,module,at,turn,choice)))return true;
+        if(layout.mode()==FloorLayout.Mode.FIXED)return false;
+        var extent=CompositionAssembler.rotatedSize(module.size(),turn);
+        for(var p:layout.placements()) {
+            var reserved=definitions.get(p.module());var low=placementOrigin(p,reserved);
+            var size=CompositionAssembler.rotatedSize(reserved.size(),p.rotation()+rotation);
+            int dx=Math.min(at.x()+extent.x(),low.x()+size.x())-Math.max(at.x(),low.x());
+            int dz=Math.min(at.z()+extent.z(),low.z()+size.z())-Math.max(at.z(),low.z());
+            // A one-block shared wall remains possible; place() still requires a compatible negotiated boundary.
+            if(dx>0 && dz>0 && (dx>1 && dz>1 || at.equals(low)))return false;
+        }
+        return true;
+    }
     boolean preservesFixedPorts(ModuleDefinition module,List<Joint> joints,Vec at,int turn) {
         var size=CompositionAssembler.rotatedSize(module.size(),turn);
         for(var port:ports) {
@@ -50,6 +75,7 @@ final class FloorLayoutFrame {
         for(var m:modules) {var size=CompositionAssembler.rotatedSize(definitions.get(m.id()).size(),m.rotation());
             for(int x=m.origin().x();x<m.origin().x()+size.x();x++)for(int z=m.origin().z();z<m.origin().z()+size.z();z++)covered.add(new GridPoint(x,z));}
         if(!covered.equals(mask))return Optional.of("Floor footprint not completely packed");
+        for(var p:layout.placements())if(modules.stream().noneMatch(m->matches(p,definitions.get(m.id()),m.origin(),m.rotation(),m.layout())))return Optional.of("Missing authored room placement: "+p.module()+" at "+p.at());
         for(var e:layout.minimumCounts().entrySet())if(modules.stream().filter(m->m.id().equals(e.getKey())).count()<e.getValue())return Optional.of("Missing required floor room: "+e.getKey());
         return Optional.empty();
     }
@@ -105,6 +131,23 @@ final class FloorLayoutFrame {
             }
         }
         var entry=ports.stream().filter(p->p.id().equals(layout.entrance())).findFirst().orElseThrow();var start=ModuleDefinition.jointCells(entry.joint()).getFirst();
+        for(var terrace:layout.terraces()) {
+            targets.add(position(terrace.access()));
+            for(int x=terrace.minimum().x();x<=terrace.maximum().x();x++)for(int z=terrace.minimum().z();z<=terrace.maximum().z();z++) {
+                var deck=position(new Vec(x,terrace.deckY(),z));var support=cells.get(deck);
+                if(support==null || !settings.materialRules().supportive().contains(support.material()))return Optional.of("Terrace deck lacks support: "+terrace.id());
+                boolean edge=false;
+                for(var d:List.of(new GridPoint(1,0),new GridPoint(-1,0),new GridPoint(0,1),new GridPoint(0,-1)))
+                    if(!mask.contains(new GridPoint(deck.x()+d.x(),deck.z()+d.z())))edge=true;
+                if(edge) {
+                    var guard=cells.get(deck.add(new Vec(0,1,0)));
+                    if(guard==null || settings.materialRules().isPassable(guard.material(),settings.airMaterial()))return Optional.of("Terrace exposed edge lacks guard: "+terrace.id());
+                } else {
+                    for(int y=terrace.deckY()+1;y<layout.size().y();y++)if(!passable(cells,position(new Vec(x,y,z)),settings))return Optional.of("Terrace is covered or obstructed: "+terrace.id());
+                    targets.add(deck.add(new Vec(0,1,0)));
+                }
+            }
+        }
         var reachable=new HashSet<Vec>();var queue=new ArrayDeque<Vec>();
         if(!standing(cells,start,settings))return Optional.of("Floor entrance is not traversable");reachable.add(start);queue.add(start);
         while(!queue.isEmpty() && reachable.size()<=16384) {

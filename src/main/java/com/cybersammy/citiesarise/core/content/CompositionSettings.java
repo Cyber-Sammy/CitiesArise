@@ -41,7 +41,11 @@ public record CompositionSettings(Map<String,ModuleDefinition> modules, List<Str
         if(minimumModules<1 || maximumModules<minimumModules || maximumModules>(buildingSections==null?16:64) || maximumHeight<1 || maximumHeight>128
                 || damageSeverity<0 || damageSeverity>100) throw new IllegalArgumentException("Invalid composition budgets");
         if(entranceJoint==null || entranceJoint.isBlank() || airMaterial==null || airMaterial.isBlank()) throw new IllegalArgumentException("Missing entrance or air material");
-        if(floorLayout!=null)floorLayout.validateModules(modules,roots,attachments);
+        if(floorLayout!=null) {
+            floorLayout.validateModules(modules,roots,attachments);
+            if(floorLayout.placements().size()>maximumModules || floorLayout.mode()==FloorLayout.Mode.FIXED && floorLayout.placements().size()<minimumModules)
+                throw new IllegalArgumentException("Authored room count outside composition budget");
+        }
         if(buildingSections!=null) {
             if(floorLayout!=null)throw new IllegalArgumentException("A composition cannot be both a floor and a section building");
             buildingSections.validateModules(modules);

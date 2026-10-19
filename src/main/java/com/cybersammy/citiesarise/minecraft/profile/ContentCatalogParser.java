@@ -414,7 +414,19 @@ public final class ContentCatalogParser {
         if(rotations.isEmpty())rotations.addAll(List.of(0,1,2,3));
         var minima=new LinkedHashMap<String,Integer>();object(data,"minimumCounts").entrySet().forEach(e->minima.put(e.getKey(),integer(object(data,"minimumCounts"),e.getKey(),0)));
         var maxima=new LinkedHashMap<String,Integer>();object(data,"maximumCounts").entrySet().forEach(e->maxima.put(e.getKey(),integer(object(data,"maximumCounts"),e.getKey(),16)));
-        return new FloorLayout(new Vec(width,integer(data,"height",5),rows.size()),mask,list(data,"rooms"),list(data,"fillers"),rotations,ports,string(data,"entrance"),minima,maxima);
+        var placements=new ArrayList<FloorLayout.Placement>();
+        for(var value:array(data,"placements")) {
+            var p=value.getAsJsonObject();placements.add(new FloorLayout.Placement(string(p,"module"),vec(p.getAsJsonArray("at")),integer(p,"rotation",0),text(p,"layout","")));
+        }
+        var terraces=new ArrayList<FloorLayout.Terrace>();
+        for(var value:array(data,"terraces")) {
+            var t=value.getAsJsonObject();var a=vec(t.getAsJsonArray("from"));var b=vec(t.getAsJsonArray("to"));
+            if(a.y()!=b.y())throw new IllegalArgumentException("Terrace deck must be level");
+            terraces.add(new FloorLayout.Terrace(string(t,"id"),new com.cybersammy.citiesarise.core.geometry.GridPoint(a.x(),a.z()),
+                    new com.cybersammy.citiesarise.core.geometry.GridPoint(b.x(),b.z()),a.y(),vec(t.getAsJsonArray("access"))));
+        }
+        return new FloorLayout(new Vec(width,integer(data,"height",5),rows.size()),mask,list(data,"rooms"),list(data,"fillers"),rotations,ports,string(data,"entrance"),minima,maxima,
+                FloorLayout.Mode.valueOf(text(data,"mode","automatic").toUpperCase(Locale.ROOT)),placements,terraces);
     }
     private static BuildingSections.Surface sectionSurface(JsonObject data) {
         var connector=new ArrayList<Cell>();

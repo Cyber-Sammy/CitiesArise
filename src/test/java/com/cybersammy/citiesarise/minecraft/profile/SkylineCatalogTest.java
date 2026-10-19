@@ -47,7 +47,7 @@ class SkylineCatalogTest {
             var base=cfg.buildingSections().sections().getFirst().recipe().layout();
             var access=base.ports().stream().filter(p->p.id().equals("entry")).findFirst().orElseThrow();
             int floors=cfg.buildingSections().sections().stream().mapToInt(BuildingSections.Section::floors).sum();
-            assertEquals(floors*4+5,cfg.maximumHeight());
+            assertEquals(floors*4+(name.equals("terrace")?1:5),cfg.maximumHeight());
             if(floors>=10)assertTrue(base.size().x()>=27 && base.size().z()>=25);
             for(int turn=0;turn<4;turn++) {
                 var entry=CompositionAssembler.rotate(new Joint("entry",access.type(),Set.of(),access.at(),Face.NORTH,1,2,false,true,""),
@@ -56,7 +56,7 @@ class SkylineCatalogTest {
                 var resolved=assembler.assemble(cfg,31,31,entry.position(),entry.face(),42);
                 assertTrue(resolved.isPresent(),name+" rotation "+turn+": "+assembler.failure());
                 var plan=resolved.orElseThrow();
-                assertEquals(floors+1,plan.modules().size());
+                assertEquals(cfg.minimumModules(),plan.modules().size());
                 assertTrue(plan.cells().stream().mapToInt(c->c.position().y()).max().orElseThrow()<cfg.maximumHeight());
                 var cells=new HashMap<Vec,String>();plan.cells().forEach(c->cells.put(c.position(),c.material()));
                 assertEquals(plan.cells().size(),cells.size());assertTrue(cells.size()<65536);

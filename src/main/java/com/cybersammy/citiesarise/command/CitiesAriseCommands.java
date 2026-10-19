@@ -101,6 +101,7 @@ public final class CitiesAriseCommands {
 
         BlockPos origin = BlockPos.containing(source.getPosition());
         String startedSummary = (ranked ? "Ranked diagnostic planning started." : "Diagnostic planning started; returning the first accepted site.")
+                + (CitiesAriseWorldgenConfig.locateTerrainRanking()?" Screening terrain before full planning.":"")
                 + " Results are candidates, not proof of generated settlements. Time budget="
                 + CitiesAriseWorldgenConfig.locateTimeLimitSeconds()+"s; a running candidate may finish after the budget.";
         source.sendSuccess(() -> Component.literal(startedSummary), false);
@@ -239,7 +240,7 @@ public final class CitiesAriseCommands {
             String summary = (timeLimited?"Diagnostic time limit reached; the search is incomplete. No accepted site yet after checking "
                     :"No accepted Cities Arise settlement candidate was found after checking ")
                     + result.attemptedCandidates()
-                    + " candidates. Rejections: "
+                    + " candidates; terrain-screened="+result.preliminaryCandidates()+". Rejections: "
                     + result.rejectionSummary()
                     + (exhausted ? ". No unchecked candidates remain in this search radius. Move farther or increase worldgen.locateSearchRadiusRegions."
                             : ". Use diagnostic next to continue with unchecked candidates; move farther if the radius is exhausted.");
@@ -262,6 +263,7 @@ public final class CitiesAriseCommands {
                 + located.region().z()
                 + "), checkedCandidates="
                 + located.attemptedCandidates()
+                + ", terrainScreened="+result.preliminaryCandidates()
                 + ", earthworkQuality="
                 + located.siteAssessment().quality()
                 + ", earthworkVolume="

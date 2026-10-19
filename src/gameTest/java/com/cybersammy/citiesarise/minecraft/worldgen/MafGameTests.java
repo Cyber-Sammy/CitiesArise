@@ -46,6 +46,10 @@ public final class MafGameTests {
         json.getAsJsonObject("survey").addProperty("width",140);json.getAsJsonObject("survey").addProperty("depth",140);
         var planning=json.getAsJsonObject("planning");for(String key:List.of("minimumParcelCount","targetParcelCount","maximumParcelCount"))planning.addProperty(key,4);
         var grid=planning.getAsJsonObject("districts").getAsJsonObject("grid");grid.addProperty("columns",1);grid.addProperty("rows",1);
+        // This fixture requires a shelter: reserve spare sidewalk width regardless of the random test origin.
+        for(var module:planning.getAsJsonObject("streets").getAsJsonArray("modules")) {
+            module.getAsJsonObject().addProperty("leftWidth",3);module.getAsJsonObject().addProperty("rightWidth",3);
+        }
         var buildings=planning.getAsJsonObject("buildings");buildings.remove("rules");buildings.addProperty("fallback","skyline:pavilion");
         buildings.add("pool",JsonParser.parseString("[{\"asset\":\"skyline:pavilion\",\"weight\":1}]"));
         var profile=new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("test:maf"),json,

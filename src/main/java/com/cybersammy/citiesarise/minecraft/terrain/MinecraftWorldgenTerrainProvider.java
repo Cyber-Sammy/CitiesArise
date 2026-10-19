@@ -22,6 +22,7 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
     private final LevelHeightAccessor levelHeight;
     private final MinecraftWorldgenTerrainSampler.TerrainSource cachedSource;
     private final CachedGroundSupport groundSupport;
+    private volatile MinecraftWorldgenTerrainSampler.TerrainSource preliminarySource;
 
     public MinecraftWorldgenTerrainProvider(
             ChunkGenerator chunkGenerator,
@@ -46,6 +47,18 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
     public TerrainSurvey sample(GridBounds bounds) {
         Objects.requireNonNull(bounds, "bounds");
         return sampler().sample(bounds);
+    }
+
+    @Override
+    public Optional<com.cybersammy.citiesarise.core.terrain.TerrainSiteEstimate.Sample> preliminarySample(GridPoint point) {
+        var source=preliminarySource;
+        if(source==null) synchronized(this) {
+            source=preliminarySource;
+            if(source==null)preliminarySource=source=MinecraftWorldgenTerrainSampler.cachedSource(chunkGenerator,randomState,levelHeight);
+        }
+        // Sparse vanilla queries must not populate a full 16x16 noise cell per sample.
+        int surface=source.height(point),support=source.supportHeight(point);
+        return Optional.of(new com.cybersammy.citiesarise.core.terrain.TerrainSiteEstimate.Sample(support,surface>support));
     }
 
     @Override

@@ -96,7 +96,12 @@ public final class WorldgenSettlementLocator {
                 },
                 EarthworkSiteAssessment::compareTo,
                 executor,
-                java.util.concurrent.TimeUnit.SECONDS.toNanos(CitiesAriseWorldgenConfig.locateTimeLimitSeconds())
+                java.util.concurrent.TimeUnit.SECONDS.toNanos(CitiesAriseWorldgenConfig.locateTimeLimitSeconds()),
+                CitiesAriseWorldgenConfig.locateTerrainRanking() ? (region,mayContinue) ->
+                        com.cybersammy.citiesarise.core.terrain.TerrainSiteEstimate.sample(
+                                com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.bounds(region,context.surveySize()),
+                                context.terrainProvider()::preliminarySample,mayContinue)
+                                .map(estimate->java.util.OptionalDouble.of(estimate.score())).orElseGet(java.util.OptionalDouble::empty) : null
         ).thenApply(outcome -> {
             if(outcome.timeLimitReached()) increment(rejectionCounts,"SEARCH_TIME_LIMIT");
             var raw=searchResult(outcome,rejectionCounts);
@@ -106,7 +111,7 @@ public final class WorldgenSettlementLocator {
             });
             var result=new SearchResult(located,raw.attemptedCandidates(),raw.rejectionCounts());
             return new SearchResult(result.settlement(),result.attemptedCandidates(),result.rejectionCounts(),
-                    context.profileId().value(),rejectedRegions);
+                    context.profileId().value(),rejectedRegions,outcome.preliminaryCandidates());
         });
     }
 
@@ -276,8 +281,11 @@ public final class WorldgenSettlementLocator {
             int attemptedCandidates,
             Map<String, Integer> rejectionCounts,
             String profile,
-            java.util.Set<SettlementRegion> rejectedRegions
+            java.util.Set<SettlementRegion> rejectedRegions,
+            int preliminaryCandidates
     ) {
+        public SearchResult(Optional<LocatedSettlement> settlement,int attemptedCandidates,Map<String,Integer> rejectionCounts,String profile,
+                java.util.Set<SettlementRegion> rejectedRegions) { this(settlement,attemptedCandidates,rejectionCounts,profile,rejectedRegions,0); }
         public SearchResult(Optional<LocatedSettlement> settlement,int attemptedCandidates,Map<String,Integer> rejectionCounts) {
             this(settlement,attemptedCandidates,rejectionCounts,"",java.util.Set.of());
         }
@@ -286,7 +294,7 @@ public final class WorldgenSettlementLocator {
             rejectedRegions=java.util.Set.copyOf(rejectedRegions);
             Objects.requireNonNull(settlement, "settlement");
             Objects.requireNonNull(rejectionCounts, "rejectionCounts");
-            if (attemptedCandidates < 0) {
+            if (attemptedCandidates < 0 || preliminaryCandidates<0) {
                 throw new IllegalArgumentException("attemptedCandidates must not be negative");
             }
 

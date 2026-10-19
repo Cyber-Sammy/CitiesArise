@@ -15,6 +15,11 @@ import java.util.Set;
 public interface WorldgenTerrainSurveyProvider {
     TerrainSurvey sample(GridBounds bounds);
 
+    /** Sparse generator-only heights; unsupported providers preserve distance ordering. Never loads chunks. */
+    default Optional<com.cybersammy.citiesarise.core.terrain.TerrainSiteEstimate.Sample> preliminarySample(GridPoint point) {
+        return Optional.empty();
+    }
+
     /** Checks the final cut/fill contact, before accepting any placement or structure start. */
     default Optional<TerrainPreparationColumn> unsupportedColumn(TerrainPreparationPlan plan) {
         return Optional.empty();

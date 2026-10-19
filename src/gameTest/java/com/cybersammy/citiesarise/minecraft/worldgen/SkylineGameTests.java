@@ -70,6 +70,15 @@ public final class SkylineGameTests {
                 helper.assertTrue(state.equals(provider.blockState(op)),name+": incorrect native block at "+pos);
                 if(op.material().startsWith("minecraft:ladder"))helper.assertTrue(state.canSurvive(helper.getLevel(),pos),name+": floating ladder");
             }
+            if(name.equals("terrace")) {
+                helper.assertTrue(cfg.buildingSections().sections().stream().mapToInt(BuildingSections.Section::floors).sum()==16,"Authored tower lost a floor range");
+                helper.assertTrue(plan.orElseThrow().modules().stream().filter(m->m.id().equals("skyline:terrace_core") && m.layout().equals("upper")).count()==4,"Upper section did not repeat its fixed core");
+                helper.assertTrue(helper.getLevel().getBlockState(base.offset(14,41,5)).is(net.minecraft.world.level.block.Blocks.OAK_DOOR),"Terrace has no native exit door");
+                helper.assertTrue(helper.getLevel().getBlockState(base.offset(2,41,2)).isAir(),"Terrace walking space is obstructed");
+                helper.assertTrue(!helper.getLevel().getBlockState(base.offset(0,41,2)).isAir(),"Terrace has no outer guard");
+                helper.assertTrue(helper.getLevel().getBlockState(base.offset(2,44,2)).isAir(),"An upper slab covered the terrace");
+                helper.assertTrue(plan.orElseThrow().modules().stream().anyMatch(m->m.id().equals("skyline:mansard_room") && m.origin().y()==60),"Missing authored mansard floor");
+            }
         }
         helper.succeed();
     }

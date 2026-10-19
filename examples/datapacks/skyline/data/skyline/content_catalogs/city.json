@@ -2906,6 +2906,3486 @@
         ]
       }
     },
+    "skyline:terrace_core": {
+      "size": [
+        17,
+        5,
+        17
+      ],
+      "tags": [
+        "skyline:building"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            16,
+            0,
+            16
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            4,
+            0
+          ],
+          "to": [
+            16,
+            4,
+            16
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            1,
+            1,
+            1
+          ],
+          "to": [
+            15,
+            3,
+            1
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            3,
+            0
+          ],
+          "to": [
+            16,
+            3,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            3,
+            1,
+            1
+          ],
+          "to": [
+            4,
+            2,
+            1
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            7,
+            1,
+            1
+          ],
+          "to": [
+            8,
+            2,
+            1
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            11,
+            1,
+            1
+          ],
+          "to": [
+            12,
+            2,
+            1
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            1,
+            1,
+            0
+          ],
+          "to": [
+            1,
+            3,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            0
+          ],
+          "to": [
+            5,
+            3,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            9,
+            1,
+            0
+          ],
+          "to": [
+            9,
+            3,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            13,
+            1,
+            0
+          ],
+          "to": [
+            13,
+            3,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            1,
+            1,
+            15
+          ],
+          "to": [
+            15,
+            3,
+            15
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            3,
+            16
+          ],
+          "to": [
+            16,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            3,
+            1,
+            15
+          ],
+          "to": [
+            4,
+            2,
+            15
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            7,
+            1,
+            15
+          ],
+          "to": [
+            8,
+            2,
+            15
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            11,
+            1,
+            15
+          ],
+          "to": [
+            12,
+            2,
+            15
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            1,
+            1,
+            16
+          ],
+          "to": [
+            1,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            16
+          ],
+          "to": [
+            5,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            9,
+            1,
+            16
+          ],
+          "to": [
+            9,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            13,
+            1,
+            16
+          ],
+          "to": [
+            13,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            1,
+            1,
+            1
+          ],
+          "to": [
+            1,
+            3,
+            15
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            3,
+            0
+          ],
+          "to": [
+            0,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            1,
+            1,
+            3
+          ],
+          "to": [
+            1,
+            2,
+            4
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            1,
+            1,
+            7
+          ],
+          "to": [
+            1,
+            2,
+            8
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            1,
+            1,
+            11
+          ],
+          "to": [
+            1,
+            2,
+            12
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            3,
+            1
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            0,
+            3,
+            5
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            9
+          ],
+          "to": [
+            0,
+            3,
+            9
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            13
+          ],
+          "to": [
+            0,
+            3,
+            13
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            15,
+            1,
+            1
+          ],
+          "to": [
+            15,
+            3,
+            15
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            16,
+            3,
+            0
+          ],
+          "to": [
+            16,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            15,
+            1,
+            3
+          ],
+          "to": [
+            15,
+            2,
+            4
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            15,
+            1,
+            7
+          ],
+          "to": [
+            15,
+            2,
+            8
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            15,
+            1,
+            11
+          ],
+          "to": [
+            15,
+            2,
+            12
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            16,
+            1,
+            1
+          ],
+          "to": [
+            16,
+            3,
+            1
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            16,
+            1,
+            5
+          ],
+          "to": [
+            16,
+            3,
+            5
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            16,
+            1,
+            9
+          ],
+          "to": [
+            16,
+            3,
+            9
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            16,
+            1,
+            13
+          ],
+          "to": [
+            16,
+            3,
+            13
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            6,
+            1,
+            2
+          ],
+          "to": [
+            6,
+            3,
+            14
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            6,
+            1,
+            4
+          ],
+          "to": [
+            6,
+            2,
+            5
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            6,
+            1,
+            12
+          ],
+          "to": [
+            6,
+            2,
+            13
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            10,
+            1,
+            2
+          ],
+          "to": [
+            10,
+            3,
+            14
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            10,
+            1,
+            4
+          ],
+          "to": [
+            10,
+            2,
+            5
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            10,
+            1,
+            12
+          ],
+          "to": [
+            10,
+            2,
+            13
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            6
+          ],
+          "to": [
+            5,
+            3,
+            6
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            3,
+            1,
+            6
+          ],
+          "to": [
+            4,
+            2,
+            6
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            11,
+            1,
+            6
+          ],
+          "to": [
+            14,
+            3,
+            6
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            12,
+            1,
+            6
+          ],
+          "to": [
+            13,
+            2,
+            6
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            10
+          ],
+          "to": [
+            5,
+            3,
+            10
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            3,
+            1,
+            10
+          ],
+          "to": [
+            4,
+            2,
+            10
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            11,
+            1,
+            10
+          ],
+          "to": [
+            14,
+            3,
+            10
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            12,
+            1,
+            10
+          ],
+          "to": [
+            13,
+            2,
+            10
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            2,
+            1,
+            7
+          ],
+          "to": [
+            14,
+            2,
+            9
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            8,
+            1,
+            2
+          ],
+          "to": [
+            8,
+            2,
+            14
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            9,
+            1,
+            10
+          ],
+          "to": [
+            9,
+            2,
+            10
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            8,
+            0,
+            9
+          ],
+          "to": [
+            8,
+            4,
+            9
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            0,
+            9
+          ],
+          "to": [
+            7,
+            4,
+            9
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        },
+        {
+          "from": [
+            3,
+            1,
+            3
+          ],
+          "to": [
+            3,
+            1,
+            3
+          ],
+          "material": "minecraft:bookshelf"
+        },
+        {
+          "from": [
+            13,
+            1,
+            3
+          ],
+          "to": [
+            13,
+            1,
+            3
+          ],
+          "material": "minecraft:crafting_table"
+        },
+        {
+          "from": [
+            3,
+            1,
+            13
+          ],
+          "to": [
+            3,
+            1,
+            13
+          ],
+          "material": "minecraft:barrel"
+        },
+        {
+          "from": [
+            13,
+            1,
+            13
+          ],
+          "to": [
+            13,
+            1,
+            13
+          ],
+          "material": "minecraft:smoker"
+        },
+        {
+          "from": [
+            3,
+            3,
+            4
+          ],
+          "to": [
+            3,
+            3,
+            4
+          ],
+          "material": "minecraft:sea_lantern"
+        },
+        {
+          "from": [
+            3,
+            3,
+            12
+          ],
+          "to": [
+            3,
+            3,
+            12
+          ],
+          "material": "minecraft:sea_lantern"
+        },
+        {
+          "from": [
+            13,
+            3,
+            4
+          ],
+          "to": [
+            13,
+            3,
+            4
+          ],
+          "material": "minecraft:sea_lantern"
+        },
+        {
+          "from": [
+            13,
+            3,
+            12
+          ],
+          "to": [
+            13,
+            3,
+            12
+          ],
+          "material": "minecraft:sea_lantern"
+        },
+        {
+          "from": [
+            8,
+            1,
+            0
+          ],
+          "to": [
+            8,
+            2,
+            1
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            8,
+            1,
+            15
+          ],
+          "to": [
+            8,
+            2,
+            16
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            8,
+            1,
+            1
+          ],
+          "to": [
+            8,
+            1,
+            1
+          ],
+          "material": "door_lower"
+        },
+        {
+          "from": [
+            8,
+            2,
+            1
+          ],
+          "to": [
+            8,
+            2,
+            1
+          ],
+          "material": "door_upper"
+        },
+        {
+          "from": [
+            8,
+            1,
+            15
+          ],
+          "to": [
+            8,
+            1,
+            15
+          ],
+          "material": "door_lower"
+        },
+        {
+          "from": [
+            8,
+            2,
+            15
+          ],
+          "to": [
+            8,
+            2,
+            15
+          ],
+          "material": "door_upper"
+        }
+      ],
+      "joints": [
+        {
+          "id": "down",
+          "type": "skyline:stairs",
+          "accepts": [
+            "skyline:stairs"
+          ],
+          "at": [
+            7,
+            0,
+            9
+          ],
+          "face": "down",
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "up",
+          "type": "skyline:stairs",
+          "accepts": [
+            "skyline:stairs"
+          ],
+          "at": [
+            7,
+            5,
+            9
+          ],
+          "face": "up",
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "entry",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            8,
+            1,
+            0
+          ],
+          "face": "north",
+          "external": false,
+          "height": 2
+        },
+        {
+          "id": "service",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            8,
+            1,
+            17
+          ],
+          "face": "south",
+          "external": false,
+          "height": 2
+        }
+      ],
+      "layouts": [
+        {
+          "id": "upper",
+          "weight": 1,
+          "closedJoints": [
+            "entry",
+            "service"
+          ],
+          "addedJoints": [
+            {
+              "id": "upper_facade",
+              "type": "skyline:upper_facade",
+              "at": [
+                8,
+                1,
+                0
+              ],
+              "face": "north",
+              "external": true
+            }
+          ],
+          "fills": [
+            {
+              "from": [
+                8,
+                1,
+                1
+              ],
+              "to": [
+                8,
+                2,
+                1
+              ],
+              "material": "wall"
+            },
+            {
+              "from": [
+                8,
+                1,
+                15
+              ],
+              "to": [
+                8,
+                2,
+                16
+              ],
+              "material": "wall"
+            }
+          ],
+          "boundaries": []
+        },
+        {
+          "id": "terrace",
+          "weight": 1
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "lobby",
+            "from": [
+              8,
+              1,
+              2
+            ],
+            "to": [
+              8,
+              1,
+              8
+            ],
+            "bodyHeight": 2
+          },
+          {
+            "id": "landing",
+            "from": [
+              8,
+              1,
+              8
+            ],
+            "to": [
+              6,
+              1,
+              9
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      },
+      "boundaries": [
+        {
+          "joint": "entry",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            8,
+            1,
+            0
+          ],
+          "to": [
+            8,
+            2,
+            0
+          ],
+          "retain": true
+        },
+        {
+          "joint": "service",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            8,
+            1,
+            16
+          ],
+          "to": [
+            8,
+            2,
+            16
+          ],
+          "retain": true
+        }
+      ]
+    },
+    "skyline:terrace_north": {
+      "size": [
+        29,
+        5,
+        4
+      ],
+      "tags": [
+        "skyline:building"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            28,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            28,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            0,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            1,
+            1
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            2
+          ],
+          "to": [
+            0,
+            1,
+            2
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            0,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            1,
+            1,
+            0
+          ],
+          "to": [
+            1,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            2,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            3,
+            1,
+            0
+          ],
+          "to": [
+            3,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            4,
+            1,
+            0
+          ],
+          "to": [
+            4,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            0
+          ],
+          "to": [
+            5,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            6,
+            1,
+            0
+          ],
+          "to": [
+            6,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            7,
+            1,
+            0
+          ],
+          "to": [
+            7,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            8,
+            1,
+            0
+          ],
+          "to": [
+            8,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            9,
+            1,
+            0
+          ],
+          "to": [
+            9,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            10,
+            1,
+            0
+          ],
+          "to": [
+            10,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            11,
+            1,
+            0
+          ],
+          "to": [
+            11,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            12,
+            1,
+            0
+          ],
+          "to": [
+            12,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            13,
+            1,
+            0
+          ],
+          "to": [
+            13,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            14,
+            1,
+            0
+          ],
+          "to": [
+            14,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            15,
+            1,
+            0
+          ],
+          "to": [
+            15,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            16,
+            1,
+            0
+          ],
+          "to": [
+            16,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            17,
+            1,
+            0
+          ],
+          "to": [
+            17,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            18,
+            1,
+            0
+          ],
+          "to": [
+            18,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            19,
+            1,
+            0
+          ],
+          "to": [
+            19,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            20,
+            1,
+            0
+          ],
+          "to": [
+            20,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            21,
+            1,
+            0
+          ],
+          "to": [
+            21,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            22,
+            1,
+            0
+          ],
+          "to": [
+            22,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            23,
+            1,
+            0
+          ],
+          "to": [
+            23,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            24,
+            1,
+            0
+          ],
+          "to": [
+            24,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            25,
+            1,
+            0
+          ],
+          "to": [
+            25,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            26,
+            1,
+            0
+          ],
+          "to": [
+            26,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            27,
+            1,
+            0
+          ],
+          "to": [
+            27,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            28,
+            1,
+            0
+          ],
+          "to": [
+            28,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            28,
+            1,
+            1
+          ],
+          "to": [
+            28,
+            1,
+            1
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            28,
+            1,
+            2
+          ],
+          "to": [
+            28,
+            1,
+            2
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            28,
+            1,
+            3
+          ],
+          "to": [
+            28,
+            1,
+            3
+          ],
+          "material": "trim"
+        }
+      ],
+      "joints": [
+        {
+          "id": "core",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            14,
+            1,
+            4
+          ],
+          "face": "south",
+          "height": 2
+        },
+        {
+          "id": "west",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            3,
+            1,
+            4
+          ],
+          "face": "south",
+          "height": 2
+        },
+        {
+          "id": "east",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            25,
+            1,
+            4
+          ],
+          "face": "south",
+          "height": 2
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "core",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            14,
+            1,
+            3
+          ],
+          "to": [
+            14,
+            2,
+            3
+          ],
+          "retain": true
+        },
+        {
+          "joint": "west",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            3,
+            1,
+            3
+          ],
+          "to": [
+            3,
+            2,
+            3
+          ],
+          "retain": true
+        },
+        {
+          "joint": "east",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            25,
+            1,
+            3
+          ],
+          "to": [
+            25,
+            2,
+            3
+          ],
+          "retain": true
+        }
+      ]
+    },
+    "skyline:terrace_south": {
+      "size": [
+        29,
+        5,
+        4
+      ],
+      "tags": [
+        "skyline:building"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            28,
+            0,
+            3
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            28,
+            4,
+            3
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            0,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            1,
+            1
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            2
+          ],
+          "to": [
+            0,
+            1,
+            2
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            0,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            1,
+            1,
+            3
+          ],
+          "to": [
+            1,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            2,
+            1,
+            3
+          ],
+          "to": [
+            2,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            3,
+            1,
+            3
+          ],
+          "to": [
+            3,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            4,
+            1,
+            3
+          ],
+          "to": [
+            4,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            3
+          ],
+          "to": [
+            5,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            6,
+            1,
+            3
+          ],
+          "to": [
+            6,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            7,
+            1,
+            3
+          ],
+          "to": [
+            7,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            8,
+            1,
+            3
+          ],
+          "to": [
+            8,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            9,
+            1,
+            3
+          ],
+          "to": [
+            9,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            10,
+            1,
+            3
+          ],
+          "to": [
+            10,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            11,
+            1,
+            3
+          ],
+          "to": [
+            11,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            12,
+            1,
+            3
+          ],
+          "to": [
+            12,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            13,
+            1,
+            3
+          ],
+          "to": [
+            13,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            14,
+            1,
+            3
+          ],
+          "to": [
+            14,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            15,
+            1,
+            3
+          ],
+          "to": [
+            15,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            16,
+            1,
+            3
+          ],
+          "to": [
+            16,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            17,
+            1,
+            3
+          ],
+          "to": [
+            17,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            18,
+            1,
+            3
+          ],
+          "to": [
+            18,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            19,
+            1,
+            3
+          ],
+          "to": [
+            19,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            20,
+            1,
+            3
+          ],
+          "to": [
+            20,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            21,
+            1,
+            3
+          ],
+          "to": [
+            21,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            22,
+            1,
+            3
+          ],
+          "to": [
+            22,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            23,
+            1,
+            3
+          ],
+          "to": [
+            23,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            24,
+            1,
+            3
+          ],
+          "to": [
+            24,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            25,
+            1,
+            3
+          ],
+          "to": [
+            25,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            26,
+            1,
+            3
+          ],
+          "to": [
+            26,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            27,
+            1,
+            3
+          ],
+          "to": [
+            27,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            28,
+            1,
+            0
+          ],
+          "to": [
+            28,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            28,
+            1,
+            1
+          ],
+          "to": [
+            28,
+            1,
+            1
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            28,
+            1,
+            2
+          ],
+          "to": [
+            28,
+            1,
+            2
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            28,
+            1,
+            3
+          ],
+          "to": [
+            28,
+            1,
+            3
+          ],
+          "material": "trim"
+        }
+      ],
+      "joints": [
+        {
+          "id": "core",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            14,
+            1,
+            0
+          ],
+          "face": "north",
+          "height": 2
+        },
+        {
+          "id": "west",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            3,
+            1,
+            0
+          ],
+          "face": "north",
+          "height": 2
+        },
+        {
+          "id": "east",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            25,
+            1,
+            0
+          ],
+          "face": "north",
+          "height": 2
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "core",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            14,
+            1,
+            0
+          ],
+          "to": [
+            14,
+            2,
+            0
+          ],
+          "retain": true
+        },
+        {
+          "joint": "west",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            3,
+            1,
+            0
+          ],
+          "to": [
+            3,
+            2,
+            0
+          ],
+          "retain": true
+        },
+        {
+          "joint": "east",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            25,
+            1,
+            0
+          ],
+          "to": [
+            25,
+            2,
+            0
+          ],
+          "retain": true
+        }
+      ]
+    },
+    "skyline:terrace_west": {
+      "size": [
+        6,
+        5,
+        17
+      ],
+      "tags": [
+        "skyline:building"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            5,
+            0,
+            16
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            5,
+            4,
+            16
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            0,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            1
+          ],
+          "to": [
+            0,
+            1,
+            1
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            2
+          ],
+          "to": [
+            0,
+            1,
+            2
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            3
+          ],
+          "to": [
+            0,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            4
+          ],
+          "to": [
+            0,
+            1,
+            4
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            5
+          ],
+          "to": [
+            0,
+            1,
+            5
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            6
+          ],
+          "to": [
+            0,
+            1,
+            6
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            7
+          ],
+          "to": [
+            0,
+            1,
+            7
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            8
+          ],
+          "to": [
+            0,
+            1,
+            8
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            9
+          ],
+          "to": [
+            0,
+            1,
+            9
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            10
+          ],
+          "to": [
+            0,
+            1,
+            10
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            11
+          ],
+          "to": [
+            0,
+            1,
+            11
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            12
+          ],
+          "to": [
+            0,
+            1,
+            12
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            13
+          ],
+          "to": [
+            0,
+            1,
+            13
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            14
+          ],
+          "to": [
+            0,
+            1,
+            14
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            15
+          ],
+          "to": [
+            0,
+            1,
+            15
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            0,
+            1,
+            16
+          ],
+          "to": [
+            0,
+            1,
+            16
+          ],
+          "material": "trim"
+        }
+      ],
+      "joints": [
+        {
+          "id": "north",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            3,
+            1,
+            0
+          ],
+          "face": "north",
+          "height": 2
+        },
+        {
+          "id": "south",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            3,
+            1,
+            17
+          ],
+          "face": "south",
+          "height": 2
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "north",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            3,
+            1,
+            0
+          ],
+          "to": [
+            3,
+            2,
+            0
+          ],
+          "retain": true
+        },
+        {
+          "joint": "south",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            3,
+            1,
+            16
+          ],
+          "to": [
+            3,
+            2,
+            16
+          ],
+          "retain": true
+        }
+      ]
+    },
+    "skyline:terrace_east": {
+      "size": [
+        6,
+        5,
+        17
+      ],
+      "tags": [
+        "skyline:building"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            5,
+            0,
+            16
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            5,
+            4,
+            16
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            5,
+            1,
+            0
+          ],
+          "to": [
+            5,
+            1,
+            0
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            1
+          ],
+          "to": [
+            5,
+            1,
+            1
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            2
+          ],
+          "to": [
+            5,
+            1,
+            2
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            3
+          ],
+          "to": [
+            5,
+            1,
+            3
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            4
+          ],
+          "to": [
+            5,
+            1,
+            4
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            5
+          ],
+          "to": [
+            5,
+            1,
+            5
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            6
+          ],
+          "to": [
+            5,
+            1,
+            6
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            7
+          ],
+          "to": [
+            5,
+            1,
+            7
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            8
+          ],
+          "to": [
+            5,
+            1,
+            8
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            9
+          ],
+          "to": [
+            5,
+            1,
+            9
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            10
+          ],
+          "to": [
+            5,
+            1,
+            10
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            11
+          ],
+          "to": [
+            5,
+            1,
+            11
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            12
+          ],
+          "to": [
+            5,
+            1,
+            12
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            13
+          ],
+          "to": [
+            5,
+            1,
+            13
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            14
+          ],
+          "to": [
+            5,
+            1,
+            14
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            15
+          ],
+          "to": [
+            5,
+            1,
+            15
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            1,
+            16
+          ],
+          "to": [
+            5,
+            1,
+            16
+          ],
+          "material": "trim"
+        }
+      ],
+      "joints": [
+        {
+          "id": "north",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            2,
+            1,
+            0
+          ],
+          "face": "north",
+          "height": 2
+        },
+        {
+          "id": "south",
+          "type": "skyline:terrace_walk",
+          "accepts": [
+            "skyline:terrace_walk"
+          ],
+          "at": [
+            2,
+            1,
+            17
+          ],
+          "face": "south",
+          "height": 2
+        }
+      ],
+      "boundaries": [
+        {
+          "joint": "north",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            2,
+            1,
+            0
+          ],
+          "to": [
+            2,
+            2,
+            0
+          ],
+          "retain": true
+        },
+        {
+          "joint": "south",
+          "role": "wall",
+          "type": "skyline:terrace_boundary",
+          "accepts": [
+            "skyline:terrace_boundary"
+          ],
+          "from": [
+            2,
+            1,
+            16
+          ],
+          "to": [
+            2,
+            2,
+            16
+          ],
+          "retain": true
+        }
+      ]
+    },
+    "skyline:mansard_room": {
+      "size": [
+        17,
+        5,
+        17
+      ],
+      "tags": [
+        "skyline:building"
+      ],
+      "fills": [
+        {
+          "from": [
+            0,
+            0,
+            0
+          ],
+          "to": [
+            16,
+            0,
+            16
+          ],
+          "material": "floor"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            16,
+            2,
+            0
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            16
+          ],
+          "to": [
+            16,
+            2,
+            16
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            0,
+            1,
+            0
+          ],
+          "to": [
+            0,
+            2,
+            16
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            16,
+            1,
+            0
+          ],
+          "to": [
+            16,
+            2,
+            16
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            1,
+            1,
+            8
+          ],
+          "to": [
+            15,
+            2,
+            8
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            8,
+            1,
+            1
+          ],
+          "to": [
+            8,
+            2,
+            15
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            6,
+            1,
+            9
+          ],
+          "to": [
+            7,
+            2,
+            9
+          ],
+          "material": "minecraft:air"
+        },
+        {
+          "from": [
+            3,
+            1,
+            0
+          ],
+          "to": [
+            4,
+            2,
+            0
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            3,
+            1,
+            16
+          ],
+          "to": [
+            4,
+            2,
+            16
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            7,
+            1,
+            0
+          ],
+          "to": [
+            8,
+            2,
+            0
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            7,
+            1,
+            16
+          ],
+          "to": [
+            8,
+            2,
+            16
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            11,
+            1,
+            0
+          ],
+          "to": [
+            12,
+            2,
+            0
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            11,
+            1,
+            16
+          ],
+          "to": [
+            12,
+            2,
+            16
+          ],
+          "material": "glass"
+        },
+        {
+          "from": [
+            0,
+            2,
+            0
+          ],
+          "to": [
+            0,
+            2,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            1,
+            2,
+            0
+          ],
+          "to": [
+            1,
+            2,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            2,
+            2,
+            0
+          ],
+          "to": [
+            2,
+            2,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            3,
+            3,
+            0
+          ],
+          "to": [
+            3,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            4,
+            3,
+            0
+          ],
+          "to": [
+            4,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            5,
+            3,
+            0
+          ],
+          "to": [
+            5,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            6,
+            4,
+            0
+          ],
+          "to": [
+            6,
+            4,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            7,
+            4,
+            0
+          ],
+          "to": [
+            7,
+            4,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            8,
+            4,
+            0
+          ],
+          "to": [
+            8,
+            4,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            9,
+            4,
+            0
+          ],
+          "to": [
+            9,
+            4,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            10,
+            4,
+            0
+          ],
+          "to": [
+            10,
+            4,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            11,
+            3,
+            0
+          ],
+          "to": [
+            11,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            12,
+            3,
+            0
+          ],
+          "to": [
+            12,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            13,
+            3,
+            0
+          ],
+          "to": [
+            13,
+            3,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            14,
+            2,
+            0
+          ],
+          "to": [
+            14,
+            2,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            15,
+            2,
+            0
+          ],
+          "to": [
+            15,
+            2,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            16,
+            2,
+            0
+          ],
+          "to": [
+            16,
+            2,
+            16
+          ],
+          "material": "trim"
+        },
+        {
+          "from": [
+            8,
+            0,
+            9
+          ],
+          "to": [
+            8,
+            4,
+            9
+          ],
+          "material": "wall"
+        },
+        {
+          "from": [
+            7,
+            0,
+            9
+          ],
+          "to": [
+            7,
+            4,
+            9
+          ],
+          "material": "minecraft:ladder[facing=west]"
+        }
+      ],
+      "joints": [
+        {
+          "id": "down",
+          "type": "skyline:stairs",
+          "accepts": [
+            "skyline:stairs"
+          ],
+          "at": [
+            7,
+            0,
+            9
+          ],
+          "face": "down",
+          "external": false,
+          "height": 1
+        },
+        {
+          "id": "up",
+          "type": "skyline:stairs",
+          "accepts": [
+            "skyline:stairs"
+          ],
+          "at": [
+            7,
+            5,
+            9
+          ],
+          "face": "up",
+          "external": false,
+          "height": 1
+        }
+      ],
+      "contract": {
+        "routes": [
+          {
+            "id": "lobby",
+            "from": [
+              8,
+              1,
+              2
+            ],
+            "to": [
+              8,
+              1,
+              8
+            ],
+            "bodyHeight": 2
+          },
+          {
+            "id": "landing",
+            "from": [
+              8,
+              1,
+              8
+            ],
+            "to": [
+              6,
+              1,
+              9
+            ],
+            "bodyHeight": 2
+          }
+        ]
+      }
+    },
     "skyline:entrance_portal": {
       "size": [
         5,
@@ -4287,15 +7767,15 @@
       }
     },
     "skyline:terrace": {
-      "minimumModules": 11,
-      "maximumModules": 11,
-      "maximumHeight": 45,
+      "minimumModules": 20,
+      "maximumModules": 20,
+      "maximumHeight": 65,
       "buildingSections": {
         "bottomCap": "minecraft:stone_bricks",
         "topCap": "minecraft:stone_bricks",
         "sections": [
           {
-            "id": "tier_0_lobby",
+            "id": "lobby",
             "floors": 1,
             "floor": "skyline:floor_29_25_ground",
             "down": "down",
@@ -4316,8 +7796,8 @@
             }
           },
           {
-            "id": "tier_0_repeat",
-            "floors": 5,
+            "id": "base",
+            "floors": 9,
             "floor": "skyline:floor_29_25_upper",
             "down": "down",
             "up": "up",
@@ -4337,9 +7817,51 @@
             }
           },
           {
-            "id": "tier_1_repeat",
+            "id": "terrace",
+            "floors": 1,
+            "floor": "skyline:terrace_transition",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "skyline:slab",
+              "accepts": [
+                "skyline:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "skyline:slab",
+              "accepts": [
+                "skyline:slab"
+              ],
+              "priority": 0
+            }
+          },
+          {
+            "id": "upper",
             "floors": 4,
-            "floor": "skyline:floor_17_17_upper",
+            "floor": "skyline:terrace_upper",
+            "down": "down",
+            "up": "up",
+            "floorBoundary": {
+              "type": "skyline:slab",
+              "accepts": [
+                "skyline:slab"
+              ],
+              "priority": 10
+            },
+            "ceilingBoundary": {
+              "type": "skyline:slab",
+              "accepts": [
+                "skyline:slab"
+              ],
+              "priority": 0
+            }
+          },
+          {
+            "id": "mansard",
+            "floors": 1,
+            "floor": "skyline:mansard_floor",
             "down": "down",
             "up": "up",
             "floorBoundary": {
@@ -4357,8 +7879,7 @@
               "priority": 0
             }
           }
-        ],
-        "roof": "skyline:roof_17_17_False"
+        ]
       }
     },
     "skyline:floor_17_17_ground": {
@@ -4545,6 +8066,392 @@
         ],
         "roof": "skyline:roof_29_25_False"
       }
+    },
+    "skyline:terrace_transition": {
+      "roots": [
+        "skyline:terrace_core"
+      ],
+      "attachments": [
+        "skyline:terrace_north",
+        "skyline:terrace_south",
+        "skyline:terrace_west",
+        "skyline:terrace_east"
+      ],
+      "entranceJoint": "down",
+      "requiredTags": [
+        "skyline:building"
+      ],
+      "minimumModules": 5,
+      "maximumModules": 5,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################",
+          "#############################"
+        ],
+        "rooms": [
+          "skyline:terrace_core",
+          "skyline:terrace_north",
+          "skyline:terrace_south",
+          "skyline:terrace_west",
+          "skyline:terrace_east"
+        ],
+        "rotations": [
+          0
+        ],
+        "ports": [
+          {
+            "id": "down",
+            "type": "skyline:stairs",
+            "at": [
+              13,
+              0,
+              13
+            ],
+            "face": "down",
+            "height": 1,
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "skyline:stairs",
+            "at": [
+              13,
+              5,
+              13
+            ],
+            "face": "up",
+            "height": 1,
+            "walkable": true
+          }
+        ],
+        "entrance": "down",
+        "mode": "fixed",
+        "placements": [
+          {
+            "module": "skyline:terrace_core",
+            "at": [
+              6,
+              0,
+              4
+            ],
+            "rotation": 0,
+            "layout": "terrace"
+          },
+          {
+            "module": "skyline:terrace_north",
+            "at": [
+              0,
+              0,
+              0
+            ],
+            "rotation": 0
+          },
+          {
+            "module": "skyline:terrace_south",
+            "at": [
+              0,
+              0,
+              21
+            ],
+            "rotation": 0
+          },
+          {
+            "module": "skyline:terrace_west",
+            "at": [
+              0,
+              0,
+              4
+            ],
+            "rotation": 0
+          },
+          {
+            "module": "skyline:terrace_east",
+            "at": [
+              23,
+              0,
+              4
+            ],
+            "rotation": 0
+          }
+        ],
+        "terraces": [
+          {
+            "id": "north",
+            "from": [
+              0,
+              0,
+              0
+            ],
+            "to": [
+              28,
+              0,
+              3
+            ],
+            "access": [
+              14,
+              1,
+              2
+            ]
+          },
+          {
+            "id": "south",
+            "from": [
+              0,
+              0,
+              21
+            ],
+            "to": [
+              28,
+              0,
+              24
+            ],
+            "access": [
+              14,
+              1,
+              22
+            ]
+          },
+          {
+            "id": "west",
+            "from": [
+              0,
+              0,
+              4
+            ],
+            "to": [
+              5,
+              0,
+              20
+            ],
+            "access": [
+              3,
+              1,
+              12
+            ]
+          },
+          {
+            "id": "east",
+            "from": [
+              23,
+              0,
+              4
+            ],
+            "to": [
+              28,
+              0,
+              20
+            ],
+            "access": [
+              25,
+              1,
+              12
+            ]
+          }
+        ]
+      }
+    },
+    "skyline:mansard_floor": {
+      "roots": [
+        "skyline:mansard_room"
+      ],
+      "attachments": [],
+      "entranceJoint": "down",
+      "requiredTags": [
+        "skyline:building"
+      ],
+      "minimumModules": 1,
+      "maximumModules": 1,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################"
+        ],
+        "rooms": [
+          "skyline:mansard_room"
+        ],
+        "rotations": [
+          0
+        ],
+        "ports": [
+          {
+            "id": "down",
+            "type": "skyline:stairs",
+            "at": [
+              7,
+              0,
+              9
+            ],
+            "face": "down",
+            "height": 1,
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "skyline:stairs",
+            "at": [
+              7,
+              5,
+              9
+            ],
+            "face": "up",
+            "height": 1,
+            "walkable": true
+          }
+        ],
+        "entrance": "down",
+        "mode": "fixed",
+        "placements": [
+          {
+            "module": "skyline:mansard_room",
+            "at": [
+              0,
+              0,
+              0
+            ],
+            "rotation": 0
+          }
+        ]
+      }
+    },
+    "skyline:terrace_upper": {
+      "roots": [
+        "skyline:terrace_core"
+      ],
+      "attachments": [],
+      "entranceJoint": "down",
+      "requiredTags": [
+        "skyline:building"
+      ],
+      "minimumModules": 1,
+      "maximumModules": 1,
+      "maximumHeight": 5,
+      "floorLayout": {
+        "height": 5,
+        "footprint": [
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################",
+          "#################"
+        ],
+        "rooms": [
+          "skyline:terrace_core"
+        ],
+        "rotations": [
+          0
+        ],
+        "ports": [
+          {
+            "id": "down",
+            "type": "skyline:stairs",
+            "at": [
+              7,
+              0,
+              9
+            ],
+            "face": "down",
+            "height": 1,
+            "walkable": true
+          },
+          {
+            "id": "up",
+            "type": "skyline:stairs",
+            "at": [
+              7,
+              5,
+              9
+            ],
+            "face": "up",
+            "height": 1,
+            "walkable": true
+          },
+          {
+            "id": "upper_facade",
+            "type": "skyline:upper_facade",
+            "at": [
+              8,
+              1,
+              0
+            ],
+            "face": "north",
+            "walkable": false
+          }
+        ],
+        "entrance": "down",
+        "minimumCounts": {
+          "skyline:terrace_core": 1
+        },
+        "maximumCounts": {
+          "skyline:terrace_core": 1
+        },
+        "mode": "fixed",
+        "placements": [
+          {
+            "module": "skyline:terrace_core",
+            "at": [
+              0,
+              0,
+              0
+            ],
+            "rotation": 0,
+            "layout": "upper"
+          }
+        ]
+      }
     }
   },
   "assets": {
@@ -4582,7 +8489,7 @@
       "provider": "modules",
       "minimumSize": 29,
       "maximumSize": 64,
-      "height": 45,
+      "height": 65,
       "parameters": {
         "composition": "skyline:terrace",
         "entrances": "skyline:residential"

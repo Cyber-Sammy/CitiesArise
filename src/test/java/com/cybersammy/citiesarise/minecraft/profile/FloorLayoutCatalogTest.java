@@ -9,6 +9,30 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FloorLayoutCatalogTest {
+    @Test void oldFrozenFloorWithoutNewFieldsRetainsAutomaticPacking() throws Exception {
+        var original=parser().parse(json()).compositions().get("zoning:cottage").floorLayout();
+        var gson=new Gson();var stored=gson.toJsonTree(original).getAsJsonObject();
+        for(var key:List.of("mode","placements","terraces"))stored.remove(key);
+        assertEquals(original,gson.fromJson(stored,FloorLayout.class));
+    }
+    @Test void authoredLayoutFieldsRejectMalformedReferencesCoordinatesAndZones() throws Exception {
+        for(String defect:List.of("mode","empty","module","layout","rotation","outside","duplicate","terrace")) {
+            var source=json();var f=source.getAsJsonObject("compositions").getAsJsonObject("zoning:cottage").getAsJsonObject("floorLayout");
+            f.addProperty("mode","fixed");f.add("placements",JsonParser.parseString("[{\"module\":\"zoning:room_main\",\"at\":[0,0,0],\"rotation\":0}]"));
+            var pose=f.getAsJsonArray("placements").get(0).getAsJsonObject();
+            switch(defect) {
+                case "mode" -> f.addProperty("mode","unknown");
+                case "empty" -> f.add("placements",new JsonArray());
+                case "module" -> pose.addProperty("module","unknown");
+                case "layout" -> pose.addProperty("layout","unknown");
+                case "rotation" -> pose.addProperty("rotation",4);
+                case "outside" -> pose.add("at",JsonParser.parseString("[31,0,31]"));
+                case "duplicate" -> f.getAsJsonArray("placements").add(pose.deepCopy());
+                case "terrace" -> f.add("terraces",JsonParser.parseString("[{\"id\":\"bad\",\"from\":[0,0,0],\"to\":[1,1,1],\"access\":[0,1,0]}]"));
+            }
+            assertThrows(RuntimeException.class,()->parser().parse(source),defect);
+        }
+    }
     private static JsonObject json() throws Exception{return JsonParser.parseString(Files.readString(Path.of("examples/datapacks/zoning_fixture/data/zoning/content_catalogs/fixture.json"))).getAsJsonObject();}
     private static ContentCatalogParser parser(){return new ContentCatalogParser((id,d,e)->{throw new java.io.IOException("No template expected");});}
     @Test void demoRoomsAndInteriorAssembleInEveryOrientation() throws Exception {

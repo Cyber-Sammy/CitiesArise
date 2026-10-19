@@ -1,5 +1,7 @@
 # Cities Arise
 
+Floor recipes now support fixed and mixed authored room placements, special section floors, guarded accessible terraces and habitable mansard modules. See [Authored floors](examples/datapacks/composition_fixture/AUTHORED_FLOORS.md); Skyline includes a sixteen-floor terrace/mansard example.
+
 Datapack-defined placement zones let kiosks, small shops, gazebos and shelters
 share existing parcels and streets. Hosted structures use ordinary modules and
 palettes, with category, height, count, probability and setback rules. Sidewalk

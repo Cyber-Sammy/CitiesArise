@@ -148,6 +148,98 @@ for name, tiers, crown in BUILDINGS:
     catalog['assets'][identifier] = dict(provider='modules', minimumSize=max(tiers[0][:2]), maximumSize=64, height=height,
                                         parameters={'composition': identifier, 'entrances': 'skyline:residential'})
 
+# A complete authored example: 10 base floors, one terrace level, four reduced
+# floors and a habitable mansard. Fixed poses use the same room solver and contracts.
+def authored_terrace_house():
+    base_w, base_d = 29, 25
+    core_id = 'skyline:terrace_core'
+    core = copy.deepcopy(catalog['modules']['skyline:floor_17_17'])
+    core['layouts'] = [l for l in core['layouts'] if l['id']=='upper'] + [dict(id='terrace',weight=1)]
+    for j in core['joints']:
+        if j['id'] in ['entry', 'service']:
+            j.update(type='skyline:terrace_walk', accepts=['skyline:terrace_walk'], external=False)
+    for z in [1, 15]:
+        core['fills'] += [fill([8, 1, z], [8, 1, z], 'door_lower'), fill([8, 2, z], [8, 2, z], 'door_upper')]
+    def boundary(j, depth):
+        at = list(j['at']); at[2] = min(at[2], depth-1)
+        return dict(joint=j['id'], role='wall', type='skyline:terrace_boundary', accepts=['skyline:terrace_boundary'],
+                    **{'from': at, 'to': [at[0], 2, at[2]]}, retain=True)
+    core['layouts'][0]['boundaries'] = []
+    core['boundaries'] = [boundary(j, 17) for j in core['joints'] if j['id'] in ['entry', 'service']]
+    catalog['modules'][core_id] = core
+    poses = [dict(module=core_id, at=[6, 0, 4], rotation=0, layout='terrace')]
+    terrace_zones = []
+    specs = [('north', 29, 4, 0, 0), ('south', 29, 4, 0, 21),
+             ('west', 6, 17, 0, 4), ('east', 6, 17, 23, 4)]
+    for side, w, d, ox, oz in specs:
+        name = 'skyline:terrace_' + side
+        fs = [fill([0, 0, 0], [w-1, 0, d-1], 'floor'), fill([0,1,0],[w-1,4,d-1],'minecraft:air')]
+        # Outer edges have solid one-block guards; all inner joins remain walkable.
+        for x in range(w):
+            for z in range(d):
+                if ox+x in [0, 28] or oz+z in [0, 24]:
+                    fs.append(fill([x, 1, z], [x, 1, z], 'trim'))
+        def walk(name, x, z, face):
+            return dict(id=name, type='skyline:terrace_walk', accepts=['skyline:terrace_walk'], at=[x, 1, z], face=face, height=2)
+        if side == 'north':
+            js = [walk('core', 14, d, 'south'), walk('west', 3, d, 'south'), walk('east', 25, d, 'south')]
+            access = [14, 1, 2]
+        elif side == 'south':
+            js = [walk('core', 14, 0, 'north'), walk('west', 3, 0, 'north'), walk('east', 25, 0, 'north')]
+            access = [14, 1, 22]
+        else:
+            x = 3 if side == 'west' else 2
+            js = [walk('north', x, 0, 'north'), walk('south', x, d, 'south')]
+            access = [ox+x, 1, oz+8]
+        catalog['modules'][name] = dict(size=[w, 5, d], tags=['skyline:building'], fills=fs, joints=js, boundaries=[boundary(j,d) for j in js])
+        poses.append(dict(module=name, at=[ox, 0, oz], rotation=0))
+        terrace_zones.append(dict(id=side, **{'from': [ox, 0, oz], 'to': [ox+w-1, 0, oz+d-1]}, access=access))
+    ports = [dict(id=j['id'], type=j['type'], at=j['at'], face=j['face'], height=1, walkable=True)
+             for j in core['joints'] if j['id'] in ['down', 'up']]
+    catalog['compositions']['skyline:terrace_transition'] = dict(roots=[core_id], attachments=[p['module'] for p in poses[1:]],
+        entranceJoint='down', requiredTags=['skyline:building'], minimumModules=5, maximumModules=5, maximumHeight=5,
+        floorLayout=dict(height=5, footprint=['#'*29]*25, rooms=[p['module'] for p in poses], rotations=[0],
+                         ports=[dict(p, at=[p['at'][0]+6,p['at'][1],p['at'][2]+4]) for p in ports], entrance='down', mode='fixed', placements=poses, terraces=terrace_zones))
+    attic_id = 'skyline:mansard_room'
+    attic = copy.deepcopy(catalog['modules']['skyline:floor_17_17'])
+    attic.pop('layouts')
+    attic['joints'] = [j for j in attic['joints'] if j['id'] in ['down', 'up']]
+    attic['fills'] = [fill([0,0,0],[16,0,16],'floor'),
+        fill([0,1,0],[16,2,0],'wall'), fill([0,1,16],[16,2,16],'wall'),
+        fill([0,1,0],[0,2,16],'wall'), fill([16,1,0],[16,2,16],'wall'),
+        fill([1,1,8],[15,2,8],'minecraft:air'), fill([8,1,1],[8,2,15],'minecraft:air'),
+        fill([6,1,9],[7,2,9],'minecraft:air')]
+    for x in [3,7,11]:
+        for z in [0,16]:
+            attic['fills'].append(fill([x,1,z],[x+1,2,z],'glass'))
+    for x in range(17):
+        y = 2 if x < 3 or x > 13 else 3 if x < 6 or x > 10 else 4
+        attic['fills'].append(fill([x, y, 0], [x, y, 16], 'trim'))
+    attic['fills'] += [fill([8, 0, 9], [8, 4, 9], 'wall'), fill([7, 0, 9], [7, 4, 9], 'minecraft:ladder[facing=west]')]
+    catalog['modules'][attic_id] = attic
+    catalog['compositions']['skyline:mansard_floor'] = dict(roots=[attic_id], attachments=[], entranceJoint='down',
+        requiredTags=['skyline:building'], minimumModules=1, maximumModules=1, maximumHeight=5,
+        floorLayout=dict(height=5, footprint=['#'*17]*17, rooms=[attic_id], rotations=[0], ports=[dict(p) for p in ports], entrance='down',
+                         mode='fixed', placements=[dict(module=attic_id, at=[0, 0, 0], rotation=0)]))
+    upper = copy.deepcopy(catalog['compositions'][floor(17,17,False)])
+    upper['roots'] = [core_id]
+    upper['floorLayout'].update(rooms=[core_id], mode='fixed', minimumCounts={core_id:1}, maximumCounts={core_id:1},
+                               placements=[dict(module=core_id,at=[0,0,0],rotation=0,layout='upper')])
+    catalog['compositions']['skyline:terrace_upper'] = upper
+    slab = dict(type='skyline:slab', accepts=['skyline:slab'])
+    def section(name, count, recipe):
+        return dict(id=name, floors=count, floor=recipe, down='down', up='up',
+                    floorBoundary=dict(slab, priority=10), ceilingBoundary=dict(slab, priority=0))
+    sections = [section('lobby', 1, floor(29,25,True)), section('base', 9, floor(29,25,False)),
+                section('terrace', 1, 'skyline:terrace_transition'), section('upper', 4, 'skyline:terrace_upper'),
+                section('mansard', 1, 'skyline:mansard_floor')]
+    catalog['compositions']['skyline:terrace'] = dict(minimumModules=20, maximumModules=20, maximumHeight=65,
+        buildingSections=dict(bottomCap='minecraft:stone_bricks', topCap='minecraft:stone_bricks', sections=sections))
+    catalog['assets']['skyline:terrace']['height'] = 65
+
+
+authored_terrace_house()
+
 for name, wall, trim, glass, accent in [
     ('limestone', 'smooth_sandstone', 'cut_sandstone', 'light_blue_stained_glass', 'gold_block'),
     ('brick', 'bricks', 'polished_andesite', 'gray_stained_glass', 'copper_block'),
@@ -247,7 +339,7 @@ def write(relative, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2)+'\n', encoding='utf-8')
 
-write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad towers, modular sidewalks, entrance groups and hosted kiosks, gazebos and shelters')))
+write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad towers, authored terraces and mansards, modular sidewalks, entrances and hosted structures')))
 write('data/skyline/content_catalogs/city.json', catalog)
 write('data/cities_arise/settlement_profiles/suburb.json', profile)
 # Every local owner must have the same deterministic start opportunity. Per-owner

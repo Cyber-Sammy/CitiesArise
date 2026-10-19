@@ -142,3 +142,5 @@ The matching mod build reads "planning.streets" from the settlement profile. Sky
 Courtyard access starts at the actual sidewalk edge. A height difference uses stone-brick stairs followed by a level landing and yard path. The first block at the sidewalk remains level. Routes that cannot fit the required rise and landing are rejected. Building entrance groups and kiosk placement zones are separate planned stages.
 
 Use this updated ZIP together with the updated JAR. Existing saved city layouts remain frozen; test the new layout in a new world or newly generated city area.
+
+The `skyline:terrace` tower now demonstrates ten base floors, an authored terrace level with real doors and guards, four reduced upper floors and a habitable mansard. Its fixed room poses and terrace zones are defined in the catalog, using the same compatibility and circulation checks as automatic floors. Update both JAR and ZIP and generate a new city area. Authoring details: [Authored floors](../composition_fixture/AUTHORED_FLOORS.md).

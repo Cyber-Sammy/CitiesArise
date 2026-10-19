@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "carriageway": 11,
+  "deckDepth": 2,
+  "clearance": 5,
+  "runPerRise": 6,
+  "pierSpacing": 8,
+  "maximumSpan": 24,
+  "maximumSupportDepth": 16,
+  "materials": {
+    "road": "minecraft:polished_deepslate",
+    "deck": "minecraft:stone_bricks",
+    "pier": "minecraft:stone_bricks",
+    "rail": "minecraft:stone_brick_wall",
+    "stair": "minecraft:stone_brick_stairs"
+  },
+  "streets": {
+    "sectionLength": 32,
+    "centerMaterial": "minecraft:yellow_concrete",
+    "vergeMaterial": "minecraft:smooth_stone",
+    "modules": [
+      {"id": "road_demo:sidewalk", "weight": 1, "leftWidth": 2, "rightWidth": 2, "material": "minecraft:smooth_stone"}
+    ]
+  },
+  "nodes": [
+    {"id": "road_demo:west", "x": -84, "y": 0, "z": 0},
+    {"id": "road_demo:upper_west", "x": -20, "y": 7, "z": 0},
+    {"id": "road_demo:upper_east", "x": 20, "y": 7, "z": 0},
+    {"id": "road_demo:east", "x": 84, "y": 0, "z": 0},
+    {"id": "road_demo:south", "x": 0, "y": 0, "z": -36},
+    {"id": "road_demo:lower_center", "x": 0, "y": 0, "z": 0},
+    {"id": "road_demo:north", "x": 0, "y": 0, "z": 36}
+  ],
+  "roads": [
+    {"id": "road_demo:approach_west", "from": "road_demo:west", "to": "road_demo:upper_west", "elevated": true},
+    {"id": "road_demo:span", "from": "road_demo:upper_west", "to": "road_demo:upper_east", "elevated": true},
+    {"id": "road_demo:approach_east", "from": "road_demo:upper_east", "to": "road_demo:east", "elevated": true},
+    {"id": "road_demo:lower_south", "from": "road_demo:south", "to": "road_demo:lower_center", "elevated": false},
+    {"id": "road_demo:lower_north", "from": "road_demo:lower_center", "to": "road_demo:north", "elevated": false}
+  ]
+}

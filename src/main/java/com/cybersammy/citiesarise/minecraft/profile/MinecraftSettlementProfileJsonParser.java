@@ -280,7 +280,7 @@ public final class MinecraftSettlementProfileJsonParser {
         );
     }
 
-    private static com.cybersammy.citiesarise.core.road.StreetSectionSettings parseStreets(JsonObject planning) {
+    static com.cybersammy.citiesarise.core.road.StreetSectionSettings parseStreets(JsonObject planning) {
         var disabled=com.cybersammy.citiesarise.core.road.StreetSectionSettings.disabled();
         if(!planning.has("streets"))return disabled;
         var street=requiredObject(planning,"streets");var modules=new java.util.ArrayList<com.cybersammy.citiesarise.core.road.StreetSectionSettings.Module>();

@@ -10,7 +10,17 @@ public record BuildingContentSettings(List<Entry> pool, List<String> palettes, B
         List<com.cybersammy.citiesarise.core.content.PropRule> props,
         java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> surfaceTemplates, List<BuildingContentRule> rules,
         List<com.cybersammy.citiesarise.core.content.ParcelContentRule> parcelRules,
-        java.util.Map<String,com.cybersammy.citiesarise.core.content.EntranceSettings> entrances) {
+        java.util.Map<String,com.cybersammy.citiesarise.core.content.EntranceSettings> entrances,
+        List<com.cybersammy.citiesarise.core.content.PlacementZoneRule> placementZones) {
+    public BuildingContentSettings(List<Entry> pool,List<String> palettes,BuildingAsset fallback,
+            java.util.Map<String,java.util.Map<String,String>> definitions,
+            java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions,
+            java.util.Map<String,String> surfaces,List<com.cybersammy.citiesarise.core.content.PropRule> props,
+            java.util.Map<String,com.cybersammy.citiesarise.core.content.SurfaceTemplate> templates,List<BuildingContentRule> rules,
+            List<com.cybersammy.citiesarise.core.content.ParcelContentRule> parcelRules,
+            java.util.Map<String,com.cybersammy.citiesarise.core.content.EntranceSettings> entrances) {
+        this(pool,palettes,fallback,definitions,compositions,surfaces,props,templates,rules,parcelRules,entrances,List.of());
+    }
     public BuildingContentSettings(List<Entry> pool,List<String> palettes,BuildingAsset fallback,
             java.util.Map<String,java.util.Map<String,String>> definitions,
             java.util.Map<String,com.cybersammy.citiesarise.core.content.CompositionSettings> compositions,
@@ -45,6 +55,13 @@ public record BuildingContentSettings(List<Entry> pool, List<String> palettes, B
         this(pool,palettes,fallback,definitions,compositions,surfaces,List.of());
     }
     public BuildingContentSettings {
+        placementZones=placementZones==null?List.of():List.copyOf(placementZones);
+        if(placementZones.size()>32 || placementZones.stream().map(com.cybersammy.citiesarise.core.content.PlacementZoneRule::id).distinct().count()!=placementZones.size())
+            throw new IllegalArgumentException("Placement zones allow at most 32 unique ids");
+        for(var prop:props)if(prop.zoneAnchor())for(var zoneId:prop.hostZone().zones()) {
+            var zone=placementZones.stream().filter(z->z.id().equals(zoneId)).findFirst().orElseThrow(()->new IllegalArgumentException("Unknown prop placement zone: "+zoneId));
+            if(!zone.categories().contains(prop.hostZone().category()))throw new IllegalArgumentException("Prop category is not permitted by zone: "+zoneId);
+        }
         entrances=entrances==null?java.util.Map.of():java.util.Map.copyOf(entrances);
         if(entrances.size()>64)throw new IllegalArgumentException("Too many entrance groups");
         var allAssets=new java.util.ArrayList<BuildingAsset>();pool.forEach(e->allAssets.add(e.asset()));allAssets.add(fallback);

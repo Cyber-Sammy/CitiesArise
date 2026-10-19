@@ -23,7 +23,8 @@ class SkylineCatalogTest {
     @Test void frozenProfileFitsTheExistingExpandedBudget() throws Exception {
         var gson=new GsonBuilder().serializeNulls().enableComplexMapKeySerialization().registerTypeHierarchyAdapter(Optional.class,
             (JsonSerializer<Optional<?>>)(value,type,context)->value.isPresent()?context.serialize(value.orElseThrow()):JsonNull.INSTANCE).create();
-        var length=gson.toJson(profile()).length();
+        var serialized=gson.toJson(profile());var length=serialized.length();
+        Files.writeString(Path.of("build/skyline-expanded-profile.json"),serialized);
         Files.writeString(Path.of("build/skyline-expanded-size.txt"),Integer.toString(length));
         assertTrue(length+512<2097152,"Expanded profile: "+length);
     }
@@ -88,6 +89,13 @@ class SkylineCatalogTest {
             assertTrue(entry.composition().modules().stream().noneMatch(m->building.composition().orElseThrow().modules().containsKey(m.id())),"Entrance module belongs to a floor recipe");
         long low=result.content().selections().values().stream().filter(s->s.rule().equals("skyline:lowrise")).count();
         assertEquals(2,low,counts.toString());
+        var hosted=result.content().props().stream().filter(p->p.zonePlacement().isPresent()).toList();
+        var kinds=hosted.stream().map(p->p.zonePlacement().orElseThrow().host()).collect(java.util.stream.Collectors.toSet());
+        assertTrue(kinds.contains(PlacementZoneRule.Host.PARCEL),"No hosted kiosks");
+        assertTrue(kinds.contains(PlacementZoneRule.Host.SIDEWALK),"No furniture in spare sidewalk width");
+        assertTrue(hosted.stream().anyMatch(p->p.ruleId().equals("skyline:gazebos")),"No shared/edge shelter");
+        var summary=hosted.stream().collect(java.util.stream.Collectors.groupingBy(ResolvedProp::ruleId,java.util.stream.Collectors.counting()));
+        Files.writeString(Path.of("build/skyline-maf-summary.txt"),summary.toString());
         Files.writeString(Path.of("build/skyline-city-summary.txt"),"Parcels: "+city.parcels().size()+"; districts: "+city.districts().size()+"; buildings: "+counts);
     }
     @Test void entranceBindingsRejectUnknownGroupsAndMissingModulePorts() throws Exception {
@@ -97,5 +105,17 @@ class SkylineCatalogTest {
         assertThrows(IllegalArgumentException.class,()->parser.parse(badGroup));
         var badPort=json.deepCopy();badPort.getAsJsonObject("entranceGroups").getAsJsonObject("skyline:residential").getAsJsonArray("requests").get(0).getAsJsonObject().addProperty("outsideJoint","missing");
         assertThrows(IllegalArgumentException.class,()->parser.parse(badPort));
+    }
+    @Test void hostedPropsRejectUnknownZonesCategoriesAndWeights() throws Exception {
+        var json=JsonParser.parseString(Files.readString(DATA.resolve("skyline/content_catalogs/city.json"))).getAsJsonObject();
+        var parser=new ContentCatalogParser((id,dir,ext)->{throw new java.io.IOException("No external resources expected");});
+        var unknown=json.deepCopy();unknown.getAsJsonObject("props").getAsJsonObject("skyline:kiosks").getAsJsonObject("hostZone").add("zones",JsonParser.parseString("[\"unknown:zone\"]"));
+        assertThrows(IllegalArgumentException.class,()->parser.parse(unknown));
+        var category=json.deepCopy();category.getAsJsonObject("props").getAsJsonObject("skyline:kiosks").getAsJsonObject("hostZone").addProperty("category","incompatible");
+        assertThrows(IllegalArgumentException.class,()->parser.parse(category));
+        var weight=json.deepCopy();weight.getAsJsonObject("props").getAsJsonObject("skyline:kiosks").getAsJsonObject("hostZone").getAsJsonObject("weights").addProperty("unknown:module",3);
+        assertThrows(IllegalArgumentException.class,()->parser.parse(weight));
+        var fractional=json.deepCopy();fractional.getAsJsonArray("placementZones").get(0).getAsJsonObject().addProperty("maximumCount",1.5);
+        assertThrows(IllegalArgumentException.class,()->parser.parse(fractional));
     }
 }

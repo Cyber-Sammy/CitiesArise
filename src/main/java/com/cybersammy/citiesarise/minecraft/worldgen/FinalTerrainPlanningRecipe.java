@@ -47,7 +47,9 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
         var packed=new com.google.gson.JsonObject();packed.add("recipe",tree);packed.add("moduleTables",references);packed.add("moduleDefinitions",definitions);
         var tag=new CompoundTag();tag.putInt("Version",4);var list=new ListTag();String text=packed.toString();
         if(text.length()>MAX_STORED_CHARACTERS) throw new IllegalArgumentException("Final terrain recipe too large: "+text.length());
-        expand(tree.deepCopy(),tables,new long[]{0,text.length()},0,true); // Save and reload enforce identical expansion budgets.
+        // The stored dictionary is bounded separately. Count the recipe being expanded,
+        // rather than charging its shared definitions once here and again at every reference.
+        expand(tree.deepCopy(),tables,new long[]{0,tree.toString().length()},0,true);
         for(int i=0;i<text.length();i+=PART_SIZE) list.add(StringTag.valueOf(text.substring(i,Math.min(i+PART_SIZE,text.length()))));
         tag.put("Json",list);return tag;
     }
@@ -141,7 +143,7 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
             if(!packed.has("moduleDefinitions") || !packed.get("moduleDefinitions").isJsonArray())throw new IllegalArgumentException("Missing final recipe definitions");
             tables=definitionTables(tables,packed.getAsJsonArray("moduleDefinitions"));
         }
-        var tree=packed.get("recipe");expand(tree,tables,new long[]{0,text.length()},0,version>=3);
+        var tree=packed.get("recipe");expand(tree,tables,new long[]{0,tree.toString().length()},0,version>=3);
         return JSON.fromJson(tree,FinalTerrainPlanningRecipe.class);
     }
 }

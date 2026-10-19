@@ -1,5 +1,11 @@
 # Skyline
 
+Independent hosted modules add brick/light kiosks, gazebos and thin bus shelters.
+They share allowed forecourt, boundary, communal and spare sidewalk zones without
+allocating extra plots. Busy entrances, fences, narrow sidewalks and unsuitable
+terrain keep priority, so these optional objects do not appear everywhere.
+Install the matching updated mod JAR and Skyline ZIP, then test a newly generated city.
+
 A standalone Cities Arise content pack for a dense centre with broad skyscrapers,
 recessed glazing, projecting vertical piers, cornice bands, roof parapets and crowns.
 All blocks are vanilla Minecraft blocks. Requires the current Cities Arise constructor

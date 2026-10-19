@@ -73,7 +73,8 @@ public final class EntranceGameTests {
         for(var chunk:chunks)helper.getLevel().getChunk(chunk.x(),chunk.z());
         for(var chunk:chunks)new WorldgenPlacementApplier().apply(helper.getLevel(),slices.slice(chunk));
         var provider=new VanillaDebugBlockMaterialProvider();int doors=0;
-        for(var op:restored.operations())if(op.material().contains("oak_door")) {
+        var slotIds=city.buildingSlots().stream().map(BuildingSlot::id).collect(java.util.stream.Collectors.toSet());
+        for(var op:restored.operations())if(op.material().contains("oak_door") && slotIds.contains(op.sourceElementId())) {
             var pos=new BlockPos(op.point().x(),op.platformY().orElseThrow()+op.verticalOffset(),op.point().z());
             var state=helper.getLevel().getBlockState(pos);helper.assertTrue(state.equals(provider.blockState(op)),"Rotated entrance door differs at "+pos);
             helper.assertTrue(state.getBlock() instanceof DoorBlock && state.canSurvive(helper.getLevel(),pos),"Unsupported door half at "+pos);doors++;

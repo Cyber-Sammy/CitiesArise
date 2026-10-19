@@ -38,6 +38,7 @@ final class SurfacePropPlanner {
         }
         List<ResolvedProp> result=new ArrayList<>();
         for(PropRule rule:rules) {
+            if(rule.zoneAnchor())continue;
             List<Anchor> anchors=new ArrayList<>();
             if(rule.parcelAnchor()) for(var parcel:plan.parcels()) {
                 var binding=parcels.get(parcel.id());
@@ -90,13 +91,9 @@ final class SurfacePropPlanner {
                         }
                     }
                     if(!fits) continue;
-                    var composition=CompositionAssembler.standalone(module,rule.severity(),rule.airMaterial(),seed^anchor.source.value().hashCode());
-                    if(composition.isEmpty()) continue;
-                    composition=new NestedCompositionResolver(rule.definitions(),rule.materialRules(),
-                            m -> m.tags().containsAll(rule.requiredTags()) && Collections.disjoint(m.tags(),rule.forbiddenTags()),
-                            rule.airMaterial(),rule.severity(),seed^anchor.source.value().hashCode()).resolve(composition.get());
-                    if(composition.isEmpty()) continue;
-                    var resolved=turn==0?composition.get():ParcelPropLayout.rotate(composition.get(),module.size(),turn,rule.definitions());
+                    var composition=PropCompositionResolver.resolve(rule,module,turn,seed^anchor.source.value().hashCode());
+                    if(composition.isEmpty())continue;
+                    var resolved=composition.orElseThrow();
                     result.add(new ResolvedProp(rule.id(),anchor.source,new Vec(origin.x(),1,origin.z()),height,resolved,rule.materials()));
                     accepted.merge(anchor.source,1,Integer::sum);
                     occupied.addAll(footprint);

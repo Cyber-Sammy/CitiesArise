@@ -8,7 +8,14 @@ import java.util.*;
 public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buildings,
         Map<String, String> placementMaterials, List<ResolvedProp> props,
         Map<String, SurfaceTemplate> surfaceTemplates, Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection> selections,
-        Map<PlanElementId,ResolvedParcelContent> parcels, com.cybersammy.citiesarise.core.parcel.ParcelBoundaryPlan boundaries) {
+        Map<PlanElementId,ResolvedParcelContent> parcels, com.cybersammy.citiesarise.core.parcel.ParcelBoundaryPlan boundaries,
+        List<ResolvedPlacementZone> placementZones) {
+    public ResolvedSettlementContent(Map<PlanElementId,BuildingContent> buildings,Map<String,String> materials,
+            List<ResolvedProp> props,Map<String,SurfaceTemplate> templates,
+            Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection> selections,
+            Map<PlanElementId,ResolvedParcelContent> parcels,com.cybersammy.citiesarise.core.parcel.ParcelBoundaryPlan boundaries) {
+        this(buildings,materials,props,templates,selections,parcels,boundaries,List.of());
+    }
     public ResolvedSettlementContent(Map<PlanElementId,BuildingContent> buildings,Map<String,String> materials,
             List<ResolvedProp> props,Map<String,SurfaceTemplate> templates,
             Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection> selections,
@@ -26,6 +33,8 @@ public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buil
     }
     public static final ResolvedSettlementContent EMPTY = new ResolvedSettlementContent(Map.of(), Map.of(), List.of(), Map.of());
     public ResolvedSettlementContent {
+        placementZones=placementZones==null?List.of():List.copyOf(placementZones);
+        if(placementZones.size()>1024)throw new IllegalArgumentException("Too many resolved placement zones");
         java.util.Objects.requireNonNull(boundaries);
         parcels = Map.copyOf(parcels);
         selections = Map.copyOf(selections);
@@ -77,6 +86,18 @@ public record ResolvedSettlementContent(Map<PlanElementId, BuildingContent> buil
         });
         for (var prop : props) if (!ids.contains(prop.source()))
             throw new IllegalArgumentException("Unknown prop source: " + prop.source().value());
+        for(var zone:placementZones)if(!ids.contains(zone.source()))throw new IllegalArgumentException("Unknown placement zone host");
+        for(var prop:props)if(prop.zonePlacement().isPresent()) {
+            var placement=prop.zonePlacement().orElseThrow();
+            var zone=placementZones.stream().filter(z->z.source().equals(prop.source()) && z.rule().id().equals(placement.zone())).findFirst()
+                    .orElseThrow(()->new IllegalArgumentException("Hosted prop references an unknown placement zone"));
+            for(var cell:prop.composition().cells())if(!zone.allowed().contains(new com.cybersammy.citiesarise.core.geometry.GridPoint(
+                    prop.origin().x()+cell.position().x(),prop.origin().z()+cell.position().z()))
+                    || cell.position().y()+prop.origin().y()<0 || cell.position().y()+prop.origin().y()>=zone.rule().maximumHeight())
+                throw new IllegalArgumentException("Hosted prop exceeds its permitted zone");
+            if(placement.path().stream().anyMatch(p->p.y()!=prop.platformY() || !placement.reserved().contains(p.point())))
+                throw new IllegalArgumentException("Hosted prop access exceeds its prepared surface");
+        }
         var deck = surfaceTemplates.get("BRIDGE_DECK");
         if (deck != null && plan.roadGraph().bridges().stream().anyMatch(b -> deck.size().y() > b.deckDepth()))
             throw new IllegalArgumentException("Bridge deck template exceeds reserved deckDepth");

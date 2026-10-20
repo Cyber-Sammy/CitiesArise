@@ -15,13 +15,22 @@ final class CityOverpassPlacement {
             for(var op:LayeredRoadPlacement.materialize(module).operations()) {
                 var old=operations.get(key(op));
                 if(old!=null && !old.material().equals("minecraft:air") && !old.material().equals(op.material())) {
+                    // Validated decks and piers replace their earthwork substrate, never occupied content.
+                    if((op.role()==DebugPlacementRole.BRIDGE_DECK || op.role()==DebugPlacementRole.BRIDGE_PIER)
+                            && earthwork(old.role())) {operations.put(key(op),op);continue;}
                     if(landings.contains(op.point()) && (op.role()==DebugPlacementRole.BRIDGE_DECK || op.role()==DebugPlacementRole.BRIDGE_CLEARANCE))continue;
-                    throw new IllegalArgumentException("City overpass overlaps occupied content at "+key(op));
+                    throw new IllegalArgumentException("City overpass overlaps occupied content at "+key(op)
+                            +": "+old.role()+"/"+old.material()+" vs "+op.role()+"/"+op.material());
                 }
                 operations.put(key(op),op);
             }
         }
         return new DebugPlacementPlan(List.copyOf(operations.values()));
+    }
+    private static boolean earthwork(DebugPlacementRole role) {
+        return role==DebugPlacementRole.TERRAIN_FILL || role==DebugPlacementRole.TERRAIN_SURFACE
+                || role==DebugPlacementRole.TERRAIN_CUT_SURFACE || role==DebugPlacementRole.TERRAIN_RETAINING_WALL
+                || role==DebugPlacementRole.SUPPORT_LINING;
     }
     private static String key(DebugBlockPlacementOperation op) {
         return op.point().x()+":"+(op.platformY().orElseThrow()+op.verticalOffset())+":"+op.point().z();

@@ -123,9 +123,8 @@ public final class CityOverpassPlanner {
             var prop=occupied.get(point);
             if(prop!=null && prop.getMax()>=base+column.bottomY() && prop.getMin()<=base+column.walkingY()+layout.clearance())
                 throw new IllegalArgumentException("Overpass intersects hosted content");
-            var old=prepared.get(point);int bottom=base+column.bottomY(),top=base+column.walkingY()+layout.clearance();
-            if(old!=null && !(pending.landing(column) && old.targetElevation()==base)
-                    && bottom<=old.targetElevation()+layout.clearance() && top>=old.targetElevation())throw new IllegalArgumentException("Overpass blocks ground circulation");
+            var old=prepared.get(point);
+            if(conflictsWithGround(pending,column,old))throw new IllegalArgumentException("Overpass blocks ground circulation or earthwork");
             if(cell.height()-1>base+column.surfaceY())throw new IllegalArgumentException("Overpass deck intersects terrain");
         }
         var footings=new ArrayList<CityOverpassPlan.Footing>();
@@ -140,7 +139,7 @@ public final class CityOverpassPlanner {
                     int contact=Math.min(top,request.survey().findCell(p).orElseThrow().height()-1);
                     var old=prepared.get(p);var prop=occupied.get(p);
                     if(prop!=null && prop.getMax()>=contact+1 && prop.getMin()<=top){allowed=false;break;}
-                    if(top-contact>layout.maximumSupportDepth() || old!=null && !pending.landing(col)
+                    if(top-contact>layout.maximumSupportDepth() || old!=null && circulation(old) && !pending.landing(col)
                             && top>=old.targetElevation()-1 && contact+1<=old.targetElevation()+layout.clearance()) {allowed=false;break;}
                     rowFootings.add(new CityOverpassPlan.Footing(road.id(),col.point(),contact+1-base,top-base));
                 }
@@ -155,5 +154,22 @@ public final class CityOverpassPlanner {
                 || volume+ground.terrainPreparationPlan().orElseThrow().constructionVolume()>request.settings().maxEarthworkVolume())
             throw new IllegalArgumentException("Overpass construction budget");
         return new CityOverpassPlan(id,layout,origin,base,c.a().id(),c.b().id(),request.seed(),footings);
+    }
+    static boolean conflictsWithGround(CityOverpassPlan module,LayeredRoadTopology.Column column,TerrainPreparationColumn old) {
+        if(old==null)return false;
+        if(!circulation(old)) {
+            // Earthwork has solid volume, but does not reserve a vehicle/pedestrian headroom envelope.
+            return old.targetElevation()>=module.baseY()+column.bottomY()
+                    && !(module.landing(column) && old.targetElevation()<=module.baseY());
+        }
+        return !(module.landing(column) && old.targetElevation()==module.baseY())
+                && module.baseY()+column.bottomY()<=old.targetElevation()+module.layout().clearance()
+                && module.baseY()+column.walkingY()+module.layout().clearance()>=old.targetElevation();
+    }
+    private static boolean circulation(TerrainPreparationColumn column) {
+        return switch(column.type()) {
+            case PLATFORM,ROAD_TRANSITION_STEP,BUILDING_ACCESS,BUILDING_ACCESS_STEP -> true;
+            case FILL_SLOPE,CUT_SLOPE,BUILDING_SHOULDER,PARCEL_SHOULDER,ROAD_SHOULDER,RETAINING_WALL -> false;
+        };
     }
 }

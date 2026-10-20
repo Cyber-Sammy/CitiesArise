@@ -41,7 +41,7 @@ neoForge {
 
         gameTestServer {
             type = 'gameTestServer'
-            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id + ',cities_arise_readiness'
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id + ',cities_arise_readiness,cities_arise_roads'
         }
 
         seedSearch {
@@ -98,6 +98,12 @@ tasks.named('processGameTestResources') {
     from('examples/datapacks/zoning_fixture') {
         include 'data/zoning/**'
     }
+    from('examples/datapacks/road_topology') {
+        include 'data/road_demo/**'
+    }
+    from('src/gameTest/resources/data/cities_arise/structure') {
+        into 'data/cities_arise_roads/structure'
+    }
 }
 
 dependencies {
@@ -144,4 +150,12 @@ publishing {
             from components.java
         }
     }
+}
+
+tasks.register('roadTopologyDatapack', Zip) {
+    from('examples/datapacks/road_topology')
+    archiveFileName = 'road_topology.zip'
+    destinationDirectory = layout.buildDirectory.dir('distributions')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
 }

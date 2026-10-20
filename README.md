@@ -286,6 +286,14 @@ cities_arise:suburb
 
 The built-in profile is stored at `data/cities_arise/settlement_profiles/suburb.json`. A datapack can add another profile with the same JSON shape and set `debugSettlementProfileId` to that profile id. Profiles can change planning dimensions, earthwork limits, and terrain-response policy. If the configured debug profile is missing or invalid, the planner falls back to the numeric debug config values. Automatic world generation fails closed when its selected profile is missing or invalid.
 
+## Authored layered roads
+
+The optional [road topology datapack](examples/datapacks/road_topology/README.md) provides an independently testable overpass node: an eleven-block carriageway, separate sidewalks on both levels, guarded graded approaches, spaced piers and an unfilled lower-road clearance. It uses the existing road graph and street sections with explicit node heights. Coincident X/Z coordinates do not connect different height layers; actual shared nodes and pedestrian arrivals must agree. Deck thickness, stair treads, lower pedestrian headroom and support gaps participate in validation.
+
+Build the example with `gradlew roadTopologyDatapack`, install `build/distributions/road_topology.zip` in the world's datapacks and `/reload`. With `planning.debugPlacementEnabled=true` and permission level 2, stand on the ground in a clear flat area with the full footprint already loaded and use `/citiesarise debug roads road_demo:overpass`. The center is your current X/Z; elevation zero is the block under your feet. The example extends 84 blocks east/west and 36 north/south, plus its lateral street width. `/citiesarise debug undo` restores the last debug placement when undo is enabled.
+
+All geometry, street sections and materials are authored in `data/<namespace>/road_layouts/<path>.json`. Preflight rejects missing chunks/bearings, obstructed clearance, intersecting foundations, invalid materials, broken pedestrian junctions or excessive spans before any blocks are placed. Existing placement snapshots preserve both decks and source identities across reverse chunk order. This first stage supplies a standalone authored road node; automatic integration with city streets/parcels, turning modules, tunnels and interchange selection are subsequent work. Natural city generation and the Skyline profile are unchanged.
+
 ## Datapack Settlement Profiles
 
 Settlement profiles are datapack JSON files. For the current MVP they change debug and experimental worldgen suburb planning numbers. They do not define house assets, structures, block palettes, loot, entities, or final placement providers yet.

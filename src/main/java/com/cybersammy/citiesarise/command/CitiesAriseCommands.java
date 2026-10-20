@@ -74,6 +74,10 @@ public final class CitiesAriseCommands {
                                         .executes(context -> runSavedLocate(context.getSource(),com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(context,"page")))))
                         .then(Commands.literal("cancel").executes(context -> cancelLocate(context.getSource()))))
                 .then(Commands.literal("debug")
+                        .then(Commands.literal("roads")
+                                .then(Commands.argument("layout",net.minecraft.commands.arguments.ResourceLocationArgument.id())
+                                        .executes(context -> runDebugRoads(context.getSource(),
+                                                net.minecraft.commands.arguments.ResourceLocationArgument.getId(context,"layout")))))
                         .then(Commands.literal("plan")
                                 .executes(context -> runDebugPlan(context.getSource())))
                         .then(Commands.literal("dump")
@@ -372,6 +376,32 @@ public final class CitiesAriseCommands {
         logPlacementResult(summary);
         logCommandResult(summary);
         return placedBlocks;
+    }
+
+    private int runDebugRoads(CommandSourceStack source, net.minecraft.resources.ResourceLocation id) {
+        if (!CitiesAriseConfig.debugPlacementEnabled()) {
+            source.sendFailure(Component.literal("Cities Arise debug placement is disabled by config.")); return 0;
+        }
+        var path=net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(id.getNamespace(),"road_layouts/"+id.getPath()+".json");
+        try (var reader=source.getLevel().getServer().getResourceManager().getResourceOrThrow(path).openAsReader()) {
+            var text=new StringBuilder(); var buffer=new char[4096]; int read;
+            while ((read=reader.read(buffer))!=-1) {
+                text.append(buffer,0,read);
+                if (text.length()>131072) throw new IllegalArgumentException("Road layout exceeds 128 KiB");
+            }
+            String json=text.toString();
+            var layout=new com.cybersammy.citiesarise.minecraft.profile.LayeredRoadLayoutParser()
+                    .parse(com.google.gson.JsonParser.parseString(json).getAsJsonObject());
+            var topology=new com.cybersammy.citiesarise.core.road.LayeredRoadTopology(layout,source.getLevel().getSeed());
+            var origin=BlockPos.containing(source.getPosition()).below();
+            var placement=com.cybersammy.citiesarise.minecraft.placement.LayeredRoadPlacement.prepare(topology,source.getLevel(),origin);
+            int blocks=placementApplier.apply(source.getLevel(),placement,CitiesAriseConfig.debugPlacementUndoEnabled());
+            String summary="Road layout "+id+": roads="+layout.graph().segments().size()+", contacts="+topology.crossings()
+                    +", operations="+placement.size()+", placed="+blocks+". Use /citiesarise debug undo to restore.";
+            source.sendSuccess(() -> Component.literal(summary),false); logPlacementResult(summary); return blocks;
+        } catch (java.io.IOException | RuntimeException error) {
+            source.sendFailure(Component.literal("Road layout rejected: "+error.getMessage())); return 0;
+        }
     }
 
     private int runDebugUndo(CommandSourceStack source) {

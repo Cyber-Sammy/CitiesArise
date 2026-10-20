@@ -16,6 +16,9 @@ public interface ContentResources {
         com.cybersammy.citiesarise.core.content.ProviderData.copy(data);
     }
     default void validateTraits(String material,boolean passable,boolean supportive,boolean climbable) { validateMaterial(material); }
+    default void validateLayeredRoad(com.cybersammy.citiesarise.core.road.LayeredRoadLayout layout) {
+        for(String material:java.util.List.of(layout.roadMaterial(),layout.deckMaterial(),layout.pierMaterial(),layout.railMaterial(),layout.stairMaterial(),layout.slabMaterial(),layout.sidewalkSlabMaterial()))validateMaterial(material);
+    }
     default void validateWalkingSurface(String material) { validateMaterial(material); }
     default void validateOperable(String material) {validateMaterial(material);}
     default void validateBridgeSurface(String material, boolean halfStep) { validateMaterial(material); }
@@ -32,6 +35,9 @@ public interface ContentResources {
             @Override public InputStream open(String id,String directory,String extension) throws IOException {
                 ResourceLocation key=ResourceLocation.parse(id);
                 return manager.getResourceOrThrow(ResourceLocation.fromNamespaceAndPath(key.getNamespace(),directory+"/"+key.getPath()+extension)).open();
+            }
+            @Override public void validateLayeredRoad(com.cybersammy.citiesarise.core.road.LayeredRoadLayout layout) {
+                com.cybersammy.citiesarise.minecraft.placement.LayeredRoadPlacement.validateMaterials(layout);
             }
             @Override public void validateMaterial(String material) {
                 ContentResources.super.validateMaterial(material);

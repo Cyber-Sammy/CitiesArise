@@ -86,6 +86,11 @@ public record SuburbPlanningSettings(
                 preferredMaxCutDepth,preferredMaxFillDepth,maxCutDepth,maxFillDepth,maxBuildingFoundationDepth,maxEarthworkVolume,
                 terrainTransitions.withStreets(streets),buildings,districts,parcelLayout);
     }
+    public SuburbPlanningSettings withCityOverpasses(com.cybersammy.citiesarise.core.road.CityOverpassSettings value) {
+        return new SuburbPlanningSettings(roadWidth,maxBuildableSlope,parcelCapacity,parcelWidth,parcelDepth,buildingMargin,maxElevationRange,
+                preferredMaxCutDepth,preferredMaxFillDepth,maxCutDepth,maxFillDepth,maxBuildingFoundationDepth,maxEarthworkVolume,
+                terrainTransitions.withCityOverpasses(value),buildings,districts,parcelLayout);
+    }
     public static final int DEFAULT_ROAD_WIDTH = 3;
     public static final double DEFAULT_MAX_BUILDABLE_SLOPE = 0.25;
     public static final int DEFAULT_TARGET_PARCEL_COUNT = 6;

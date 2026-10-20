@@ -49,6 +49,9 @@ public final class DebugPlacementPlanConverter {
 
     public DebugPlacementPlan convert(SettlementPlan plan) { return convert(plan,ResolvedSettlementContent.EMPTY); }
     public DebugPlacementPlan convert(SettlementPlan plan,ResolvedSettlementContent content) {
+        return CityOverpassPlacement.add(convertGround(plan,content),plan);
+    }
+    private DebugPlacementPlan convertGround(SettlementPlan plan,ResolvedSettlementContent content) {
         content.validateAgainst(plan);
         Objects.requireNonNull(plan, "plan");
         return HostedPropPlacement.add(EntrancePlacement.add(StreetSectionPlacement.apply(ParcelBoundaryPlacement.add(ParcelOutdoorPlacement.add(withSurfaceTemplates(withBridges(convert(plan, content, Map.of()), plan,content),plan,content),content),content.boundaries()),plan),plan,content),content);
@@ -85,6 +88,9 @@ public final class DebugPlacementPlanConverter {
         return convert(plan,preparationPlan,ResolvedSettlementContent.EMPTY);
     }
     public DebugPlacementPlan convert(SettlementPlan plan, TerrainPreparationPlan preparationPlan, ResolvedSettlementContent content) {
+        return CityOverpassPlacement.add(convertGround(plan,preparationPlan,content),plan);
+    }
+    private DebugPlacementPlan convertGround(SettlementPlan plan, TerrainPreparationPlan preparationPlan, ResolvedSettlementContent content) {
         content.validateAgainst(plan);
         Objects.requireNonNull(plan, "plan");
         Objects.requireNonNull(preparationPlan, "preparationPlan");

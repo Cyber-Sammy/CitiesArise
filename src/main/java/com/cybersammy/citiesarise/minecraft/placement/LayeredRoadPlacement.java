@@ -27,16 +27,7 @@ public final class LayeredRoadPlacement {
         }
         for (var c:surfaces.values()) {
             boolean edge=c.edge() && topology.at(c.point()).stream().filter(n -> n.surfaceY()==c.surfaceY()).allMatch(LayeredRoadTopology.Column::edge);
-            String surface=c.surface().material().isEmpty()?layout.roadMaterial():c.surface().material();
-            for (int y=c.bottomY();y<=c.surfaceY();y++)
-                put(operations,c,c.point(),y,y==c.surfaceY()?surface:layout.deckMaterial(),DebugPlacementRole.BRIDGE_DECK,origin);
-            if (c.step() && !edge)
-                put(operations,c,c.point(),c.surfaceY()+1,rampTread(layout,c),DebugPlacementRole.BRIDGE_STEP,origin);
-            if (c.step() && edge)
-                put(operations,c,c.point(),c.surfaceY()+1,layout.deckMaterial(),DebugPlacementRole.BRIDGE_DECK,origin);
-            if (edge) put(operations,c,c.point(),c.walkingY()+1,layout.railMaterial(),DebugPlacementRole.BRIDGE_RAIL,origin);
-            else for (int y=c.walkingY()+1;y<=c.walkingY()+layout.clearance();y++)
-                put(operations,c,c.point(),y,"minecraft:air",DebugPlacementRole.BRIDGE_CLEARANCE,origin);
+            surface(operations,c,layout,origin,edge);
         }
         // Ground roads bear continuously. Elevated roads bear only on authored spacing, outside other road envelopes.
         for (var road:layout.graph().segments()) {
@@ -74,19 +65,54 @@ public final class LayeredRoadPlacement {
             if (existing.hasBlockEntity()) throw new IllegalArgumentException("Road intersects a block entity at "+pos);
             if (op.role()==DebugPlacementRole.BRIDGE_CLEARANCE && !existing.isAir() && !MinecraftVegetationClassifier.isClearable(existing))
                 throw new IllegalArgumentException("Road clearance obstructed at "+pos);
-            if (op.role()==DebugPlacementRole.BRIDGE_RAIL) {
-                int mask=0; int[][] dirs={{0,-1},{1,0},{0,1},{-1,0}};
-                for (int i=0;i<4;i++) for (int dy=-1;dy<=1;dy++) {
-                    var neighbor=operations.get(new DebugPlacementPosition(new GridPoint(op.point().x()+dirs[i][0],op.point().z()+dirs[i][1]),op.verticalOffset()+dy));
-                    if (neighbor!=null && neighbor.role()==DebugPlacementRole.BRIDGE_RAIL) {mask|=1<<i;break;}
-                }
-                var state=MinecraftContentMaterials.fenceConnections(MinecraftContentMaterials.resolve(op.material(),0),""+mask);
-                op=new DebugBlockPlacementOperation(op.point(),op.verticalOffset(),op.role(),op.sourceElementId(),op.platformY(),
-                        net.minecraft.commands.arguments.blocks.BlockStateParser.serialize(state),0);
-            }
+            op=connectedRail(op,operations);
             result.add(op);
         }
         return new DebugPlacementPlan(result);
+    }
+    /** Pure materialization of a frozen city module; no chunk or level access. */
+    public static DebugPlacementPlan materialize(CityOverpassPlan module) {
+        var topology=module.topology();var layout=module.layout();validateMaterials(layout);
+        var origin=new BlockPos(module.origin().x(),module.baseY(),module.origin().z());
+        var operations=new LinkedHashMap<DebugPlacementPosition,DebugBlockPlacementOperation>();
+        var unique=new LinkedHashMap<DebugPlacementPosition,LayeredRoadTopology.Column>();
+        for(var c:topology.columns())unique.putIfAbsent(new DebugPlacementPosition(c.point(),c.surfaceY()),c);
+        for(var c:unique.values())surface(operations,c,layout,origin,c.edge() && !module.landing(c));
+        for(var f:module.footings()) {
+            var c=topology.at(f.point()).stream().filter(col->col.road().id().equals(f.road())).findFirst().orElseThrow();
+            for(int y=f.bottomY();y<=f.topY();y++)put(operations,c,f.point(),y,layout.pierMaterial(),DebugPlacementRole.BRIDGE_PIER,origin);
+        }
+        var result=new ArrayList<DebugBlockPlacementOperation>();
+        for(var op:operations.values()) {
+            op=connectedRail(op,operations);
+            result.add(op);
+        }
+        return new DebugPlacementPlan(result);
+    }
+    private static DebugBlockPlacementOperation connectedRail(DebugBlockPlacementOperation op,
+            Map<DebugPlacementPosition,DebugBlockPlacementOperation> operations) {
+        if(op.role()!=DebugPlacementRole.BRIDGE_RAIL)return op;
+        int mask=0;int[][] dirs={{0,-1},{1,0},{0,1},{-1,0}};
+        for(int i=0;i<4;i++)for(int dy=-1;dy<=1;dy++) {
+            var neighbor=operations.get(new DebugPlacementPosition(new GridPoint(op.point().x()+dirs[i][0],op.point().z()+dirs[i][1]),op.verticalOffset()+dy));
+            if(neighbor!=null && neighbor.role()==DebugPlacementRole.BRIDGE_RAIL){mask|=1<<i;break;}
+        }
+        var state=MinecraftContentMaterials.fenceConnections(MinecraftContentMaterials.resolve(op.material(),0),""+mask);
+        return new DebugBlockPlacementOperation(op.point(),op.verticalOffset(),op.role(),op.sourceElementId(),op.platformY(),
+                net.minecraft.commands.arguments.blocks.BlockStateParser.serialize(state),0);
+    }
+    private static void surface(Map<DebugPlacementPosition,DebugBlockPlacementOperation> operations,LayeredRoadTopology.Column c,
+            LayeredRoadLayout layout,BlockPos origin,boolean edge) {
+            String surface=c.surface().material().isEmpty()?layout.roadMaterial():c.surface().material();
+            for (int y=c.bottomY();y<=c.surfaceY();y++)
+                put(operations,c,c.point(),y,y==c.surfaceY()?surface:layout.deckMaterial(),DebugPlacementRole.BRIDGE_DECK,origin);
+            if (c.step() && !edge)
+                put(operations,c,c.point(),c.surfaceY()+1,rampTread(layout,c),DebugPlacementRole.BRIDGE_STEP,origin);
+            if (c.step() && edge)
+                put(operations,c,c.point(),c.surfaceY()+1,layout.deckMaterial(),DebugPlacementRole.BRIDGE_DECK,origin);
+            if (edge) put(operations,c,c.point(),c.walkingY()+1,layout.railMaterial(),DebugPlacementRole.BRIDGE_RAIL,origin);
+            else for (int y=c.walkingY()+1;y<=c.walkingY()+layout.clearance();y++)
+                put(operations,c,c.point(),y,"minecraft:air",DebugPlacementRole.BRIDGE_CLEARANCE,origin);
     }
     private record Footing(LayeredRoadTopology.Column column,int bottom,int top) { }
     private static int findBearing(ServerLevel level,BlockPos origin,GridPoint point,int top,int depth) {
@@ -114,7 +140,7 @@ public final class LayeredRoadPlacement {
                 net.minecraft.world.level.block.state.properties.SlabType.BOTTOM);
         return net.minecraft.commands.arguments.blocks.BlockStateParser.serialize(state);
     }
-    private static void validateMaterials(LayeredRoadLayout layout) {
+    public static void validateMaterials(LayeredRoadLayout layout) {
         var full=new ArrayList<>(List.of(layout.roadMaterial(),layout.deckMaterial(),layout.pierMaterial(),layout.streets().vergeMaterial()));
         if (!layout.streets().centerMaterial().isEmpty()) full.add(layout.streets().centerMaterial());
         layout.streets().modules().forEach(m -> full.add(m.material()));

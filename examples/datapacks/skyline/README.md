@@ -144,3 +144,23 @@ Courtyard access starts at the actual sidewalk edge. A height difference uses st
 Use this updated ZIP together with the updated JAR. Existing saved city layouts remain frozen; test the new layout in a new world or newly generated city area.
 
 The `skyline:terrace` tower now demonstrates ten base floors, an authored terrace level with real doors and guards, four reduced upper floors and a habitable mansard. Its fixed room poses and terrace zones are defined in the catalog, using the same compatibility and circulation checks as automatic floors. Update both JAR and ZIP and generate a new city area. Authoring details: [Authored floors](../composition_fixture/AUTHORED_FLOORS.md).
+
+## Automatic overpass selection
+
+This pack now enables `planning.cityOverpasses` in its settlement profile. Up to four feasible candidates are tried for one optional overpass per city. A three-span elevated module is loaded from `data/skyline/road_layouts/arterial.json`; `skyline:west` and `skyline:east` identify its ground ports. The module keeps the 11-block carriageway and reserves three sidewalk blocks per side, matching the city profile's maximum street corridor. Approaches use polished-deepslate slabs and smooth-stone sidewalk slabs. The upper deck rises ten blocks, leaving eight blocks of lower-road clearance with its two-layer deck.
+
+The planner chooses existing straight arterial ports and lower crossing streets, adapts span lengths within the module's run/landing limits, and recalculates ground access to every parcel. It reserves actual 3D deck/headroom and footing space: pylons do not fill the lower roadway, sidewalks or hosted content. A city may have no overpass if no checked candidate passes these constraints. Search and city acceptance retain the valid ordinary city when optional overpass selection fails.
+
+```json
+"cityOverpasses": {
+  "maximumCandidateChecks": 4,
+  "maximumConstructionVolume": 32768,
+  "modules": [
+    {"layout": "skyline:arterial", "start": "skyline:west", "end": "skyline:east", "weight": 1}
+  ]
+}
+```
+
+Omit this object (or use an empty `modules` array) to preserve ground-only cities. Enabled overpasses require `structuralSupports.enabled=true` so their bearings and clearance are checked against final terrain before placement. Budgets are bounded: at most four module choices, one selected overpass, 1..8 candidate fits and 1..131072 construction blocks, also charged to the city's existing earthwork/construction budget. Module weights choose a deterministic trial order. The first integration supports straight three-span chains with two equal-height upper nodes; bends, interchange connections and tunnels are separate later stages. The overpass replaces a ground arterial; access to the lower streets follows the remaining connected city grid. Entrance groups, parcel boundaries and MAFs are recalculated before the replacement is accepted.
+
+Update the mod JAR together with this ZIP and generate a new city area. Already saved cities are not rebuilt. Planning logs and exported plan JSON report the selected overpass count/geometry. This pack is independent of the standalone `road_topology.zip` demonstration.

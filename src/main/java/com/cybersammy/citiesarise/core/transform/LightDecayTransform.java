@@ -40,7 +40,7 @@ public record LightDecayTransform(double buildingDecayChance, double roadWearCha
                 plan.parcels(),
                 transformBuildingSlots(plan.buildingSlots(), context),
                 plan.tags(),
-                plan.properties(), plan.districts()
+                plan.properties(), plan.districts(),plan.overpasses()
         );
     }
 

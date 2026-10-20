@@ -36,5 +36,7 @@ public record SettlementProfile(
         Objects.requireNonNull(surveySize, "surveySize");
         Objects.requireNonNull(suburbPlanningSettings, "suburbPlanningSettings");
         Objects.requireNonNull(terrainResponsePolicy, "terrainResponsePolicy");
+        if(suburbPlanningSettings.terrainTransitions().cityOverpasses().enabled() && !structuralSupports.enabled())
+            throw new IllegalArgumentException("City overpasses require structuralSupports.enabled");
     }
 }

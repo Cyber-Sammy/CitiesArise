@@ -331,7 +331,14 @@ public final class MinecraftSuburbPlanningService {
                 request,
                 result
         );
-        var finished=planner.finishContent(request,refinedResult);
+        var overpassTerrain=terrainProvider;
+        var contentRequest=request;
+        if(refinedResult.successful() && planningSettings.terrainTransitions().cityOverpasses().enabled()
+                && terrainProvider instanceof TiledCityTerrainProvider tiled) {
+            // The refiner already queried this footprint. Reuse its exact survey instead of sampling the city twice.
+            contentRequest=new SuburbPlanningRequest(request.settlementId(),tiled.latestSurvey().orElse(survey),seed,planningSettings,terrainResponsePolicy);
+        }
+        var finished=planner.finishContent(contentRequest,refinedResult,(candidateRequest,candidate)->TerrainSupportAcceptance.validate(overpassTerrain,candidateRequest.survey(),candidate));
         if(refinedResult.successful() && !finished.successful()) {
             // Invalid content can affect layout fallback. Retain the original full solver
             // for that exceptional case, with already cached terrain samples.
@@ -450,13 +457,13 @@ public final class MinecraftSuburbPlanningService {
 
         SettlementPlan plan = result.plan();
         logger.info(
-                "Suburb planning accepted: {}, roads={}, parcels={}, buildingSlots={}, wornRoads={}, decayedBuildingSlots={}.",
+                "Suburb planning accepted: {}, roads={}, parcels={}, buildingSlots={}, wornRoads={}, decayedBuildingSlots={}, overpasses={}.",
                 result.summary(),
                 plan.roadGraph().segments().size(),
                 plan.parcels().size(),
                 plan.buildingSlots().size(),
                 result.wornRoadCount(),
-                result.decayedBuildingSlotCount()
+                result.decayedBuildingSlotCount(),plan.overpasses().size()
         );
     }
 }

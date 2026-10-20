@@ -32,10 +32,26 @@ public final class StructuralSupportPlacement {
         }
     }
     public static Resolution resolve(DebugPlacementPlan original,StructuralSupportBlueprint blueprint,StructuralSupportPlanner.Ground ground) {
+        var layeredSources=new HashSet<com.cybersammy.citiesarise.core.model.PlanElementId>();
+        for(var module:blueprint.overpasses()) {
+            module.layout().graph().segments().forEach(road->layeredSources.add(road.id()));
+            for(var footing:module.footings()) {
+                var p=module.world(footing.point());if(blueprint.ownership()!=null && !blueprint.ownership().contains(p))continue;
+                for(int depth=1;depth<=4;depth++)if(!ground.solid(p.x(),module.baseY()+footing.bottomY()-depth,p.z())
+                        || ground.fluid(p.x(),module.baseY()+footing.bottomY()-depth,p.z()))
+                    return new Resolution(Optional.empty(),"CITY_OVERPASS_UNSUPPORTED_BEARING",0,0);
+            }
+            for(var column:module.topology().columns()) {
+                var p=module.world(column.point());if(blueprint.ownership()!=null && !blueprint.ownership().contains(p))continue;
+                for(int y=module.baseY()+column.walkingY()+1;y<=module.baseY()+column.walkingY()+module.layout().clearance();y++)
+                    if(ground.solid(p.x(),y,p.z()) || ground.fluid(p.x(),y,p.z()))
+                        return new Resolution(Optional.empty(),"CITY_OVERPASS_OBSTRUCTED_CLEARANCE",0,0);
+            }
+        }
         var originalPositions=blueprint.ownership()==null?Set.<String>of():original.operations().stream().map(StructuralSupportPlacement::key).collect(java.util.stream.Collectors.toSet());
         boolean fill=blueprint.ravines().enabled() && blueprint.ravines().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FILL;
         var fillEnvelopes=new ArrayList<>(blueprint.envelopes());
-        if(fill) for(var op:original.operations()) if(op.role()==DebugPlacementRole.BRIDGE_DECK && op.platformY().isPresent())
+        if(fill) for(var op:original.operations()) if(op.role()==DebugPlacementRole.BRIDGE_DECK && op.platformY().isPresent() && !layeredSources.contains(op.sourceElementId()))
             fillEnvelopes.add(new StructuralSupportPlanner.Envelope(op.sourceElementId(),
                     new com.cybersammy.citiesarise.core.geometry.GridBounds(op.point(),new com.cybersammy.citiesarise.core.geometry.GridSize(1,1)),
                     op.platformY().getAsInt()+op.verticalOffset(),StructuralSupportPlanner.Kind.ROAD));

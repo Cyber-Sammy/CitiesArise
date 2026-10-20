@@ -63,11 +63,17 @@ public final class SuburbPlanner {
     boolean composesContent() {return composeContent;}
 
     public SuburbPlanningResult finishContent(SuburbPlanningRequest request,SuburbPlanningResult result) {
+        return finishContent(request,result,PlanningAcceptance.ACCEPT);
+    }
+    public SuburbPlanningResult finishContent(SuburbPlanningRequest request,SuburbPlanningResult result,PlanningAcceptance acceptance) {
         if(!result.successful())return result;
         try {
-            return result.withContent(com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
+            var integrated=integrateOverpass(request,result,acceptance);
+            if(integrated!=result)return integrated;
+            var finished=result.withContent(com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
                     result.plan().orElseThrow(),result.terrainPreparationPlan().orElseThrow(),request.seed(),
                     request.settings().buildings(),request.settings().parcelLayout()));
+            return finished;
         } catch(IllegalArgumentException error) {
             return SuburbPlanningResult.invalid(List.of(PlanValidationError.forElement(
                     com.cybersammy.citiesarise.core.validation.PlanValidationErrorCode.CONTENT_COMPOSITION_FAILED,
@@ -84,6 +90,16 @@ public final class SuburbPlanner {
     }
 
     public SuburbPlanningResult plan(SuburbPlanningRequest request, PlanningAcceptance acceptance) {
+        var result=planGround(request,acceptance);
+        return composeContent?integrateOverpass(request,result,acceptance):result;
+    }
+    private SuburbPlanningResult integrateOverpass(SuburbPlanningRequest request,SuburbPlanningResult result,PlanningAcceptance acceptance) {
+        if(!request.settings().districts().grid().enabled())return result;
+        return com.cybersammy.citiesarise.core.road.CityOverpassPlanner.attach(request,result,
+                ground->complete(request,ground,acceptance,true,true,createTerrainAdaptationPlan(request)),
+                candidate->acceptance.validate(request,candidate).successful());
+    }
+    private SuburbPlanningResult planGround(SuburbPlanningRequest request, PlanningAcceptance acceptance) {
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(acceptance, "acceptance");
 

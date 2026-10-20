@@ -185,6 +185,18 @@
           "material": "minecraft:smooth_stone"
         }
       ]
+    },
+    "cityOverpasses": {
+      "maximumCandidateChecks": 4,
+      "maximumConstructionVolume": 32768,
+      "modules": [
+        {
+          "layout": "skyline:arterial",
+          "start": "skyline:west",
+          "end": "skyline:east",
+          "weight": 1
+        }
+      ]
     }
   },
   "terrainPolicy": {

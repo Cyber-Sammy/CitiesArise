@@ -8,6 +8,8 @@ import java.util.*;
 /** Samples an expanded city's metadata in bounded windows; exact checks use the same window partition. */
 final class TiledCityTerrainProvider implements WorldgenTerrainSurveyProvider {
     private final WorldgenTerrainSurveyProvider delegate;
+    private TerrainSurvey latest;
+    Optional<TerrainSurvey> latestSurvey() {return Optional.ofNullable(latest);}
     TiledCityTerrainProvider(WorldgenTerrainSurveyProvider delegate) {this.delegate=Objects.requireNonNull(delegate);}
     public TerrainSurvey sample(GridBounds bounds) {return collect(bounds,null).orElseThrow();}
     public Optional<TerrainSurvey> sampleWithExactWaterMask(GridBounds bounds,Set<GridPoint> points) {return collect(bounds,points);}
@@ -29,6 +31,7 @@ final class TiledCityTerrainProvider implements WorldgenTerrainSurveyProvider {
             }
             survey.cells().stream().filter(c->tile.contains(c.point())).forEach(cells::add);
         }
-        return Optional.of(new TerrainSurvey(bounds,cells));
+        latest=new TerrainSurvey(bounds,cells);
+        return Optional.of(latest);
     }
 }

@@ -15,6 +15,44 @@ import org.junit.jupiter.api.Test;
 
 final class InMemoryRegionPlanCacheTest {
     @Test
+    void locateHintsMatchEveryWorldgenInputAndDisappearOnClear() {
+        var cache = new InMemoryRegionPlanCache();
+        var settings = SuburbPlanningSettings.defaults();
+        var profile = new SettlementProfileId("cities_arise:suburb");
+        var size = new GridSize(540,540);
+        var policy = com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy.defaults();
+        var context = new WorldgenPlanningContext("minecraft:overworld",1234,profile,size,settings,policy,
+                bounds->{throw new AssertionError("Cached hints must not query terrain");},false,false);
+        var region = new SettlementRegion(3,3);
+        var valid = new RegionPlanCacheKey(context.dimensionId(),region,context.worldSeed(),TerrainSurveySource.WORLDGEN_BASE,
+                profile,size,settings,policy);
+        var calls = new AtomicInteger();
+        var accepted = cache.getOrCreate(valid,()->largeResult(1,calls));
+        assertSame(accepted,cache.completedWorldgenPlans(context).get(region));
+        var snapshot = cache.snapshot();
+        assertThrows(UnsupportedOperationException.class,snapshot::clear);
+        cache.clear();
+        assertEquals(1,snapshot.size());
+        assertEquals(java.util.Map.of(),cache.completedWorldgenPlans(context));
+        var wrongKeys = java.util.List.of(
+                new RegionPlanCacheKey("minecraft:the_nether",region,1234,TerrainSurveySource.WORLDGEN_BASE,profile,size,settings,policy),
+                new RegionPlanCacheKey(context.dimensionId(),region,4321,TerrainSurveySource.WORLDGEN_BASE,profile,size,settings,policy),
+                new RegionPlanCacheKey(context.dimensionId(),region,1234,TerrainSurveySource.LOADED_WORLD,profile,size,settings,policy),
+                new RegionPlanCacheKey(context.dimensionId(),region,1234,TerrainSurveySource.WORLDGEN_BASE,new SettlementProfileId("test:other"),size,settings,policy),
+                new RegionPlanCacheKey(context.dimensionId(),region,1234,TerrainSurveySource.WORLDGEN_BASE,profile,new GridSize(120,72),settings,policy),
+                new RegionPlanCacheKey(context.dimensionId(),region,1234,TerrainSurveySource.WORLDGEN_BASE,profile,size,new SuburbPlanningSettings(5,1.0,8,18,20,4),policy),
+                new RegionPlanCacheKey(context.dimensionId(),region,1234,TerrainSurveySource.WORLDGEN_BASE,profile,size,settings,
+                        new com.cybersammy.citiesarise.core.terrain.policy.TerrainResponsePolicy(policy.responses(),policy.capabilities(),
+                                com.cybersammy.citiesarise.core.terrain.policy.TerrainAdaptationSettings.defaults())));
+        for (var wrong : wrongKeys) {
+            cache.clear();cache.getOrCreate(wrong,()->largeResult(1,calls));
+            assertEquals(java.util.Map.of(),cache.completedWorldgenPlans(context),wrong.toString());
+        }
+        cache.clear();cache.getOrCreate(valid,()->rejectedResult(calls));
+        assertEquals(java.util.Map.of(),cache.completedWorldgenPlans(context));
+    }
+
+    @Test
     void retainsTwoNeighboringLargePlansAlongsideRejectedCandidates() {
         var cache=new InMemoryRegionPlanCache();var calls=new AtomicInteger();
         var settings=SuburbPlanningSettings.defaults();

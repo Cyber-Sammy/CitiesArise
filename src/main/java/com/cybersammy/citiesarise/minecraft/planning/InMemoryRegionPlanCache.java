@@ -33,6 +33,11 @@ public final class InMemoryRegionPlanCache implements RegionPlanCache {
     }
 
     @Override
+    public java.util.Map<RegionPlanCacheKey, SuburbDebugPlanResult> snapshot() {
+        return plans.snapshot();
+    }
+
+    @Override
     public void clear() {
         plans.clear();
     }

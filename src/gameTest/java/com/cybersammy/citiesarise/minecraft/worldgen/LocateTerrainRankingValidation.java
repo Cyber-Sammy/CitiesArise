@@ -22,6 +22,16 @@ public final class LocateTerrainRankingValidation {
         var planning=(MinecraftSuburbPlanningService)field.get(CitiesAriseWorldgen.structureGeneration());
         var locator=new WorldgenSettlementLocator(planning);
         Files.writeString(path,"seed="+level.getSeed()+"; ranking="+CitiesAriseWorldgenConfig.locateTerrainRanking()+"\n");
+        String warm = System.getProperty("citiesarise.locateWarmSite", "");
+        if (!warm.isBlank()) {
+            var coordinates = warm.split(",");
+            var context = planning.prepareLocateContext(level,level.getChunkSource().getGenerator()).orElseThrow();
+            long started = System.nanoTime();
+            var result = planning.planForWorldgen(context,new BlockPos(Integer.parseInt(coordinates[0]),0,Integer.parseInt(coordinates[1])));
+            Files.writeString(path,"warmMs="+(System.nanoTime()-started)/1e6+"; accepted="+result.successful()
+                    +"; hints="+planning.cachedWorldgenPlans(context).keySet()+"\n",StandardOpenOption.APPEND);
+            if (!result.successful()) { locator.stop();server.halt(false);return; }
+        }
         run(server,locator,path,new HashSet<>(),0,Integer.getInteger("citiesarise.locateAuditPasses",12),System.nanoTime());
     }
     private static void set(String name,boolean value) throws Exception {
@@ -30,7 +40,8 @@ public final class LocateTerrainRankingValidation {
     }
     private static void run(MinecraftServer server,WorldgenSettlementLocator locator,Path output,Set<SettlementRegion> excluded,int pass,int maximum,long started) {
         long tick=System.nanoTime();
-        locator.findFirstAsync(server.overworld(),new BlockPos(-8372,53,6650),excluded).whenComplete((result,error)->server.execute(()->{
+        locator.findFirstAsync(server.overworld(),new BlockPos(Integer.getInteger("citiesarise.locateOriginX",-8372),53,
+                Integer.getInteger("citiesarise.locateOriginZ",6650)),excluded).whenComplete((result,error)->server.execute(()->{
             try {
                 if(error!=null)throw new IllegalStateException("Diagnostic failed",error);
                 Files.writeString(output,"pass="+(pass+1)+"; elapsedMs="+(System.nanoTime()-tick)/1e6+"; result="+result+"\n",StandardOpenOption.APPEND);

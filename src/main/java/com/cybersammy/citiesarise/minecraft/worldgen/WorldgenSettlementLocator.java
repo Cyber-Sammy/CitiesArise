@@ -78,6 +78,7 @@ public final class WorldgenSettlementLocator {
         int seaLevel = level.getSeaLevel();
         Map<String, Integer> rejectionCounts = new LinkedHashMap<>();
         var rejectedRegions=new java.util.HashSet<SettlementRegion>();
+        var completedPlans = planningService.cachedWorldgenPlans(context);
         return regionSearch.findBestAsync(
                 origin.getX(),
                 origin.getZ(),
@@ -90,7 +91,7 @@ public final class WorldgenSettlementLocator {
                         && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,context.surveySize(),
                                 placement.potentialChunk(region).x,placement.potentialChunk(region).z),
                 region -> {
-                    var evaluation=evaluate(context,seaLevel,region,rejectionCounts,nativeStarts);
+                    var evaluation=evaluate(context,seaLevel,region,rejectionCounts,nativeStarts,completedPlans.get(region));
                     if(evaluation.isEmpty()) rejectedRegions.add(region);
                     return evaluation;
                 },
@@ -101,7 +102,8 @@ public final class WorldgenSettlementLocator {
                         com.cybersammy.citiesarise.core.terrain.TerrainSiteEstimate.sample(
                                 com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.bounds(region,context.surveySize()),
                                 context.terrainProvider()::preliminarySample,mayContinue)
-                                .map(estimate->java.util.OptionalDouble.of(estimate.score())).orElseGet(java.util.OptionalDouble::empty) : null
+                                .map(estimate->java.util.OptionalDouble.of(estimate.score())).orElseGet(java.util.OptionalDouble::empty) : null,
+                completedPlans.keySet()
         ).thenApply(outcome -> {
             if(outcome.timeLimitReached()) increment(rejectionCounts,"SEARCH_TIME_LIMIT");
             var raw=searchResult(outcome,rejectionCounts);
@@ -136,10 +138,11 @@ public final class WorldgenSettlementLocator {
             WorldgenPlanningContext context,
             int seaLevel,
             SettlementRegion region,
-            Map<String, Integer> rejectionCounts,NativeStructureStartVerifier nativeStarts
+            Map<String, Integer> rejectionCounts,NativeStructureStartVerifier nativeStarts,
+            SuburbDebugPlanResult completedPlan
     ) {
         BlockPos center = centerPosition(seaLevel, region);
-        SuburbDebugPlanResult result = planningService.planForWorldgen(context, center);
+        SuburbDebugPlanResult result = completedPlan != null ? completedPlan : planningService.planForWorldgen(context, center);
         if (result.successful()) {
             var rejection=nativeStarts.rejection(result,context.profileId());
             if(rejection.isPresent()) {

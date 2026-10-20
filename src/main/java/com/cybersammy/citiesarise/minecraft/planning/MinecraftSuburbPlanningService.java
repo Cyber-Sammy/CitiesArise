@@ -293,6 +293,11 @@ public final class MinecraftSuburbPlanningService {
         );
     }
 
+    /** Exact-context hints only. Native structure-start validation still runs in the locator. */
+    public java.util.Map<SettlementRegion, SuburbDebugPlanResult> cachedWorldgenPlans(WorldgenPlanningContext context) {
+        return planCache.completedWorldgenPlans(context);
+    }
+
     public void clearCache() {
         planCache.clear();
         profileCache.clear();

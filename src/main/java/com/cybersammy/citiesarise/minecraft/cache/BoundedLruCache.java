@@ -54,6 +54,11 @@ public final class BoundedLruCache<K, V> {
         return entries.size();
     }
 
+    /** Completed entries only; never waits for an in-flight computation or changes LRU order. */
+    public synchronized Map<K, V> snapshot() {
+        return Map.copyOf(entries);
+    }
+
     public synchronized void clear() {
         generation++;
         entries.clear();

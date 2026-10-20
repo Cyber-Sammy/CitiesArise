@@ -52,8 +52,9 @@ public final class LayeredRoadTopology {
                 throw new IllegalArgumentException("Road grade has insufficient run/landing: " + road.id());
             int dx = Integer.signum(b.point().x()-a.point().x()), dz = Integer.signum(b.point().z()-a.point().z());
             for (int d=0;d<=length;d++) {
-                int y = height(d,length,landing,ay,by);
-                boolean step = d>0 && height(d-1,length,landing,ay,by)>y
+                int halfHeight = halfHeight(d,length,landing,ay,by);
+                int y = layout.rampSurface()==LayeredRoadLayout.RampSurface.SLABS ? Math.floorDiv(halfHeight,2) : height(d,length,landing,ay,by);
+                boolean step = layout.rampSurface()==LayeredRoadLayout.RampSurface.SLABS ? Math.floorMod(halfHeight,2)!=0 : d>0 && height(d-1,length,landing,ay,by)>y
                         || d<length && height(d+1,length,landing,ay,by)>y;
                 for (int lateral=-road.width()/2;lateral<road.width()-road.width()/2;lateral++) {
                     var p = new GridPoint(a.point().x()+dx*d+(dx==0?lateral:0),a.point().z()+dz*d+(dz==0?lateral:0));
@@ -135,6 +136,13 @@ public final class LayeredRoadTopology {
         }
     }
 
+    /** Half-block terraces retain the configured full-block grade and flat endpoint landings. */
+    private int halfHeight(int d,int length,int landing,int a,int b) {
+        int rises=Math.abs(b-a); if(rises==0)return 2*a;
+        int padding=(length-2*landing-layout.runPerRise()*rises)/2;
+        int halves=Math.clamp(Math.floorDiv(2*(d-landing-padding),layout.runPerRise()),0,2*rises);
+        return 2*a+Integer.signum(b-a)*halves;
+    }
     private int height(int d,int length,int landing,int a,int b) {
         int rises=Math.abs(b-a); if (rises==0) return a;
         int padding=(length-2*landing-layout.runPerRise()*rises)/2;

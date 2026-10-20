@@ -2,7 +2,8 @@
   "version": 1,
   "carriageway": 11,
   "deckDepth": 2,
-  "clearance": 5,
+  "clearance": 8,
+  "rampSurface": "slabs",
   "runPerRise": 6,
   "pierSpacing": 8,
   "maximumSpan": 24,
@@ -12,7 +13,9 @@
     "deck": "minecraft:stone_bricks",
     "pier": "minecraft:stone_bricks",
     "rail": "minecraft:stone_brick_wall",
-    "stair": "minecraft:stone_brick_stairs"
+    "stair": "minecraft:stone_brick_stairs",
+    "slab": "minecraft:polished_deepslate_slab",
+    "sidewalkSlab": "minecraft:smooth_stone_slab"
   },
   "streets": {
     "sectionLength": 32,
@@ -23,10 +26,10 @@
     ]
   },
   "nodes": [
-    {"id": "road_demo:west", "x": -84, "y": 0, "z": 0},
-    {"id": "road_demo:upper_west", "x": -20, "y": 7, "z": 0},
-    {"id": "road_demo:upper_east", "x": 20, "y": 7, "z": 0},
-    {"id": "road_demo:east", "x": 84, "y": 0, "z": 0},
+    {"id": "road_demo:west", "x": -100, "y": 0, "z": 0},
+    {"id": "road_demo:upper_west", "x": -20, "y": 10, "z": 0},
+    {"id": "road_demo:upper_east", "x": 20, "y": 10, "z": 0},
+    {"id": "road_demo:east", "x": 100, "y": 0, "z": 0},
     {"id": "road_demo:south", "x": 0, "y": 0, "z": -36},
     {"id": "road_demo:lower_center", "x": 0, "y": 0, "z": 0},
     {"id": "road_demo:north", "x": 0, "y": 0, "z": 36}

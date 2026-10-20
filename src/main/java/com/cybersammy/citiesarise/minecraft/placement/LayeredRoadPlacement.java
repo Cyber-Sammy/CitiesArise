@@ -31,7 +31,7 @@ public final class LayeredRoadPlacement {
             for (int y=c.bottomY();y<=c.surfaceY();y++)
                 put(operations,c,c.point(),y,y==c.surfaceY()?surface:layout.deckMaterial(),DebugPlacementRole.BRIDGE_DECK,origin);
             if (c.step() && !edge)
-                put(operations,c,c.point(),c.surfaceY()+1,NativeStreetStairMaterial.orient(layout.stairMaterial(),c.uphillX(),c.uphillZ()),DebugPlacementRole.BRIDGE_STEP,origin);
+                put(operations,c,c.point(),c.surfaceY()+1,rampTread(layout,c),DebugPlacementRole.BRIDGE_STEP,origin);
             if (c.step() && edge)
                 put(operations,c,c.point(),c.surfaceY()+1,layout.deckMaterial(),DebugPlacementRole.BRIDGE_DECK,origin);
             if (edge) put(operations,c,c.point(),c.walkingY()+1,layout.railMaterial(),DebugPlacementRole.BRIDGE_RAIL,origin);
@@ -101,6 +101,19 @@ public final class LayeredRoadPlacement {
         return state.isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE,BlockPos.ZERO) && state.getFluidState().isEmpty()
                 && !state.hasBlockEntity() && !MinecraftVegetationClassifier.isClearable(state);
     }
+    private static String rampTread(LayeredRoadLayout layout, LayeredRoadTopology.Column column) {
+        if(layout.rampSurface()==LayeredRoadLayout.RampSurface.STAIRS)
+            return NativeStreetStairMaterial.orient(layout.stairMaterial(),column.uphillX(),column.uphillZ());
+        return slab(column.surface().kind()==StreetSectionGeometry.Kind.SIDEWALK ? layout.sidewalkSlabMaterial() : layout.slabMaterial());
+    }
+    private static String slab(String material) {
+        var state=MinecraftContentMaterials.resolve(material,0);
+        if(!(state.getBlock() instanceof SlabBlock) || !state.getFluidState().isEmpty())
+            throw new IllegalArgumentException("Road ramp slab must be a dry slab: "+material);
+        state=state.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.SLAB_TYPE,
+                net.minecraft.world.level.block.state.properties.SlabType.BOTTOM);
+        return net.minecraft.commands.arguments.blocks.BlockStateParser.serialize(state);
+    }
     private static void validateMaterials(LayeredRoadLayout layout) {
         var full=new ArrayList<>(List.of(layout.roadMaterial(),layout.deckMaterial(),layout.pierMaterial(),layout.streets().vergeMaterial()));
         if (!layout.streets().centerMaterial().isEmpty()) full.add(layout.streets().centerMaterial());
@@ -116,6 +129,7 @@ public final class LayeredRoadPlacement {
         if (!MinecraftContentMaterials.resolve(layout.stairMaterial(),0).getFluidState().isEmpty())
             throw new IllegalArgumentException("Road stair must be dry");
         NativeStreetStairMaterial.orient(layout.stairMaterial(),1,0);
+        if(layout.rampSurface()==LayeredRoadLayout.RampSurface.SLABS) {slab(layout.slabMaterial());slab(layout.sidewalkSlabMaterial());}
     }
     private static void checkLoaded(ServerLevel level,BlockPos pos) {
         if (level.isOutsideBuildHeight(pos) || !level.getWorldBorder().isWithinBounds(pos) || !level.hasChunkAt(pos))

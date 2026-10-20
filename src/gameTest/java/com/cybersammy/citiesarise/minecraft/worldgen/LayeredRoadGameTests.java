@@ -44,13 +44,22 @@ public final class LayeredRoadGameTests {
         for(var chunk:restored.operations().stream().map(op->PlacementChunk.containing(op.point())).distinct()
                 .sorted(Comparator.comparingInt(PlacementChunk::x).thenComparingInt(PlacementChunk::z).reversed()).toList())
             new WorldgenPlacementApplier().apply(h.getLevel(),index.slice(chunk));
-        h.assertTrue(!h.getLevel().getBlockState(origin).isAir() && !h.getLevel().getBlockState(origin.above(7)).isAir(),"Missing lower or upper deck");
-        for(int y=1;y<=5;y++) h.assertTrue(h.getLevel().getBlockState(origin.above(y)).isAir(),"Pier or deck blocks lower carriageway");
+        h.assertTrue(!h.getLevel().getBlockState(origin).isAir() && !h.getLevel().getBlockState(origin.above(10)).isAir(),"Missing lower or upper deck");
+        for(int y=1;y<=8;y++) h.assertTrue(h.getLevel().getBlockState(origin.above(y)).isAir(),"Pier or deck blocks lower carriageway");
         for(var c:t.columns()) if(!c.edge()) {
             var walking=origin.offset(c.point().x(),c.walkingY(),c.point().z());
             h.assertTrue(!h.getLevel().getBlockState(walking).isAir(),"Missing pedestrian/road walking surface");
             h.assertTrue(h.getLevel().getBlockState(walking.above()).isAir() && h.getLevel().getBlockState(walking.above(2)).isAir(),"Road headroom blocked");
         }
+        int slabCount=0;
+        for(var op:plan.operations())if(op.role()==DebugPlacementRole.BRIDGE_STEP) {
+            var pos=new BlockPos(op.point().x(),op.platformY().orElseThrow()+op.verticalOffset(),op.point().z());
+            var state=h.getLevel().getBlockState(pos);
+            h.assertTrue(state.getBlock() instanceof net.minecraft.world.level.block.SlabBlock,"Ramp tread is not a slab");
+            h.assertTrue(state.getCollisionShape(h.getLevel(),pos).max(net.minecraft.core.Direction.Axis.Y)==0.5,"Ramp slab is not a bottom half block");
+            slabCount++;
+        }
+        h.assertTrue(slabCount>100,"Missing half-height ramp terraces");
         for(var op:plan.operations())if(op.role()==DebugPlacementRole.BRIDGE_RAIL) {
             var pos=new BlockPos(op.point().x(),op.platformY().orElseThrow()+op.verticalOffset(),op.point().z());
             h.assertTrue(!h.getLevel().getBlockState(pos.below()).isAir(),"Unsupported railing at a step");
@@ -70,10 +79,17 @@ public final class LayeredRoadGameTests {
         rejects(h,()->LayeredRoadPlacement.prepare(topology(material),h.getLevel(),origin),"nonstructural deck");
         var wet=data.deepCopy();wet.getAsJsonObject("materials").addProperty("stair","minecraft:stone_brick_stairs[waterlogged=true]");
         rejects(h,()->LayeredRoadPlacement.prepare(topology(wet),h.getLevel(),origin),"wet stair");
+        var badSlab=data.deepCopy();badSlab.getAsJsonObject("materials").addProperty("slab","minecraft:stone_bricks");
+        rejects(h,()->LayeredRoadPlacement.prepare(topology(badSlab),h.getLevel(),origin),"full cube as slab");
+        var wetSlab=data.deepCopy();wetSlab.getAsJsonObject("materials").addProperty("sidewalkSlab","minecraft:smooth_stone_slab[waterlogged=true]");
+        rejects(h,()->LayeredRoadPlacement.prepare(topology(wetSlab),h.getLevel(),origin),"wet sidewalk slab");
+        var legacy=data.deepCopy();legacy.remove("rampSurface");
+        var legacyPlan=LayeredRoadPlacement.prepare(topology(legacy),h.getLevel(),origin);
+        h.assertTrue(legacyPlan.operations().stream().anyMatch(op->op.role()==DebugPlacementRole.BRIDGE_STEP && op.material().contains("stairs")),"Legacy stair mode lost");
         var filled=data.deepCopy();filled.getAsJsonArray("roads").get(1).getAsJsonObject().addProperty("elevated",false);
         rejects(h,()->LayeredRoadPlacement.prepare(topology(filled),h.getLevel(),origin),"ground fill through lower road");
         rejects(h,()->LayeredRoadPlacement.prepare(t,h.getLevel(),new BlockPos(origin.getX(),h.getLevel().getMaxBuildHeight(),origin.getZ())),"height overflow");
-        for(int y=-2;y>=-20;y--)h.getLevel().setBlock(origin.offset(-84,y,-7),Blocks.AIR.defaultBlockState(),2);
+        for(int y=-2;y>=-20;y--)h.getLevel().setBlock(origin.offset(-100,y,-7),Blocks.AIR.defaultBlockState(),2);
         rejects(h,()->LayeredRoadPlacement.prepare(t,h.getLevel(),origin),"missing dry bearing");
         h.assertTrue(h.getLevel().getBlockState(origin).isAir(),"Rejected plan changed world");h.succeed();
     }
@@ -92,9 +108,9 @@ public final class LayeredRoadGameTests {
         try {
             flag.set(false);flag.clearCache();h.assertTrue(commands.execute("citiesarise debug roads road_demo:overpass",source)==0,"Placement gate bypassed");
             flag.set(true);flag.clearCache();h.assertTrue(commands.execute("citiesarise debug roads road_demo:overpass",source)>0,"Road command failed");
-            h.assertTrue(!h.getLevel().getBlockState(origin.above(7)).isAir(),"Command did not place upper road");
+            h.assertTrue(!h.getLevel().getBlockState(origin.above(10)).isAir(),"Command did not place upper road");
             h.assertTrue(commands.execute("citiesarise debug undo",source)>0,"Road undo failed");
-            h.assertTrue(h.getLevel().getBlockState(origin).isAir() && h.getLevel().getBlockState(origin.above(7)).isAir()
+            h.assertTrue(h.getLevel().getBlockState(origin).isAir() && h.getLevel().getBlockState(origin.above(10)).isAir()
                     && h.getLevel().getBlockState(origin.below()).is(Blocks.STONE),"Undo did not restore both layers and ground");
         } finally {flag.set(before);flag.clearCache();}
         h.succeed();

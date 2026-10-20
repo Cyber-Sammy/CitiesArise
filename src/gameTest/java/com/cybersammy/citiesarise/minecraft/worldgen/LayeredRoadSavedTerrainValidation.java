@@ -26,8 +26,8 @@ public final class LayeredRoadSavedTerrainValidation {
             var plan=LayeredRoadPlacement.prepare(topology,level,origin);
             var before=level.getBlockState(origin);var applier=new DebugPlacementApplier();
             int placed=applier.apply(level,plan,true);
-            if(level.getBlockState(origin).isAir() || level.getBlockState(origin.above(7)).isAir())throw new IllegalStateException("Missing deck");
-            for(int y=1;y<=5;y++)if(!level.getBlockState(origin.above(y)).isAir())throw new IllegalStateException("Lower headroom blocked");
+            if(level.getBlockState(origin).isAir() || level.getBlockState(origin.above(10)).isAir())throw new IllegalStateException("Missing deck");
+            for(int y=1;y<=8;y++)if(!level.getBlockState(origin.above(y)).isAir())throw new IllegalStateException("Lower headroom blocked");
             int restored=applier.undoLast(level);
             if(!level.getBlockState(origin).equals(before))throw new IllegalStateException("Undo mismatch");
             Files.writeString(path,"ACCEPTED operations="+plan.size()+"; placed="+placed+"; undo="+restored+"\n",StandardOpenOption.APPEND);

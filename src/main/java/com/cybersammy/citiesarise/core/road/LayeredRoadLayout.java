@@ -7,13 +7,22 @@ import java.util.Objects;
 public record LayeredRoadLayout(RoadGraph graph, StreetSectionSettings streets, int carriageway,
         int deckDepth, int clearance, int runPerRise, int pierSpacing, int maximumSpan,
         int maximumSupportDepth, String roadMaterial, String deckMaterial, String pierMaterial,
-        String railMaterial, String stairMaterial) {
+        String railMaterial, String stairMaterial, RampSurface rampSurface, String slabMaterial, String sidewalkSlabMaterial) {
+    public enum RampSurface { STAIRS, SLABS }
+    public LayeredRoadLayout(RoadGraph graph, StreetSectionSettings streets, int carriageway,
+            int deckDepth, int clearance, int runPerRise, int pierSpacing, int maximumSpan,
+            int maximumSupportDepth, String roadMaterial, String deckMaterial, String pierMaterial,
+            String railMaterial, String stairMaterial) {
+        this(graph, streets, carriageway, deckDepth, clearance, runPerRise, pierSpacing, maximumSpan,
+                maximumSupportDepth, roadMaterial, deckMaterial, pierMaterial, railMaterial, stairMaterial,
+                RampSurface.STAIRS, "minecraft:stone_brick_slab", "minecraft:smooth_stone_slab");
+    }
     public static final PlanPropertyKey ELEVATION = new PlanPropertyKey("cities_arise:road/elevation");
     public static final PlanPropertyKey ELEVATED = new PlanPropertyKey("cities_arise:road/elevated");
 
     public LayeredRoadLayout {
-        Objects.requireNonNull(graph); Objects.requireNonNull(streets);
-        for (String material : new String[]{roadMaterial, deckMaterial, pierMaterial, railMaterial, stairMaterial})
+        Objects.requireNonNull(graph); Objects.requireNonNull(streets); Objects.requireNonNull(rampSurface);
+        for (String material : new String[]{roadMaterial, deckMaterial, pierMaterial, railMaterial, stairMaterial, slabMaterial, sidewalkSlabMaterial})
             if (material == null || material.isBlank() || material.length() > 512)
                 throw new IllegalArgumentException("Invalid road material");
         if (carriageway < 3 || carriageway > 16 || deckDepth < 1 || deckDepth > 4

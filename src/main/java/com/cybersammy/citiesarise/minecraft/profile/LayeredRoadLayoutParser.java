@@ -29,7 +29,10 @@ public final class LayeredRoadLayoutParser {
         var m=json.getAsJsonObject("materials");
         var result=new LayeredRoadLayout(new RoadGraph(nodes,roads),streets,carriageway,integer(json,"deckDepth"),
                 integer(json,"clearance"),integer(json,"runPerRise"),integer(json,"pierSpacing"),integer(json,"maximumSpan"),
-                integer(json,"maximumSupportDepth"),string(m,"road"),string(m,"deck"),string(m,"pier"),string(m,"rail"),string(m,"stair"));
+                integer(json,"maximumSupportDepth"),string(m,"road"),string(m,"deck"),string(m,"pier"),string(m,"rail"),string(m,"stair"),
+                json.has("rampSurface") ? LayeredRoadLayout.RampSurface.valueOf(string(json,"rampSurface").toUpperCase(Locale.ROOT)) : LayeredRoadLayout.RampSurface.STAIRS,
+                m.has("slab") ? string(m,"slab") : "minecraft:stone_brick_slab",
+                m.has("sidewalkSlab") ? string(m,"sidewalkSlab") : (m.has("slab") ? string(m,"slab") : "minecraft:smooth_stone_slab"));
         new LayeredRoadTopology(result,0); // Reject invalid authored topology at load, before native world access.
         return result;
     }

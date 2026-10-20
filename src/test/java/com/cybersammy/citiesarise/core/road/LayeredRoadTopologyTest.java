@@ -16,10 +16,10 @@ class LayeredRoadTopologyTest {
     private LayeredRoadTopology topology(JsonObject json) {return new LayeredRoadTopology(new LayeredRoadLayoutParser().parse(json),42);}
     @Test void separateLayersDoNotInventAJunctionAndKeepBothSidewalks() throws Exception {
         var t=topology(example()); var at=t.at(new GridPoint(0,0));
-        assertEquals(Set.of(0,7),at.stream().map(LayeredRoadTopology.Column::surfaceY).collect(java.util.stream.Collectors.toSet()));
+        assertEquals(Set.of(0,10),at.stream().map(LayeredRoadTopology.Column::surfaceY).collect(java.util.stream.Collectors.toSet()));
         assertEquals(2,t.crossings().stream().filter(c -> c.kind()==LayeredRoadTopology.CrossingKind.GRADE_SEPARATED).count());
         assertEquals(3,t.crossings().stream().filter(c -> c.kind()==LayeredRoadTopology.CrossingKind.JUNCTION).count());
-        for (int y:List.of(0,7)) for (int z:List.of(-6,6))
+        for (int y:List.of(0,10)) for (int z:List.of(-6,6))
             assertTrue(t.at(new GridPoint(0,z)).stream().anyMatch(c -> c.surfaceY()==y
                     && (y==0 || c.surface().kind()==StreetSectionGeometry.Kind.SIDEWALK)));
         assertEquals(t.columns(),topology(example()).columns());
@@ -34,9 +34,9 @@ class LayeredRoadTopologyTest {
     }
     @Test void piersCannotOccupyLowerRoadsOrPedestrianHeadroom() throws Exception {
         var t=topology(example());
-        var crossing=t.at(new GridPoint(0,7)).stream().filter(c -> c.surfaceY()==7).findFirst().orElseThrow();
+        var crossing=t.at(new GridPoint(0,7)).stream().filter(c -> c.surfaceY()==10).findFirst().orElseThrow();
         assertFalse(t.supportAllowed(crossing,0,5));
-        var outside=t.at(new GridPoint(12,7)).stream().filter(c -> c.surfaceY()==7).findFirst().orElseThrow();
+        var outside=t.at(new GridPoint(12,7)).stream().filter(c -> c.surfaceY()==10).findFirst().orElseThrow();
         assertTrue(t.supportAllowed(outside,0,5));
     }
     @Test void steepApproachesDuplicatePosesUnknownNodesAndFractionalInputsReject() throws Exception {
@@ -74,6 +74,35 @@ class LayeredRoadTopologyTest {
             assertTrue(center.stream().limit(8).noneMatch(LayeredRoadTopology.Column::step));
             assertTrue(center.stream().skip(center.size()-8).noneMatch(LayeredRoadTopology.Column::step));
         }
+    }
+    @Test void slabsUseHalfBlockTerracesInBothDirectionsIncludingOddRunsAndNegativeHeights() throws Exception {
+        for(int run:List.of(6,7)) {
+            var data=example();data.addProperty("runPerRise",run);
+            data.getAsJsonArray("nodes").get(0).getAsJsonObject().addProperty("x",-120);
+            data.getAsJsonArray("nodes").get(3).getAsJsonObject().addProperty("x",120);
+            for(var n:data.getAsJsonArray("nodes"))n.getAsJsonObject().addProperty("y",n.getAsJsonObject().get("y").getAsInt()-12);
+            var t=topology(data);
+            for(var road:t.layout().graph().segments()) {
+                var rows=t.columns().stream().filter(c->c.road().id().equals(road.id()) && c.lateral()==0).toList();
+                int halves=0;
+                for(int i=1;i<rows.size();i++) {
+                    var a=rows.get(i-1);var b=rows.get(i);
+                    int delta=2*b.surfaceY()+(b.step()?1:0)-2*a.surfaceY()-(a.step()?1:0);
+                    assertTrue(Math.abs(delta)<=1,"Ramp jumps more than half a block");
+                    halves+=Math.abs(delta);
+                }
+                if(road.id().value().contains("approach")) {
+                    assertEquals(20,halves);
+                    assertTrue(rows.stream().filter(LayeredRoadTopology.Column::step).count()>=20);
+                }
+            }
+        }
+    }
+    @Test void legacyLayoutsDefaultToStairsAndUnknownModesReject() throws Exception {
+        var data=example();data.remove("rampSurface");data.getAsJsonObject("materials").remove("slab");
+        assertEquals(LayeredRoadLayout.RampSurface.STAIRS,topology(data).layout().rampSurface());
+        assertTrue(topology(data).columns().stream().anyMatch(LayeredRoadTopology.Column::step));
+        data.addProperty("rampSurface","unknown");assertThrows(IllegalArgumentException.class,()->topology(data));
     }
     @Test void elbowWithoutAnOuterPedestrianCornerRejectsInsteadOfLeavingABrokenSidewalk() throws Exception {
         var data=example();var nodes=new JsonArray();var roads=new JsonArray();

@@ -22,6 +22,7 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
     private final LevelHeightAccessor levelHeight;
     private final MinecraftWorldgenTerrainSampler.TerrainSource cachedSource;
     private final CachedGroundSupport groundSupport;
+    private final BatchedNoiseTerrain cells;
     private volatile MinecraftWorldgenTerrainSampler.TerrainSource preliminarySource;
 
     public MinecraftWorldgenTerrainProvider(
@@ -33,7 +34,7 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
         this.chunkGenerator = Objects.requireNonNull(chunkGenerator, "chunkGenerator");
         this.randomState = Objects.requireNonNull(randomState, "randomState");
         this.levelHeight = LevelHeightAccessor.create(minBuildHeight, worldHeight);
-        var cells = BatchedNoiseTerrain.create(chunkGenerator,randomState,levelHeight);
+        cells = BatchedNoiseTerrain.create(chunkGenerator,randomState,levelHeight);
         this.cachedSource = MinecraftWorldgenTerrainSampler.cachedSource(chunkGenerator, randomState, levelHeight,cells);
         this.groundSupport = new CachedGroundSupport(point -> {
             if(cells!=null) return y -> cells.solid(point,y);
@@ -42,6 +43,8 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
                     && terrain.getBlock(y).blocksMotion() && terrain.getBlock(y).getFluidState().isEmpty();
         });
     }
+
+    BatchedNoiseTerrain batchedNoise() { return cells; }
 
     @Override
     public TerrainSurvey sample(GridBounds bounds) {

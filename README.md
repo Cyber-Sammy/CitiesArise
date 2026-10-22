@@ -781,7 +781,7 @@ District candidate selection validates both earthwork preparation and adapter gr
 
 ### Terrain sampling performance
 
-For the standard vanilla noise generator, city surveys share interpolation across aligned 16x16 grids and cache primitive height, water and full-depth solid-ground answers (up to 256 grids per provider). Exact terrain and four-layer ground-support checks remain enabled. Custom generator subclasses and unsupported height ranges use the original sampling API. This reduces repeated noise calculation while teleportation and world shutdown wait for required chunk generation.
+For the exact vanilla noise-generator class, city surveys share interpolation across aligned 16x16 grids, including tall noise settings such as JJThunder 2096-block worlds. Primitive surface/support heights and full-depth dry-solid masks are shared between providers and planning stages. Retained caches have one process-wide 128 MiB budget (16 MiB heights, 112 MiB height-dependent masks including entry overhead), with at most two active noise-tile computations. Mutable NoiseChunk instances and their wrapped density graphs are discarded after each tile; world unload/server stop clears retained generator references. Exact water and four-layer ground-support checks remain enabled. Custom generator subclasses, Big Globe, unaligned clipped bounds and tiles exceeding the memory budget retain their generator-specific/original API paths; sparse preliminary ranking also keeps point sampling. Large cold surveys still cost CPU time: this removes repeated noise work rather than making all terrain generation instantaneous.
 
 ### Semantic city map and resolved content
 

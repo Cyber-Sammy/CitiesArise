@@ -50,4 +50,38 @@ public final class NoiseTerrainGameTests {
         }
         helper.succeed();
     }
+
+    @GameTest(template="empty",timeoutTicks=200)
+    public static void sharedCacheKeepsWorldContextsAndCustomGeneratorsSeparate(GameTestHelper helper) {
+        BatchedNoiseTerrain.clearSharedCaches();
+        var registry=helper.getLevel().registryAccess();
+        var biomes=MultiNoiseBiomeSource.createFromPreset(registry.registryOrThrow(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST)
+                .getHolderOrThrow(MultiNoiseBiomeSourceParameterLists.OVERWORLD));
+        var settings=registry.registryOrThrow(Registries.NOISE_SETTINGS).getHolderOrThrow(NoiseGeneratorSettings.OVERWORLD);
+        var generator=new NoiseBasedChunkGenerator(biomes,settings);
+        var random=RandomState.create(settings.value(),registry.lookupOrThrow(Registries.NOISE),78123L);
+        var height=LevelHeightAccessor.create(generator.getMinY(),generator.getGenDepth());
+        var first=BatchedNoiseTerrain.create(generator,random,height);
+        var peer=BatchedNoiseTerrain.create(generator,random,height);
+        var point=new GridPoint(-1,16);
+        int surface=first.surface(point);
+        helper.assertTrue(peer.surface(point)==surface && peer.computedCells()==0,"Same-context providers rebuilt a noise tile");
+        var otherRandom=RandomState.create(settings.value(),registry.lookupOrThrow(Registries.NOISE),78124L);
+        var other=BatchedNoiseTerrain.create(generator,otherRandom,height);
+        helper.assertTrue(other.surface(point)==generator.getBaseHeight(point.x(),point.z(),Heightmap.Types.WORLD_SURFACE_WG,height,otherRandom)
+                && other.computedCells()==1,"Different seeds shared cached terrain");
+        var clipped=BatchedNoiseTerrain.create(generator,random,LevelHeightAccessor.create(0,128));
+        helper.assertTrue(clipped.surface(point)==generator.getBaseHeight(point.x(),point.z(),Heightmap.Types.WORLD_SURFACE_WG,
+                LevelHeightAccessor.create(0,128),random) && clipped.computedCells()==1,"Clipped bounds shared cached terrain");
+        var custom=new NoiseBasedChunkGenerator(biomes,settings) {
+            @Override public int getBaseHeight(int x,int z,Heightmap.Types type,LevelHeightAccessor bounds,RandomState state) {return 111;}
+        };
+        helper.assertTrue(BatchedNoiseTerrain.create(custom,random,height)==null,"Custom noise-generator override bypassed");
+        var fallback=new MinecraftWorldgenTerrainProvider(custom,random,height.getMinBuildHeight(),height.getHeight());
+        helper.assertTrue(fallback.preliminarySample(point).orElseThrow().height()==111,"Custom generator height override lost in fallback");
+        BatchedNoiseTerrain.clearSharedCaches();
+        helper.assertTrue(BatchedNoiseTerrain.cacheStats().solidBytes()==0 && BatchedNoiseTerrain.cacheStats().heightBytes()==0,
+                "World cache cleanup retained terrain");
+        helper.succeed();
+    }
 }

@@ -33,6 +33,9 @@ final class BatchedNoiseTerrain {
     private static final BoundedLruCache<Key,Cell> CELLS=new BoundedLruCache<>(
             NoiseTerrainCacheBudget.MAX_CELL_ENTRIES,NoiseTerrainCacheBudget.CELL_BYTES,
             value->NoiseTerrainCacheBudget.cellBytes(value.height()));
+    private static final BoundedLruCache<Key,Integer> PRELIMINARY=new BoundedLruCache<>(32768,
+            NoiseTerrainCacheBudget.PRELIMINARY_BYTES,value->128L);
+    private static final LongAdder PRELIMINARY_COMPUTATIONS=new LongAdder();
     private static final Semaphore SAMPLERS=new Semaphore(NoiseTerrainCacheBudget.MAX_SAMPLERS);
     private static final LongAdder SAMPLED_CELLS=new LongAdder();
     private final LongAdder computations=new LongAdder();
@@ -56,13 +59,22 @@ final class BatchedNoiseTerrain {
         context=new Context(random,settings,fluids,minimumY,height);
     }
 
-    int surface(GridPoint point) { return heights(point).surface()[index(point)]; }
-    int support(GridPoint point) { return heights(point).support()[index(point)]; }
+    int surface(GridPoint point) { yieldSpeculation();return heights(point).surface()[index(point)]; }
+    int support(GridPoint point) { yieldSpeculation();return heights(point).support()[index(point)]; }
+    private static void yieldSpeculation() {
+        // Yield before acquiring any cache promise, never inside a factory: a native
+        // neighbor may need the same tile and must not wait for a paused producer.
+        while(com.cybersammy.citiesarise.minecraft.planning.PlanningAheadQueue.isWorker()
+                && com.cybersammy.citiesarise.minecraft.planning.WorldgenPlanningMetrics.naturalPlansActive()>0) {
+            if(Thread.currentThread().isInterrupted())throw new CancellationException("Speculative terrain sampling interrupted");
+            java.util.concurrent.locks.LockSupport.parkNanos(1_000_000);
+        }
+    }
     int cachedCells() { return (int)CELLS.snapshot().keySet().stream().filter(k->k.context().equals(context)).count(); }
     long computedCells() { return computations.sum(); }
-    static void clearSharedCaches() { HEIGHTS.clear();CELLS.clear();SAMPLED_CELLS.reset(); }
-    static CacheStats cacheStats() { return new CacheStats(HEIGHTS.size(),CELLS.size(),HEIGHTS.retainedWeight(),CELLS.retainedWeight(),SAMPLED_CELLS.sum()); }
-    record CacheStats(int heightTiles,int solidTiles,long heightBytes,long solidBytes,long sampledTiles) { }
+    static void clearSharedCaches() { HEIGHTS.clear();CELLS.clear();PRELIMINARY.clear();SAMPLED_CELLS.reset();PRELIMINARY_COMPUTATIONS.reset(); }
+    static CacheStats cacheStats() { return new CacheStats(HEIGHTS.size(),CELLS.size(),HEIGHTS.retainedWeight(),CELLS.retainedWeight(),SAMPLED_CELLS.sum(),PRELIMINARY.size(),PRELIMINARY.retainedWeight(),PRELIMINARY_COMPUTATIONS.sum()); }
+    record CacheStats(int heightTiles,int solidTiles,long heightBytes,long solidBytes,long sampledTiles,int preliminaryPoints,long preliminaryBytes,long preliminaryComputations) { }
     boolean solid(GridPoint point,int y) {
         if(y<minimumY || y>=minimumY+height) return false;
         int bit=index(point)*height+y-minimumY;
@@ -89,7 +101,7 @@ final class BatchedNoiseTerrain {
         java.util.Arrays.fill(surface,minimumY);java.util.Arrays.fill(support,minimumY);
         long[] solids=new long[NoiseTerrainCacheBudget.maskWords(height)];
         int cellHeight=noiseSettings.getCellHeight(),yCells=Math.floorDiv(height,cellHeight);
-        var noise=new CellNoise(random,x0,z0,noiseSettings,settings,fluidPicker);
+        var noise=new CellNoise(random,x0,z0,noiseSettings,settings,fluidPicker,context);
         noise.initializeForFirstCellX();
         var surfaceTest=Heightmap.Types.WORLD_SURFACE_WG.isOpaque();
         var supportTest=Heightmap.Types.OCEAN_FLOOR_WG.isOpaque();
@@ -140,8 +152,19 @@ final class BatchedNoiseTerrain {
         @Override public boolean equals(Object value){return value instanceof Context c && random==c.random && settings==c.settings && fluids==c.fluids && minY==c.minY && height==c.height;}
     }
     private static final class CellNoise extends NoiseChunk {
-        CellNoise(RandomState random,int x,int z,NoiseSettings noise,NoiseGeneratorSettings settings,Aquifer.FluidPicker fluids) {
+        private final Context context;
+        CellNoise(RandomState random,int x,int z,NoiseSettings noise,NoiseGeneratorSettings settings,Aquifer.FluidPicker fluids,Context context) {
             super(WIDTH/noise.getCellWidth(),random,x,z,noise,BEARDIFIER_MARKER,settings,fluids,Blender.empty());
+            this.context=context;
+        }
+        @Override public int preliminarySurfaceLevel(int x,int z) {
+            // Aquifers query neighboring quart columns repeatedly across tile boundaries.
+            // The empty-blender, exact-generator inputs and clipped vertical span are identical.
+            var key=new Key(context,Math.floorDiv(x,4),Math.floorDiv(z,4));
+            return PRELIMINARY.getOrCreate(key,()->{
+                PRELIMINARY_COMPUTATIONS.increment();
+                return super.preliminarySurfaceLevel(x,z);
+            });
         }
         BlockState state() { return getInterpolatedState(); }
     }

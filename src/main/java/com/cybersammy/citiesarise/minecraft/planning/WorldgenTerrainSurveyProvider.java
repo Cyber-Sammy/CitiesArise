@@ -15,6 +15,9 @@ import java.util.Set;
 public interface WorldgenTerrainSurveyProvider {
     TerrainSurvey sample(GridBounds bounds);
 
+    /** Opt in only when concurrent calls create independent samplers over immutable generator inputs. */
+    default boolean parallelSamples(){return false;}
+
     /** Sparse generator-only heights; unsupported providers preserve distance ordering. Never loads chunks. */
     default Optional<com.cybersammy.citiesarise.core.terrain.TerrainSiteEstimate.Sample> preliminarySample(GridPoint point) {
         return Optional.empty();

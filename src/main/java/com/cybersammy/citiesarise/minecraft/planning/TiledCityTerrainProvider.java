@@ -16,22 +16,35 @@ final class TiledCityTerrainProvider implements WorldgenTerrainSurveyProvider {
     public Optional<TerrainPreparationColumn> unsupportedColumn(TerrainPreparationPlan plan) {return delegate.unsupportedColumn(plan);}
     private Optional<TerrainSurvey> collect(GridBounds bounds,Set<GridPoint> exact) {
         var cells=new ArrayList<TerrainCell>();
+        var windows=new ArrayList<Window>();
         for(int z=bounds.minZ();z<bounds.maxZExclusive();z+=112) for(int x=bounds.minX();x<bounds.maxXExclusive();x+=112) {
             var tile=new GridBounds(new GridPoint(x,z),new GridSize(Math.min(112,bounds.maxXExclusive()-x),Math.min(112,bounds.maxZExclusive()-z)));
             int minX=Math.max(bounds.minX(),x-4),minZ=Math.max(bounds.minZ(),z-4);
             var window=new GridBounds(new GridPoint(minX,minZ),new GridSize(Math.min(bounds.maxXExclusive(),tile.maxXExclusive()+4)-minX,
                     Math.min(bounds.maxZExclusive(),tile.maxZExclusive()+4)-minZ));
-            TerrainSurvey survey;
-            if(exact==null) survey=delegate.sample(window);
-            else {
-                var local=new HashSet<GridPoint>();exact.stream().filter(window::contains).forEach(local::add);
-                var refined=delegate.sampleWithExactWaterMask(window,java.util.Collections.unmodifiableSet(local));
-                if(refined.isEmpty()) return Optional.empty();
-                survey=refined.orElseThrow();
+            windows.add(new Window(tile,window));
+        }
+        for(int i=0;i<windows.size();i++) {
+            var first=windows.get(i);
+            if(delegate.parallelSamples() && i+1<windows.size()) {
+                var pending=TerrainSamplingAssist.submit(()->sample(first,exact));
+                var second=windows.get(++i);var secondSurvey=sample(second,exact);var firstSurvey=pending.join();
+                if(firstSurvey.isEmpty() || secondSurvey.isEmpty())return Optional.empty();
+                append(cells,first,firstSurvey.orElseThrow());append(cells,second,secondSurvey.orElseThrow());
+            }else {
+                var survey=sample(first,exact);if(survey.isEmpty())return Optional.empty();append(cells,first,survey.orElseThrow());
             }
-            survey.cells().stream().filter(c->tile.contains(c.point())).forEach(cells::add);
         }
         latest=new TerrainSurvey(bounds,cells);
         return Optional.of(latest);
     }
+    private Optional<TerrainSurvey> sample(Window item,Set<GridPoint> exact) {
+        if(exact==null)return Optional.of(delegate.sample(item.window()));
+        var local=new HashSet<GridPoint>();exact.stream().filter(item.window()::contains).forEach(local::add);
+        return delegate.sampleWithExactWaterMask(item.window(),Collections.unmodifiableSet(local));
+    }
+    private static void append(List<TerrainCell> cells,Window item,TerrainSurvey survey) {
+        survey.cells().stream().filter(c->item.tile().contains(c.point())).forEach(cells::add);
+    }
+    private record Window(GridBounds tile,GridBounds window) { }
 }

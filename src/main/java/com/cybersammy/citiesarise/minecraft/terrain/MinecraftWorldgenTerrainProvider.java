@@ -45,6 +45,7 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
     }
 
     BatchedNoiseTerrain batchedNoise() { return cells; }
+    @Override public boolean parallelSamples(){return cells!=null;}
 
     @Override
     public TerrainSurvey sample(GridBounds bounds) {

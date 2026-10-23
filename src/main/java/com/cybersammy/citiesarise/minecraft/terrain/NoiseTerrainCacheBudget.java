@@ -3,7 +3,8 @@ package com.cybersammy.citiesarise.minecraft.terrain;
 /** Process-wide retained-cache budgets; charges include conservative array/key/entry overhead. */
 final class NoiseTerrainCacheBudget {
     static final int WIDTH = 16;
-    static final long HEIGHT_BYTES = 16L * 1024 * 1024;
+    static final long HEIGHT_BYTES = 12L * 1024 * 1024;
+    static final long PRELIMINARY_BYTES = 4L * 1024 * 1024;
     static final long CELL_BYTES = 112L * 1024 * 1024;
     static final int MAX_HEIGHT_ENTRIES = 8192;
     static final int MAX_CELL_ENTRIES = 4096;

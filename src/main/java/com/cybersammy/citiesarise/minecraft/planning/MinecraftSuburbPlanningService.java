@@ -202,7 +202,8 @@ public final class MinecraftSuburbPlanningService {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(position, "position");
 
-        return planAt(
+        long started=System.nanoTime();
+        try {return planAt(
                 OVERWORLD_DIMENSION_ID,
                 context.worldSeed(),
                 position.getX(),
@@ -215,7 +216,7 @@ public final class MinecraftSuburbPlanningService {
                 context.terrainProvider(),
                 context.terrainLoggingEnabled(),
                 context.planningLoggingEnabled()
-        );
+        );}finally{WorldgenPlanningMetrics.structureWait(System.nanoTime()-started);}
     }
 
     private SuburbDebugPlanResult planAt(
@@ -279,7 +280,7 @@ public final class MinecraftSuburbPlanningService {
 
         return planCache.getOrCreate(
                 cacheKey,
-                () -> createPlan(
+                () -> WorldgenPlanningMetrics.compute(cacheKey,()->createPlan(
                         region,
                         bounds,
                         settlementId,
@@ -289,8 +290,18 @@ public final class MinecraftSuburbPlanningService {
                         terrainProvider,
                         terrainLoggingEnabled,
                         planningLoggingEnabled
-                )
+                ))
         );
+    }
+
+    public java.util.Set<SettlementRegion> cachedWorldgenRegions(WorldgenPlanningContext context) {
+        var regions=new java.util.HashSet<SettlementRegion>();
+        for(var key:planCache.snapshot().keySet()) {
+            var expected=new RegionPlanCacheKey(context.dimensionId(),key.region(),context.worldSeed(),TerrainSurveySource.WORLDGEN_BASE,
+                    context.profileId(),context.surveySize(),context.planningSettings(),context.terrainResponsePolicy());
+            if(key.equals(expected))regions.add(key.region());
+        }
+        return java.util.Set.copyOf(regions);
     }
 
     /** Exact-context hints only. Native structure-start validation still runs in the locator. */

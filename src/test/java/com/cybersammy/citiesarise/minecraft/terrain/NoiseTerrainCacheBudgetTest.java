@@ -11,7 +11,7 @@ class NoiseTerrainCacheBudgetTest {
         long cityTiles=36L*36; // Worst alignment including the survey's slope halo.
         assertTrue(cityTiles*NoiseTerrainCacheBudget.cellBytes(2096)<NoiseTerrainCacheBudget.CELL_BYTES,
                 "A 540x540 city must not evict its own JJThunder masks between stages");
-        assertEquals(128L*1024*1024,NoiseTerrainCacheBudget.CELL_BYTES+NoiseTerrainCacheBudget.HEIGHT_BYTES);
+        assertEquals(128L*1024*1024,NoiseTerrainCacheBudget.CELL_BYTES+NoiseTerrainCacheBudget.HEIGHT_BYTES+NoiseTerrainCacheBudget.PRELIMINARY_BYTES);
         assertTrue(NoiseTerrainCacheBudget.fits(2096));
         assertFalse(NoiseTerrainCacheBudget.fits(Integer.MAX_VALUE));
         assertFalse(NoiseTerrainCacheBudget.fits(0));

@@ -14,6 +14,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 final class InMemoryRegionPlanCacheTest {
+    @Test void speculativeAndNativeRequestsShareOneCompletedOutcome() throws Exception {
+        var cache=new InMemoryRegionPlanCache();var calls=new AtomicInteger();
+        var key=key("minecraft:overworld","cities_arise:suburb",SuburbPlanningSettings.defaults());
+        var began=new java.util.concurrent.CountDownLatch(1);var release=new java.util.concurrent.CountDownLatch(1);
+        var prefetched=new java.util.concurrent.CompletableFuture<SuburbDebugPlanResult>();
+        try(var queue=new PlanningAheadQueue<RegionPlanCacheKey>(1);var nativeWorker=java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            queue.offer(key,()->prefetched.complete(cache.getOrCreate(key,()->{
+                began.countDown();try{release.await();}catch(InterruptedException e){throw new AssertionError(e);}return result(88,calls);
+            })));
+            org.junit.jupiter.api.Assertions.assertTrue(began.await(2,java.util.concurrent.TimeUnit.SECONDS));
+            var nativeResult=nativeWorker.submit(()->cache.getOrCreate(key,()->result(99,calls)));
+            release.countDown();assertSame(prefetched.get(2,java.util.concurrent.TimeUnit.SECONDS),nativeResult.get(2,java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(1,calls.get());assertEquals(88,nativeResult.get().seed());
+        }finally{release.countDown();}
+    }
     @Test
     void locateHintsMatchEveryWorldgenInputAndDisappearOnClear() {
         var cache = new InMemoryRegionPlanCache();

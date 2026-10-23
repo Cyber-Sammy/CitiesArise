@@ -73,14 +73,21 @@ final class PendingStructuralPlacement extends SavedData {
         pending.put(id,e);setDirty();
     }
     void applyReady(ServerLevel level) {
+        try {applyReadyTick(level);}finally {
+            completion.retain(level,pending.keySet());
+            if(level.players().isEmpty())completion.clear(level);
+        }
+    }
+    void releaseCompletionTickets(ServerLevel level){completion.clear(level);}
+    private void applyReadyTick(ServerLevel level) {
         if(level.getGameTime()%20==0) {
-            var nearby=new ArrayList<NearbyPlacementCompletion.Candidate>();
+            var nearby=new ArrayList<PlacementCompletionTickets.Candidate>();
             for(var e:pending.values()) {
                 int minX=e.original.minimumX(),minZ=e.original.minimumZ(),maxX=e.original.maximumX(),maxZ=e.original.maximumZ();
                 int radius=Math.min(128,level.getServer().getPlayerList().getViewDistance()*16);
                 boolean near=level.players().stream().anyMatch(p->Math.max(Math.max(minX-p.getX(),p.getX()-maxX),0)<=radius
                         && Math.max(Math.max(minZ-p.getZ(),p.getZ()-maxZ),0)<=radius);
-                if(near)nearby.add(new NearbyPlacementCompletion.Candidate(e.id,e.required()));
+                if(near)nearby.add(new PlacementCompletionTickets.Candidate(e.id,e.required()));
             }
             completion.maintain(level,nearby);
         }

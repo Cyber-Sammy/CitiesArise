@@ -121,7 +121,8 @@ public final class PlacementReadinessGameTests {
         var completion=new NearbyPlacementCompletion();var started=new boolean[1];
         helper.succeedWhen(()->{
             if(level.getGameTime()%20==0) {
-                completion.maintain(level,List.of(new NearbyPlacementCompletion.Candidate("test:one-owner",Set.of(ready,missing))));
+                completion.maintain(level,List.of(new PlacementCompletionTickets.Candidate("test:one-owner",Set.of(ready,missing))));
+                if(!started[0])helper.assertTrue(level.getChunkSource().getChunkNow(missing.x(),0)==null,"Completion synchronously generated the missing chunk");
                 started[0]=true;
             }
             helper.assertTrue(started[0],"Waiting for completion cadence");

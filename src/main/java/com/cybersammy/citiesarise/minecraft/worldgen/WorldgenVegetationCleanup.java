@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 public final class WorldgenVegetationCleanup {
@@ -55,6 +56,11 @@ public final class WorldgenVegetationCleanup {
     public static void onServerStopped(ServerStoppedEvent event) {
         Objects.requireNonNull(event, "event");
         PENDING.clear();
+        PlacementCompletionTickets.resetMeasurements();
+    }
+
+    public static void onServerStopping(ServerStoppingEvent event) {
+        for(var level:event.getServer().getAllLevels())PendingStructuralPlacement.get(level).releaseCompletionTickets(level);
     }
 
     private static WorldgenVegetationCleanupPlan merge(

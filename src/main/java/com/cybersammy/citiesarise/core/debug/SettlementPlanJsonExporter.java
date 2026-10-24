@@ -157,6 +157,15 @@ public final class SettlementPlanJsonExporter {
     }
 
     private static void writeRoadGraph(JsonBuilder json, SettlementPlan plan) {
+        json.arrayField("overpasses",()->plan.overpasses().forEach(module->json.arrayValue(()->{
+            json.beginObject();json.stringField("id",module.id().value());
+            json.stringField("startPort",module.startPort().value());json.stringField("endPort",module.endPort().value());
+            json.numberField("baseY",module.baseY());json.numberField("clearance",module.layout().clearance());
+            json.objectField("origin",()->writePoint(json,module.origin()));
+            json.arrayField("nodes",()->writeRoadNodes(json,module.layout().graph().nodes()));
+            json.arrayField("segments",()->writeRoadSegments(json,module.layout().graph().segments()));
+            json.endObject();
+        })));
         json.arrayField("nodes", () -> writeRoadNodes(json, plan.roadGraph().nodes()));
         json.arrayField("segments", () -> writeRoadSegments(json, plan.roadGraph().segments()));
         json.arrayField("bridges", () -> plan.roadGraph().bridges().forEach(bridge -> json.arrayValue(() -> {

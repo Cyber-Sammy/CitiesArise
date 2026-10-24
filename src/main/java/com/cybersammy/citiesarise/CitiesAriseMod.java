@@ -45,12 +45,20 @@ public final class CitiesAriseMod {
         CitiesAriseCommands commands = new CitiesAriseCommands(planningService, LOGGER);
         NeoForge.EVENT_BUS.addListener(commands::register);
         NeoForge.EVENT_BUS.addListener(commands::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(commands::onServerStopping);
         NeoForge.EVENT_BUS.addListener(cacheLifecycle::onDatapackSync);
         NeoForge.EVENT_BUS.addListener(cacheLifecycle::onServerStopped);
         NeoForge.EVENT_BUS.addListener(profileStore::register);
         NeoForge.EVENT_BUS.addListener(profileStore::onTagsUpdated);
         NeoForge.EVENT_BUS.addListener(WorldgenVegetationCleanup::onServerTick);
         NeoForge.EVENT_BUS.addListener(WorldgenVegetationCleanup::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(WorldgenVegetationCleanup::onServerStopping);
+        var planningAhead=new com.cybersammy.citiesarise.minecraft.worldgen.CityPlanningAhead(planningService);
+        NeoForge.EVENT_BUS.addListener(planningAhead::pre);
+        NeoForge.EVENT_BUS.addListener(planningAhead::post);
+        NeoForge.EVENT_BUS.addListener(planningAhead::sync);
+        NeoForge.EVENT_BUS.addListener(planningAhead::stop);
+        NeoForge.EVENT_BUS.addListener(planningAhead::stopping);
         NeoForge.EVENT_BUS.addListener(com.cybersammy.citiesarise.minecraft.worldgen.SettlementRegistryLifecycle::onChunkLoad);
     }
 

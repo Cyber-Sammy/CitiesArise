@@ -9,6 +9,50 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class WorldgenRegionPreselectionTest {
     private static final SettlementRegion NEAR=new SettlementRegion(0,0),FAR=new SettlementRegion(3,0);
+    @Test void completedPlanIsFullyValidatedBeforeAnyGeneratorScreening() {
+        var calls = new ArrayList<SettlementRegion>();
+        var result = new WorldgenRegionSearch().findBest(64,64,4,4,0,r->true,r->{
+            calls.add(r); return Optional.of(1);
+        },Integer::compare,1000,()->0L,(r,time)->{
+            throw new AssertionError("Terrain sampled despite an accepted completed plan");
+        },Set.of(FAR));
+        assertEquals(List.of(FAR),calls);
+        assertEquals(FAR,result.result().orElseThrow().region());
+        assertEquals(0,result.preliminaryCandidates());
+    }
+    @Test void rejectedCompletedPlanFallsThroughToRankedCandidatesWithoutRepeatingIt() {
+        var calls = new ArrayList<SettlementRegion>();
+        var result = new WorldgenRegionSearch().findBest(64,64,4,4,0,r->r.equals(NEAR)||r.equals(FAR),r->{
+            calls.add(r); return r.equals(NEAR)?Optional.of(1):Optional.empty();
+        },Integer::compare,1000,()->0L,(r,time)->{
+            assertNotEquals(FAR,r); return OptionalDouble.of(0);
+        },Set.of(FAR));
+        assertEquals(List.of(FAR,NEAR),calls);
+        assertEquals(2,result.attemptedCandidates());
+        assertEquals(1,result.preliminaryCandidates());
+    }
+    @Test void completedHintsRespectExclusionsRadiusAttemptAndTimeLimits() {
+        var excluded = new SettlementRegion(1,0);
+        var outside = new SettlementRegion(20,0);
+        var clock = new AtomicLong();
+        var calls = new ArrayList<SettlementRegion>();
+        var result = new WorldgenRegionSearch().findBest(64,64,4,4,0,r->!r.equals(excluded),r->{
+            calls.add(r);clock.addAndGet(1000);return Optional.empty();
+        },Integer::compare,1000,clock::get,(r,time)->{
+            throw new AssertionError("Expired search sampled terrain");
+        },Set.of(FAR,excluded,outside));
+        assertEquals(List.of(FAR),calls);
+        assertTrue(result.timeLimitReached());
+        assertEquals(1,result.attemptedCandidates());
+    }
+    @Test void bestModeStillComparesNewSitesAfterACompletedHint() {
+        var calls = new ArrayList<SettlementRegion>();
+        var result = new WorldgenRegionSearch().findBest(64,64,4,4,1,r->r.equals(NEAR)||r.equals(FAR),r->{
+            calls.add(r);return Optional.of(r.equals(NEAR)?0:1);
+        },Integer::compare,1000,()->0L,(r,time)->OptionalDouble.of(0),Set.of(FAR));
+        assertEquals(List.of(FAR,NEAR),calls);
+        assertEquals(NEAR,result.result().orElseThrow().region());
+    }
     @Test void promisingDistantSiteIsPlannedFirstButStillRequiresFullAcceptance() {
         var full=new ArrayList<SettlementRegion>();
         var result=new WorldgenRegionSearch().findBest(64,64,4,4,0,r->r.equals(NEAR)||r.equals(FAR),r->{

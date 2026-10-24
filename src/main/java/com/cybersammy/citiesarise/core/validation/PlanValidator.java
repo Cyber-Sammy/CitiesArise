@@ -24,10 +24,30 @@ public final class PlanValidator {
         addMissingRoadNodeErrors(plan, errors);
         addBuildingSlotErrors(plan, errors);
         validateDistricts(plan, errors);
+        validateOverpasses(plan,errors);
 
         return List.copyOf(errors);
     }
 
+    private static void validateOverpasses(SettlementPlan plan,List<PlanValidationError> errors) {
+        var nodes=new HashMap<PlanElementId,RoadNode>();plan.roadGraph().nodes().forEach(n->nodes.put(n.id(),n));
+        var identities=new HashSet<PlanElementId>();identities.add(plan.id());nodes.keySet().forEach(identities::add);
+        plan.roadGraph().segments().forEach(e->identities.add(e.id()));plan.roadGraph().bridges().forEach(e->identities.add(e.id()));
+        plan.parcels().forEach(e->identities.add(e.id()));plan.buildingSlots().forEach(e->identities.add(e.id()));
+        for(var module:plan.overpasses()) {
+            boolean valid=identities.add(module.id()) && nodes.containsKey(module.startPort()) && nodes.containsKey(module.endPort());
+            var local=module.layout().graph().nodes();
+            var ports=local.stream().filter(n->com.cybersammy.citiesarise.core.road.LayeredRoadLayout.elevation(n)==0).toList();
+            if(ports.size()!=2)valid=false;
+            else if(valid) {
+                var actual=Set.of(module.world(ports.getFirst().point()),module.world(ports.getLast().point()));
+                valid=actual.equals(Set.of(nodes.get(module.startPort()).point(),nodes.get(module.endPort()).point()));
+            }
+            for(var n:local)valid&=identities.add(n.id());
+            for(var e:module.layout().graph().segments())valid&=identities.add(e.id());
+            if(!valid)errors.add(PlanValidationError.forElement(PlanValidationErrorCode.INVALID_DISTRICT,module.id(),"Invalid city overpass identity or ground ports"));
+        }
+    }
     private static void validateDistricts(SettlementPlan plan, List<PlanValidationError> errors) {
         if (plan.districts().isEmpty()) return;
         var ids = new HashSet<PlanElementId>();

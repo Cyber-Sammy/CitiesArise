@@ -34,6 +34,10 @@ final class TerrainSupportAcceptance {
                 }
             }
         }
+        for(var overpass:result.plan().orElseThrow().overpasses())for(var footing:overpass.footings()) {
+            var point=overpass.world(footing.point());
+            if(known.add(point))supportColumns.add(new TerrainPreparationColumn(point,footing.road(),overpass.baseY()+footing.bottomY(),0,0));
+        }
         var supportPlan = TerrainPreparationPlan.of(preparation.elevationPlan(), List.of(), supportColumns);
         return terrain.unsupportedColumn(preparation).or(() -> terrain.unsupportedColumn(supportPlan))
                 .map(column -> SuburbPlanningResult.rejectedTerrain(new SuburbTerrainDiagnostic(

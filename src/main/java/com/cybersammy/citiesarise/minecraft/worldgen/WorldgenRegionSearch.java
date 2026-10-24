@@ -38,6 +38,14 @@ final class WorldgenRegionSearch {
             int improvementCandidateAttempts,Predicate<SettlementRegion> candidatePredicate,
             Function<SettlementRegion,Optional<T>> evaluator,Comparator<T> comparator,Executor executor,long timeLimitNanos,
             WorldgenRegionPreselection.Estimator estimator) {
+        return findBestAsync(originX, originZ, searchRadius, maxCandidateAttempts, improvementCandidateAttempts,
+                candidatePredicate, evaluator, comparator, executor, timeLimitNanos, estimator, java.util.Set.of());
+    }
+
+    <T> CompletableFuture<Outcome<T>> findBestAsync(int originX,int originZ,int searchRadius,int maxCandidateAttempts,
+            int improvementCandidateAttempts,Predicate<SettlementRegion> candidatePredicate,
+            Function<SettlementRegion,Optional<T>> evaluator,Comparator<T> comparator,Executor executor,long timeLimitNanos,
+            WorldgenRegionPreselection.Estimator estimator, java.util.Set<SettlementRegion> preferred) {
         Objects.requireNonNull(executor, "executor");
         return CompletableFuture.supplyAsync(
                 () -> findBest(
@@ -50,7 +58,7 @@ final class WorldgenRegionSearch {
                         evaluator,
                         comparator,
                         timeLimitNanos,
-                        System::nanoTime,estimator
+                        System::nanoTime,estimator,preferred
                 ),
                 executor
         );
@@ -81,6 +89,15 @@ final class WorldgenRegionSearch {
             int improvementCandidateAttempts,Predicate<SettlementRegion> candidatePredicate,
             Function<SettlementRegion,Optional<T>> evaluator,Comparator<T> comparator,long timeLimitNanos,
             java.util.function.LongSupplier clock,WorldgenRegionPreselection.Estimator estimator) {
+        return findBest(originX, originZ, searchRadius, maxCandidateAttempts, improvementCandidateAttempts,
+                candidatePredicate, evaluator, comparator, timeLimitNanos, clock, estimator, java.util.Set.of());
+    }
+
+    <T> Outcome<T> findBest(int originX,int originZ,int searchRadius,int maxCandidateAttempts,
+            int improvementCandidateAttempts,Predicate<SettlementRegion> candidatePredicate,
+            Function<SettlementRegion,Optional<T>> evaluator,Comparator<T> comparator,long timeLimitNanos,
+            java.util.function.LongSupplier clock,WorldgenRegionPreselection.Estimator estimator,
+            java.util.Set<SettlementRegion> preferred) {
         if(timeLimitNanos<=0) throw new IllegalArgumentException("timeLimitNanos must be positive");
         long started=clock.getAsLong();
         requirePositive(searchRadius, "searchRadius");
@@ -92,21 +109,36 @@ final class WorldgenRegionSearch {
 
         rejectInterruptedSearch();
         List<SettlementRegion> regions = orderedRegions(originX, originZ, searchRadius);
+        // Keep geographic order within completed hints; exclusions, radius and eligibility still apply.
+        regions = new ArrayList<>(regions);
+        regions.sort(Comparator.comparingInt(region -> preferred.contains(region) ? 0 : 1));
+        int preferredCount = 0;
+        while (preferredCount < regions.size() && preferred.contains(regions.get(preferredCount))) preferredCount++;
         int preliminaryCandidates=0;
-        if(estimator!=null) {
-            long allowance=Math.min(java.util.concurrent.TimeUnit.SECONDS.toNanos(8),timeLimitNanos/5);
-            var selection=WorldgenRegionPreselection.order(regions,candidatePredicate,estimator,()->clock.getAsLong()-started<allowance);
-            regions=selection.regions();preliminaryCandidates=selection.sampledSites();
-            System.getLogger(WorldgenRegionSearch.class.getName()).log(System.Logger.Level.INFO,
-                    "Diagnostic terrain preselection: screened="+preliminaryCandidates+", elapsedMs="+(clock.getAsLong()-started)/1_000_000.0);
-        }
         Optional<Candidate<T>> bestCandidate = Optional.empty();
         int attempts = 0;
         int firstAcceptedAttempt = -1;
         boolean timedOut=false;
-        for (SettlementRegion region : regions) {
+        for (int index = 0; index < regions.size(); index++) {
             rejectInterruptedSearch();
             if(clock.getAsLong()-started>=timeLimitNanos) { timedOut=true; break; }
+            // Defer generator screening until completed plans fail (or best mode requests improvement).
+            if (index == preferredCount && estimator != null) {
+                long screeningStarted = clock.getAsLong();
+                long allowance = Math.min(java.util.concurrent.TimeUnit.SECONDS.toNanos(8), timeLimitNanos / 5);
+                var selection = WorldgenRegionPreselection.order(regions.subList(index, regions.size()),
+                        candidatePredicate, estimator, () -> clock.getAsLong() - started < timeLimitNanos
+                                && clock.getAsLong() - screeningStarted < allowance);
+                var reordered = new ArrayList<>(regions.subList(0, index));
+                reordered.addAll(selection.regions());
+                regions = reordered;
+                preliminaryCandidates = selection.sampledSites();
+                System.getLogger(WorldgenRegionSearch.class.getName()).log(System.Logger.Level.INFO,
+                        "Diagnostic terrain preselection: screened=" + preliminaryCandidates
+                                + ", elapsedMs=" + (clock.getAsLong() - screeningStarted) / 1_000_000.0);
+                if (clock.getAsLong() - started >= timeLimitNanos) { timedOut = true; break; }
+            }
+            SettlementRegion region = regions.get(index);
             if (!candidatePredicate.test(region)) {
                 continue;
             }

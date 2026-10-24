@@ -52,6 +52,8 @@ public final class WorldgenSettlementLocator {
 
     private CompletableFuture<SearchResult> findAsync(ServerLevel level, BlockPos origin, java.util.Set<SettlementRegion> excluded, boolean ranked) {
         var skipped=java.util.Set.copyOf(excluded);
+        int exclusionRadius=CitiesAriseWorldgenConfig.cityExclusionRadius();
+        var exclusionZones=CityReservations.exclusions(level,exclusionRadius);
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(origin, "origin");
 
@@ -78,30 +80,36 @@ public final class WorldgenSettlementLocator {
         int seaLevel = level.getSeaLevel();
         Map<String, Integer> rejectionCounts = new LinkedHashMap<>();
         var rejectedRegions=new java.util.HashSet<SettlementRegion>();
+        var completedPlans = planningService.cachedWorldgenPlans(context);
         return regionSearch.findBestAsync(
                 origin.getX(),
                 origin.getZ(),
                 CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
                 CitiesAriseWorldgenConfig.locateMaxCandidateAttempts(),
                 ranked ? CitiesAriseWorldgenConfig.locateImprovementCandidateAttempts() : 0,
-                region -> !skipped.contains(region) && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,context.surveySize())
+                region -> !skipped.contains(region)
+                        && exclusionZones.stream().noneMatch(zone->{
+                            var center=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.center(region,context.surveySize());
+                            return zone.excludes(center.x(),center.z(),exclusionRadius);
+                        }) && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,context.surveySize())
                         && candidateSelector.isCandidate(worldSeed, region, regionModulo,context.surveySize())
                         && placement.isStructureRegion(region)
                         && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,context.surveySize(),
                                 placement.potentialChunk(region).x,placement.potentialChunk(region).z),
                 region -> {
-                    var evaluation=evaluate(context,seaLevel,region,rejectionCounts,nativeStarts);
+                    var evaluation=evaluate(context,seaLevel,region,rejectionCounts,nativeStarts,completedPlans.get(region));
                     if(evaluation.isEmpty()) rejectedRegions.add(region);
                     return evaluation;
                 },
-                EarthworkSiteAssessment::compareTo,
+                java.util.Comparator.comparing(ValidatedCity::assessment),
                 executor,
                 java.util.concurrent.TimeUnit.SECONDS.toNanos(CitiesAriseWorldgenConfig.locateTimeLimitSeconds()),
                 CitiesAriseWorldgenConfig.locateTerrainRanking() ? (region,mayContinue) ->
                         com.cybersammy.citiesarise.core.terrain.TerrainSiteEstimate.sample(
                                 com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.bounds(region,context.surveySize()),
                                 context.terrainProvider()::preliminarySample,mayContinue)
-                                .map(estimate->java.util.OptionalDouble.of(estimate.score())).orElseGet(java.util.OptionalDouble::empty) : null
+                                .map(estimate->java.util.OptionalDouble.of(estimate.score())).orElseGet(java.util.OptionalDouble::empty) : null,
+                completedPlans.keySet()
         ).thenApply(outcome -> {
             if(outcome.timeLimitReached()) increment(rejectionCounts,"SEARCH_TIME_LIMIT");
             var raw=searchResult(outcome,rejectionCounts);
@@ -111,7 +119,8 @@ public final class WorldgenSettlementLocator {
             });
             var result=new SearchResult(located,raw.attemptedCandidates(),raw.rejectionCounts());
             return new SearchResult(result.settlement(),result.attemptedCandidates(),result.rejectionCounts(),
-                    context.profileId().value(),rejectedRegions,outcome.preliminaryCandidates());
+                    context.profileId().value(),rejectedRegions,outcome.preliminaryCandidates(),
+                    outcome.result().map(r->r.evaluation().pieces()).orElseGet(java.util.List::of));
         });
     }
 
@@ -120,34 +129,42 @@ public final class WorldgenSettlementLocator {
         var planning=planningService.prepareLocateContext(level,level.getChunkSource().getGenerator());
         if(planning.isEmpty()) return Optional.empty();
         var size=planning.orElseThrow().surveySize();
+        int radius=CitiesAriseWorldgenConfig.cityExclusionRadius();
+        var zones=CityReservations.exclusions(level,radius);
         var placement = placementContext(level, level.getSeed());
         if (placement.isEmpty()) return Optional.empty();
         var context = placement.orElseThrow();
         return PotentialRegionSearch.find(SettlementRegion.fromBlockPosition(origin.getX(), origin.getZ()),
                 CitiesAriseWorldgenConfig.locateSearchRadiusRegions(),
-                region -> com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,size) && candidateSelector.isCandidate(level.getSeed(), region,
+                region -> zones.stream().noneMatch(zone->{
+                    var center=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.center(region,size);
+                    return zone.excludes(center.x(),center.z(),radius);
+                }) && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.anchor(region,size) && candidateSelector.isCandidate(level.getSeed(), region,
                         CitiesAriseWorldgenConfig.candidateRegionModulo(),size) && context.isStructureRegion(region)
                         && com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,size,
                                 context.potentialChunk(region).x,context.potentialChunk(region).z))
                 .map(context::locatePosition);
     }
 
-    private Optional<EarthworkSiteAssessment> evaluate(
+    private record ValidatedCity(EarthworkSiteAssessment assessment,java.util.List<CitiesAriseSuburbPiece> pieces) { }
+
+    private Optional<ValidatedCity> evaluate(
             WorldgenPlanningContext context,
             int seaLevel,
             SettlementRegion region,
-            Map<String, Integer> rejectionCounts,NativeStructureStartVerifier nativeStarts
+            Map<String, Integer> rejectionCounts,NativeStructureStartVerifier nativeStarts,
+            SuburbDebugPlanResult completedPlan
     ) {
         BlockPos center = centerPosition(seaLevel, region);
-        SuburbDebugPlanResult result = planningService.planForWorldgen(context, center);
+        SuburbDebugPlanResult result = completedPlan != null ? completedPlan : planningService.planForWorldgen(context, center);
         if (result.successful()) {
             var rejection=nativeStarts.rejection(result,context.profileId());
             if(rejection.isPresent()) {
                 increment(rejectionCounts,rejection.orElseThrow());return Optional.empty();
             }
-            return Optional.of(result.optionalSiteAssessment().orElseThrow(
+            return Optional.of(new ValidatedCity(result.optionalSiteAssessment().orElseThrow(
                     () -> new IllegalStateException("successful worldgen plan is missing site assessment")
-            ));
+            ),nativeStarts.pieces()));
         }
 
         increment(rejectionCounts, rejectionReason(result));
@@ -155,7 +172,7 @@ public final class WorldgenSettlementLocator {
     }
 
     private SearchResult searchResult(
-            WorldgenRegionSearch.Outcome<EarthworkSiteAssessment> outcome,
+            WorldgenRegionSearch.Outcome<ValidatedCity> outcome,
             Map<String, Integer> rejectionCounts
     ) {
         Optional<LocatedSettlement> settlement = outcome.result().map(this::locatedSettlement);
@@ -182,7 +199,7 @@ public final class WorldgenSettlementLocator {
     }
 
     private LocatedSettlement locatedSettlement(
-            WorldgenRegionSearch.Result<EarthworkSiteAssessment> result
+            WorldgenRegionSearch.Result<ValidatedCity> result
     ) {
         SettlementRegion region = result.region();
         var center = WorldgenPlacementCoordinates.diagnosticCenter(region);
@@ -191,7 +208,7 @@ public final class WorldgenSettlementLocator {
                 center.x(),
                 center.z(),
                 result.attemptedCandidates(),
-                result.evaluation()
+                result.evaluation().assessment()
         );
     }
 
@@ -282,14 +299,20 @@ public final class WorldgenSettlementLocator {
             Map<String, Integer> rejectionCounts,
             String profile,
             java.util.Set<SettlementRegion> rejectedRegions,
-            int preliminaryCandidates
+            int preliminaryCandidates,
+            java.util.List<CitiesAriseSuburbPiece> pieces
     ) {
+        public SearchResult(Optional<LocatedSettlement> settlement,int attemptedCandidates,Map<String,Integer> rejectionCounts,String profile,
+                java.util.Set<SettlementRegion> rejectedRegions,int preliminaryCandidates) {
+            this(settlement,attemptedCandidates,rejectionCounts,profile,rejectedRegions,preliminaryCandidates,java.util.List.of());
+        }
         public SearchResult(Optional<LocatedSettlement> settlement,int attemptedCandidates,Map<String,Integer> rejectionCounts,String profile,
                 java.util.Set<SettlementRegion> rejectedRegions) { this(settlement,attemptedCandidates,rejectionCounts,profile,rejectedRegions,0); }
         public SearchResult(Optional<LocatedSettlement> settlement,int attemptedCandidates,Map<String,Integer> rejectionCounts) {
             this(settlement,attemptedCandidates,rejectionCounts,"",java.util.Set.of());
         }
         public SearchResult {
+            pieces=java.util.List.copyOf(pieces);
             Objects.requireNonNull(profile);
             rejectedRegions=java.util.Set.copyOf(rejectedRegions);
             Objects.requireNonNull(settlement, "settlement");

@@ -202,7 +202,8 @@ public final class MinecraftSuburbPlanningService {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(position, "position");
 
-        return planAt(
+        long started=System.nanoTime();
+        try {return planAt(
                 OVERWORLD_DIMENSION_ID,
                 context.worldSeed(),
                 position.getX(),
@@ -215,7 +216,7 @@ public final class MinecraftSuburbPlanningService {
                 context.terrainProvider(),
                 context.terrainLoggingEnabled(),
                 context.planningLoggingEnabled()
-        );
+        );}finally{WorldgenPlanningMetrics.structureWait(System.nanoTime()-started);}
     }
 
     private SuburbDebugPlanResult planAt(
@@ -279,7 +280,7 @@ public final class MinecraftSuburbPlanningService {
 
         return planCache.getOrCreate(
                 cacheKey,
-                () -> createPlan(
+                () -> WorldgenPlanningMetrics.compute(cacheKey,()->createPlan(
                         region,
                         bounds,
                         settlementId,
@@ -289,8 +290,23 @@ public final class MinecraftSuburbPlanningService {
                         terrainProvider,
                         terrainLoggingEnabled,
                         planningLoggingEnabled
-                )
+                ))
         );
+    }
+
+    public java.util.Set<SettlementRegion> cachedWorldgenRegions(WorldgenPlanningContext context) {
+        var regions=new java.util.HashSet<SettlementRegion>();
+        for(var key:planCache.snapshot().keySet()) {
+            var expected=new RegionPlanCacheKey(context.dimensionId(),key.region(),context.worldSeed(),TerrainSurveySource.WORLDGEN_BASE,
+                    context.profileId(),context.surveySize(),context.planningSettings(),context.terrainResponsePolicy());
+            if(key.equals(expected))regions.add(key.region());
+        }
+        return java.util.Set.copyOf(regions);
+    }
+
+    /** Exact-context hints only. Native structure-start validation still runs in the locator. */
+    public java.util.Map<SettlementRegion, SuburbDebugPlanResult> cachedWorldgenPlans(WorldgenPlanningContext context) {
+        return planCache.completedWorldgenPlans(context);
     }
 
     public void clearCache() {
@@ -331,7 +347,14 @@ public final class MinecraftSuburbPlanningService {
                 request,
                 result
         );
-        var finished=planner.finishContent(request,refinedResult);
+        var overpassTerrain=terrainProvider;
+        var contentRequest=request;
+        if(refinedResult.successful() && planningSettings.terrainTransitions().cityOverpasses().enabled()
+                && terrainProvider instanceof TiledCityTerrainProvider tiled) {
+            // The refiner already queried this footprint. Reuse its exact survey instead of sampling the city twice.
+            contentRequest=new SuburbPlanningRequest(request.settlementId(),tiled.latestSurvey().orElse(survey),seed,planningSettings,terrainResponsePolicy);
+        }
+        var finished=planner.finishContent(contentRequest,refinedResult,(candidateRequest,candidate)->TerrainSupportAcceptance.validate(overpassTerrain,candidateRequest.survey(),candidate));
         if(refinedResult.successful() && !finished.successful()) {
             // Invalid content can affect layout fallback. Retain the original full solver
             // for that exceptional case, with already cached terrain samples.
@@ -450,13 +473,13 @@ public final class MinecraftSuburbPlanningService {
 
         SettlementPlan plan = result.plan();
         logger.info(
-                "Suburb planning accepted: {}, roads={}, parcels={}, buildingSlots={}, wornRoads={}, decayedBuildingSlots={}.",
+                "Suburb planning accepted: {}, roads={}, parcels={}, buildingSlots={}, wornRoads={}, decayedBuildingSlots={}, overpasses={}.",
                 result.summary(),
                 plan.roadGraph().segments().size(),
                 plan.parcels().size(),
                 plan.buildingSlots().size(),
                 result.wornRoadCount(),
-                result.decayedBuildingSlotCount()
+                result.decayedBuildingSlotCount(),plan.overpasses().size()
         );
     }
 }

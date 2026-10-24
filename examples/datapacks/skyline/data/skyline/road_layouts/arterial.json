@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "carriageway": 11,
+  "deckDepth": 2,
+  "clearance": 8,
+  "rampSurface": "slabs",
+  "runPerRise": 6,
+  "pierSpacing": 8,
+  "maximumSpan": 24,
+  "maximumSupportDepth": 16,
+  "materials": {
+    "road": "minecraft:polished_deepslate",
+    "deck": "minecraft:stone_bricks",
+    "pier": "minecraft:stone_bricks",
+    "rail": "minecraft:stone_brick_wall",
+    "stair": "minecraft:stone_brick_stairs",
+    "slab": "minecraft:polished_deepslate_slab",
+    "sidewalkSlab": "minecraft:smooth_stone_slab"
+  },
+  "streets": {
+    "sectionLength": 32,
+    "centerMaterial": "minecraft:yellow_concrete",
+    "vergeMaterial": "minecraft:smooth_stone",
+    "modules": [
+      {
+        "id": "skyline:overpass_sidewalk",
+        "weight": 1,
+        "leftWidth": 3,
+        "rightWidth": 3,
+        "material": "minecraft:smooth_stone"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "skyline:west",
+      "x": -100,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "id": "skyline:upper_west",
+      "x": -20,
+      "y": 10,
+      "z": 0
+    },
+    {
+      "id": "skyline:upper_east",
+      "x": 20,
+      "y": 10,
+      "z": 0
+    },
+    {
+      "id": "skyline:east",
+      "x": 100,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "id": "skyline:south",
+      "x": 0,
+      "y": 0,
+      "z": -36
+    },
+    {
+      "id": "skyline:lower_center",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "id": "skyline:north",
+      "x": 0,
+      "y": 0,
+      "z": 36
+    }
+  ],
+  "roads": [
+    {
+      "id": "skyline:approach_west",
+      "from": "skyline:west",
+      "to": "skyline:upper_west",
+      "elevated": true
+    },
+    {
+      "id": "skyline:span",
+      "from": "skyline:upper_west",
+      "to": "skyline:upper_east",
+      "elevated": true
+    },
+    {
+      "id": "skyline:approach_east",
+      "from": "skyline:upper_east",
+      "to": "skyline:east",
+      "elevated": true
+    },
+    {
+      "id": "skyline:lower_south",
+      "from": "skyline:south",
+      "to": "skyline:lower_center",
+      "elevated": false
+    },
+    {
+      "id": "skyline:lower_north",
+      "from": "skyline:lower_center",
+      "to": "skyline:north",
+      "elevated": false
+    }
+  ]
+}

@@ -50,7 +50,7 @@ public final class MinecraftSettlementProfileJsonParser {
         SettlementProfile profile = new SettlementProfile(
                 id,
                 parseSurveySize(survey),
-                parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning, resources)).withDistricts(parseDistricts(planning)).withParcelLayout(ParcelLayoutJsonParser.parse(planning,resources)),
+                parseSuburbPlanningSettings(planning).withBuildings(parseBuildings(planning, resources)).withDistricts(parseDistricts(planning)).withParcelLayout(ParcelLayoutJsonParser.parse(planning,resources)).withCityOverpasses(CityOverpassJsonParser.parse(planning,resources)),
                 parseTerrainResponsePolicy(json),
                 parseStructuralSupports(planning),
                 parseRavineRoads(planning)

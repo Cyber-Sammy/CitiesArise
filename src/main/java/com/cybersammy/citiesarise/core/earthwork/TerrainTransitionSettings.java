@@ -16,8 +16,20 @@ public record TerrainTransitionSettings(
         int supportLiningDepth,
         int cutSlopeRadius,
         int fillSlopeRadius,
-        com.cybersammy.citiesarise.core.road.StreetSectionSettings streets
+        com.cybersammy.citiesarise.core.road.StreetSectionSettings streets,
+        com.cybersammy.citiesarise.core.road.CityOverpassSettings cityOverpasses
 ) {
+    public TerrainTransitionSettings(int accessRun,int roadRadius,int roadFill,int parcelRadius,int parcelFill,
+            int buildingRadius,int buildingFill,boolean walls,int wallHeight,int liningDepth,int cutRadius,int fillRadius,
+            com.cybersammy.citiesarise.core.road.StreetSectionSettings streets) {
+        this(accessRun,roadRadius,roadFill,parcelRadius,parcelFill,buildingRadius,buildingFill,walls,wallHeight,liningDepth,
+                cutRadius,fillRadius,streets,com.cybersammy.citiesarise.core.road.CityOverpassSettings.disabled());
+    }
+    public TerrainTransitionSettings withCityOverpasses(com.cybersammy.citiesarise.core.road.CityOverpassSettings value) {
+        return new TerrainTransitionSettings(buildingAccessRunPerRise,roadShoulderRadius,roadShoulderMaxFillDepth,parcelShoulderRadius,
+                parcelShoulderMaxFillDepth,buildingShoulderRadius,buildingShoulderMaxFillDepth,retainingWalls,retainingWallMinimumHeight,
+                supportLiningDepth,cutSlopeRadius,fillSlopeRadius,streets,value);
+    }
     public TerrainTransitionSettings(int accessRun,int roadRadius,int roadFill,int parcelRadius,int parcelFill,
             int buildingRadius,int buildingFill,boolean walls,int wallHeight,int liningDepth,int cutRadius,int fillRadius) {
         this(accessRun,roadRadius,roadFill,parcelRadius,parcelFill,buildingRadius,buildingFill,walls,wallHeight,liningDepth,cutRadius,fillRadius,
@@ -25,7 +37,7 @@ public record TerrainTransitionSettings(
     }
     public TerrainTransitionSettings withStreets(com.cybersammy.citiesarise.core.road.StreetSectionSettings value) {
         return new TerrainTransitionSettings(buildingAccessRunPerRise,roadShoulderRadius,roadShoulderMaxFillDepth,parcelShoulderRadius,parcelShoulderMaxFillDepth,
-                buildingShoulderRadius,buildingShoulderMaxFillDepth,retainingWalls,retainingWallMinimumHeight,supportLiningDepth,cutSlopeRadius,fillSlopeRadius,value);
+                buildingShoulderRadius,buildingShoulderMaxFillDepth,retainingWalls,retainingWallMinimumHeight,supportLiningDepth,cutSlopeRadius,fillSlopeRadius,value,cityOverpasses);
     }
     public TerrainTransitionSettings(int accessRun, int roadRadius, int roadFill, int parcelRadius, int parcelFill,
             int buildingRadius, int buildingFill, boolean walls, int wallHeight, int liningDepth, int cutRadius) {
@@ -45,6 +57,7 @@ public record TerrainTransitionSettings(
     public static final int MAX_ACCESS_RUN_PER_RISE = 8;
 
     public TerrainTransitionSettings {
+        cityOverpasses=cityOverpasses==null?com.cybersammy.citiesarise.core.road.CityOverpassSettings.disabled():cityOverpasses;
         streets=streets==null?com.cybersammy.citiesarise.core.road.StreetSectionSettings.disabled():streets;
         requireRange(fillSlopeRadius,0,MAX_SUPPORT_RADIUS,"fillSlopeRadius");
         requireRange(cutSlopeRadius,0,MAX_SUPPORT_RADIUS,"cutSlopeRadius");

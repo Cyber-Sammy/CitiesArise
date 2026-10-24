@@ -334,14 +334,25 @@ p['buildings'] = dict(catalog='skyline:city',
 # Urban plazas instead of garden fences; preserve the proven road and terrain settings.
 p.pop('parcelLayout', None)
 
+p['cityOverpasses'] = dict(maximumCandidateChecks=4, maximumConstructionVolume=32768,
+    modules=[dict(layout='skyline:arterial', start='skyline:west', end='skyline:east', weight=1)])
+overpass = json.loads((ROOT / 'examples/datapacks/road_topology/data/road_demo/road_layouts/overpass.json').read_text(encoding='utf-8'))
+for node in overpass['nodes']:
+    node['id'] = node['id'].replace('road_demo:', 'skyline:')
+for edge in overpass['roads']:
+    for field in ('id', 'from', 'to'):
+        edge[field] = edge[field].replace('road_demo:', 'skyline:')
+overpass['streets']['modules'][0].update(id='skyline:overpass_sidewalk', leftWidth=3, rightWidth=3)
+
 def write(relative, value):
     path = PACK / relative
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2)+'\n', encoding='utf-8')
 
-write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad towers, authored terraces and mansards, modular sidewalks, entrances and hosted structures')))
+write('pack.mcmeta', dict(pack=dict(pack_format=48, description='Cities Arise Skyline: broad towers, authored terraces and mansards, modular sidewalks, entrances, hosted structures and automatic overpasses')))
 write('data/skyline/content_catalogs/city.json', catalog)
 write('data/cities_arise/settlement_profiles/suburb.json', profile)
+write('data/skyline/road_layouts/arterial.json', overpass)
 # Every local owner must have the same deterministic start opportunity. Per-owner
 # village exclusion would otherwise delete isolated pieces of one accepted city.
 write('data/cities_arise/worldgen/structure_set/suburb.json', dict(

@@ -11,7 +11,12 @@ import net.minecraft.nbt.*;
 /** Persisted reservations and policy, separate from immutable content and eventual support geometry. */
 public record StructuralSupportBlueprint(StructuralSupportSettings settings,
         List<StructuralSupportPlanner.Envelope> envelopes,Map<String,String> materials,int constructionAllowance,
-        com.cybersammy.citiesarise.core.road.RavineRoadSettings ravines,FinalTerrainPlanningRecipe recipe,GridBounds ownership,int clearanceHeight,boolean sharedBudget) {
+        com.cybersammy.citiesarise.core.road.RavineRoadSettings ravines,FinalTerrainPlanningRecipe recipe,GridBounds ownership,int clearanceHeight,boolean sharedBudget, List<com.cybersammy.citiesarise.core.road.CityOverpassPlan> overpasses) {
+    public StructuralSupportBlueprint(StructuralSupportSettings settings,List<StructuralSupportPlanner.Envelope> envelopes,
+            Map<String,String> materials,int allowance,com.cybersammy.citiesarise.core.road.RavineRoadSettings ravines,
+            FinalTerrainPlanningRecipe recipe,GridBounds ownership,int clearanceHeight,boolean sharedBudget) {
+        this(settings,envelopes,materials,allowance,ravines,recipe,ownership,clearanceHeight,sharedBudget,List.of());
+    }
     public StructuralSupportBlueprint(StructuralSupportSettings settings,List<StructuralSupportPlanner.Envelope> envelopes,
             Map<String,String> materials,int allowance,com.cybersammy.citiesarise.core.road.RavineRoadSettings ravines,
             FinalTerrainPlanningRecipe recipe,GridBounds ownership,int clearanceHeight) {
@@ -33,6 +38,8 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
         this(settings,envelopes,materials,settings.maximumVolume());
     }
     public StructuralSupportBlueprint {
+        overpasses=overpasses==null?List.of():List.copyOf(overpasses);
+        if(overpasses.size()>1)throw new IllegalArgumentException("Too many city overpasses");
         if(clearanceHeight<12 || clearanceHeight>32)throw new IllegalArgumentException("Invalid clearance height");
         if(ownership!=null && (ownership.size().width()>128 || ownership.size().depth()>128))throw new IllegalArgumentException("Structural owner exceeds local start bounds");
         Objects.requireNonNull(settings);Objects.requireNonNull(ravines);
@@ -68,19 +75,21 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
                         bridge.deckElevation(distance),StructuralSupportPlanner.Kind.BRIDGE));
             }
         }
-        return new StructuralSupportBlueprint(settings,envelopes,materials);
+        return new StructuralSupportBlueprint(settings,envelopes,materials,settings.maximumVolume(),base.ravines(),null,null,12,false,plan.overpasses());
     }
     public StructuralSupportBlueprint withinConstructionBudget(long remaining) {
         // Earthwork pays for clearance, junctions and supports together. Structural
         // geometry has its own maximumVolume ceiling and must not cap this pool.
-        return new StructuralSupportBlueprint(settings,envelopes,materials,(int)Math.clamp(remaining,0,Integer.MAX_VALUE),ravines,recipe,ownership,clearanceHeight,sharedBudget);
+        long moduleVolume=overpasses.stream().map(com.cybersammy.citiesarise.minecraft.placement.LayeredRoadPlacement::materialize)
+                .flatMap(p->p.operations().stream()).filter(op->!op.material().equals("minecraft:air")).count();
+        return new StructuralSupportBlueprint(settings,envelopes,materials,(int)Math.clamp(remaining-moduleVolume,0,Integer.MAX_VALUE),ravines,recipe,ownership,clearanceHeight,sharedBudget,overpasses);
     }
 
     public StructuralSupportBlueprint withRecipe(FinalTerrainPlanningRecipe recipe) {
         var policy=recipe.profile().ravineRoads();
         return new StructuralSupportBlueprint(settings,envelopes,materials,constructionAllowance,policy,
                 policy.enabled() && policy.mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE?recipe:null,ownership,
-                Math.max(12,recipe.profile().suburbPlanningSettings().maxCutDepth()),sharedBudget);
+                Math.max(12,recipe.profile().suburbPlanningSettings().maxCutDepth()),sharedBudget,overpasses);
     }
     /** Includes terrain read between an outer apron and its platform, not only written columns. */
     Set<com.cybersammy.citiesarise.minecraft.placement.PlacementChunk> requiredChunks(
@@ -114,9 +123,10 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
                 chunks.add(new com.cybersammy.citiesarise.minecraft.placement.PlacementChunk(x,z));
     }
     CompoundTag save() {
-        var tag=new CompoundTag();tag.putInt("Version",5);tag.putBoolean("SharedBudget",sharedBudget);tag.putInt("ClearanceHeight",clearanceHeight);tag.putInt("Allowance",constructionAllowance);tag.putBoolean("Enabled",settings.enabled());
+        var tag=new CompoundTag();tag.putInt("Version",6);tag.putBoolean("SharedBudget",sharedBudget);tag.putInt("ClearanceHeight",clearanceHeight);tag.putInt("Allowance",constructionAllowance);tag.putBoolean("Enabled",settings.enabled());
         if(ownership!=null)tag.putIntArray("Owner",new int[]{ownership.minX(),ownership.minZ(),ownership.size().width(),ownership.size().depth()});
         if(recipe!=null) tag.put("Recipe",recipe.save());
+        if(!overpasses.isEmpty())tag.putString("CityOverpasses",new com.google.gson.GsonBuilder().enableComplexMapKeySerialization().create().toJson(overpasses));
         tag.putString("Ravines",new com.google.gson.Gson().toJson(ravines));
         tag.putInt("Depth",settings.maximumDepth());tag.putInt("Span",settings.maximumSpan());
         tag.putInt("ShallowFoundationHeight",settings.maximumShallowFoundationHeight());tag.putInt("Spacing",settings.pierSpacing());tag.putInt("Volume",settings.maximumVolume());
@@ -128,7 +138,7 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
         tag.put("Envelopes",list);var palette=new CompoundTag();materials.forEach(palette::putString);tag.put("Materials",palette);return tag;
     }
     static StructuralSupportBlueprint load(CompoundTag tag) {
-        if(tag.getInt("Version")<1 || tag.getInt("Version")>5) throw new IllegalArgumentException("Unsupported structural blueprint version");
+        if(tag.getInt("Version")<1 || tag.getInt("Version")>6) throw new IllegalArgumentException("Unsupported structural blueprint version");
         var settings=new StructuralSupportSettings(tag.getBoolean("Enabled"),tag.getInt("Depth"),tag.getInt("Span"),tag.getInt("Spacing"),tag.getInt("Volume"),tag.contains("ShallowFoundationHeight")?tag.getInt("ShallowFoundationHeight"):2);
         var list=new ArrayList<StructuralSupportPlanner.Envelope>();
         for(var item:tag.getList("Envelopes",Tag.TAG_COMPOUND)) {
@@ -147,8 +157,11 @@ public record StructuralSupportBlueprint(StructuralSupportSettings settings,
             var b=tag.getIntArray("Owner");if(b.length!=4 || b[2]<1 || b[2]>128 || b[3]<1 || b[3]>128)throw new IllegalArgumentException("Invalid structural owner");
             owner=new GridBounds(new GridPoint(b[0],b[1]),new GridSize(b[2],b[3]));
         }
+        if(tag.getString("CityOverpasses").length()>262144)throw new IllegalArgumentException("City overpass blueprint too large");
+        var modules=tag.contains("CityOverpasses")?List.of(new com.google.gson.GsonBuilder().enableComplexMapKeySerialization().create().fromJson(
+                tag.getString("CityOverpasses"),com.cybersammy.citiesarise.core.road.CityOverpassPlan[].class)):List.<com.cybersammy.citiesarise.core.road.CityOverpassPlan>of();
         return new StructuralSupportBlueprint(settings,list,palette,tag.contains("Allowance")?tag.getInt("Allowance"):settings.maximumVolume(),
                 ravines,tag.contains("Recipe")?FinalTerrainPlanningRecipe.load(tag.getCompound("Recipe")):null,owner,
-                tag.getInt("Version")>=4?tag.getInt("ClearanceHeight"):12,tag.getInt("Version")>=5 && tag.getBoolean("SharedBudget"));
+                tag.getInt("Version")>=4?tag.getInt("ClearanceHeight"):12,tag.getInt("Version")>=5 && tag.getBoolean("SharedBudget"),modules);
     }
 }

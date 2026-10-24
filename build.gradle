@@ -159,3 +159,15 @@ tasks.register('roadTopologyDatapack', Zip) {
     preserveFileTimestamps = false
     reproducibleFileOrder = true
 }
+
+// Authored road definitions are available to profile fixtures without packaging test content in the mod.
+tasks.named('processTestResources') {
+    from('examples/datapacks/skyline') { include 'data/skyline/road_layouts/**' }
+}
+tasks.named('processGameTestResources') {
+    from('examples/datapacks/skyline') { include 'data/skyline/road_layouts/**' }
+}
+
+tasks.named('processGameTestResources') {
+    from('examples/datapacks/skyline/data/cities_arise/settlement_profiles/suburb.json') { into 'fixtures/skyline' }
+}

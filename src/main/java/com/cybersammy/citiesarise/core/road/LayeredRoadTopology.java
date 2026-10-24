@@ -84,7 +84,7 @@ public final class LayeredRoadTopology {
             if (old!=null && old.kind()!=kind) throw new IllegalArgumentException("Roads intersect inconsistently across their width");
         }
         columns=List.copyOf(all); var frozen=new HashMap<GridPoint,List<Column>>();
-        points.forEach((p,c) -> frozen.put(p,List.copyOf(c))); byPoint=Map.copyOf(frozen);
+        points.forEach((p,c) -> frozen.put(p,List.copyOf(c))); byPoint=Collections.unmodifiableMap(frozen);
         crossings=List.copyOf(contacts.values());
         validatePedestrianJunctions(nodes);
     }

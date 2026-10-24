@@ -27,13 +27,18 @@ final class SuburbStructureGeneration {
     private final Logger logger;
     private SuburbDebugPlanResult partitionedSource;
     private PartitionedCityPlacement partitionedPlacement;
+    // Only locate's read-only verifier may create new starts. Ordinary chunk generation
+    // must never call the terrain planner, including after a cache eviction/reload.
+    private final ThreadLocal<SuburbDebugPlanResult> preview = new ThreadLocal<>();
+    <T> T preview(SuburbDebugPlanResult plan, java.util.function.Supplier<T> action) {
+        if (preview.get() != null) throw new IllegalStateException("Nested city preview");
+        preview.set(plan);
+        try { return action.get(); } finally { preview.remove(); }
+    }
     synchronized void clearCache(){partitionedSource=null;partitionedPlacement=null;}
 
     boolean reservesSpawn(long seed,int x,int z) {
-        if(!CitiesAriseWorldgenConfig.enabled())return false;
-        var profile=profileStore.find(new SettlementProfileId(CitiesAriseWorldgenConfig.settlementProfileId()));
-        if(profile.isEmpty())return false;
-        return WorldgenSpawnReservation.contains(seed,x,z,profile.orElseThrow().surveySize(),CitiesAriseWorldgenConfig.candidateRegionModulo());
+        return false; // No potential cities exist until an explicit locate selects one.
     }
 
     SuburbStructureGeneration(
@@ -50,7 +55,7 @@ final class SuburbStructureGeneration {
 
     Optional<Generation> create(Structure.GenerationContext context) {
         Objects.requireNonNull(context, "context");
-        if (!CitiesAriseWorldgenConfig.enabled()) {
+        if (!CitiesAriseWorldgenConfig.enabled() || preview.get() == null) {
             return Optional.empty();
         }
 
@@ -67,28 +72,13 @@ final class SuburbStructureGeneration {
         long worldSeed=StructureWorldSeeds.resolve(context.chunkGenerator(),context.seed());
         var localRegion=region;
         region=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.parent(region,profile.surveySize());
+        if (!region.equals(preview.get().region())) return Optional.empty();
         if(!candidateSelector.isCandidate(worldSeed,region,CitiesAriseWorldgenConfig.candidateRegionModulo(),profile.surveySize()))return Optional.empty();
         if(!com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.reachable(region,profile.surveySize(),context.chunkPos().x,context.chunkPos().z)) return Optional.empty();
         var cityCenter=com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.center(region,profile.surveySize());
         center=new BlockPos(cityCenter.x(),center.getY(),cityCenter.z());
-        MinecraftWorldgenTerrainProvider terrainProvider = new MinecraftWorldgenTerrainProvider(
-                context.chunkGenerator(),
-                context.randomState(),
-                context.heightAccessor().getMinBuildHeight(),
-                context.heightAccessor().getHeight()
-        );
-        StructurePlanningContext planningContext = new StructurePlanningContext(
-                worldSeed,
-                profile.id(),
-                profile.surveySize(),
-                profile.suburbPlanningSettings(),
-                profile.terrainResponsePolicy(),
-                terrainProvider,
-                CitiesAriseConfig.terrainLoggingEnabled(),
-                CitiesAriseConfig.planningLoggingEnabled()
-        );
         long planningStarted = System.nanoTime();
-        SuburbDebugPlanResult result = planningService.planForStructureStart(planningContext, center);
+        SuburbDebugPlanResult result = preview.get();
         if (CitiesAriseConfig.planningLoggingEnabled()) logger.info("Structure planning at {}: success={}, elapsedMs={}",
                 center, result.successful(), (System.nanoTime() - planningStarted) / 1_000_000.0);
         if (!result.successful()) {

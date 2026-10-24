@@ -121,7 +121,8 @@ public final class PlacementReadinessGameTests {
         var completion=new NearbyPlacementCompletion();var started=new boolean[1];
         helper.succeedWhen(()->{
             if(level.getGameTime()%20==0) {
-                completion.maintain(level,List.of(new NearbyPlacementCompletion.Candidate("test:one-owner",Set.of(ready,missing))));
+                completion.maintain(level,List.of(new PlacementCompletionTickets.Candidate("test:one-owner",Set.of(ready,missing))));
+                if(!started[0])helper.assertTrue(level.getChunkSource().getChunkNow(missing.x(),0)==null,"Completion synchronously generated the missing chunk");
                 started[0]=true;
             }
             helper.assertTrue(started[0],"Waiting for completion cadence");
@@ -136,26 +137,27 @@ public final class PlacementReadinessGameTests {
     public static void readyChunkPassesUnloadedFirstChunkAndProgressSurvivesReload(GameTestHelper helper) {
         var level=helper.getLevel();
         int x=Math.floorDiv(helper.absolutePos(BlockPos.ZERO).getX(),16)*16+32768;
-        level.getChunk(x>>4,0);
+        int z=Math.floorDiv(helper.absolutePos(BlockPos.ZERO).getZ(),16)*16+65536;
+        level.getChunk(x>>4,z>>4);
         int far=x-16384;
-        helper.assertTrue(level.getChunkSource().getChunkNow(far>>4,0)==null,"Fixture first chunk already loaded");
+        helper.assertTrue(level.getChunkSource().getChunkNow(far>>4,z>>4)==null,"Fixture first chunk already loaded");
         var source=new PlanElementId("test:ready-out-of-order");
-        var ops=List.of(far,x).stream().map(xx->new DebugBlockPlacementOperation(new GridPoint(xx,0),0,
+        var ops=List.of(far,x).stream().map(xx->new DebugBlockPlacementOperation(new GridPoint(xx,z),0,
                 DebugPlacementRole.SUSPENDED_CONTENT,source,OptionalInt.of(70),"minecraft:diamond_block",0)).toList();
         var snapshot=new CompoundTag();SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(ops)).save(snapshot);
         var row=new CompoundTag();row.putString("Id",source.value());row.putString("Profile","test:profile");
-        row.putInt("X",x);row.putInt("Z",0);row.put("Original",snapshot);row.put("Resolved",snapshot.copy());
+        row.putInt("X",x);row.putInt("Z",z);row.put("Original",snapshot);row.put("Resolved",snapshot.copy());
         row.put("Blueprint",new StructuralSupportBlueprint(new StructuralSupportSettings(false,32,12,4,20000),List.of(),Map.of()).save());
         var rows=new ListTag();rows.add(row);var tag=new CompoundTag();tag.putInt("Version",1);tag.put("Pending",rows);
         var queue=PendingStructuralPlacement.load(tag);
         queue.applyReady(level);
-        helper.assertTrue(level.getBlockState(new BlockPos(x,70,0)).is(Blocks.DIAMOND_BLOCK),"Ready chunk blocked behind unloaded chunk");
-        helper.assertTrue(level.getChunkSource().getChunkNow(far>>4,0)==null,"Placement forced a remote chunk load");
+        helper.assertTrue(level.getBlockState(new BlockPos(x,70,z)).is(Blocks.DIAMOND_BLOCK),"Ready chunk blocked behind unloaded chunk");
+        helper.assertTrue(level.getChunkSource().getChunkNow(far>>4,z>>4)==null,"Placement forced a remote chunk load");
         var saved=queue.save(new CompoundTag(),level.registryAccess());
         helper.assertTrue(saved.getList("Pending",Tag.TAG_COMPOUND).getCompound(0).getLongArray("Placed").length==1,"Progress not persisted");
-        level.setBlock(new BlockPos(x,70,0),Blocks.EMERALD_BLOCK.defaultBlockState(),2);
+        level.setBlock(new BlockPos(x,70,z),Blocks.EMERALD_BLOCK.defaultBlockState(),2);
         PendingStructuralPlacement.load(saved).applyReady(level);
-        helper.assertTrue(level.getBlockState(new BlockPos(x,70,0)).is(Blocks.EMERALD_BLOCK),"Reload repeated completed placement");
+        helper.assertTrue(level.getBlockState(new BlockPos(x,70,z)).is(Blocks.EMERALD_BLOCK),"Reload repeated completed placement");
         helper.succeed();
     }
 }

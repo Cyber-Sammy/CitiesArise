@@ -6,6 +6,7 @@ public final class CitiesAriseWorldgenConfig {
     public static final ModConfigSpec SPEC;
 
     private static final ModConfigSpec.BooleanValue ENABLED;
+    private static final ModConfigSpec.IntValue CITY_EXCLUSION_RADIUS;
     private static final ModConfigSpec.ConfigValue<String> SETTLEMENT_PROFILE_ID;
     private static final ModConfigSpec.IntValue CANDIDATE_REGION_MODULO;
     private static final ModConfigSpec.IntValue LOCATE_SEARCH_RADIUS_REGIONS;
@@ -19,9 +20,12 @@ public final class CitiesAriseWorldgenConfig {
 
         builder.push("worldgen");
         ENABLED = builder
-                .comment("Enables automatic Cities Arise settlement placement in newly generated chunks.")
+                .comment("Enables city search and placement requested by /citiesarise locate. Exploration never plans new cities.")
                 .worldRestart()
                 .define("enabled", false);
+        CITY_EXCLUSION_RADIUS = builder
+                .comment("Minimum horizontal distance between city centers. Successful searches persist their exclusion radius per dimension.")
+                .defineInRange("cityExclusionRadius", 30000, 0, 60000000);
         SETTLEMENT_PROFILE_ID = builder
                 .comment("Settlement profile id used by automatic world generation.")
                 .worldRestart()
@@ -53,6 +57,8 @@ public final class CitiesAriseWorldgenConfig {
 
     private CitiesAriseWorldgenConfig() {
     }
+
+    public static int cityExclusionRadius() { return CITY_EXCLUSION_RADIUS.get(); }
 
     public static boolean enabled() {
         return ENABLED.get();

@@ -39,7 +39,7 @@ final class PartitionedCityPlacement {
                     envelopes.add(new StructuralSupportPlanner.Envelope(envelope.source(),clipped,envelope.platformY(),envelope.kind()));
                 }
                 int allowance=blueprint.constructionAllowance();
-                local=new StructuralSupportBlueprint(blueprint.settings(),envelopes,blueprint.materials(),allowance,blueprint.ravines(),null,owner,blueprint.clearanceHeight(),true);
+                local=new StructuralSupportBlueprint(blueprint.settings(),envelopes,blueprint.materials(),allowance,blueprint.ravines(),null,owner,blueprint.clearanceHeight(),true,blueprint.overpasses().stream().filter(m->m.bounds().intersects(owner)).toList());
             }
             result.put(entry.getKey(),new Part(SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(entry.getValue())),local));
         }

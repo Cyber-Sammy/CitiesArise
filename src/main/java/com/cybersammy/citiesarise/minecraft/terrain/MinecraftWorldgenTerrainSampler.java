@@ -209,6 +209,9 @@ public final class MinecraftWorldgenTerrainSampler {
     }
 
     static TerrainSource cachedSource(ChunkGenerator generator, RandomState random, LevelHeightAccessor height,BatchedNoiseTerrain cells) {
+        // Batched height tiles already retain exact primitive answers for an entire city. A smaller
+        // per-point cache only adds boxing/churn and cannot prevent repeated whole-city passes.
+        if(cells!=null)return new ChunkGeneratorTerrainSource(generator,random,height,cells);
         return new CachedTerrainSource(new ChunkGeneratorTerrainSource(generator, random, height,cells));
     }
 

@@ -3,6 +3,6 @@
   "minVersion": "0.8",
   "package": "com.cybersammy.citiesarise.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": ["CarvingMaskAccess", "SettlementCarvingMixin", "SettlementLakeMixin", "NoiseGeneratorAccess", "BigGlobeSpawnLocatorMixin", "BigGlobeSpawnManagerMixin"],
+  "mixins": ["CarvingMaskAccess", "SettlementCarvingMixin", "SettlementLakeMixin", "NoiseGeneratorAccess", "BigGlobeSpawnLocatorMixin", "BigGlobeSpawnManagerMixin", "PlayerMovementReadinessMixin", "NativeNoiseTimingMixin", "CatSpawnerReadinessMixin"],
   "injectors": { "defaultRequire": 1 }
 }

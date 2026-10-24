@@ -37,6 +37,7 @@ public final class CitiesAriseCommands {
     private final Logger logger;
     private final java.util.Map<String,java.util.Set<com.cybersammy.citiesarise.minecraft.planning.SettlementRegion>> rejectedLocateRegions = new java.util.HashMap<>();
     private final AtomicBoolean locateInProgress = new AtomicBoolean();
+    private boolean locateCancelled;
 
     public CitiesAriseCommands(MinecraftSuburbPlanningService planningService, Logger logger) {
         this.planningService = planningService;
@@ -56,6 +57,11 @@ public final class CitiesAriseCommands {
         locateInProgress.set(false);
         settlementLocator.stop();
         rejectedLocateRegions.clear();
+    }
+
+    public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+        locateCancelled=true;
+        settlementLocator.cancel();
     }
 
     private void register(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -103,10 +109,11 @@ public final class CitiesAriseCommands {
             return 0;
         }
 
+        locateCancelled=false;
         BlockPos origin = BlockPos.containing(source.getPosition());
         String startedSummary = (ranked ? "Ranked diagnostic planning started." : "Diagnostic planning started; returning the first accepted site.")
                 + (CitiesAriseWorldgenConfig.locateTerrainRanking()?" Screening terrain before full planning.":"")
-                + " Results are candidates, not proof of generated settlements. Time budget="
+                + " Only the selected site is reserved and queued. Time budget="
                 + CitiesAriseWorldgenConfig.locateTimeLimitSeconds()+"s; a running candidate may finish after the budget.";
         source.sendSuccess(() -> Component.literal(startedSummary), false);
         logCommandResult(startedSummary);
@@ -140,8 +147,6 @@ public final class CitiesAriseCommands {
     private int runSavedLocate(CommandSourceStack source,int page) {
         var level=source.getLevel();var origin=source.getPosition();
         var entries=new java.util.LinkedHashMap<com.cybersammy.citiesarise.minecraft.planning.SettlementRegion,LocateEntry>();
-        for(var candidate:com.cybersammy.citiesarise.minecraft.worldgen.DiagnosticSettlementLocations.get(level).entries())
-            entries.put(candidate.region(),new LocateEntry(candidate.x(),candidate.z(),"SAVED_DIAGNOSTIC (not proof of generation), profile="+candidate.profile()));
         for(var entry:SettlementRegistry.get(level).entries()) {
             var m=entry.metadata();
             entries.put(com.cybersammy.citiesarise.minecraft.planning.SettlementRegion.fromBlockPosition(m.centerX(),m.centerZ()),
@@ -150,8 +155,11 @@ public final class CitiesAriseCommands {
         var ordered=entries.values().stream().sorted(java.util.Comparator
                 .comparingDouble((LocateEntry e)->Math.hypot(e.x()-origin.x,e.z()-origin.z))
                 .thenComparingInt(LocateEntry::x).thenComparingInt(LocateEntry::z)).toList();
+        if(page==0 && SettlementRegistry.get(level).size()==0 && com.cybersammy.citiesarise.minecraft.worldgen.CityReservations.get(level).zones().isEmpty())
+            return runLocate(source,false,false);
         if(ordered.isEmpty()) {
-            source.sendFailure(Component.literal("No saved locations. Use /citiesarise locate diagnostic, then diagnostic next."));return 0;
+            if(page==0)return runLocate(source,false,false);
+            source.sendFailure(Component.literal("No saved locations. Use /citiesarise locate to start a city search."));return 0;
         }
         int pages=(ordered.size()+9)/10;
         if(page>pages) {source.sendFailure(Component.literal("No such page. Pages: "+pages));return 0;}
@@ -207,6 +215,7 @@ public final class CitiesAriseCommands {
             source.sendFailure(Component.literal("No diagnostic search is running."));
             return 0;
         }
+        locateCancelled=true;
         settlementLocator.cancel();
         source.sendSuccess(() -> Component.literal("Cancellation requested; the current bounded candidate may finish first."), false);
         return 1;
@@ -222,6 +231,7 @@ public final class CitiesAriseCommands {
             Throwable exception
     ) {
         locateInProgress.set(false);
+        if(locateCancelled) { source.sendSuccess(()->Component.literal("City search cancelled; no city reserved."),false); return; }
         if (exception != null) {
             Throwable cause = exception;
             while (cause.getCause() != null) cause = cause.getCause();
@@ -246,7 +256,8 @@ public final class CitiesAriseCommands {
                     + result.attemptedCandidates()
                     + " candidates; terrain-screened="+result.preliminaryCandidates()+". Rejections: "
                     + result.rejectionSummary()
-                    + (exhausted ? ". No unchecked candidates remain in this search radius. Move farther or increase worldgen.locateSearchRadiusRegions."
+                    + (exhausted ? ". No eligible candidates remain in this search radius. City exclusion radius="
+                            +CitiesAriseWorldgenConfig.cityExclusionRadius()+" blocks. Move outside existing city zones or increase worldgen.locateSearchRadiusRegions."
                             : ". Use diagnostic next to continue with unchecked candidates; move farther if the radius is exhausted.");
             if(timeLimited)source.sendSuccess(()->Component.literal(summary),false);
             else source.sendFailure(Component.literal(summary));
@@ -255,9 +266,11 @@ public final class CitiesAriseCommands {
         }
 
         var located = result.settlement().orElseThrow();
-        com.cybersammy.citiesarise.minecraft.worldgen.DiagnosticSettlementLocations.get(source.getLevel()).remember(
-                new com.cybersammy.citiesarise.minecraft.worldgen.DiagnosticSettlementLocations.Entry(located.region(),located.blockX(),located.blockZ(),result.profile()));
-        String summary = "Structure-start-validated candidate center (not a generated settlement): ["
+        var rejected=com.cybersammy.citiesarise.minecraft.worldgen.OnDemandCityPlacement.publish(source.getLevel(),result);
+        if(rejected.isPresent()) {
+            source.sendFailure(Component.literal("City was not reserved or queued: "+rejected.orElseThrow()+". No partial city was published."));return;
+        }
+        String summary = "City reserved and queued for placement near the player: ["
                 + located.blockX()
                 + ", ~, "
                 + located.blockZ()

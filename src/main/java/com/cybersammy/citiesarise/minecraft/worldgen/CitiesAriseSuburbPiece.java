@@ -127,6 +127,12 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
 
     boolean requiresFinalTerrain() { return structuralBlueprint!=null && structuralBlueprint.settings().enabled(); }
 
+    PendingStructuralPlacement.Submission submission() {
+        var blueprint = structuralBlueprint != null ? structuralBlueprint : new StructuralSupportBlueprint(
+                com.cybersammy.citiesarise.core.earthwork.StructuralSupportSettings.disabled(),java.util.List.of(),java.util.Map.of());
+        return new PendingStructuralPlacement.Submission(profileId,planId,centerX,centerZ,snapshot,blueprint,registryTemplate);
+    }
+
     DebugChunkPlacementPlan carvingProtectionSlice(PlacementChunk chunk) {
         return requiresFinalTerrain()?new DebugChunkPlacementPlan(chunk,java.util.List.of()):placementSlice(chunk);
     }

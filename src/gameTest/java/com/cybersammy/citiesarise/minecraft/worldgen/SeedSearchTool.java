@@ -167,7 +167,7 @@ public final class SeedSearchTool {
                 if(!filter.matches(counts)) { reject(report,"ELEMENT_FILTER"); continue; }
                 // Run the real structure-start path too: biome rules, vertical placement bounds and current profile store.
                 report.addProperty("phase","VERIFYING_START"); checkpoint(output,report,started);
-                var start=structure.generate(registries,generator,biomes,random,level.getStructureManager(),seed,chunk,0,height,structure.biomes()::contains);
+                var start=CitiesAriseWorldgen.structureGeneration().preview(result,()->structure.generate(registries,generator,biomes,random,level.getStructureManager(),seed,chunk,0,height,structure.biomes()::contains));
                 if(stopped(o,output,report,started,seconds)) return;
                 if(!start.isValid()) { reject(report,"STRUCTURE_START"); continue; }
                 String dump="plan-"+seed+"-"+region.x()+"-"+region.z()+".json";

@@ -12,8 +12,12 @@ final class LocateSearchExecutor implements Executor {
     @Override
     public synchronized void execute(Runnable command) {
         Objects.requireNonNull(command, "command");
-        activeTask = new SearchTask(command);
-        activeExecutor().execute(activeTask);
+        SearchTask task = new SearchTask(command);
+        activeTask = task;
+        activeExecutor().execute(() -> {
+            try { task.run(); }
+            finally { synchronized (this) { if(activeTask==task)activeTask=null; } }
+        });
     }
 
     synchronized void cancel() {

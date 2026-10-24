@@ -45,6 +45,7 @@ public final class CitiesAriseMod {
         CitiesAriseCommands commands = new CitiesAriseCommands(planningService, LOGGER);
         NeoForge.EVENT_BUS.addListener(commands::register);
         NeoForge.EVENT_BUS.addListener(commands::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(commands::onServerStopping);
         NeoForge.EVENT_BUS.addListener(cacheLifecycle::onDatapackSync);
         NeoForge.EVENT_BUS.addListener(cacheLifecycle::onServerStopped);
         NeoForge.EVENT_BUS.addListener(profileStore::register);

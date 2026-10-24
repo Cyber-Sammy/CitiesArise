@@ -120,7 +120,9 @@ public final class ChunkMovementValidation {
                 report.addProperty("maximumPostIntervalMs",maxInterval);report.addProperty("maximumTickBodyMs",maxTick);
                 report.add("planner",plannerMetrics());report.add("visibleChunks",visible());report.add("completion",JSON.toJsonTree(PlacementCompletionTickets.measurements()));checkpoint();
             }
-            if(distance<=.01 && visible().get("missing").getAsInt()==0 && (probeChunk==null || probePlaced))finish(server,null);
+            boolean cityComplete=!Boolean.getBoolean("citiesarise.requireCityCompletion") || SettlementRegistry.get(player.serverLevel()).entries()
+                    .stream().allMatch(entry->entry.state().equals("PLACEMENT_COMPLETE"));
+            if(distance<=.01 && visible().get("missing").getAsInt()==0 && (probeChunk==null || probePlaced) && cityComplete)finish(server,null);
             else if(System.nanoTime()-began>Long.getLong("citiesarise.movementTimeoutSeconds",600L)*1_000_000_000L)finish(server,new IllegalStateException("Movement/view did not finish before timeout"));
         }catch(Throwable failure){finish(server,failure);}
     }
@@ -146,6 +148,8 @@ public final class ChunkMovementValidation {
             report.addProperty("postIntervalP95UpperMs",percentile(.95));report.addProperty("postIntervalP99UpperMs",percentile(.99));
             report.addProperty("gcMs",gcMillis()-gcStart);report.add("planner",plannerMetrics());report.add("visibleChunks",visible());
             report.add("completion",JSON.toJsonTree(PlacementCompletionTickets.measurements()));
+            report.add("cityStates",JSON.toJsonTree(SettlementRegistry.get(player.serverLevel()).entries().stream()
+                    .map(e->e.metadata().id()+":"+e.state()+":"+e.placedChunks().size()+"/"+e.metadata().placementChunks().size()).toList()));
             if(probeChunk!=null){report.addProperty("probeFullMs",probeFullMs);report.addProperty("probePlaced",probePlaced);}
             server.getPlayerList().remove(player);long save=System.nanoTime();server.saveEverything(false,true,true);
             report.addProperty("saveMs",(System.nanoTime()-save)/1e6);report.addProperty("saved",true);checkpoint();

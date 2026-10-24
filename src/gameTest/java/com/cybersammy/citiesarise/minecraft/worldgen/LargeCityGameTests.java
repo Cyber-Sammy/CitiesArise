@@ -63,9 +63,16 @@ public final class LargeCityGameTests {
         try {
             enabled.set(true);modulo.set(16);enabled.clearCache();modulo.clearCache();logging.set(true);
             helper.assertTrue(CitiesAriseWorldgenConfig.enabled() && CitiesAriseWorldgenConfig.candidateRegionModulo()==16,"Native config overrides did not take effect");
+            var planning=MinecraftSuburbPlanningService.defaults(org.slf4j.LoggerFactory.getLogger(LargeCityGameTests.class));
+            var context=planning.prepareLocateContext(level,generator).orElseThrow();
+            var selected=planning.planForWorldgen(context,new BlockPos(392,0,392));
+            helper.assertTrue(selected.successful(),"Explicit Skyline plan failed");
             for(var chunk:List.of(new ChunkPos(24,24),new ChunkPos(8,8),new ChunkPos(32,32))) {
-                var start=structure.generate(level.registryAccess(),generator,generator.getBiomeSource(),level.getChunkSource().randomState(),
+                var ordinary=structure.generate(level.registryAccess(),generator,generator.getBiomeSource(),level.getChunkSource().randomState(),
                     level.getStructureManager(),level.getSeed(),chunk,0,level,structure.biomes()::contains);
+                helper.assertTrue(!ordinary.isValid(),"Exploration created an unrequested city");
+                var start=CitiesAriseWorldgen.structureGeneration().preview(selected,()->structure.generate(level.registryAccess(),generator,generator.getBiomeSource(),level.getChunkSource().randomState(),
+                    level.getStructureManager(),level.getSeed(),chunk,0,level,structure.biomes()::contains));
                 helper.assertTrue(start.isValid(),"Missing real local start at "+chunk);
                 var piece=(CitiesAriseSuburbPiece)start.getPieces().getFirst();var box=piece.getBoundingBox();
                 var owner=CityPlanningArea.owner(SettlementRegion.fromBlockPosition(chunk.getMiddleBlockX(),chunk.getMiddleBlockZ()));

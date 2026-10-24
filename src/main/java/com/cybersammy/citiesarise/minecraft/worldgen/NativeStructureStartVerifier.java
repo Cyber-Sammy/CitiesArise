@@ -30,6 +30,8 @@ final class NativeStructureStartVerifier {
     private final RandomSpreadStructurePlacement placement;
     private final Structure structure;
     private final long seed;
+    private java.util.List<CitiesAriseSuburbPiece> pieces = java.util.List.of();
+    java.util.List<CitiesAriseSuburbPiece> pieces() { return pieces; }
 
     NativeStructureStartVerifier(ServerLevel level, RandomSpreadStructurePlacement placement) {
         if (!level.getServer().isSameThread()) {
@@ -48,6 +50,12 @@ final class NativeStructureStartVerifier {
     }
 
     Optional<String> rejection(SuburbDebugPlanResult result, SettlementProfileId profile) {
+        return CitiesAriseWorldgen.structureGeneration().preview(result, () -> verify(result, profile));
+    }
+
+    private Optional<String> verify(SuburbDebugPlanResult result, SettlementProfileId profile) {
+        pieces = java.util.List.of();
+        var prepared = new java.util.ArrayList<CitiesAriseSuburbPiece>();
         if (!(structure instanceof CitiesAriseSuburbStructure)) return Optional.of("STRUCTURE_UNAVAILABLE");
         var owners = CitiesAriseWorldgen.structureGeneration().requiredStartRegions(result, profile);
         if (owners.isEmpty()) return Optional.of("EMPTY_CITY_PLACEMENT");
@@ -67,7 +75,9 @@ final class NativeStructureStartVerifier {
             if (!start.isValid()) {
                 return Optional.of(biomeRejected[0] ? "STRUCTURE_BIOME_REJECTED" : "STRUCTURE_START_REJECTED");
             }
+            for (var piece : start.getPieces()) prepared.add((CitiesAriseSuburbPiece)piece);
         }
+        pieces = java.util.List.copyOf(prepared);
         return Optional.empty();
     }
 }

@@ -6,6 +6,7 @@ public final class CitiesAriseWorldgenConfig {
     public static final ModConfigSpec SPEC;
 
     private static final ModConfigSpec.BooleanValue ENABLED;
+    private static final ModConfigSpec.IntValue PLACEMENT_TICK_BUDGET_MS;
     private static final ModConfigSpec.IntValue CITY_EXCLUSION_RADIUS;
     private static final ModConfigSpec.ConfigValue<String> SETTLEMENT_PROFILE_ID;
     private static final ModConfigSpec.IntValue CANDIDATE_REGION_MODULO;
@@ -23,6 +24,9 @@ public final class CitiesAriseWorldgenConfig {
                 .comment("Enables city search and placement requested by /citiesarise locate. Exploration never plans new cities.")
                 .worldRestart()
                 .define("enabled", false);
+        PLACEMENT_TICK_BUDGET_MS = builder
+                .comment("Soft shared time budget for city snapshot capture, writes and tree cleanup per server tick. One native block update may overrun it.")
+                .defineInRange("placementTickBudgetMs",4,1,20);
         CITY_EXCLUSION_RADIUS = builder
                 .comment("Minimum horizontal distance between city centers. Successful searches persist their exclusion radius per dimension.")
                 .defineInRange("cityExclusionRadius", 30000, 0, 60000000);
@@ -57,6 +61,8 @@ public final class CitiesAriseWorldgenConfig {
 
     private CitiesAriseWorldgenConfig() {
     }
+
+    public static int placementTickBudgetMs(){return PLACEMENT_TICK_BUDGET_MS.get();}
 
     public static int cityExclusionRadius() { return CITY_EXCLUSION_RADIUS.get(); }
 

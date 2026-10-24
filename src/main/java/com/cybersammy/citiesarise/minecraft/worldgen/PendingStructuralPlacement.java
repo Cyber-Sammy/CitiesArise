@@ -38,25 +38,27 @@ final class PendingStructuralPlacement extends SavedData {
         SettlementIndex.Metadata parent;
         SuburbStructurePlacementSnapshot original,resolved;
         StructuralSupportBlueprint blueprint;
-        FinalTerrainSnapshot captured;
-        java.util.concurrent.CompletableFuture<StructuralSupportPlacement.Resolution> future;
+        PlacementCompiler.Original originalData;
+        PlacementCompiler.Owner prepared;
+        PlacementCompiler.Chunk active;
+        PlacementTerrainSnapshot.Capture capture;
+        PlacementChunk compilingChunk;
+        java.util.concurrent.CompletableFuture<?> work;
+        Work kind;
+        boolean lease;
+        int writeCursor,completionCursor,treeCursor;
+        long retryAt;
         final Set<PlacementChunk> placed=new HashSet<>();
         Set<PlacementChunk> requiredCache;
-        DebugPlacementPlan placementCache;
-        DebugChunkPlacementIndex indexCache;
-        WorldgenVegetationCleanupIndex cleanupCache;
-        List<PlacementChunk> chunkCache;
-        void prepareResolved() {
-            if(placementCache!=null) return;
-            placementCache=resolved.toPlacementPlan();indexCache=new DebugPlacementChunkProjector().partition(placementCache);
-            cleanupCache=new WorldgenVegetationCleanupIndex(placementCache);
-            chunkCache=placementCache.operations().stream().map(op->PlacementChunk.containing(op.point()))
-                    .distinct().sorted(Comparator.comparingInt(PlacementChunk::x).thenComparingInt(PlacementChunk::z)).toList();
-        }
-        Set<PlacementChunk> required() {
-            if(requiredCache!=null) return requiredCache;
-            requiredCache=blueprint.requiredChunks(original.toPlacementPlan());return requiredCache;
-        }
+        Set<PlacementChunk> required(){return requiredCache==null?originalData.required():requiredCache;}
+    }
+    private enum Work { ORIGINAL,OWNER,RESOLVE,CHUNK }
+    private static boolean start(Entry e,Work kind,java.util.function.Supplier<?> task) {
+        if(!e.lease && !PlacementWorker.reserve())return false;
+        e.lease=true;e.kind=kind;e.work=PlacementWorker.submit(task);return true;
+    }
+    private static void release(Entry e) {
+        if(e.lease)PlacementWorker.release();e.lease=false;e.work=null;e.kind=null;e.compilingChunk=null;
     }
     static PendingStructuralPlacement get(ServerLevel level) {
         if(!level.getServer().isSameThread()) throw new IllegalStateException("Structural placement requires server thread");
@@ -89,108 +91,172 @@ final class PendingStructuralPlacement extends SavedData {
         pending.put(id,e);setDirty();
     }
     void applyReady(ServerLevel level) {
-        try {applyReadyTick(level);}finally {
+        applyReady(level,new TickWorkBudget(4_000_000,1024));
+    }
+    void applyReady(ServerLevel level,TickWorkBudget budget) {
+        try {applyReadyTick(level,budget);}finally {
             completion.retain(level,pending.keySet());
             if(level.players().isEmpty())completion.clear(level);
         }
     }
+    boolean hasPartiallyWrittenChunk(){return pending.values().stream().anyMatch(e->e.active!=null && e.writeCursor>0 && e.writeCursor<e.active.size());}
+    Set<PlacementChunk> activeWriteChunks(){return pending.values().stream().filter(e->e.active!=null).map(e->e.active.chunk()).collect(java.util.stream.Collectors.toUnmodifiableSet());}
+    boolean hasScheduledWork(){return pending.values().stream().anyMatch(e->e.work!=null || e.capture!=null || e.active!=null);}
+    boolean hasReadyWork(ServerLevel level) {
+        for(var e:pending.values()) {
+            if(e.work!=null || e.capture!=null)return true;
+            if(e.retryAt>level.getGameTime())continue;
+            if(e.originalData==null || e.resolved!=null && e.prepared==null)return true;
+            if(e.resolved==null && (!e.blueprint.settings().enabled() || e.required().stream().allMatch(c->level.getChunkSource().getChunkNow(c.x(),c.z())!=null)))return true;
+            if(e.active!=null){if(writeHalo(e.active.chunk()).stream().allMatch(c->level.getChunkSource().getChunkNow(c.x(),c.z())!=null))return true;else continue;}
+            if(e.prepared!=null && (e.placed.containsAll(e.prepared.chunks()) || e.prepared.chunks().stream()
+                    .anyMatch(c->!e.placed.contains(c) && level.getChunkSource().getChunkNow(c.x(),c.z())!=null)))return true;
+        }
+        return false;
+    }
+    void resetTransient() {
+        for(var e:pending.values()) {if(e.work!=null)e.work.cancel(false);e.work=null;e.capture=null;e.lease=false;e.kind=null;e.compilingChunk=null;e.originalData=null;e.prepared=null;}
+    }
     void releaseCompletionTickets(ServerLevel level){completion.clear(level);}
-    private void applyReadyTick(ServerLevel level) {
-        if(level.getGameTime()%20==0) {
+    private void applyReadyTick(ServerLevel level,TickWorkBudget budget) {
+        if(level.getGameTime()%20==0 && budget.available()) {
             var nearby=new ArrayList<PlacementCompletionTickets.Candidate>();
             for(var e:pending.values()) {
-                int minX=e.original.minimumX(),minZ=e.original.minimumZ(),maxX=e.original.maximumX(),maxZ=e.original.maximumZ();
-                int radius=Math.min(128,level.getServer().getPlayerList().getViewDistance()*16);
-                boolean near=level.players().stream().anyMatch(p->Math.max(Math.max(minX-p.getX(),p.getX()-maxX),0)<=radius
-                        && Math.max(Math.max(minZ-p.getZ(),p.getZ()-maxZ),0)<=radius);
-                if(near)nearby.add(new PlacementCompletionTickets.Candidate(e.id,e.required()));
+                if(e.originalData==null)continue;
+                var m=e.originalData;int radius=Math.min(128,level.getServer().getPlayerList().getViewDistance()*16);
+                boolean near=level.players().stream().anyMatch(p->Math.max(Math.max(m.minX()-p.getX(),p.getX()-m.maxX()),0)<=radius
+                        && Math.max(Math.max(m.minZ()-p.getZ(),p.getZ()-m.maxZ()),0)<=radius);
+                if(near) {
+                    Set<PlacementChunk> required=e.required();
+                    if(e.resolved!=null && e.prepared!=null) {
+                        var next=e.active!=null?Optional.of(e.active.chunk()):e.prepared.chunks().stream().filter(c->!e.placed.contains(c)).findFirst();
+                        if(next.isPresent())required=writeHalo(next.orElseThrow());
+                    }
+                    nearby.add(new PlacementCompletionTickets.Candidate(e.id,required));
+                }
             }
             completion.maintain(level,nearby);
         }
         for(var e:List.copyOf(pending.values())) {
-            if(e.resolved==null) {
-                StructuralSupportPlacement.Resolution result;
-                if(!e.blueprint.settings().enabled()) {
-                    result=new StructuralSupportPlacement.Resolution(Optional.of(e.original.toPlacementPlan()),"ACCEPTED",0,0);
-                } else if(edgeMode(e.blueprint)) {
-                    if(e.blueprint.recipe()==null) result=new StructuralSupportPlacement.Resolution(Optional.empty(),"MISSING_RAVINE_RECIPE",0,0);
-                    else {
-                        if(e.future==null) {
-                            if(e.required().stream().anyMatch(c->level.getChunkSource().getChunkNow(c.x(),c.z())==null)) continue;
-                            if(!FinalTerrainReplanning.reserve()) return;
-                            try {
-                                if(e.captured==null) {e.captured=FinalTerrainSnapshot.capture(level,e.blueprint.recipe().bounds());setDirty();}
-                                e.future=FinalTerrainReplanning.submit(e.original.toPlacementPlan(),e.blueprint,e.captured);
-                            } catch(RuntimeException ex) {
-                                FinalTerrainReplanning.release();completed.put(e.id,"FINAL_TERRAIN_CAPTURE_FAILURE");pending.remove(e.id);setDirty();
-                                LOG.warn("Final terrain capture rejected {}: {}",e.id,ex.getMessage());
+            if(!budget.step())return;
+            if(e.retryAt>level.getGameTime())continue;
+            if(e.work!=null) {
+                if(!e.work.isDone())continue; // Never wait for a worker on the server thread.
+                var kind=e.kind;
+                try {
+                    var value=e.work.join();
+                    if(e.capture!=null && !e.capture.valid(level)) {PlacementRuntimeMetrics.invalidatedCapture();release(e);e.capture=null;continue;}
+                    release(e);
+                    switch(kind) {
+                        case ORIGINAL -> e.originalData=(PlacementCompiler.Original)value;
+                        case OWNER -> e.prepared=(PlacementCompiler.Owner)value;
+                        case RESOLVE -> {
+                            var computed=(PlacementCompiler.Resolved)value;var result=charge(e,computed.result());
+                            if(result.plan().isEmpty()) {
+                                completed.put(e.id,result.reason());pending.remove(e.id);e.capture=null;setDirty();
+                                LOG.warn("Final-terrain structural placement rejected {}: {}; no settlement blocks placed",e.id,result.reason());continue;
                             }
-                            return;
+                            e.prepared=computed.owner();e.resolved=e.prepared.snapshot();e.capture=null;setDirty();
+                            LOG.info("Final-terrain structural placement accepted {} on worker: suspendedColumns={}, supportBlocks={}",e.id,result.suspendedColumns(),result.supports());
                         }
-                        if(!e.future.isDone()) return;
-                        try {result=e.future.join();}
-                        catch(java.util.concurrent.CompletionException ex) {
-                            LOG.error("Final terrain replanning failed for {}",e.id,ex);
-                            result=new StructuralSupportPlacement.Resolution(Optional.empty(),"FINAL_TERRAIN_REPLAN_FAILURE",0,0);
+                        case CHUNK -> {
+                            e.active=(PlacementCompiler.Chunk)value;e.writeCursor=0;e.capture=null;
+                            e.treeCursor=0;setDirty();
                         }
-                        e.future=null;e.captured=null;
                     }
-                } else {
-                    if(e.required().stream().anyMatch(c->level.getChunkSource().getChunkNow(c.x(),c.z())==null)) continue;
-                    try { result=StructuralSupportPlacement.resolve(e.original.toPlacementPlan(),e.blueprint,new com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Ground() {
-                        public boolean solid(int x,int y,int z) {return PendingStructuralPlacement.solid(level,x,y,z);}
-                        public boolean fluid(int x,int y,int z) {return !loadedChunk(level,x,z).getFluidState(new BlockPos(x,y,z)).isEmpty();}
-                    }); } catch(UnloadedStructuralTerrain waiting) {
+                } catch(java.util.concurrent.CompletionException error) {
+                    release(e);e.capture=null;
+                    if(error.getCause() instanceof UnloadedStructuralTerrain waiting) {
                         var required=new HashSet<>(e.required());required.add(waiting.chunk());e.requiredCache=Set.copyOf(required);
-                        continue; // No writes or budget charges have occurred; retry when this chunk is ready.
-                    }
-                }
-                if(result.plan().isPresent() && e.blueprint.sharedBudget()) {
-                    String city=e.parent==null?e.id:e.parent.planId();
-                    long spent=constructionSpent.getOrDefault(city,0L);
-                    long supports=structuralSpent.getOrDefault(city,0L);
-                    if(result.construction()>e.blueprint.constructionAllowance()-spent)
-                        result=new StructuralSupportPlacement.Resolution(Optional.empty(),"CITY_CONSTRUCTION_VOLUME_LIMIT",0,0);
-                    else if(result.structuralVolume()>e.blueprint.settings().maximumVolume()-supports)
-                        result=new StructuralSupportPlacement.Resolution(Optional.empty(),"CITY_STRUCTURAL_VOLUME_LIMIT",0,0);
-                    else {
-                        constructionSpent.put(city,spent+result.construction());
-                        structuralSpent.put(city,supports+result.structuralVolume());
-                    }
-                }
-                if(result.plan().isEmpty()) {
-                    completed.put(e.id,result.reason());pending.remove(e.id);setDirty();
-                    LOG.warn("Final-terrain structural placement rejected {}: {}; no settlement blocks placed",e.id,result.reason());
-                    return;
-                }
-                e.resolved=SuburbStructurePlacementSnapshot.from(result.plan().orElseThrow());setDirty();
-                LOG.info("Final-terrain structural placement accepted {}: suspendedColumns={}, supportBlocks={}",e.id,result.suspendedColumns(),result.supports());
+                    } else {e.retryAt=level.getGameTime()+200;LOG.error("Placement worker failed for {}; retaining saved work",e.id,error);}
+                    continue;
+                } catch(java.util.concurrent.CancellationException cancelled) {release(e);e.capture=null;continue;}
             }
-            e.prepareResolved();var plan=e.placementCache;var index=e.indexCache;var chunks=e.chunkCache;
-            if(e.placed.containsAll(chunks)) {
-                // Final support resolution can remove every old substrate operation in
-                // a chunk. It has no remaining work, but still belongs to the parent plan.
-                if(e.parent!=null)recordOriginalChunks(level,e.original,e.parent);
+            if(e.originalData==null) {var snapshot=e.original;var blueprint=e.blueprint;start(e,Work.ORIGINAL,()->PlacementCompiler.original(snapshot,blueprint));continue;}
+            if(e.resolved==null) {
+                if(!e.blueprint.settings().enabled()) {var original=e.originalData;var blueprint=e.blueprint;start(e,Work.RESOLVE,()->PlacementCompiler.resolve(original,blueprint,null));continue;}
+                if(e.required().stream().anyMatch(c->level.getChunkSource().getChunkNow(c.x(),c.z())==null))continue;
+                if(capture(e,level,e.required(),edgeMode(e.blueprint) && e.blueprint.recipe()!=null?e.blueprint.recipe().bounds():null,budget)) {
+                    var terrain=e.capture.finish(level);var original=e.originalData;var blueprint=e.blueprint;
+                    start(e,Work.RESOLVE,()->PlacementCompiler.resolve(original,blueprint,terrain));
+                }
+                continue;
+            }
+            if(e.prepared==null) {var snapshot=e.resolved;start(e,Work.OWNER,()->PlacementCompiler.owner(snapshot.toPlacementPlan()));continue;}
+            if(e.active!=null) {
+                var chunk=e.active.chunk();if(writeHalo(chunk).stream().anyMatch(c->level.getChunkSource().getChunkNow(c.x(),c.z())==null))continue;
+                while(e.treeCursor<e.active.treeTargets().size() && budget.step()) {
+                    var tree=e.active.treeTargets().get(e.treeCursor);
+                    if(!PendingTreeRemoval.get(level).addOne(tree.getKey(),tree.getValue()))return;
+                    e.treeCursor++;
+                }
+                if(e.treeCursor<e.active.treeTargets().size())return;
+                var access=new MinecraftWorldgenBlockAccess(level,new VanillaDebugBlockMaterialProvider());
+                long began=System.nanoTime();
+                while(e.writeCursor<e.active.size() && budget.step()) {
+                    var op=e.active.writes().operations().get(e.writeCursor).toPlacementOperation();
+                    access.placeOperation(new WorldgenBlockPosition(op.point().x(),op.platformY().orElseThrow(),op.point().z()),op);
+                    e.writeCursor++;PlacementRuntimeMetrics.write();setDirty();
+                }
+                if(e.writeCursor<e.active.size())return;
+                e.placed.add(chunk);e.active=null;e.writeCursor=0;e.treeCursor=0;setDirty();
+                var m=e.parent==null?new SettlementIndex.Metadata(level.dimension().location().toString(),e.profile,e.id,e.centerX,e.centerZ,
+                        e.prepared.minX(),e.prepared.minZ(),e.prepared.maxX(),e.prepared.maxZ(),e.prepared.packedChunks()):bound(e.parent,level);
+                SettlementRegistry.get(level).placed(m,net.minecraft.world.level.ChunkPos.asLong(chunk.x(),chunk.z()),System.nanoTime()-began);
+                return;
+            }
+            if(e.placed.containsAll(e.prepared.chunks())) {
+                // Account for original chunks with no remaining operations, in bounded steps.
+                var chunks=e.originalData.placementChunks();
+                if(e.parent!=null)while(e.completionCursor<chunks.size() && budget.step()) {
+                    var chunk=chunks.get(e.completionCursor++);
+                    SettlementRegistry.get(level).placed(bound(e.parent,level),net.minecraft.world.level.ChunkPos.asLong(chunk.x(),chunk.z()),0);
+                }
+                if(e.parent!=null && e.completionCursor<chunks.size())return;
                 completed.put(e.id,"PLACED");pending.remove(e.id);setDirty();return;
             }
-            var next=chunks.stream().filter(c->!e.placed.contains(c)
-                    && level.getChunkSource().getChunkNow(c.x(),c.z())!=null).findFirst();
+            var next=e.prepared.chunks().stream().filter(c->!e.placed.contains(c) && level.getChunkSource().getChunkNow(c.x(),c.z())!=null).findFirst();
             if(next.isEmpty())continue;
-            var chunk=next.orElseThrow();
-            if(level.getChunkSource().getChunkNow(chunk.x(),chunk.z())==null) continue;
-            long started=System.nanoTime();
-            new WorldgenPlacementApplier().apply(level,index.slice(chunk),plan.operations());
-            var cleanup=e.cleanupCache.slice(chunk);
-            if(!cleanup.influencingOperations().isEmpty()) WorldgenVegetationCleanup.enqueue(level.dimension(),cleanup);
-            e.placed.add(chunk);setDirty();
-            var allChunks=chunks.stream().map(c->net.minecraft.world.level.ChunkPos.asLong(c.x(),c.z())).collect(java.util.stream.Collectors.toSet());
-            var metadata=new SettlementIndex.Metadata(level.dimension().location().toString(),e.profile,e.id,e.centerX,e.centerZ,
-                    e.resolved.minimumX(),e.resolved.minimumZ(),e.resolved.maximumX(),e.resolved.maximumZ(),allChunks);
-            if(e.parent!=null)metadata=new SettlementIndex.Metadata(level.dimension().location().toString(),e.parent.profile(),e.parent.planId(),
-                    e.parent.centerX(),e.parent.centerZ(),e.parent.minX(),e.parent.minZ(),e.parent.maxX(),e.parent.maxZ(),e.parent.placementChunks());
-            SettlementRegistry.get(level).placed(metadata,net.minecraft.world.level.ChunkPos.asLong(chunk.x(),chunk.z()),System.nanoTime()-started);
-            return; // At most one chunk (and one structural resolution) per dimension per tick.
+            var chunk=e.compilingChunk==null?next.orElseThrow():e.compilingChunk;
+            e.compilingChunk=chunk;var needed=new HashSet<PlacementChunk>();
+            // Tree discovery sees only already-ready neighbors; it never loads its halo.
+            for(int dz=-2;dz<=2;dz++)for(int dx=-2;dx<=2;dx++)
+                if(level.getChunkSource().getChunkNow(chunk.x()+dx,chunk.z()+dz)!=null)needed.add(new PlacementChunk(chunk.x()+dx,chunk.z()+dz));
+            if(capture(e,level,needed,null,budget)) {
+                var terrain=e.capture.finish(level);var prepared=e.prepared;
+                start(e,Work.CHUNK,()->PlacementCompiler.chunk(prepared,chunk,terrain));
+            }
         }
+    }
+    private boolean capture(Entry e,ServerLevel level,Set<PlacementChunk> needed,com.cybersammy.citiesarise.core.geometry.GridBounds bounds,TickWorkBudget budget) {
+        if(e.capture==null) {
+            if(!PlacementWorker.reserve())return false;
+            e.lease=true;e.capture=new PlacementTerrainSnapshot.Capture(level,needed,bounds);
+        }
+        try {
+            if(!e.capture.valid(level)){PlacementRuntimeMetrics.invalidatedCapture();release(e);e.capture=null;return false;}
+            return e.capture.advance(level,budget);
+        }catch(IllegalStateException failure) {
+            release(e);e.capture=null;e.retryAt=level.getGameTime()+20;
+            if(!(failure instanceof UnloadedStructuralTerrain))LOG.warn("Terrain capture deferred for {}: {}",e.id,failure.getMessage());
+            return false;
+        }
+    }
+    private StructuralSupportPlacement.Resolution charge(Entry e,StructuralSupportPlacement.Resolution result) {
+        if(result.plan().isEmpty() || !e.blueprint.sharedBudget())return result;
+        String city=e.parent==null?e.id:e.parent.planId();
+        long spent=constructionSpent.getOrDefault(city,0L),supports=structuralSpent.getOrDefault(city,0L);
+        if(result.construction()>e.blueprint.constructionAllowance()-spent)
+            return new StructuralSupportPlacement.Resolution(Optional.empty(),"CITY_CONSTRUCTION_VOLUME_LIMIT",0,0);
+        if(result.structuralVolume()>e.blueprint.settings().maximumVolume()-supports)
+            return new StructuralSupportPlacement.Resolution(Optional.empty(),"CITY_STRUCTURAL_VOLUME_LIMIT",0,0);
+        constructionSpent.put(city,spent+result.construction());structuralSpent.put(city,supports+result.structuralVolume());return result;
+    }
+    private static SettlementIndex.Metadata bound(SettlementIndex.Metadata m,ServerLevel level) {
+        return new SettlementIndex.Metadata(level.dimension().location().toString(),m.profile(),m.planId(),m.centerX(),m.centerZ(),m.minX(),m.minZ(),m.maxX(),m.maxZ(),m.placementChunks());
+    }
+    private static Set<PlacementChunk> writeHalo(PlacementChunk c) {
+        var result=new HashSet<PlacementChunk>();for(int dz=-1;dz<=1;dz++)for(int dx=-1;dx<=1;dx++)result.add(new PlacementChunk(c.x()+dx,c.z()+dz));return Set.copyOf(result);
     }
     private static boolean edgeMode(StructuralSupportBlueprint blueprint) {
         return blueprint.ravines().enabled() && blueprint.ravines().mode()==com.cybersammy.citiesarise.core.road.RavineRoadSettings.Mode.FOLLOW_EDGE;
@@ -207,7 +273,7 @@ final class PendingStructuralPlacement extends SavedData {
         return chunk;
     }
     static PendingStructuralPlacement load(CompoundTag tag) {
-        if(tag.getInt("Version")!=1) throw new IllegalArgumentException("Unsupported structural placement version");
+        if(tag.getInt("Version")!=1 && tag.getInt("Version")!=2) throw new IllegalArgumentException("Unsupported structural placement version");
         var data=new PendingStructuralPlacement();long operations=0;
         var spent=tag.getCompound("ConstructionSpent");
         for(var city:spent.getAllKeys()) {
@@ -229,7 +295,16 @@ final class PendingStructuralPlacement extends SavedData {
             operations+=e.original.operations().size();if(operations>MAX_OPERATIONS) throw new IllegalArgumentException("Structural operation budget exceeded");
             e.blueprint=StructuralSupportBlueprint.load(row.getCompound("Blueprint"));
             if(row.contains("ParentCity"))e.parent=SettlementRegistry.readMetadata(row.getCompound("ParentCity"));
-            if(row.contains("Captured")) e.captured=FinalTerrainSnapshot.load(row.getCompound("Captured"));
+            if(row.contains("ActiveChunk")) {
+                var a=row.getCompound("ActiveChunk");var chunk=new PlacementChunk(a.getInt("X"),a.getInt("Z"));
+                var writes=a.contains("Writes")?SuburbStructurePlacementSnapshot.load(a.getCompound("Writes")):null;
+                var trees=new HashMap<BlockPos,String>();for(var t:a.getList("Trees",Tag.TAG_COMPOUND)) {
+                    var tree=(CompoundTag)t;if(trees.size()>=262144)throw new IllegalArgumentException("Too many active tree targets");
+                    trees.put(BlockPos.of(tree.getLong("Position")),tree.getString("Block"));
+                }
+                e.active=new PlacementCompiler.Chunk(chunk,writes,Map.copyOf(trees));e.writeCursor=a.getInt("Cursor");
+                if(e.writeCursor<0 || e.writeCursor>e.active.size())throw new IllegalArgumentException("Invalid saved placement cursor");
+            }
             if(row.contains("Resolved")) e.resolved=SuburbStructurePlacementSnapshot.load(row.getCompound("Resolved"));
             for(long packed:row.getLongArray("Placed")) e.placed.add(new PlacementChunk((int)packed,(int)(packed>>32)));
             data.pending.put(e.id,e);
@@ -237,14 +312,17 @@ final class PendingStructuralPlacement extends SavedData {
         return data;
     }
     @Override public CompoundTag save(CompoundTag tag,HolderLookup.Provider lookup) {
-        tag.putInt("Version",1);var spent=new CompoundTag();constructionSpent.forEach(spent::putLong);tag.put("ConstructionSpent",spent);var structural=new CompoundTag();structuralSpent.forEach(structural::putLong);tag.put("StructuralSpent",structural);var done=new CompoundTag();completed.forEach(done::putString);tag.put("Completed",done);
+        tag.putInt("Version",2);var spent=new CompoundTag();constructionSpent.forEach(spent::putLong);tag.put("ConstructionSpent",spent);var structural=new CompoundTag();structuralSpent.forEach(structural::putLong);tag.put("StructuralSpent",structural);var done=new CompoundTag();completed.forEach(done::putString);tag.put("Completed",done);
         var list=new ListTag();
         for(var e:pending.values()) {
             var row=new CompoundTag();row.putString("Id",e.id);row.putString("Profile",e.profile);row.putInt("X",e.centerX);row.putInt("Z",e.centerZ);
             if(e.parent!=null)row.put("ParentCity",SettlementRegistry.writeMetadata(e.parent));
             var original=new CompoundTag();e.original.save(original);row.put("Original",original);row.put("Blueprint",e.blueprint.save());
             if(e.resolved!=null) { var resolved=new CompoundTag();e.resolved.save(resolved);row.put("Resolved",resolved); }
-            if(e.captured!=null) row.put("Captured",e.captured.save());
+            if(e.active!=null) {
+                var a=new CompoundTag();var trees=new ListTag();e.active.treeRemoval().forEach((pos,block)->{var tree=new CompoundTag();tree.putLong("Position",pos.asLong());tree.putString("Block",block);trees.add(tree);});a.put("Trees",trees);a.putInt("X",e.active.chunk().x());a.putInt("Z",e.active.chunk().z());a.putInt("Cursor",e.writeCursor);
+                if(e.active.writes()!=null){var writes=new CompoundTag();e.active.writes().save(writes);a.put("Writes",writes);}row.put("ActiveChunk",a);
+            }
             row.putLongArray("Placed",e.placed.stream().mapToLong(c->net.minecraft.world.level.ChunkPos.asLong(c.x(),c.z())).toArray());list.add(row);
         }
         tag.put("Pending",list);return tag;

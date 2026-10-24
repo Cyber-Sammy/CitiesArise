@@ -31,7 +31,7 @@ public final class PlacementReadinessGameTests {
         var saved=queue.save(new CompoundTag(),level.registryAccess());
         var resolved=new CompoundTag();SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(List.of(near))).save(resolved);
         saved.getList("Pending",Tag.TAG_COMPOUND).getCompound(0).put("Resolved",resolved);
-        queue=PendingStructuralPlacement.load(saved);queue.applyReady(level);queue.applyReady(level);
+        queue=PendingStructuralPlacement.load(saved);PlacementTestDrain.applyReady(queue,level);PlacementTestDrain.applyReady(queue,level);
         var entry=SettlementRegistry.get(level).entries().stream().filter(e->e.metadata().planId().equals(parent.planId()) && e.metadata().centerX()==x && e.metadata().centerZ()==z).findFirst().orElseThrow();
         helper.assertTrue(entry.state().equals("PLACEMENT_COMPLETE"),"Removed substrate left phantom pending chunks");
         helper.assertTrue(entry.metadata().dimension().equals(level.dimension().location().toString()),"Template dimension leaked into registry");
@@ -98,9 +98,9 @@ public final class PlacementReadinessGameTests {
             helper.assertTrue(StructuralSupportBlueprint.load(bp.save()).sharedBudget(),"Shared budget flag not persisted");
             queue.add("test:budget",source.value(),x,z,snapshot,bp,parent);
         }
-        queue.applyReady(level);queue.applyReady(level);
+        PlacementTestDrain.applyReady(queue,level);PlacementTestDrain.applyReady(queue,level);
         queue=PendingStructuralPlacement.load(queue.save(new CompoundTag(),level.registryAccess()));
-        for(int i=0;i<8;i++)queue.applyReady(level);
+        for(int i=0;i<8;i++)PlacementTestDrain.applyReady(queue,level);
         var saved=queue.save(new CompoundTag(),level.registryAccess());var done=saved.getCompound("Completed");
         helper.assertTrue(done.getString("test:budget-owner-0").equals("PLACED"),"Large owner could not borrow unused budget");
         helper.assertTrue(done.getString("test:budget-owner-1").equals("PLACED"),"Remaining budget not reusable after reload");
@@ -108,7 +108,7 @@ public final class PlacementReadinessGameTests {
         helper.assertTrue(saved.getCompound("ConstructionSpent").getLong("test:budget-city")==4,"Shared work charged incorrectly");
         helper.succeed();
     }
-    @GameTest(template="empty",timeoutTicks=200)
+    @GameTest(template="empty",timeoutTicks=1200)
     public static void boundedCompletionCanFinishOneMissingChunkWithoutLoadingAnotherOwner(GameTestHelper helper) {
         var level=helper.getLevel();
         int x=Math.floorDiv(helper.absolutePos(BlockPos.ZERO).getX(),16)+4096;
@@ -150,13 +150,13 @@ public final class PlacementReadinessGameTests {
         row.put("Blueprint",new StructuralSupportBlueprint(new StructuralSupportSettings(false,32,12,4,20000),List.of(),Map.of()).save());
         var rows=new ListTag();rows.add(row);var tag=new CompoundTag();tag.putInt("Version",1);tag.put("Pending",rows);
         var queue=PendingStructuralPlacement.load(tag);
-        queue.applyReady(level);
+        PlacementTestDrain.applyReady(queue,level);
         helper.assertTrue(level.getBlockState(new BlockPos(x,70,z)).is(Blocks.DIAMOND_BLOCK),"Ready chunk blocked behind unloaded chunk");
         helper.assertTrue(level.getChunkSource().getChunkNow(far>>4,z>>4)==null,"Placement forced a remote chunk load");
         var saved=queue.save(new CompoundTag(),level.registryAccess());
         helper.assertTrue(saved.getList("Pending",Tag.TAG_COMPOUND).getCompound(0).getLongArray("Placed").length==1,"Progress not persisted");
         level.setBlock(new BlockPos(x,70,z),Blocks.EMERALD_BLOCK.defaultBlockState(),2);
-        PendingStructuralPlacement.load(saved).applyReady(level);
+        PlacementTestDrain.applyReady(PendingStructuralPlacement.load(saved),level);
         helper.assertTrue(level.getBlockState(new BlockPos(x,70,z)).is(Blocks.EMERALD_BLOCK),"Reload repeated completed placement");
         helper.succeed();
     }

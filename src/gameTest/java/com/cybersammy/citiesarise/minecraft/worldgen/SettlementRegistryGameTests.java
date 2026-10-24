@@ -13,7 +13,7 @@ import net.neoforged.neoforge.gametest.*;
 @PrefixGameTestTemplate(false)
 public final class SettlementRegistryGameTests {
     @GameTest(template = "empty", timeoutTicks = 100)
-    public static void diagnosticLocationsPersistSeparatelyAndLocateCommandsReadThem(GameTestHelper helper) throws Exception {
+    public static void historicalDiagnosticLocationsPersistButLocateUsesRecordedCities(GameTestHelper helper) throws Exception {
         var registry=new DiagnosticSettlementLocations();
         var region=new com.cybersammy.citiesarise.minecraft.planning.SettlementRegion(-70,80);
         var first=new DiagnosticSettlementLocations.Entry(region,-8896,10304,"test:profile");
@@ -39,13 +39,17 @@ public final class SettlementRegistryGameTests {
             };
             var source=helper.getLevel().getServer().createCommandSourceStack().withLevel(helper.getLevel())
                     .withPosition(new net.minecraft.world.phys.Vec3(first.x(),80,first.z())).withSource(sink);
+            var recorded=new com.cybersammy.citiesarise.core.registry.SettlementIndex.Metadata(helper.getLevel().dimension().location().toString(),
+                    "test:recorded-profile","test:recorded-only",first.x()+64,first.z(),first.x()+64,first.z(),first.x()+65,first.z()+1,Set.of(1L));
+            SettlementRegistry.get(helper.getLevel()).observe(recorded);
             var dispatcher=helper.getLevel().getServer().getCommands().getDispatcher();
             var parsed=dispatcher.parse("citiesarise locate diagnostic next",source);
             helper.assertTrue(parsed.getExceptions().isEmpty() && !parsed.getReader().canRead(),"Diagnostic next command not registered");
             helper.assertTrue(dispatcher.execute("citiesarise locate",source)==1,"Saved nearest lookup failed");
-            helper.assertTrue(messages.stream().anyMatch(m->m.contains("SAVED_DIAGNOSTIC") && m.contains("-8896")),"Candidate mislabeled or absent from locate");
+            helper.assertTrue(messages.stream().anyMatch(m->m.contains("RECORDED") && m.contains(Integer.toString(first.x()+64)))
+                    && messages.stream().noneMatch(m->m.contains("SAVED_DIAGNOSTIC")),"Historical candidate was used instead of the recorded city");
             messages.clear();dispatcher.execute("citiesarise locate list",source);
-            helper.assertTrue(messages.stream().anyMatch(m->m.contains("-8768")),"Second candidate missing from list");
+            helper.assertTrue(messages.stream().noneMatch(m->m.contains("-8768")),"Historical unbuilt candidate was listed as a recorded city");
             helper.assertTrue(SettlementRegistry.get(helper.getLevel()).entries().stream().noneMatch(e->e.metadata().centerX()==first.x() && e.metadata().centerZ()==first.z()
                     || e.metadata().centerX()==second.x() && e.metadata().centerZ()==second.z()),"Diagnostic candidate was promoted to generated");
             helper.succeed();

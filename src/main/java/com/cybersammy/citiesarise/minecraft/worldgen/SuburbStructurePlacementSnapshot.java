@@ -222,7 +222,7 @@ public record SuburbStructurePlacementSnapshot(List<Operation> operations) {
             );
         }
 
-        private DebugBlockPlacementOperation toPlacementOperation() {
+        DebugBlockPlacementOperation toPlacementOperation() {
             return new DebugBlockPlacementOperation(
                     point,
                     verticalOffset,

@@ -117,10 +117,10 @@ public final class RavineSupportGameTests {
     public static void pendingGeometryPersistsBetweenChunksAndRejectsMissingFootingsBeforeWriting(GameTestHelper helper) {
         int x=Math.floorDiv(helper.absolutePos(BlockPos.ZERO).getX(),16)*16+8704;var level=helper.getLevel();var f=fixture(level,x,true);var pending=new PendingStructuralPlacement();
         pending.add("test:ravine_profile","test:queued-ravine",x,0,SuburbStructurePlacementSnapshot.from(f.original()),f.blueprint());
-        pending.applyReady(level);var tag=pending.save(new CompoundTag(),level.registryAccess());
+        var tag=PlacementTestDrain.untilResolved(pending,level);
         helper.assertTrue(tag.getList("Pending",10).getCompound(0).contains("Resolved"),"Resolved geometry not persisted");
         var reloaded=PendingStructuralPlacement.load(tag);
-        for(int i=0;i<6;i++) reloaded.applyReady(level);
+        for(int i=0;i<6;i++) PlacementTestDrain.applyReady(reloaded,level);
         verify(helper,x);
         var overBudget=StructuralSupportPlacement.resolveReady(level,f.original(),f.blueprint().withinConstructionBudget(0));
         // Inspect the original reservation on a fresh carved footprint so no placed pier becomes an anchor.
@@ -129,7 +129,7 @@ public final class RavineSupportGameTests {
         helper.assertTrue(overBudget.plan().isEmpty() && overBudget.reason().equals("CONSTRUCTION_VOLUME_LIMIT"),"Structural works bypassed the shared construction budget");
         var empty=fixture(level,x+256,false);var rejected=new PendingStructuralPlacement();
         rejected.add("test:ravine_profile","test:unsupported-ravine",x+256,0,SuburbStructurePlacementSnapshot.from(empty.original()),empty.blueprint());
-        rejected.applyReady(level);var rejection=rejected.save(new CompoundTag(),level.registryAccess());
+        PlacementTestDrain.applyReady(rejected,level);var rejection=rejected.save(new CompoundTag(),level.registryAccess());
         helper.assertTrue(rejection.getCompound("Completed").getString("test:unsupported-ravine").startsWith("NO_STRUCTURAL_ANCHOR"),"Unsupported city not rejected");
         helper.assertTrue(level.getBlockState(new BlockPos(x+264,65,5)).isAir(),"Rejected city left a partial deck");
         helper.succeed();
@@ -151,15 +151,20 @@ public final class RavineSupportGameTests {
         var reloaded=new CitiesAriseSuburbPiece(tag);
         var mask=new SettlementCarvingProtection.ColumnMask();mask.include(reloaded.carvingProtectionSlice(new PlacementChunk(x>>4,0)));
         helper.assertTrue(!mask.test(8,62,5),"Final-terrain mode still preserves an artificial cave ceiling");
+        var pinned=new HashSet<net.minecraft.world.level.ChunkPos>();
+        for(var c:f.blueprint().requiredChunks(plan))for(int dz=-1;dz<=1;dz++)for(int dx=-1;dx<=1;dx++)pinned.add(new net.minecraft.world.level.ChunkPos(c.x()+dx,c.z()+dz));
+        for(var c:pinned){level.setChunkForced(c.x,c.z,true);level.getChunk(c.x,c.z);}
+        Runnable release=()->{for(var c:pinned)level.setChunkForced(c.x,c.z,false);};helper.runAtTickTime(99,release);
         reloaded.postProcess(level,level.structureManager(),level.getChunkSource().getGenerator(),net.minecraft.util.RandomSource.create(1),
                 box,new net.minecraft.world.level.ChunkPos(x>>4,0),new BlockPos(x,65,3));
         helper.assertTrue(level.getBlockState(new BlockPos(x+8,65,5)).isAir(),"Structure wrote its old foundation before support acceptance");
         helper.runAfterDelay(12,()->{
+            PlacementTestDrain.applyReady(PendingStructuralPlacement.get(level),level);
             verify(helper,x);
             helper.assertTrue(level.getBlockState(new BlockPos(x+6,48,18)).is(Blocks.WATER),
                     "Suspended house changed the channel at "+new BlockPos(x+6,48,18)+": "+level.getBlockState(new BlockPos(x+6,48,18)));
             helper.assertTrue(level.getBlockState(new BlockPos(x+12,66,3)).isAir(),"Span rail blocked a building entrance");
-            helper.succeed();
+            release.run();helper.succeed();
         });
     }
 
@@ -226,7 +231,7 @@ public final class RavineSupportGameTests {
         var e=new StructuralSupportPlanner.Envelope(source,new GridBounds(point,new GridSize(5,5)),65,StructuralSupportPlanner.Kind.ROAD);
         var blueprint=new StructuralSupportBlueprint(new StructuralSupportSettings(true,32,12,4,20000),List.of(e),Map.of());
         var pending=new PendingStructuralPlacement();pending.add("test:ravine_profile",source.value(),point.x(),point.z(),SuburbStructurePlacementSnapshot.from(plan),blueprint);
-        pending.applyReady(helper.getLevel());var tag=pending.save(new CompoundTag(),helper.getLevel().registryAccess());
+        PlacementTestDrain.applyReady(pending,helper.getLevel());var tag=pending.save(new CompoundTag(),helper.getLevel().registryAccess());
         helper.assertTrue(!tag.getList("Pending",10).getCompound(0).contains("Resolved"),"Unloaded terrain was evaluated");
         helper.assertTrue(helper.getLevel().getChunkSource().getChunkNow(point.x()>>4,point.z()>>4)==null,"Structural resolution loaded a chunk");
         helper.succeed();

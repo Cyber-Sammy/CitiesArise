@@ -37,19 +37,19 @@ public final class StructuralTerrainReadinessGameTests {
         var probe=StructuralSupportPlacement.resolveReady(level,original,blueprint);
         helper.assertTrue(probe.reason().equals("WAITING_FOR_LOADED_TERRAIN"),"Direct resolver did not defer");
         var queue=new PendingStructuralPlacement();queue.add("test:profile",source.value(),x,0,SuburbStructurePlacementSnapshot.from(original),blueprint);
-        queue.applyReady(level);var saved=queue.save(new CompoundTag(),level.registryAccess());
+        PlacementTestDrain.applyReady(queue,level);var saved=queue.save(new CompoundTag(),level.registryAccess());
         helper.assertTrue(saved.getList("Pending",10).size()==1 && saved.getCompound("Completed").isEmpty(),"Waiting settlement was rejected");
         helper.assertTrue(saved.getCompound("ConstructionSpent").isEmpty() && saved.getCompound("StructuralSpent").isEmpty(),"Waiting consumed budget");
         helper.assertTrue(level.getBlockState(new BlockPos(platform.x(),64,platform.z())).is(Blocks.STONE),"Waiting wrote settlement blocks");
         helper.assertTrue(level.getChunkSource().getChunkNow(intermediate.x(),intermediate.z())==null,"Readiness force-loaded terrain");
-        queue=PendingStructuralPlacement.load(saved);queue.applyReady(level);
+        queue=PendingStructuralPlacement.load(saved);PlacementTestDrain.applyReady(queue,level);
         helper.assertTrue(queue.save(new CompoundTag(),level.registryAccess()).getList("Pending",10).size()==1,"Reload lost waiting settlement");
         for(var chunk:expected)level.getChunk(chunk.x(),chunk.z());
         for(int z=15;z<144;z++)level.setBlock(new BlockPos(x+16,64,z),Blocks.STONE.defaultBlockState(),2);
         var ready=StructuralSupportPlacement.resolveReady(level,original,blueprint);
         helper.assertTrue(ready.plan().isPresent() && ready.plan().orElseThrow().operations().stream().anyMatch(
                 op->op.point().equals(outside) && op.role()==DebugPlacementRole.TERRAIN_SURFACE),"Connected apron was removed during resolution");
-        for(int tick=0;tick<5;tick++)queue.applyReady(level);
+        for(int tick=0;tick<5;tick++)PlacementTestDrain.applyReady(queue,level);
         var finished=queue.save(new CompoundTag(),level.registryAccess());
         helper.assertTrue(finished.getCompound("Completed").getString(source.value()).equals("PLACED"),"Ready settlement did not resume: "+finished.getCompound("Completed"));
         helper.assertTrue(level.getBlockState(new BlockPos(platform.x(),64,platform.z())).is(Blocks.STONE_BRICKS),"Platform was not placed");

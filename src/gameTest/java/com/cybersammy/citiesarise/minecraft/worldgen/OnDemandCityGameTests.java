@@ -31,7 +31,8 @@ public final class OnDemandCityGameTests {
         var snapshot=SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(List.of(op)));
         var blueprint=new StructuralSupportBlueprint(com.cybersammy.citiesarise.core.earthwork.StructuralSupportSettings.disabled(),List.of(),Map.of());
         var queue=new PendingStructuralPlacement();var tooMany=new ArrayList<PendingStructuralPlacement.Submission>();
-        for(int i=0;i<65;i++)tooMany.add(new PendingStructuralPlacement.Submission("test:profile","test:city-"+i,pos.getX(),pos.getZ(),snapshot,blueprint,null));
+        var parent=new com.cybersammy.citiesarise.core.registry.SettlementIndex.Metadata(level.dimension().location().toString(),"test:profile","test:on-demand-city",pos.getX(),pos.getZ(),pos.getX(),pos.getZ(),pos.getX(),pos.getZ(),Set.of(net.minecraft.world.level.ChunkPos.asLong(pos.getX()>>4,pos.getZ()>>4)));
+        for(int i=0;i<65;i++)tooMany.add(new PendingStructuralPlacement.Submission("test:profile","test:city-"+i,pos.getX(),pos.getZ(),snapshot,blueprint,parent));
         helper.assertTrue(!queue.canAddAll(tooMany),"Oversized city partially admitted");
         helper.assertTrue(queue.save(new CompoundTag(),level.registryAccess()).getList("Pending",10).isEmpty(),"Preflight mutated queue");
         var pieces=tooMany.subList(0,2);queue.addAll(pieces);
@@ -39,7 +40,7 @@ public final class OnDemandCityGameTests {
         helper.assertTrue(restored.save(new CompoundTag(),level.registryAccess()).getList("Pending",10).size()==2,"Reload lost city owners");
         restored.addAll(pieces);
         helper.assertTrue(restored.save(new CompoundTag(),level.registryAccess()).getList("Pending",10).size()==2,"Duplicate owners after reload");
-        restored.applyReady(level);
+        PlacementTestDrain.applyReady(restored,level);
         helper.assertTrue(level.getBlockState(pos).is(net.minecraft.world.level.block.Blocks.DIAMOND_BLOCK),"Already generated chunk did not receive requested city");
         helper.succeed();
     }

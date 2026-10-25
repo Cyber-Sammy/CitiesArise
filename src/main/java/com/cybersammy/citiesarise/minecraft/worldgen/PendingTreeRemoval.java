@@ -17,15 +17,22 @@ final class PendingTreeRemoval extends SavedData {
         return level.getDataStorage().computeIfAbsent(new Factory<>(PendingTreeRemoval::new,
                 (tag,lookup)->load(tag)),"cities_arise_tree_cleanup");
     }
-    void add(Map<BlockPos,String> blocks) {
-        if((long)pending.size()+blocks.size()>MAX_PENDING) return;
-        pending.putAll(blocks);if(!blocks.isEmpty()) setDirty();
+    boolean add(Map<BlockPos,String> blocks) {
+        if((long)pending.size()+blocks.size()>MAX_PENDING && pending.size()+blocks.keySet().stream().filter(p->!pending.containsKey(p)).count()>MAX_PENDING)return false;
+        pending.putAll(blocks);if(!blocks.isEmpty()) setDirty();return true;
+    }
+    boolean addOne(BlockPos pos,String block) {
+        if(pending.size()>=MAX_PENDING && !pending.containsKey(pos))return false;
+        pending.put(pos,block);setDirty();return true;
     }
     void applyReady(ServerLevel level) {
+        applyReady(level,new TickWorkBudget(4_000_000,4096));
+    }
+    void applyReady(ServerLevel level,TickWorkBudget budget) {
         int visited=0,writes=0;var iterator=pending.entrySet().iterator();var waiting=new LinkedHashMap<BlockPos,String>();
-        while(iterator.hasNext() && visited++<MAX_WRITES && writes<MAX_WRITES) {
+        while(iterator.hasNext() && visited++<MAX_WRITES && writes<MAX_WRITES && budget.step()) {
             var entry=iterator.next();var p=entry.getKey();
-            if(level.getChunkSource().getChunkNow(p.getX()>>4,p.getZ()>>4)==null) {
+            if(!readyHalo(level,p)) {
                 waiting.put(p,entry.getValue());iterator.remove();continue;
             }
             var state=level.getBlockState(p);
@@ -34,6 +41,12 @@ final class PendingTreeRemoval extends SavedData {
             iterator.remove();writes++;setDirty();
         }
         pending.putAll(waiting);
+    }
+    private static boolean readyHalo(ServerLevel level,BlockPos p) {
+        int x=p.getX()>>4,z=p.getZ()>>4;
+        for(int dz=-1;dz<=1;dz++)for(int dx=-1;dx<=1;dx++)
+            if(level.getChunkSource().getChunkNow(x+dx,z+dz)==null)return false;
+        return true;
     }
     static PendingTreeRemoval load(CompoundTag tag) {
         if(tag.getInt("Version")!=1) throw new IllegalArgumentException("Unsupported tree cleanup version");

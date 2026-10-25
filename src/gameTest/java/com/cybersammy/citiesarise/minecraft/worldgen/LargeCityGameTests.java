@@ -98,7 +98,7 @@ public final class LargeCityGameTests {
         var queue=new PendingStructuralPlacement();String id=tag.getString("SettlementPlan");
         queue.add(metadata.profile(),id,metadata.centerX(),metadata.centerZ(),snapshot,blueprint,metadata);
         var recovered=PendingStructuralPlacement.load(queue.save(new CompoundTag(),level.registryAccess()));
-        for(int tick=0;tick<100;tick++)recovered.applyReady(level);
+        for(int tick=0;tick<100;tick++)PlacementTestDrain.applyReady(recovered,level);
         var saved=recovered.save(new CompoundTag(),level.registryAccess());
         helper.assertTrue("PLACED".equals(saved.getCompound("Completed").getString(id)),"Saved local placement did not finish: "+saved.getCompound("Completed"));
         var expected=snapshot.toPlacementPlan().operations().stream().filter(o->o.material().equals("minecraft:sea_lantern") && o.point().x()>540).findFirst().orElseThrow();

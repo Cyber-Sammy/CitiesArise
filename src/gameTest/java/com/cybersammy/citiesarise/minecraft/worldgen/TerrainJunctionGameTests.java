@@ -106,7 +106,7 @@ public final class TerrainJunctionGameTests {
         helper.succeed();
     }
     @GameTest(template="empty",timeoutTicks=400)
-    public static void carvedGorgeReroutesBeforePlacementAndCapturedInputsSurviveReload(GameTestHelper helper) {
+    public static void carvedGorgeReroutesBeforePlacementAndFrozenRecipeSurvivesReload(GameTestHelper helper) {
         int x=origin(helper,16384);var level=helper.getLevel();var bounds=new GridBounds(new GridPoint(x,0),new GridSize(128,64));
         // This remote fixture has no player tickets. Test-owned tickets keep input/output ready while the worker runs.
         for(int cx=x>>4;cx<=(x+127)>>4;cx++)for(int cz=0;cz<4;cz++) {level.setChunkForced(cx,cz,true);level.getChunk(cx,cz);}
@@ -127,11 +127,11 @@ public final class TerrainJunctionGameTests {
         var blueprint=StructuralSupportBlueprint.from(initial.plan().orElseThrow(),preparation,profile.structuralSupports(),initial.content().placementMaterials()).withRecipe(recipe);
         helper.assertTrue(StructuralSupportBlueprint.load(blueprint.save()).recipe().profile().equals(profile),"Frozen recipe lost profile/content settings");
         var queued=new PendingStructuralPlacement();queued.add(profile.id().value(),id,x+64,32,SuburbStructurePlacementSnapshot.from(original),blueprint);
-        queued.applyReady(level);var saved=queued.save(new CompoundTag(),level.registryAccess());
-        helper.assertTrue(saved.getList("Pending",10).getCompound(0).contains("Captured"),"Final input was not captured before worker planning");
+        var saved=queued.save(new CompoundTag(),level.registryAccess());
+        helper.assertTrue(saved.getList("Pending",10).getCompound(0).getCompound("Blueprint").contains("Recipe"),"Frozen recipe was not saved before worker planning");
         var reloaded=PendingStructuralPlacement.load(saved);
         helper.succeedWhen(()-> {
-            reloaded.applyReady(level);var state=reloaded.save(new CompoundTag(),level.registryAccess());
+            PlacementTestDrain.applyReady(reloaded,level);var state=reloaded.save(new CompoundTag(),level.registryAccess());
             helper.assertTrue(state.getCompound("Completed").getString(id).equals("PLACED"),"Edge layout not placed: "+state.getCompound("Completed").getString(id));
             for(int dx=60;dx<=65;dx++)for(int z=23;z<=40;z++)helper.assertTrue(level.getBlockState(new BlockPos(x+dx,64,z)).isAir(),"Road covered the preserved gorge opening");
             release.run();
@@ -182,7 +182,7 @@ public final class TerrainJunctionGameTests {
                 new GridBounds(new GridPoint(x,0),new GridSize(1,1)),65,StructuralSupportPlanner.Kind.ROAD)),Map.of()).withRecipe(new FinalTerrainPlanningRecipe(profile,bounds,42,source.value()));
         var original=new DebugPlacementPlan(List.of(new DebugBlockPlacementOperation(new GridPoint(x,0),0,DebugPlacementRole.ROAD_SURFACE,source,OptionalInt.of(65))));
         helper.assertTrue(level.getChunkSource().getChunkNow((x+223)>>4,13)==null,"Remote fixture chunk was already loaded");
-        var queued=new PendingStructuralPlacement();queued.add(profile.id().value(),source.value(),x,0,SuburbStructurePlacementSnapshot.from(original),blueprint);queued.applyReady(level);
+        var queued=new PendingStructuralPlacement();queued.add(profile.id().value(),source.value(),x,0,SuburbStructurePlacementSnapshot.from(original),blueprint);PlacementTestDrain.applyReady(queued,level);
         helper.assertTrue(level.getChunkSource().getChunkNow((x+223)>>4,13)==null,"Follow-edge capture force-loaded terrain");
         helper.assertTrue(!queued.save(new CompoundTag(),level.registryAccess()).getList("Pending",10).getCompound(0).contains("Captured"),"Capture started before full reservation ready");
         helper.succeed();

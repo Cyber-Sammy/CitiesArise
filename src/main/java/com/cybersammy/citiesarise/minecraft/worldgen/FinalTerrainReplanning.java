@@ -13,10 +13,10 @@ final class FinalTerrainReplanning {
     private static final ExecutorService WORKER=Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"Cities Arise Final Terrain");t.setDaemon(true);return t;});
     static boolean reserve() {return CAPTURE_SLOTS.tryAcquire();}
     static void release() {CAPTURE_SLOTS.release();}
-    static CompletableFuture<StructuralSupportPlacement.Resolution> submit(DebugPlacementPlan original,StructuralSupportBlueprint blueprint,FinalTerrainSnapshot captured) {
+    static CompletableFuture<StructuralSupportPlacement.Resolution> submit(DebugPlacementPlan original,StructuralSupportBlueprint blueprint,TerrainSurveySnapshot captured) {
         return CompletableFuture.supplyAsync(()->resolve(original,blueprint,captured),WORKER).whenComplete((r,e)->release());
     }
-    static StructuralSupportPlacement.Resolution resolve(DebugPlacementPlan original,StructuralSupportBlueprint blueprint,FinalTerrainSnapshot captured) {
+    static StructuralSupportPlacement.Resolution resolve(DebugPlacementPlan original,StructuralSupportBlueprint blueprint,TerrainSurveySnapshot captured) {
         var recipe=blueprint.recipe();
         if(recipe==null) return new StructuralSupportPlacement.Resolution(Optional.empty(),"MISSING_RAVINE_RECIPE",0,0);
         var previousRoad=new HashSet<GridPoint>();

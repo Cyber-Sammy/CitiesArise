@@ -13,7 +13,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 /** Immutable bounded input for off-thread pure planning. Never retains chunks, a level or block states. */
-final class FinalTerrainSnapshot implements StructuralSupportPlanner.Ground {
+final class FinalTerrainSnapshot implements TerrainSurveySnapshot {
     private final GridBounds bounds;
     private final int minY,height;
     private final long[] solids,fluids;
@@ -60,7 +60,7 @@ final class FinalTerrainSnapshot implements StructuralSupportPlanner.Ground {
         }
         return new FinalTerrainSnapshot(bounds,min,height,solids,fluids,tops,biomes);
     }
-    TerrainSurvey survey() {return survey;}
+    public TerrainSurvey survey() {return survey;}
     public boolean solid(int x,int y,int z) {return bit(solids,x,y,z);}
     public boolean fluid(int x,int y,int z) {return bit(fluids,x,y,z);}
     private boolean bit(long[] values,int x,int y,int z) {

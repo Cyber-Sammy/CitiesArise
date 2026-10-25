@@ -95,6 +95,10 @@ public final class ChunkMovementValidation {
         var server=event.getServer();
         try {
             if(Boolean.getBoolean("citiesarise.completionProbe") && probeChunk==null && player.getX()>=1152)beginProbe(player.serverLevel());
+            if(Long.getLong("citiesarise.saveAfterWriteOperations",Long.MAX_VALUE)<=PlacementRuntimeMetrics.snapshot().writeOperations()
+                    && PendingStructuralPlacement.get(player.serverLevel()).hasPartiallyWrittenChunk()) {
+                report.addProperty("intentionalPartialSave",true);finish(server,null);return;
+            }
             if(Files.exists(Path.of(output()+".stop"))){finish(server,new java.util.concurrent.CancellationException("Owned diagnostic stopped"));return;}
             if(probeChunk!=null) {
                 var chunk=player.serverLevel().getChunkSource().getChunkNow(probeChunk.x,probeChunk.z);
@@ -118,7 +122,7 @@ public final class ChunkMovementValidation {
                 report.addProperty("status","MOVING");report.addProperty("x",player.getX());report.addProperty("z",player.getZ());
                 report.addProperty("elapsedMs",(System.nanoTime()-began)/1e6);report.addProperty("maximumPacketMs",maxPacket);
                 report.addProperty("maximumPostIntervalMs",maxInterval);report.addProperty("maximumTickBodyMs",maxTick);
-                report.add("planner",plannerMetrics());report.add("visibleChunks",visible());report.add("completion",JSON.toJsonTree(PlacementCompletionTickets.measurements()));checkpoint();
+                report.add("planner",plannerMetrics());report.add("placement",JSON.toJsonTree(PlacementRuntimeMetrics.snapshot()));report.add("visibleChunks",visible());report.add("completion",JSON.toJsonTree(PlacementCompletionTickets.measurements()));checkpoint();
             }
             boolean cityComplete=!Boolean.getBoolean("citiesarise.requireCityCompletion") || SettlementRegistry.get(player.serverLevel()).entries()
                     .stream().allMatch(entry->entry.state().equals("PLACEMENT_COMPLETE"));
@@ -142,11 +146,11 @@ public final class ChunkMovementValidation {
     private static void finish(MinecraftServer server,Throwable failure) {
         if(finished)return;finished=true;if(watch!=null)watch.shutdownNow();
         try {
-            report.addProperty("status",failure==null?"PASS":"FAILED");if(failure!=null)report.addProperty("failure",failure.toString());
+            report.addProperty("status",failure==null?(report.has("intentionalPartialSave")?"SAVED_PARTIAL":"PASS"):"FAILED");if(failure!=null)report.addProperty("failure",failure.toString());
             report.addProperty("elapsedMs",(System.nanoTime()-began)/1e6);report.addProperty("packets",packets);report.addProperty("maximumPacketMs",maxPacket);
             report.addProperty("maximumPostIntervalMs",maxInterval);report.addProperty("maximumTickBodyMs",maxTick);
             report.addProperty("postIntervalP95UpperMs",percentile(.95));report.addProperty("postIntervalP99UpperMs",percentile(.99));
-            report.addProperty("gcMs",gcMillis()-gcStart);report.add("planner",plannerMetrics());report.add("visibleChunks",visible());
+            report.addProperty("gcMs",gcMillis()-gcStart);report.add("planner",plannerMetrics());report.add("placement",JSON.toJsonTree(PlacementRuntimeMetrics.snapshot()));report.add("visibleChunks",visible());
             report.add("completion",JSON.toJsonTree(PlacementCompletionTickets.measurements()));
             report.add("cityStates",JSON.toJsonTree(SettlementRegistry.get(player.serverLevel()).entries().stream()
                     .map(e->e.metadata().id()+":"+e.state()+":"+e.placedChunks().size()+"/"+e.metadata().placementChunks().size()).toList()));

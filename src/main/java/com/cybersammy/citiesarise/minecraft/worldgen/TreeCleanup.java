@@ -16,26 +16,46 @@ import net.minecraft.world.level.block.state.BlockState;
 /** Captures tree identity before placement; cross-chunk writes are server-thread deferred. */
 public final class TreeCleanup {
     private TreeCleanup() { }
+    interface Access {
+        BlockState getBlockState(BlockPos pos);
+        int getMinBuildHeight();
+        int getMaxBuildHeight();
+        boolean available(int x,int z);
+    }
+    record Protection(Set<BlockPos> plants,Set<BlockPos> reserved) { }
+    static Protection protection(List<DebugBlockPlacementOperation> operations,DebugBlockMaterialProvider materials) {
+        var plants=new HashSet<BlockPos>();var reserved=new HashSet<BlockPos>();
+        for(var op:operations)if(op.platformY().isPresent()) {
+            var pos=new BlockPos(op.point().x(),op.platformY().getAsInt()+op.verticalOffset(),op.point().z());
+            reserved.add(pos);if(materials.needsVegetationProtection(op))plants.add(pos);
+        }
+        // Dense BlockPos grids have many equal hashes: SetN linear probing can become quadratic.
+        // These locally owned hash sets are never mutated after publication.
+        return new Protection(Collections.unmodifiableSet(plants),Collections.unmodifiableSet(reserved));
+    }
+
     public static Map<BlockPos,String> discover(WorldGenLevel level,List<DebugBlockPlacementOperation> operations,
             List<DebugBlockPlacementOperation> protectedOperations,boolean postPlacement) {
         return discover(level,operations,protectedOperations,postPlacement,new VanillaDebugBlockMaterialProvider());
     }
     public static Map<BlockPos,String> discover(WorldGenLevel level,List<DebugBlockPlacementOperation> operations,
             List<DebugBlockPlacementOperation> protectedOperations,boolean postPlacement,DebugBlockMaterialProvider materials) {
-        var protectedPositions=new HashSet<BlockPos>();
-        var reservedPositions=new HashSet<BlockPos>();
-        for(var op:protectedOperations) if(op.platformY().isPresent()) {
-            reservedPositions.add(new BlockPos(op.point().x(),op.platformY().getAsInt()+op.verticalOffset(),op.point().z()));
-            if(materials.needsVegetationProtection(op))
-            protectedPositions.add(new BlockPos(op.point().x(),op.platformY().getAsInt()+op.verticalOffset(),op.point().z()));
-        }
+        return discover(new Access() {
+            public BlockState getBlockState(BlockPos p){return level.getBlockState(p);}
+            public int getMinBuildHeight(){return level.getMinBuildHeight();}
+            public int getMaxBuildHeight(){return level.getMaxBuildHeight();}
+            public boolean available(int x,int z){return TreeCleanup.available(level,x,z);}
+        },operations,protection(protectedOperations,materials),postPlacement);
+    }
+    static Map<BlockPos,String> discover(Access level,List<DebugBlockPlacementOperation> operations,Protection protection,boolean postPlacement) {
+        var protectedPositions=protection.plants();var reservedPositions=protection.reserved();
         var contacts=new HashSet<Point>();var columns=new HashMap<com.cybersammy.citiesarise.core.geometry.GridPoint,Integer>();
         for(var op:operations) if(op.platformY().isPresent() && op.role()!=DebugPlacementRole.SUPPORT_LINING
                 && (!op.role().bridge() || op.role()==DebugPlacementRole.BRIDGE_DECK || op.role()==DebugPlacementRole.BRIDGE_STEP))
             columns.merge(op.point(),op.platformY().getAsInt(),Math::min);
         // Only occupied columns seed tree removal. The old broad buffer is not a tree boundary.
         for(var entry:columns.entrySet()) {
-            if(!available(level,entry.getKey().x(),entry.getKey().z())) continue;
+            if(!level.available(entry.getKey().x(),entry.getKey().z())) continue;
             int bottom=Math.max(level.getMinBuildHeight(),entry.getValue()-8);
             int top=Math.min(level.getMaxBuildHeight(),entry.getValue()+64);
             for(int y=bottom;y<top;y++) {
@@ -54,7 +74,7 @@ public final class TreeCleanup {
                 if(samples.size()>=TreeRemovalPlanner.MAX_READS) throw new TreeRemovalPlanner.Unavailable();
                 var b=pos(p);
                 if(b.getY()<level.getMinBuildHeight() || b.getY()>=level.getMaxBuildHeight()) return Optional.empty();
-                if(!available(level,b.getX(),b.getZ())) throw new TreeRemovalPlanner.Unavailable();
+                if(!level.available(b.getX(),b.getZ())) throw new TreeRemovalPlanner.Unavailable();
                 if(postPlacement && protectedPositions.contains(b)) return Optional.empty();
                 var sample=node(level.getBlockState(b));samples.put(p,sample);return sample;
             });

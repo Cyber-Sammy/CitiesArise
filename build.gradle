@@ -41,7 +41,7 @@ neoForge {
 
         gameTestServer {
             type = 'gameTestServer'
-            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id + ',cities_arise_readiness,cities_arise_roads'
+            systemProperty 'neoforge.enabledGameTestNamespaces', mod_id + ',cities_arise_readiness,cities_arise_roads,cities_arise_budget'
         }
 
         seedSearch {
@@ -170,4 +170,9 @@ tasks.named('processGameTestResources') {
 
 tasks.named('processGameTestResources') {
     from('examples/datapacks/skyline/data/cities_arise/settlement_profiles/suburb.json') { into 'fixtures/skyline' }
+}
+
+// Bounded placement regressions use an isolated namespace for short targeted runs.
+tasks.named('processGameTestResources') {
+    from('src/gameTest/resources/data/cities_arise/structure') { into 'data/cities_arise_budget/structure' }
 }

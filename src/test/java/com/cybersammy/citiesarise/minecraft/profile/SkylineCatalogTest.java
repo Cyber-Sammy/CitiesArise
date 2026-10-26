@@ -20,6 +20,31 @@ class SkylineCatalogTest {
             JsonParser.parseString(Files.readString(DATA.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject(),
             (id,dir,ext)->{var parts=id.split(":",2);return Files.newInputStream(DATA.resolve(parts[0]).resolve(dir).resolve(parts[1]+ext));});
     }
+    @Test void upperFloorHallsNeverCutTheFacadeAndLobbyKeepsOnlyItsDoorSockets() throws Exception {
+        var b=profile().suburbPlanningSettings().buildings();
+        var modules=b.compositions().get("skyline:crown").modules();
+        for(String id:List.of("skyline:floor_35_29","skyline:floor_l","skyline:floor_u")) {
+            var m=modules.get(id);if(m==null)m=b.compositions().get(id.equals("skyline:floor_l")?"skyline:loft":"skyline:courtyard").modules().get(id);
+            var mask=new HashSet<>(m.columnFootprint());var edge=new HashSet<GridPoint>();
+            for(var p:mask)for(var d:List.of(new GridPoint(1,0),new GridPoint(-1,0),new GridPoint(0,1),new GridPoint(0,-1)))
+                if(!mask.contains(new GridPoint(p.x()+d.x(),p.z()+d.z())))edge.add(p);
+            var inner=new HashSet<GridPoint>();
+            for(var p:mask)if(!edge.contains(p))for(var d:List.of(new GridPoint(1,0),new GridPoint(-1,0),new GridPoint(0,1),new GridPoint(0,-1)))
+                if(edge.contains(new GridPoint(p.x()+d.x(),p.z()+d.z())))inner.add(p);
+            var upper=new HashMap<Vec,String>();m.forLayout("upper").cells().forEach(c->upper.put(c.position(),c.material()));
+            for(var p:inner)for(int y=1;y<=4;y++){var material=upper.get(new Vec(p.x(),y,p.z()));assertNotNull(material,id+" missing facade "+p);assertNotEquals("minecraft:air",material,id+" facade hole "+p+" at "+y);}
+            var ground=new HashMap<Vec,String>();m.cells().forEach(c->ground.put(c.position(),c.material()));
+            int entry=m.size().x()/2;assertEquals("minecraft:air",ground.get(new Vec(entry,1,1)));assertEquals("minecraft:air",ground.get(new Vec(entry,2,1)));
+            assertNotEquals("minecraft:air",ground.get(new Vec(entry-1,1,1)));assertNotEquals("minecraft:air",ground.get(new Vec(entry+1,1,1)));
+        }
+        for(String id:List.of("skyline:floor_29_25","skyline:floor_17_17")) {
+            var m=modules.get(id);var upper=new HashMap<Vec,String>();m.forLayout("upper").cells().forEach(c->upper.put(c.position(),c.material()));
+            for(int x=1;x<m.size().x()-1;x++)for(int z:List.of(1,m.size().z()-2))for(int y=1;y<=4;y++) {
+                var material=upper.get(new Vec(x,y,z));assertNotNull(material,id+" missing legacy facade");assertNotEquals("minecraft:air",material,id+" open legacy facade");
+            }
+        }
+    }
+
     @Test void towerChoiceRespectsAvailableHeightWithoutClippingOrLowRiseSubstitution() throws Exception {
         var cfg=profile().suburbPlanningSettings().buildings();
         var slot=new BuildingSlot(new PlanElementId("test:height"),new PlanElementId("test:parcel"),new GridBounds(new GridPoint(0,0),new GridSize(39,39)),Set.of(),PlanProperties.empty());

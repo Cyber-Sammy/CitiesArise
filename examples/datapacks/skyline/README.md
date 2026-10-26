@@ -1,5 +1,12 @@
 # Skyline
 
+Wide-floor halls leave both facade layers intact. Ground-floor entrances use only
+their authored door sockets; upper floors restore the matching glazing and trim.
+Install this ZIP together with the matching mod JAR and test a newly planned city.
+Existing saved cities keep their frozen floor modules and are not rebuilt by replacing
+the pack. The matching JAR drains puddles during final road/yard clearance; already
+completed surfaces are not automatically reprocessed.
+
 Independent hosted modules add brick/light kiosks, gazebos and thin bus shelters.
 They share allowed forecourt, boundary, communal and spare sidewalk zones without
 allocating extra plots. Busy entrances, fences, narrow sidewalks and unsuitable

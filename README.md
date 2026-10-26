@@ -1,5 +1,14 @@
 # Cities Arise
 
+Skyline floor halls preserve the complete outer facade; only ground-floor entrance
+sockets cut through it, and upper floors restore the original wall, trim and glazing.
+Use the updated Skyline ZIP for newly planned buildings: saved cities retain their
+frozen module data. Placement preparation scans vegetation neighborhoods once per
+horizontal column rather than once per block on every storey, without increasing
+the server tick budget. Final terrain clearance also removes puddles above prepared
+roads and yards, including suspended surfaces, while preserving water below bridges
+and explicitly authored water. Already completed surfaces are not rebuilt automatically.
+
 Floor recipes now support fixed and mixed authored room placements, special section floors, guarded accessible terraces and habitable mansard modules. See [Authored floors](examples/datapacks/composition_fixture/AUTHORED_FLOORS.md); Skyline includes a 32-floor terrace/mansard example.
 
 Datapack-defined placement zones let kiosks, small shops, gazebos and shelters

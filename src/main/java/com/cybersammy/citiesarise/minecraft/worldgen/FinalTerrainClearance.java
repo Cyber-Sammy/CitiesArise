@@ -39,7 +39,7 @@ final class FinalTerrainClearance {
                 if(existing==null || !authored(existing.role()) || !(ground instanceof ExistingContent evidence) || !evidence.matches(existing))return -1;
             }
             for(int y=y(floor)+1;y<=y(floor)+height;y++) {
-            if(!ground.solid(floor.point().x(),y,floor.point().z())) continue;
+            if(!ground.solid(floor.point().x(),y,floor.point().z()) && !ground.fluid(floor.point().x(),y,floor.point().z())) continue;
             var op=new DebugBlockPlacementOperation(floor.point(),0,DebugPlacementRole.TERRAIN_CLEARANCE,
                     floor.sourceElementId(),OptionalInt.of(y),"minecraft:air",0);
             if(operations.putIfAbsent(key(op),op)==null) count++;

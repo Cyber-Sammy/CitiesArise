@@ -32,6 +32,17 @@ for mid in floor_ids:
             if b[field][1]==4:b[field][1]=5
     for layout in m.get('layouts',[]):taller_fills(layout.get('fills',[]))
 
+# Repair legacy upper doorway caps with the original facade pattern rather than a solid stripe.
+for mid in ['skyline:floor_29_25','skyline:floor_17_17']:
+    m=d['modules'][mid];w,_,depth=m['size'];cx=w//2
+    xs={p for start in range(3,w-3,4) for p in (start,start+1)}
+    def legacy_front(z,y):
+        if z in (0,depth-1):return 'trim' if y==4 or cx in range(1,w-1,4) else 'minecraft:air'
+        return 'glass' if y in (1,2) and cx in xs else 'wall'
+    upper=next(l for l in m['layouts'] if l['id']=='upper')
+    upper['fills']=[{'from':[cx,y,z],'to':[cx,y,z],'material':legacy_front(z,y)}
+        for z in (0,1,depth-2,depth-1) for y in range(1,5)]
+
 # Reusable broad-floor generator. Only explicit circulation air is stored; the
 # sparse authoring style matches the original pack and avoids whole-volume air copies.
 def module(name,w,h,shape):
@@ -49,17 +60,22 @@ def module(name,w,h,shape):
                         if (x+dx,z+dz) in mask:hall.add((x+dx,z+dz))
     line(entry,0,entry,7);line(min(entry,sx-1),7,max(entry,sx-1),7);line(sx-1,7,sx-1,sz)
     line(service,7,service,h-1);line(min(service,sx-1),7,max(service,sx-1),7)
+    def facade(x,z,y):
+        if (x,z) in edges:
+            return 'trim' if x%4==1 or z%4==1 or y==4 else None
+        if (x,z) in inner:
+            return 'glass' if y in (2,3) and (x%4 in (2,3) or z%4 in (2,3)) else 'wall'
+        return None
+    doors={(entry,z) for z in (0,1)}|{(service,z) for z in (h-2,h-1)}
     cells={}
     for x,z in mask:
         cells[x,0,z]=cells[x,5,z]='floor'
         for y in range(1,5):
-            material=None
-            if (x,z) in edges:
-                if x%4==1 or z%4==1 or y==4:material='trim'
-            elif (x,z) in inner:
-                material='glass' if y in (2,3) and (x%4 in (2,3) or z%4 in (2,3)) else 'wall'
-            elif x==w//2 or z==h//2:material='wall'
-            if (x,z) in hall:material='minecraft:air'
+            material=facade(x,z,y)
+            if (x,z) not in edges|inner:
+                if x==w//2 or z==h//2:material='wall'
+                if (x,z) in hall:material='minecraft:air'
+            if (x,z) in doors and y<=2:material='minecraft:air'
             if material is not None:cells[x,y,z]=material
     for y in range(6):cells[sx, y,sz]='minecraft:ladder[facing=west]';cells[sx+1,y,sz]='wall'
     for x,z,mat in [(4,4,'minecraft:bookshelf'),(w-5,4,'minecraft:crafting_table'),(4,h-5,'minecraft:barrel'),(w-5,h-5,'minecraft:smoker')]:
@@ -77,7 +93,10 @@ def module(name,w,h,shape):
     def joint(i,t,at,face,external=False,height=1):return {'id':i,'type':t,'accepts':[t],'at':at,'face':face,'external':external,'height':height}
     joints=[joint('down','skyline:stairs',[sx,0,sz],'down'),joint('up','skyline:stairs',[sx,6,sz],'up'),joint('entry','skyline:entry',[entry,1,0],'north',True,2),joint('service','skyline:entry',[service,1,h],'south',True,2)]
     joints[2]['accepts']=['skyline:entrance'];joints[3]['accepts']=['skyline:entrance']
-    upper={'id':'upper','weight':1,'closedJoints':['entry','service'],'fills':[{'from':[entry,1,0],'to':[entry,4,1],'material':'wall'},{'from':[service,1,h-2],'to':[service,4,h-1],'material':'wall'}]}
+    # Restore the actual facade palette, including glazing and piers, above the lobby.
+    upper={'id':'upper','weight':1,'closedJoints':['entry','service'],'fills':[
+        {'from':[x,y,z],'to':[x,y,z],'material':facade(x,z,y) or 'minecraft:air'}
+        for x,z in sorted(doors) for y in range(1,5)]}
     d['modules'][name]={'footprint':[''.join('#' if (x,z) in mask else '.' for x in range(w)) for z in range(h)],'size':[w,6,h],'tags':['skyline:building'],'fills':fills,'joints':joints,'layouts':[{'id':'lobby','weight':1},upper],
         'contract':{'routes':[{'id':'lobby','from':[entry,1,2],'to':[sx-1,1,sz],'bodyHeight':2}]}}
     for level in ['ground','upper']:

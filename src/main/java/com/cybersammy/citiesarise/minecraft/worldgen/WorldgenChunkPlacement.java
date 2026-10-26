@@ -196,15 +196,9 @@ final class WorldgenChunkPlacement {
 
     private static Map<GridPoint, SurfaceColumn> surfaceColumns(WorldgenBlockAccess level, DebugChunkPlacementPlan plan) {
         Map<GridPoint, SurfaceColumn> columns = new LinkedHashMap<>();
-        for (DebugBlockPlacementOperation operation : plan.operations()) {
-            addSurfaceColumns(
-                    level,
-                    plan,
-                    columns,
-                    operation.point(),
-                    LATE_FLUID_STABILIZATION_RADIUS
-            );
-        }
+        var visited=new HashSet<GridPoint>();
+        for(var operation:plan.operations())if(visited.add(operation.point()))
+            addSurfaceColumns(level,plan,columns,operation.point(),LATE_FLUID_STABILIZATION_RADIUS);
         return Map.copyOf(columns);
     }
 
@@ -296,21 +290,11 @@ final class WorldgenChunkPlacement {
                 point,
                 new VegetationColumn(column, column.placementY(), true, Set.of())
         ));
-        for (DebugBlockPlacementOperation operation : plan.operations()) {
-            int plannedBaseY = operation.platformY().orElseGet(
-                    () -> occupiedColumns.get(operation.point()).placementY()
-            );
-            addVegetationClearanceColumns(
-                    level,
-                    plan.chunk(),
-                    columns,
-                    operation.point(),
-                    plannedBaseY,
-                    WorldgenPlacementPolicy.VEGETATION_CLEARANCE_RADIUS,
-                    true,
-                    OptionalInt.empty()
-            );
-        }
+        var bases=new LinkedHashMap<GridPoint,Integer>();
+        for(var operation:plan.operations())bases.merge(operation.point(),operation.platformY().orElseGet(
+                ()->occupiedColumns.get(operation.point()).placementY()),Math::min);
+        bases.forEach((point,base)->addVegetationClearanceColumns(level,plan.chunk(),columns,point,base,
+                WorldgenPlacementPolicy.VEGETATION_CLEARANCE_RADIUS,true,OptionalInt.empty()));
         return Map.copyOf(columns);
     }
 
@@ -319,30 +303,15 @@ final class WorldgenChunkPlacement {
             WorldgenVegetationCleanupPlan plan
     ) {
         Map<GridPoint, VegetationColumn> columns = new LinkedHashMap<>();
-        for (DebugBlockPlacementOperation operation : plan.influencingOperations()) {
-            int plannedBaseY = operation.platformY().orElseGet(
-                    () -> surfaceColumn(level, nearestPointInChunk(plan.chunk(), operation.point())).placementY()
-            );
-            addVegetationClearanceColumns(
-                    level,
-                    plan.chunk(),
-                    columns,
-                    operation.point(),
-                    plannedBaseY,
-                    WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,
-                    false,
-                    OptionalInt.empty()
-            );
-            addVegetationClearanceColumns(
-                    level,
-                    plan.chunk(),
-                    columns,
-                    operation.point(),
-                    plannedBaseY,
-                    0,
-                    true,
-                    protectedVegetationY(level, operation, plannedBaseY)
-            );
+        var bases=new LinkedHashMap<GridPoint,Integer>();
+        for(var operation:plan.influencingOperations())bases.merge(operation.point(),operation.platformY().orElseGet(
+                ()->surfaceColumn(level,nearestPointInChunk(plan.chunk(),operation.point())).placementY()),Math::min);
+        var visited=new HashSet<GridPoint>();
+        for(var operation:plan.influencingOperations()) {
+            int base=operation.platformY().orElseGet(()->surfaceColumn(level,nearestPointInChunk(plan.chunk(),operation.point())).placementY());
+            if(visited.add(operation.point()))addVegetationClearanceColumns(level,plan.chunk(),columns,operation.point(),bases.get(operation.point()),
+                    WorldgenPlacementPolicy.FINAL_VEGETATION_CLEARANCE_RADIUS,false,OptionalInt.empty());
+            addVegetationClearanceColumns(level,plan.chunk(),columns,operation.point(),base,0,true,protectedVegetationY(level,operation,base));
         }
         return Map.copyOf(columns);
     }
@@ -368,24 +337,11 @@ final class WorldgenChunkPlacement {
             for (int xOffset = -radius; xOffset <= radius; xOffset++) {
                 GridPoint point = new GridPoint(center.x() + xOffset, center.z() + zOffset);
                 if (chunk.contains(point)) {
-                    columns.compute(point, (ignored, existing) -> {
-                        SurfaceColumn surface = existing == null
-                                ? surfaceColumn(level, point)
-                                : existing.surface();
-                        int clearanceBaseY = existing == null
-                                ? plannedBaseY
-                                : Math.min(existing.clearanceBaseY(), plannedBaseY);
-                        Set<Integer> protectedVegetationYs = existing == null
-                                ? new HashSet<>()
-                                : new HashSet<>(existing.protectedVegetationYs());
-                        protectedVegetationY.ifPresent(protectedVegetationYs::add);
-                        return new VegetationColumn(
-                                surface,
-                                clearanceBaseY,
-                                clearLogs || (existing != null && existing.clearLogs()),
-                                protectedVegetationYs
-                        );
-                    });
+                    var existing=columns.get(point);
+                    if(existing==null) {
+                        existing=new VegetationColumn(surfaceColumn(level,point),plannedBaseY,clearLogs,Set.of());columns.put(point,existing);
+                    }
+                    existing.include(plannedBaseY,clearLogs,protectedVegetationY);
                 }
             }
         }
@@ -484,17 +440,20 @@ final class WorldgenChunkPlacement {
         }
     }
 
-    private record VegetationColumn(
-            SurfaceColumn surface,
-            int clearanceBaseY,
-            boolean clearLogs,
-            Set<Integer> protectedVegetationYs
-    ) {
-        private VegetationColumn {
-            Objects.requireNonNull(surface, "surface");
-            Objects.requireNonNull(protectedVegetationYs, "protectedVegetationYs");
-            protectedVegetationYs = Set.copyOf(protectedVegetationYs);
+    /** Private invocation-local accumulator: each protected height is inserted once, never copied per block. */
+    private static final class VegetationColumn {
+        private final SurfaceColumn surface;
+        private int clearanceBaseY;
+        private boolean clearLogs;
+        private final Set<Integer> protectedYs;
+        VegetationColumn(SurfaceColumn surface,int base,boolean logs,Set<Integer> protectedYs) {
+            this.surface=Objects.requireNonNull(surface);clearanceBaseY=base;clearLogs=logs;this.protectedYs=new HashSet<>(protectedYs);
         }
+        void include(int base,boolean logs,OptionalInt protectedY){clearanceBaseY=Math.min(clearanceBaseY,base);clearLogs|=logs;protectedY.ifPresent(protectedYs::add);}
+        SurfaceColumn surface(){return surface;}
+        int clearanceBaseY(){return clearanceBaseY;}
+        boolean clearLogs(){return clearLogs;}
+        Set<Integer> protectedVegetationYs(){return protectedYs;}
     }
 
     private static GridPoint nearestPointInChunk(PlacementChunk chunk, GridPoint point) {

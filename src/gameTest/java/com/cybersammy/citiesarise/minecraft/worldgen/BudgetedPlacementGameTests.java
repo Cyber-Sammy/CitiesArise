@@ -15,6 +15,27 @@ import net.neoforged.neoforge.gametest.*;
 @PrefixGameTestTemplate(false)
 public final class BudgetedPlacementGameTests {
     @GameTest(template="empty",timeoutTicks=600)
+    public static void suspendedPavementDrainsPuddlesAboveItsSurfaceWithoutDrainingNeighborWater(GameTestHelper helper) {
+        var level=helper.getLevel();int cx=(helper.absolutePos(BlockPos.ZERO).getX()>>4)+19500;int x=cx*16+6;
+        for(int dz=-1;dz<=1;dz++)for(int dx=-1;dx<=1;dx++)level.getChunk(cx+dx,dz);
+        var id=new PlanElementId("test:surface-puddles");var ops=new ArrayList<DebugBlockPlacementOperation>();
+        for(int z=6;z<9;z++)for(int a=x;a<x+3;a++) {
+            for(int y=60;y<=64;y++)level.setBlock(new BlockPos(a,y,z),Blocks.STONE.defaultBlockState(),2);
+            for(int y=65;y<=66;y++)level.setBlock(new BlockPos(a,y,z),Blocks.WATER.defaultBlockState(),2);
+            ops.add(new DebugBlockPlacementOperation(new GridPoint(a,z),0,DebugPlacementRole.SUSPENDED_CONTENT,id,OptionalInt.of(64),"minecraft:stone_bricks",0));
+        }
+        var river=new BlockPos(x+8,63,7);level.setBlock(river.below(),Blocks.STONE.defaultBlockState(),2);level.setBlock(river,Blocks.WATER.defaultBlockState(),2);
+        var blueprint=new StructuralSupportBlueprint(new StructuralSupportSettings(true,32,12,4,10000),List.of(
+            new com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Envelope(id,new com.cybersammy.citiesarise.core.geometry.GridBounds(
+                new GridPoint(x,6),new com.cybersammy.citiesarise.core.geometry.GridSize(3,3)),64,com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Kind.PARCEL)),Map.of());
+        var queue=new PendingStructuralPlacement();queue.add("test:water",id.value(),x,7,SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(ops)),blueprint);
+        PlacementTestDrain.applyReady(queue,level);
+        helper.runAfterDelay(20,()->{
+            for(int z=6;z<9;z++)for(int a=x;a<x+3;a++)for(int y=65;y<=66;y++)helper.assertTrue(level.getFluidState(new BlockPos(a,y,z)).isEmpty(),"Puddle remains on suspended pavement");
+            helper.assertTrue(!level.getFluidState(river).isEmpty(),"Neighbor river was drained");helper.succeed();
+        });
+    }
+    @GameTest(template="empty",timeoutTicks=600)
     public static void replayRecognizesOnlyExactAuthoredUpperFloorsAfterLostQueueProgress(GameTestHelper helper) {
         var level=helper.getLevel();int cx=(helper.absolutePos(BlockPos.ZERO).getX()>>4)+19000;
         for(int dz=-1;dz<=1;dz++)for(int dx=-1;dx<=1;dx++)level.getChunk(cx+dx,dz);

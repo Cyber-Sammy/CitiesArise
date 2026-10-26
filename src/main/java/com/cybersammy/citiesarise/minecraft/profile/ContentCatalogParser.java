@@ -47,7 +47,7 @@ public final class ContentCatalogParser {
                 var a=item.getAsJsonObject();adjacency.add(new RoomAdjacency(string(a,"neighbor"),text(a,"joint",""),text(a,"neighborJoint",""),
                         a.has("rotation")?integer(a,"rotation",0):null,a.has("offset")?vec(a.getAsJsonArray("offset")):null,integer(a,"weight",1)));
             }
-            modules.put(entry.getKey(),new ModuleDefinition(entry.getKey(),size,cells(data,size),joints(data,"joints"),strings(data,"tags"),variants,damage,contract(object(data,"contract")),boundaries(data),layouts,adjacency));
+            modules.put(entry.getKey(),new ModuleDefinition(entry.getKey(),size,cells(data,size),joints(data,"joints"),strings(data,"tags"),variants,damage,contract(object(data,"contract")),boundaries(data),layouts,adjacency,moduleFootprint(data,size)));
         }
         for(var module:modules.values()) {
             for(var layout:module.layouts())module.forLayout(layout.id());
@@ -400,9 +400,19 @@ public final class ContentCatalogParser {
                 .filter(p -> p.containsKey(cell.material())).map(p -> p.get(cell.material())).distinct().toList();
         for(String state:states) resources.validateProviderData(state,cell.providerData());
     }
+    private static List<com.cybersammy.citiesarise.core.geometry.GridPoint> moduleFootprint(JsonObject data,Vec size) {
+        if(!data.has("footprint"))return List.of();
+        var rows=array(data,"footprint");if(rows.size()!=size.z())throw new IllegalArgumentException("Module footprint depth mismatch");
+        var points=new ArrayList<com.cybersammy.citiesarise.core.geometry.GridPoint>();
+        for(int z=0;z<rows.size();z++) {
+            var row=rows.get(z);if(!row.isJsonPrimitive() || !row.getAsJsonPrimitive().isString() || row.getAsString().length()!=size.x())throw new IllegalArgumentException("Module footprint width mismatch");
+            for(int x=0;x<size.x();x++){char c=row.getAsString().charAt(x);if(c=='#')points.add(new com.cybersammy.citiesarise.core.geometry.GridPoint(x,z));else if(c!='.')throw new IllegalArgumentException("Invalid module footprint marker");}
+        }
+        if(points.isEmpty())throw new IllegalArgumentException("Empty module footprint");return points;
+    }
     private static FloorLayout floorLayout(JsonObject data) {
         var rows=new ArrayList<String>();for(var row:array(data,"footprint")) {if(!row.isJsonPrimitive() || !row.getAsJsonPrimitive().isString())throw new IllegalArgumentException("Floor footprint row must be a string");rows.add(row.getAsString());}if(rows.isEmpty())throw new IllegalArgumentException("Empty floor footprint");
-        int width=rows.getFirst().length();if(width<1 || width>32 || rows.size()>32)throw new IllegalArgumentException("Floor footprint exceeds budget");var mask=new ArrayList<com.cybersammy.citiesarise.core.geometry.GridPoint>();
+        int width=rows.getFirst().length();if(width<1 || width>64 || rows.size()>64)throw new IllegalArgumentException("Floor footprint exceeds budget");var mask=new ArrayList<com.cybersammy.citiesarise.core.geometry.GridPoint>();
         for(int z=0;z<rows.size();z++) {
             if(rows.get(z).length()!=width)throw new IllegalArgumentException("Floor footprint rows differ in width");
             for(int x=0;x<width;x++) {char c=rows.get(z).charAt(x);if(c=='#')mask.add(new com.cybersammy.citiesarise.core.geometry.GridPoint(x,z));else if(c!='.')throw new IllegalArgumentException("Unknown floor footprint marker");}

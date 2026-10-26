@@ -1,6 +1,6 @@
 # Cities Arise
 
-Floor recipes now support fixed and mixed authored room placements, special section floors, guarded accessible terraces and habitable mansard modules. See [Authored floors](examples/datapacks/composition_fixture/AUTHORED_FLOORS.md); Skyline includes a sixteen-floor terrace/mansard example.
+Floor recipes now support fixed and mixed authored room placements, special section floors, guarded accessible terraces and habitable mansard modules. See [Authored floors](examples/datapacks/composition_fixture/AUTHORED_FLOORS.md); Skyline includes a 32-floor terrace/mansard example.
 
 Datapack-defined placement zones let kiosks, small shops, gazebos and shelters
 share existing parcels and streets. Hosted structures use ordinary modules and
@@ -83,18 +83,22 @@ connection between an outer bank and its platform. Missing chunks keep that
 settlement pending across saves; readiness checks do not force-load them or spend
 the construction budget before placement can be resolved.
 
-The [Skyline datapack](examples/datapacks/skyline/README.md) adds broad 29 x 25 block
-towers with 10, 12, 14 or 16 floors, two low-rise recipes, recessed two-block windows,
-projecting facades, setbacks, flat roofs and crowns. It uses 39 x 39 plots and
-eleven-block carriageways (5 + 1 + 5) with separate modular sidewalks. Its large-city profile targets 80 buildings in 20 orthogonal
-blocks over a 540 x 540 survey, with coordinated elevations within each block.
-Skyline prefers up to eight blocks of cut/fill for shared terraces, within hard
-limits of sixteen blocks of cut/fill and one million earthwork blocks. Partial
-Skyline cities may retain 24 or more safe plots. Partitioned-city candidate density
-accounts for the existing 6 x 6 reservation instead of applying the full ordinary
-region divisor a second time; diagnostic search and world generation agree.
-Use the matching large-city JAR. Enable it instead of the other example profile packs for
-new settlements; `scripts/generate_skyline_fixture.py` builds its installable ZIP.
+The [Skyline datapack](examples/datapacks/skyline/README.md) adds eight broad tower
+recipes with **20–50 floors**, **five-block storey steps and four clear interior blocks**.
+Rectangular, L-shaped, U-shaped and stepped footprints vary from 29 x 25 to 37 x 33.
+Four palettes, recessed two-block windows, projecting facades, terraces, flat roofs and
+crowns provide variation. The real world ceiling filters eligible recipes before selection.
+It uses 47 x 47 plots, eleven-block carriageways (5 + 1 + 5) and separate modular
+sidewalks. The profile targets 96 buildings in 24 blocks over a 768 x 768 survey,
+with shared block elevations and bounded sixteen-block cut/fill/two-million earthwork.
+At least 32 safe plots must remain. Plot packing is still a regular grid; mixed plot
+sizes and frontage-aware subdivision are the recorded next parcel-layout stage.
+Only an explicit locate request plans a new city; exploration retains on-demand policy
+and persisted exclusion zones. Existing cities keep their saved content.
+Use the matching JAR and updated Skyline ZIP instead of other example profile packs.
+The [road topology pack](examples/datapacks/road_topology/README.md) also includes
+an authored four-ramp slab interchange with reusable corner masks; automatic city
+selection of that turning interchange remains a following stage.
 
 Parcel boundaries are configured through `planning.parcelLayout`: independent spacing, reserved road-connected alleys, compatible shared fences and explicit separate-boundary policy. Gates reserve open passages before props. The zoning fixture enables wood fences for homes and stone walls for workshops; [its authoring guide](examples/datapacks/zoning_fixture/AUTHORING_GUIDE.md#parcel-spacing-and-fences) describes the options. These changes apply to newly generated settlements and require the matching JAR and datapack.
 
@@ -1014,6 +1018,13 @@ Connected short road segments share reachable footing/bank anchors through their
 Minecraft cave-carving protection previously preserved a near-surface ceiling under ordinary roads and plots, which could survive as a thick stone slab over a ravine. A new support-enabled structure does not reserve that artificial ceiling. Its persisted blueprint waits until all reserved chunks are already FULL and loaded, after carving and configured features. The structure bounds reserve the configured downward support envelope. The server incrementally captures private terrain palette copies, then a dedicated placement worker resolves support, builds indexes, discovers vegetation and compiles concrete block actions. Live world reads and writes stay on the server thread. Results are accepted only while captured chunk identities and block revisions still match. Writes require an already-FULL 3×3 chunk halo; bounded completion tickets request missing chunks without waiting in the tick handler. All reserved chunks must be loaded simultaneously at initial resolution. A small view distance can leave a city waiting; merely visiting chunks that unload again is insufficient, so increasing view distance may be necessary. Pending blueprints, resolved operations, concrete active-chunk actions, tree targets and the write cursor survive saves; reload resumes unfinished actions without repeating completed writes. Native SavedData decoding happens during server startup before playable ticks. The discovery registry receives placement progress only after final support acceptance. Diagnostic locate still checks generator terrain, so diagnostic acceptance alone cannot prove final carved-terrain acceptance.
 
 `worldgen.placementTickBudgetMs` in `cities_arise-common.toml` defaults to **4 ms** (range 1–20). This cooperative budget and a 4,096-step ceiling are shared across dimensions, terrain capture, structural writes and tree cleanup. One native block action, palette copy or GC pause can exceed the deadline; this is not a hard maximum server tick duration. One process-wide placement worker/capture lease bounds admission, and each terrain snapshot has a 128 MiB estimated memory budget. This is not a cap on total Minecraft heap. Finished worker futures are polled; the server does not wait for an unfinished placement job. Normal city placement is incremental, so construction can remain visible over multiple ticks. Authoring/debug helpers and native world generation retain their own execution rules.
+
+After an abrupt stop, saved chunks can contain upper floors whose queue progress
+was not saved yet. Final clearance validation recognizes an existing block only
+when its native state exactly matches authored content in the frozen plan. It can
+then replay that work idempotently. Merely scheduling a block at the same position
+does not bypass terrain limits; different terrain above the permitted cut still rejects.
+
 
 Support materials remain datapack content: `STRUCTURAL_BEAM`, `STRUCTURAL_PIER`, `STRUCTURAL_BRACE`, plus existing `BRIDGE_PIER` and `BRIDGE_RAIL`. The demo uses stripped oak members for plots and stone for road/bridge supports. These settings do not hardcode district names or building types. Support materials must satisfy supportive/non-passable material traits. Debug placement uses the same ready-terrain resolution before edits and includes the resulting operations in undo; missing ready chunks or invalid anchors reject debug placement.
 

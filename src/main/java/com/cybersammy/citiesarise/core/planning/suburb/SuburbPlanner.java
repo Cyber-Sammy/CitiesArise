@@ -72,7 +72,7 @@ public final class SuburbPlanner {
             if(integrated!=result)return integrated;
             var finished=result.withContent(com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
                     result.plan().orElseThrow(),result.terrainPreparationPlan().orElseThrow(),request.seed(),
-                    request.settings().buildings(),request.settings().parcelLayout()));
+                    request.settings().buildings(),request.settings().parcelLayout(),request.maximumBuildHeight()));
             return finished;
         } catch(IllegalArgumentException error) {
             return SuburbPlanningResult.invalid(List.of(PlanValidationError.forElement(
@@ -155,7 +155,7 @@ public final class SuburbPlanner {
         }
         var selectedSize=request.settings().districts().parcelSize(request.seed(),request.settlementId().value(),0);
         if(selectedSize.isPresent()) request=new SuburbPlanningRequest(request.settlementId(),request.survey(),request.seed(),
-                request.settings().withParcelSize(selectedSize.orElseThrow()),request.terrainResponsePolicy());
+                request.settings().withParcelSize(selectedSize.orElseThrow()),request.terrainResponsePolicy(),request.maximumBuildHeight());
         var result = planSingle(request, acceptance, false,false,true);
         return result.successful() ? acceptance.validate(request, result) : result;
     }
@@ -251,7 +251,7 @@ public final class SuburbPlanner {
             if (!checked.successful()) return checked;
             if(!composeContent)return checked;
             var content=com.cybersammy.citiesarise.core.content.SettlementContentComposer.compose(
-                    plan, preparationPlan, request.seed(), request.settings().buildings(), request.settings().parcelLayout());
+                    plan, preparationPlan, request.seed(), request.settings().buildings(), request.settings().parcelLayout(),request.maximumBuildHeight());
             return SuburbPlanningResult.success(plan, preparationPlan, siteAssessment).withContent(content);
         } catch (IllegalArgumentException exception) {
             return SuburbPlanningResult.invalid(List.of(PlanValidationError.forElement(

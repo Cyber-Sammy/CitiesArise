@@ -7,6 +7,10 @@ import java.util.*;
 
 /** Explicit saved removals above occupied floors; never creates substrate below a suspended deck. */
 final class FinalTerrainClearance {
+    /** Exact state evidence for replay; scheduled coordinates alone never count as existing content. */
+    interface ExistingContent extends StructuralSupportPlanner.Ground {
+        boolean matches(DebugBlockPlacementOperation operation);
+    }
     static int add(Map<String,DebugBlockPlacementOperation> operations, DebugPlacementPlan original,
             List<StructuralSupportPlanner.Envelope> envelopes,StructuralSupportPlanner.Ground ground, int height) {
         return add(operations,original,envelopes,ground,height,null);
@@ -29,7 +33,11 @@ final class FinalTerrainClearance {
         int count=0;
         for(var floor:floors.values()) {
             if(ownership!=null && !ownership.contains(floor.point())) continue;
-            if(ground.solid(floor.point().x(),y(floor)+height+1,floor.point().z())) return -1;
+            int probeY=y(floor)+height+1;
+            if(ground.solid(floor.point().x(),probeY,floor.point().z())) {
+                var existing=operations.get(floor.point().x()+","+probeY+","+floor.point().z());
+                if(existing==null || !authored(existing.role()) || !(ground instanceof ExistingContent evidence) || !evidence.matches(existing))return -1;
+            }
             for(int y=y(floor)+1;y<=y(floor)+height;y++) {
             if(!ground.solid(floor.point().x(),y,floor.point().z())) continue;
             var op=new DebugBlockPlacementOperation(floor.point(),0,DebugPlacementRole.TERRAIN_CLEARANCE,
@@ -38,6 +46,13 @@ final class FinalTerrainClearance {
             }
         }
         return count;
+    }
+    private static boolean authored(DebugPlacementRole role) {
+        return switch(role) {
+            case CONTENT_BLOCK, SUSPENDED_CONTENT, BUILDING_FLOOR, BUILDING_WALL, BUILDING_ROOF, DECAYED_BUILDING_WALL, DECAYED_BUILDING_ROOF,
+                OAK_HOUSE_WALL, STONE_HOUSE_WALL, RED_HOUSE_ROOF, SLATE_HOUSE_ROOF, BUILDING_WINDOW -> true;
+            default -> false;
+        };
     }
     static String key(DebugBlockPlacementOperation op) {return op.point().x()+","+y(op)+","+op.point().z();}
     private static int y(DebugBlockPlacementOperation op) {return op.platformY().orElseThrow()+op.verticalOffset();}

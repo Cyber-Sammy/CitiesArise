@@ -13,20 +13,22 @@ build (Minecraft 1.21.1 / NeoForge); this is not a standalone vanilla structure 
 
 | Building | Floors | Base footprint | Upper section |
 | --- | ---: | --- | --- |
-| Crown | 16 | 29 x 25 | 17 x 17 after floor 12, ornamental crown |
-| Metropolitan | 12 | 29 x 25 | 17 x 17 after floor 8, ornamental crown |
-| Regent | 14 | 29 x 25 | Full-width tower, flat roof and parapet |
-| Terrace | 10 | 29 x 25 | 17 x 17 after floor 6, flat roof and parapet |
-| Townhouse | 2 | 17 x 17 | Flat roof and parapet |
-| Pavilion | 1 | 29 x 25 | Flat roof and parapet |
+| Crown | 50 | 35 x 29 | 29 x 25 after 30; 17 x 17 after 42; ornamental crown |
+| Metropolitan | 40 | 35 x 29 | 29 x 25 after 30; flat roof |
+| Regent | 20 | 35 x 29 | Full-width flat roof |
+| Slender | 24 | 29 x 25 | Full-width flat roof |
+| Loft | 28 | L-shaped 35 x 29 | Open inner corner, flat cap |
+| Courtyard | 36 | U-shaped 37 x 33 | Open courtyard, flat cap |
+| Landmark | 45 | 35 x 29 | 29 x 25 after 25; 17 x 17 after 37; crown |
+| Terrace | 32 | 29 x 25 | Authored transition, terrace and mansard |
 
-Tower choices have equal weights. Four independently selected palettes provide
-limestone, brick, ivory quartz and dark slate appearances. One building in each group of forty slots
-selects one of the two low-rise recipes instead; a full eighty-plot city therefore
-has seventy-eight towers and two low buildings. Random selection can repeat a recipe.
+Eight active tower recipes have equal weights. Four independently selected palettes
+provide limestone, brick, ivory quartz and dark slate appearances. Low buildings
+remain available as catalog assets; the active building pool contains towers only.
+Hosted kiosks, gazebos and shelters remain optional small structures.
 
-Each floor has four large furnished rooms around intersecting halls. The lower
-tower floors have rooms approximately 10 x 8 blocks inside their partitions;
+Broad floors provide furnished rooms and connecting halls; rectangular and
+courtyard layouts differ. The lower tower floors have large interior spaces;
 the crown rooms are smaller. Interior shells are authored floor modules rather
 than a new procedural room solver. Sections repeat their layout consistently.
 Vertical access uses a continuous **backed ladder**, including the roof landing.
@@ -39,24 +41,24 @@ prepared yard access network. Unreachable service sockets are closed. Entrance
 modules are attached once at ground level; upper floors do not repeat them.
 See the [entrance authoring guide](../composition_fixture/ENTRANCES.md).
 
-The floor-to-floor step is exactly **4 blocks**: each five-layer floor module
+The floor-to-floor step is exactly **5 blocks**, with **4 clear interior blocks**: each six-layer floor module
 shares its boundary slab with the next floor. Windows are **2 blocks tall and
 2 blocks wide**, with six window bays along the long facade and five along the
 short facade. Piers and cornices project one block beyond the recessed wall.
 Upper floors close the ground-floor lobby entrance instead of repeating exterior
 doorways. Floors use single-block partitions.
 
-Plots are **39 x 39**, with a four-block building margin, eleven-block carriageways (5 + 1 + 5), separate modular sidewalks
-and paved plazas instead of garden fencing. The profile surveys **540 x 540** blocks,
-about five times the previous survey area, and targets **80 plots in 20 blocks**.
+Plots are **47 x 47**, with a four-block building margin, eleven-block carriageways (5 + 1 + 5), separate modular sidewalks
+and paved plazas instead of garden fencing. The profile surveys **768 x 768** blocks,
+and targets **96 plots in 24 blocks**.
 Each block contains four plots in a 2 x 2 arrangement. Streets share an orthogonal
 lattice; height changes can still introduce short graded sections. Homes within a
 block seek a shared elevation, while separate blocks can occupy different terraces.
 Unusable plots and street edges are omitted individually. Plots remain when they
-have another safe street frontage in the connected city. At least 24 plots must
+have another safe street frontage in the connected city. At least 32 plots must
 remain. Terrain therefore affects the final city size and search success.
 The large profile allows up to 16 blocks of cut and 16 blocks of fill/foundation,
-with a one-million-block earthwork cap. Shared block levels now prefer up to eight
+with a two-million-block earthwork cap. Shared block levels now prefer up to eight
 blocks of cut/fill, so moderate hills are terraced instead of splitting every plot
 onto its own level. The slope threshold increases from two to four. This changes
 the Skyline profile only; other packs retain their existing terrain policy.
@@ -70,11 +72,10 @@ owning a disjoint part of the city. Reloaded pieces retain their common city ide
 and frozen content. The pack overrides the suburb structure set to allow all local
 starts; it omits the default per-start vanilla-village exclusion, which would leave
 holes in a large city. Other example packs retain their existing structure rules.
-Candidate density accounts for the parent's 6 x 6 reservation: the configured
-`candidateRegionModulo` is divided by 36, rounded up, for partitioned cities only.
-The default 16 therefore considers every large parent, already 768 blocks apart,
-instead of discarding another fifteen out of sixteen. Locate and automatic world
-generation use the same selection. Ordinary profiles keep their exact candidate set.
+This profile reserves 8 x 8 owner regions (1,024 blocks between candidate anchors).
+Only an explicit `/citiesarise locate` request plans a new city. Exploration and LOD
+generation do not start new city searches. A saved configurable exclusion radius
+(default 30,000 blocks) prevents nearby new cities. Existing cities retain frozen content.
 Bridge and fill ravine policies are supported; large partitioned profiles cannot use
 `follow_edge`. This version requires the matching large-city mod JAR.
 
@@ -99,34 +100,36 @@ The ZIP has `pack.mcmeta` at its root; do not wrap it in an extra directory.
 The opt-in configuration lives under `planning.districts.grid`:
 
 ```json
-{"enabled": true, "columns": 5, "rows": 4, "parcelsAcross": 2, "parcelsDeep": 2}
+{"enabled": true, "columns": 6, "rows": 4, "parcelsAcross": 2, "parcelsDeep": 2}
 ```
 
 Columns and rows each support 1-8 blocks, parcels per axis support 1-3, and the
 product cannot exceed 128 plots. The complete lattice must fit the survey with
 its road shoulders. Parcel dimensions, spacing, margins, street width and cut/fill
 limits retain their existing profile settings. Skyline uses no spacing between
-plots inside a block, so its street pitch is 83 blocks. Mandatory grass road shoulders are disabled;
+plots inside a block, so its street pitch is 111 blocks. Mandatory grass road shoulders are disabled;
 retaining faces and bounded cut/fill aprons meet the paved blocks instead.
 
 Surveys above 240 blocks on either axis require the grid and coordinated local
-starts. The maximum survey is 576 x 576; large parent cities are 768 blocks apart.
-Automatic generation needs a structure-set start opportunity in every 128 x 128
+starts. The engine maximum survey is 832 x 832; this 768-block profile reserves anchors 1,024 blocks apart.
+Coordinated placement needs a structure-set start opportunity in every 128 x 128
 owner tile, as supplied by this pack's spacing8/separation7 override. A custom
 structure set that skips owners can leave portions of the city ungenerated.
 Smaller profiles keep the existing single-start layout unless the grid is enabled.
 
 ## Author and verify
 
-`scripts/generate_skyline_fixture.py` rebuilds the catalog, profile and
-`build/distributions/skyline.zip`. It inherits terrain/surface defaults from the
-current zoning fixture but does not edit that fixture. It preserves this README.
+`scripts/generate_skyline_fixture.py` rebuilds the base content, applies the high-rise
+authoring layer and creates `build/distributions/skyline.zip`. For an existing edited
+catalog, `scripts/generate_skyline_towers.py` reapplies only the high-rise layer.
+`gradlew.bat skylineDatapack` packages the checked-in content without regeneration.
+The generator inherits terrain defaults from the zoning fixture without editing it.
 
 Keep the explicit circulation air and shared slabs when editing modules. Unneeded
 air is omitted from the content table; the placement system prepares the building
 volume. Ground/upper facade alternatives share a module and are constrained by
 their fixed floor ports. This keeps the broad buildings inside the existing
-frozen-recipe budgets without increasing engine limits.
+bounded frozen-recipe budgets.
 
 Run `gradlew.bat test --tests "*SkylineCatalogTest"` for composition, rotation,
 height, footprint and full-city selection checks. Run
@@ -139,11 +142,11 @@ and bridge continuity across ownership boundaries in an isolated test world unde
 
 The matching mod build reads "planning.streets" from the settlement profile. Skyline uses smooth-stone sidewalks, a yellow one-block centre line, and weighted standard (2 + 2), wide (3 + 3) and asymmetric (1 + 3) sidewalk widths. Sidewalks share the local road surface elevation and are additional to the eleven-block carriageway. Their maximum reservation makes the whole street corridor 17 blocks wide. Narrower sections leave grass verges inside that reservation; widths change gradually between modules. Intersections reserve full pedestrian corners and interrupt the centre line.
 
-Courtyard access starts at the actual sidewalk edge. A height difference uses stone-brick stairs followed by a level landing and yard path. The first block at the sidewalk remains level. Routes that cannot fit the required rise and landing are rejected. Building entrance groups and kiosk placement zones are separate planned stages.
+Courtyard access starts at the actual sidewalk edge. A height difference uses stone-brick stairs followed by a level landing and yard path. The first block at the sidewalk remains level. Routes that cannot fit the required rise and landing are rejected. Building entrance groups and hosted kiosk zones are separate modules.
 
 Use this updated ZIP together with the updated JAR. Existing saved city layouts remain frozen; test the new layout in a new world or newly generated city area.
 
-The `skyline:terrace` tower now demonstrates ten base floors, an authored terrace level with real doors and guards, four reduced upper floors and a habitable mansard. Its fixed room poses and terrace zones are defined in the catalog, using the same compatibility and circulation checks as automatic floors. Update both JAR and ZIP and generate a new city area. Authoring details: [Authored floors](../composition_fixture/AUTHORED_FLOORS.md).
+The `skyline:terrace` tower now demonstrates a lobby and twenty-five base floors, an authored terrace level with real doors and guards, four reduced upper floors and a habitable mansard. Its fixed room poses and terrace zones are defined in the catalog, using the same compatibility and circulation checks as automatic floors. Update both JAR and ZIP and generate a new city area. Authoring details: [Authored floors](../composition_fixture/AUTHORED_FLOORS.md).
 
 ## Automatic overpass selection
 
@@ -164,3 +167,20 @@ The planner chooses existing straight arterial ports and lower crossing streets,
 Omit this object (or use an empty `modules` array) to preserve ground-only cities. Enabled overpasses require `structuralSupports.enabled=true` so their bearings and clearance are checked against final terrain before placement. Budgets are bounded: at most four module choices, one selected overpass, 1..8 candidate fits and 1..131072 construction blocks, also charged to the city's existing earthwork/construction budget. Module weights choose a deterministic trial order. The first integration supports straight three-span chains with two equal-height upper nodes; bends, interchange connections and tunnels are separate later stages. The overpass replaces a ground arterial; access to the lower streets follows the remaining connected city grid. Entrance groups, parcel boundaries and MAFs are recalculated before the replacement is accepted.
 
 Update the mod JAR together with this ZIP and generate a new city area. Already saved cities are not rebuilt. Planning logs and exported plan JSON report the selected overpass count/geometry. This pack is independent of the standalone `road_topology.zip` demonstration.
+
+## Height, scale and authoring
+
+The selector filters recipes against the real world ceiling and prepared parcel elevation.
+It never clips a tower. A 50-floor crown occupies 255 blocks including its roof; it
+fits the vanilla ceiling at base Y65, while higher sites select shorter eligible towers.
+If even the shortest tower cannot fit, that candidate cannot use this active pool.
+JJ Thunder worlds can provide more vertical room. Larger content still increases
+planning, save size and construction work; placement retains its bounded tick budget.
+
+Regenerate authored assets with `python scripts/generate_skyline_towers.py`.
+L/U modules declare an explicit `footprint` mask so courtyard cells remain outside
+room coverage. Smaller packs retain rectangular module footprints by default.
+
+Plots currently share a regular size/grid. Mixed parcel sizes, frontage-aware packing,
+alleys and shared boundaries are the next recorded parcel-layout stage, not part of
+this content scale change.

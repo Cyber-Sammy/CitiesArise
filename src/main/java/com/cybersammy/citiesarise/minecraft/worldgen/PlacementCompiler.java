@@ -14,7 +14,9 @@ import net.minecraft.world.level.material.FluidState;
 
 /** Runs the existing placement rules against a private virtual world; emits resumable writes. */
 final class PlacementCompiler {
-    record Original(DebugPlacementPlan plan,Set<PlacementChunk> required,int minX,int minZ,int maxX,int maxZ,List<PlacementChunk> placementChunks) { }
+    record Original(SuburbStructurePlacementSnapshot snapshot,Set<PlacementChunk> required,int minX,int minZ,int maxX,int maxZ,List<PlacementChunk> placementChunks) {
+        DebugPlacementPlan plan(){return snapshot.toPlacementPlan();}
+    }
     record Owner(SuburbStructurePlacementSnapshot snapshot,DebugPlacementPlan plan,DebugChunkPlacementIndex index,
             WorldgenVegetationCleanupIndex cleanup,List<PlacementChunk> chunks,Set<Long> packedChunks,TreeCleanup.Protection protection,int minX,int minZ,int maxX,int maxZ) { }
     record Resolved(StructuralSupportPlacement.Resolution result,Owner owner) { }
@@ -26,7 +28,7 @@ final class PlacementCompiler {
     }
     static Original original(SuburbStructurePlacementSnapshot snapshot,StructuralSupportBlueprint blueprint) {
         var plan=snapshot.toPlacementPlan();
-        return new Original(plan,blueprint.requiredChunks(plan),snapshot.minimumX(),snapshot.minimumZ(),snapshot.maximumX(),snapshot.maximumZ(),plan.operations().stream().map(op->PlacementChunk.containing(op.point())).distinct().toList());
+        return new Original(snapshot,blueprint.requiredChunks(plan),snapshot.minimumX(),snapshot.minimumZ(),snapshot.maximumX(),snapshot.maximumZ(),plan.operations().stream().map(op->PlacementChunk.containing(op.point())).distinct().toList());
     }
     static Owner owner(DebugPlacementPlan plan) {
         var snapshot=SuburbStructurePlacementSnapshot.from(plan);

@@ -7,7 +7,7 @@ import java.util.*;
 public record BuildingAsset(String id, String provider, int minimumSize, int maximumSize, int height, Map<String,String> parameters) {
     public BuildingAsset {
         if(id==null || id.isBlank() || provider==null || provider.isBlank()) throw new IllegalArgumentException("Missing asset/provider id");
-        if(minimumSize<1 || maximumSize<minimumSize || height<1 || height>128) throw new IllegalArgumentException("Invalid asset dimensions");
+        if(minimumSize<1 || maximumSize<minimumSize || height<1 || height>320) throw new IllegalArgumentException("Invalid asset dimensions");
         parameters=Map.copyOf(parameters);
     }
     public boolean fits(GridSize size) {

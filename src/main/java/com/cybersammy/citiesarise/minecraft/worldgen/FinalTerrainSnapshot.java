@@ -19,6 +19,7 @@ final class FinalTerrainSnapshot implements TerrainSurveySnapshot {
     private final long[] solids,fluids;
     private final int[] tops,biomes;
     private final TerrainSurvey survey;
+    public int maximumBuildHeight(){return minY+height;}
     private FinalTerrainSnapshot(GridBounds bounds,int minY,int height,long[] solids,long[] fluids,int[] tops,int[] biomes) {
         int area=Math.multiplyExact(bounds.size().width(),bounds.size().depth());
         if(area>CityPlanningArea.MAX_AREA || height<1 || height>512 || tops.length!=area || biomes.length!=area

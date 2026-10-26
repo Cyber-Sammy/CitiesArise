@@ -5,7 +5,11 @@ import java.util.*;
 /** All names, matching labels and materials are opaque author-defined data. */
 public record ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint> joints,
         Set<String> tags, List<Variant> variants, Damage damage, ModuleContract contract, List<ModuleBoundary> boundaries,
-        List<RoomLayout> layouts,List<RoomAdjacency> adjacency) {
+        List<RoomLayout> layouts,List<RoomAdjacency> adjacency,List<com.cybersammy.citiesarise.core.geometry.GridPoint> footprint) {
+    public ModuleDefinition(String id,Vec size,List<Cell> cells,List<Joint> joints,Set<String> tags,List<Variant> variants,
+            Damage damage,ModuleContract contract,List<ModuleBoundary> boundaries,List<RoomLayout> layouts,List<RoomAdjacency> adjacency) {
+        this(id,size,cells,joints,tags,variants,damage,contract,boundaries,layouts,adjacency,List.of());
+    }
     public ModuleDefinition(String id,Vec size,List<Cell> cells,List<Joint> joints,Set<String> tags,List<Variant> variants,Damage damage,ModuleContract contract,List<ModuleBoundary> boundaries) {
         this(id,size,cells,joints,tags,variants,damage,contract,boundaries,List.of(),List.of());
     }
@@ -59,6 +63,16 @@ public record ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint
         public static Damage none() { return new Damage(false,0,Set.of(),List.of()); }
     }
     public ModuleDefinition {
+        footprint=footprint==null?List.of():List.copyOf(footprint);
+        var mask=new HashSet<>(footprint);
+        if(footprint.size()>4096 || mask.size()!=footprint.size() || footprint.stream().anyMatch(p->p.x()<0 || p.z()<0 || p.x()>=size.x() || p.z()>=size.z()))
+            throw new IllegalArgumentException("Invalid module footprint");
+        if(!mask.isEmpty()) {
+            var declared=new ArrayList<Cell>(cells);variants.forEach(v->declared.addAll(v.cells()));
+            if(layouts!=null)layouts.forEach(l->declared.addAll(l.cells()));
+            if(declared.stream().anyMatch(c->!mask.contains(new com.cybersammy.citiesarise.core.geometry.GridPoint(c.position().x(),c.position().z()))))
+                throw new IllegalArgumentException("Module content outside declared footprint");
+        }
         layouts=layouts==null?List.of():List.copyOf(layouts);adjacency=adjacency==null?List.of():List.copyOf(adjacency);
         if(layouts.size()>32 || adjacency.size()>64)throw new IllegalArgumentException("Room alternative/rule budget exceeded");
         boundaries=boundaries==null?List.of():List.copyOf(boundaries); // Older frozen profiles omit this field.
@@ -128,7 +142,13 @@ public record ModuleDefinition(String id, Vec size, List<Cell> cells, List<Joint
         }
         var closable=new HashSet<>(damage.closableJoints());closable.retainAll(portIds);
         return new ModuleDefinition(this.id,size,patched(cells,l.cells()),ports,tags,alternatives,
-                new Damage(damage.enabled(),damage.maxRemovedCells(),closable,damage.optionalJoints()),l.contract().orElse(contract),boundariesFor(id),List.of(),adjacency);
+                new Damage(damage.enabled(),damage.maxRemovedCells(),closable,damage.optionalJoints()),l.contract().orElse(contract),boundariesFor(id),List.of(),adjacency,footprint);
+    }
+    public List<com.cybersammy.citiesarise.core.geometry.GridPoint> columnFootprint() {
+        if(!footprint.isEmpty())return footprint;
+        var points=new ArrayList<com.cybersammy.citiesarise.core.geometry.GridPoint>();
+        for(int z=0;z<size.z();z++)for(int x=0;x<size.x();x++)points.add(new com.cybersammy.citiesarise.core.geometry.GridPoint(x,z));
+        return points;
     }
     private static List<Cell> patched(List<Cell> base,List<Cell> patches) {
         var map=new LinkedHashMap<Vec,Cell>();base.forEach(c->map.put(c.position(),c));patches.forEach(c->map.put(c.position(),c));return List.copyOf(map.values());

@@ -52,6 +52,7 @@ final class InMemoryRegionPlanCacheTest {
         var wrongKeys = java.util.List.of(
                 new RegionPlanCacheKey("minecraft:the_nether",region,1234,TerrainSurveySource.WORLDGEN_BASE,profile,size,settings,policy),
                 new RegionPlanCacheKey(context.dimensionId(),region,4321,TerrainSurveySource.WORLDGEN_BASE,profile,size,settings,policy),
+                new RegionPlanCacheKey(context.dimensionId(),region,1234,TerrainSurveySource.WORLDGEN_BASE,profile,size,settings,policy,320),
                 new RegionPlanCacheKey(context.dimensionId(),region,1234,TerrainSurveySource.LOADED_WORLD,profile,size,settings,policy),
                 new RegionPlanCacheKey(context.dimensionId(),region,1234,TerrainSurveySource.WORLDGEN_BASE,new SettlementProfileId("test:other"),size,settings,policy),
                 new RegionPlanCacheKey(context.dimensionId(),region,1234,TerrainSurveySource.WORLDGEN_BASE,profile,new GridSize(120,72),settings,policy),
@@ -86,6 +87,21 @@ final class InMemoryRegionPlanCacheTest {
         cache.getOrCreate(third,()->largeResult(5,calls));
         cache.getOrCreate(first,()->largeResult(6,calls));
         assertEquals(36,calls.get(),"The large-plan memory budget became unbounded");
+    }
+
+    @Test void retainsOneExtraLargeCityWithoutRebuildingItForSmallRejections() {
+        var cache=new InMemoryRegionPlanCache();var calls=new AtomicInteger();var settings=SuburbPlanningSettings.defaults();
+        var first=key("minecraft:overworld","test:xl-first",settings);var second=key("minecraft:overworld","test:xl-second",settings);
+        java.util.function.LongFunction<SuburbDebugPlanResult> factory=seed->{
+            var r=largeResult(seed,calls);return new SuburbDebugPlanResult(r.region(),new GridBounds(new GridPoint(136,136),new GridSize(768,768)),seed,true,r.plan(),null,null);
+        };
+        var accepted=cache.getOrCreate(first,()->factory.apply(1));
+        for(int i=0;i<16;i++)cache.getOrCreate(key("minecraft:overworld","test:rejection-"+i,settings),()->rejectedResult(calls));
+        assertSame(accepted,cache.getOrCreate(first,()->factory.apply(2)));
+        assertEquals(17,calls.get());
+        cache.getOrCreate(second,()->factory.apply(3));
+        org.junit.jupiter.api.Assertions.assertFalse(cache.snapshot().containsKey(first));
+        org.junit.jupiter.api.Assertions.assertTrue(cache.snapshot().containsKey(second));
     }
 
     private static SuburbDebugPlanResult largeResult(long seed,AtomicInteger calls) {

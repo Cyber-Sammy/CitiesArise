@@ -25,7 +25,7 @@ public final class CityOverpassGameTests {
             json=JsonParser.parseReader(new java.io.InputStreamReader(Objects.requireNonNull(stream),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
         }
         json.getAsJsonObject("survey").addProperty("width",440);json.getAsJsonObject("survey").addProperty("depth",240);
-        var p=json.getAsJsonObject("planning");p.remove("buildings");p.addProperty("minimumParcelCount",8);p.addProperty("targetParcelCount",32);p.addProperty("maximumParcelCount",32);
+        var p=json.getAsJsonObject("planning");p.remove("buildings");p.addProperty("parcelWidth",39);p.addProperty("parcelDepth",39);p.getAsJsonObject("districts").getAsJsonArray("parcelSizes").get(0).getAsJsonObject().addProperty("width",39);p.getAsJsonObject("districts").getAsJsonArray("parcelSizes").get(0).getAsJsonObject().addProperty("depth",39);p.addProperty("minimumParcelCount",8);p.addProperty("targetParcelCount",32);p.addProperty("maximumParcelCount",32);
         p.getAsJsonObject("districts").getAsJsonObject("grid").addProperty("columns",4);p.getAsJsonObject("districts").getAsJsonObject("grid").addProperty("rows",2);
         return new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("test:city-overpass"),json,
                 ContentResources.of(h.getLevel().getServer().getResourceManager()));

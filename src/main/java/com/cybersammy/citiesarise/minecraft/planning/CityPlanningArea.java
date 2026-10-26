@@ -5,15 +5,18 @@ import com.cybersammy.citiesarise.core.geometry.*;
 /** City reservations and bounded owners; large cities use coordinated local structure starts. */
 public final class CityPlanningArea {
     public static final int SINGLE_START_MAX_SIZE=240;
-    public static final int MAX_SIZE=576;
+    public static final int MAX_SIZE=832;
     public static final int LARGE_REGION_STRIDE=6;
     public static final int MAX_AREA=MAX_SIZE*MAX_SIZE;
     private CityPlanningArea() { }
+    /** Preserve all existing <=576 city anchors; wider profiles reserve eight owner tiles. */
+    public static int regionStride(GridSize size){return size.width()>576 || size.depth()>576?8:LARGE_REGION_STRIDE;}
     public static boolean partitioned(GridSize size){return size.width()>SINGLE_START_MAX_SIZE || size.depth()>SINGLE_START_MAX_SIZE;}
     public static SettlementRegion parent(SettlementRegion region,GridSize size) {
         if(!partitioned(size))return region;
-        return new SettlementRegion(Math.addExact(Math.multiplyExact(Math.floorDiv(region.x(),LARGE_REGION_STRIDE),LARGE_REGION_STRIDE),3),
-                Math.addExact(Math.multiplyExact(Math.floorDiv(region.z(),LARGE_REGION_STRIDE),LARGE_REGION_STRIDE),3));
+        int stride=regionStride(size),offset=stride/2;
+        return new SettlementRegion(Math.addExact(Math.multiplyExact(Math.floorDiv(region.x(),stride),stride),offset),
+                Math.addExact(Math.multiplyExact(Math.floorDiv(region.z(),stride),stride),offset));
     }
     public static GridBounds owner(SettlementRegion region){return new GridBounds(new GridPoint(Math.multiplyExact(region.x(),128),Math.multiplyExact(region.z(),128)),new GridSize(128,128));}
     public static boolean expanded(GridSize size) {return size.width()>128 || size.depth()>128;}

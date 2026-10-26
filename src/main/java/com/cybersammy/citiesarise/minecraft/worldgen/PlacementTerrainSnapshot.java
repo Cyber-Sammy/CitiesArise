@@ -13,7 +13,7 @@ import net.minecraft.world.level.chunk.*;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 /** Private palette copies only: workers cannot reach a live chunk or level. */
-final class PlacementTerrainSnapshot implements TerrainSurveySnapshot,TreeCleanup.Access {
+final class PlacementTerrainSnapshot implements TerrainSurveySnapshot,TreeCleanup.Access,FinalTerrainClearance.ExistingContent {
     private record Chunk(PalettedContainer<BlockState>[] sections,int[] heights,byte[][] biomes,Map<Integer,Boolean> fluidShapes) { }
     private final Map<PlacementChunk,Chunk> chunks;
     private final int minY,height;
@@ -22,6 +22,7 @@ final class PlacementTerrainSnapshot implements TerrainSurveySnapshot,TreeCleanu
     private PlacementTerrainSnapshot(Map<PlacementChunk,Chunk> chunks,int minY,int height,GridBounds bounds) {
         this.chunks=Map.copyOf(chunks);this.minY=minY;this.height=height;surveyBounds=bounds;
     }
+    public int maximumBuildHeight(){return minY+height;}
     public int getMinBuildHeight(){return minY;}
     public int getMaxBuildHeight(){return minY+height;}
     public boolean available(int x,int z){return chunks.containsKey(PlacementChunk.containing(x,z));}
@@ -40,6 +41,10 @@ final class PlacementTerrainSnapshot implements TerrainSurveySnapshot,TreeCleanu
         var state=getBlockState(pos);
         if(!state.getBlock().hasDynamicShape())return state.getCollisionShape(net.minecraft.world.level.EmptyBlockGetter.INSTANCE,pos).isEmpty();
         return chunk(pos.getX(),pos.getZ()).fluidShapes().getOrDefault(((pos.getY()-minY)<<8)|((pos.getZ()&15)<<4)|(pos.getX()&15),false);
+    }
+    public boolean matches(com.cybersammy.citiesarise.minecraft.placement.DebugBlockPlacementOperation operation) {
+        var pos=new BlockPos(operation.point().x(),operation.platformY().orElseThrow()+operation.verticalOffset(),operation.point().z());
+        return getBlockState(pos).equals(new com.cybersammy.citiesarise.minecraft.placement.VanillaDebugBlockMaterialProvider().blockState(operation));
     }
     public boolean solid(int x,int y,int z) {
         var state=getBlockState(new BlockPos(x,y,z));

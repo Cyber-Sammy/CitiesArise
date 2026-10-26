@@ -7,8 +7,15 @@ import java.util.Objects;
 public record LayeredRoadLayout(RoadGraph graph, StreetSectionSettings streets, int carriageway,
         int deckDepth, int clearance, int runPerRise, int pierSpacing, int maximumSpan,
         int maximumSupportDepth, String roadMaterial, String deckMaterial, String pierMaterial,
-        String railMaterial, String stairMaterial, RampSurface rampSurface, String slabMaterial, String sidewalkSlabMaterial) {
+        String railMaterial, String stairMaterial, RampSurface rampSurface, String slabMaterial, String sidewalkSlabMaterial,
+        java.util.List<LayeredRoadJunction> junctions) {
     public enum RampSurface { STAIRS, SLABS }
+    public LayeredRoadLayout(RoadGraph graph,StreetSectionSettings streets,int carriageway,int deckDepth,int clearance,
+            int runPerRise,int pierSpacing,int maximumSpan,int maximumSupportDepth,String roadMaterial,String deckMaterial,
+            String pierMaterial,String railMaterial,String stairMaterial,RampSurface rampSurface,String slabMaterial,String sidewalkSlabMaterial) {
+        this(graph,streets,carriageway,deckDepth,clearance,runPerRise,pierSpacing,maximumSpan,maximumSupportDepth,
+                roadMaterial,deckMaterial,pierMaterial,railMaterial,stairMaterial,rampSurface,slabMaterial,sidewalkSlabMaterial,java.util.List.of());
+    }
     public LayeredRoadLayout(RoadGraph graph, StreetSectionSettings streets, int carriageway,
             int deckDepth, int clearance, int runPerRise, int pierSpacing, int maximumSpan,
             int maximumSupportDepth, String roadMaterial, String deckMaterial, String pierMaterial,
@@ -21,6 +28,9 @@ public record LayeredRoadLayout(RoadGraph graph, StreetSectionSettings streets, 
     public static final PlanPropertyKey ELEVATED = new PlanPropertyKey("cities_arise:road/elevated");
 
     public LayeredRoadLayout {
+        junctions=junctions==null?java.util.List.of():java.util.List.copyOf(junctions);
+        if(junctions.size()>32 || junctions.stream().map(LayeredRoadJunction::node).distinct().count()!=junctions.size())
+            throw new IllegalArgumentException("Invalid or duplicate road junction modules");
         Objects.requireNonNull(graph); Objects.requireNonNull(streets); Objects.requireNonNull(rampSurface);
         for (String material : new String[]{roadMaterial, deckMaterial, pierMaterial, railMaterial, stairMaterial, slabMaterial, sidewalkSlabMaterial})
             if (material == null || material.isBlank() || material.length() > 512)

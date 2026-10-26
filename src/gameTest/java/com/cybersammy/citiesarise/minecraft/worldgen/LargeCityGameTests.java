@@ -41,6 +41,38 @@ public final class LargeCityGameTests {
         var field=CitiesAriseWorldgenConfig.class.getDeclaredField(name);field.setAccessible(true);return (ModConfigSpec.ConfigValue<T>)field.get(null);
     }
     @GameTest(template="empty",timeoutTicks=600)
+    public static void fiftyStoreysReachTheVanillaCeilingWithBackedLaddersAndFiveBlockSlabs(GameTestHelper helper) {
+        var level=helper.getLevel();var profile=new com.cybersammy.citiesarise.minecraft.profile.MinecraftSettlementProfileRepository().find(level,
+                new com.cybersammy.citiesarise.core.profile.SettlementProfileId("cities_arise:suburb")).orElseThrow();
+        var frozen=new FinalTerrainPlanningRecipe(profile,new GridBounds(new GridPoint(136,136),profile.surveySize()),42,"test:large-frozen");
+        helper.assertTrue(frozen.equals(FinalTerrainPlanningRecipe.load(frozen.save())),"Large profile mask/height changed after frozen recipe reload");
+        var cfg=profile.suburbPlanningSettings().buildings().compositions().get("skyline:crown");
+        var assembler=new com.cybersammy.citiesarise.core.content.CompositionAssembler();
+        var resolved=assembler.assemble(cfg,39,39,new com.cybersammy.citiesarise.core.content.ModuleDefinition.Vec(19,1,0),
+                com.cybersammy.citiesarise.core.content.ModuleDefinition.Face.NORTH,42).orElseThrow(()->new IllegalStateException(assembler.failure()));
+        int x=helper.absolutePos(new BlockPos(12000,0,12000)).getX();int z=helper.absolutePos(new BlockPos(12000,0,12000)).getZ();
+        var id=new PlanElementId("test:fifty-floors");var palette=profile.suburbPlanningSettings().buildings().paletteDefinitions().get("skyline:brick");
+        var operations=new ArrayList<DebugBlockPlacementOperation>();
+        for(var c:resolved.cells())operations.add(new DebugBlockPlacementOperation(new GridPoint(x+c.position().x(),z+c.position().z()),c.position().y(),
+                DebugPlacementRole.CONTENT_BLOCK,id,OptionalInt.of(65),c.material().contains(":")?c.material():palette.get(c.material()),c.rotation(),"",c.providerData()));
+        int top=operations.stream().mapToInt(op->65+op.verticalOffset()).max().orElseThrow();helper.assertTrue(top==319,"Fifty-floor crown has the wrong height");
+        for(int cz=(z>>4)-2;cz<=((z+39)>>4)+2;cz++)for(int cx=(x>>4)-2;cx<=((x+39)>>4)+2;cx++)level.getChunk(cx,cz);
+        var queue=new PendingStructuralPlacement();queue.add("test:skyline",id.value(),x,z,SuburbStructurePlacementSnapshot.from(new DebugPlacementPlan(operations)),
+                new StructuralSupportBlueprint(com.cybersammy.citiesarise.core.earthwork.StructuralSupportSettings.disabled(),List.of(),Map.of()));
+        PlacementTestDrain.applyReady(queue,level);
+        for(var op:operations)if(op.material().startsWith("minecraft:ladder")) {
+            var pos=new BlockPos(op.point().x(),65+op.verticalOffset(),op.point().z());
+            helper.assertTrue(level.getBlockState(pos).getBlock() instanceof net.minecraft.world.level.block.LadderBlock,"Missing high-floor ladder");
+            helper.assertTrue(level.getBlockState(pos.east()).blocksMotion(),"High-floor ladder lost its backing");
+        }
+        for(int floor=42;floor<50;floor++) {
+            int y=65+5*floor;helper.assertTrue(!level.getBlockState(new BlockPos(x+16,y,z+11)).isAir(),"Missing shared floor slab");
+            for(int dy=1;dy<=4;dy++)helper.assertTrue(level.getBlockState(new BlockPos(x+16,y+dy,z+11)).isAir(),"Interior does not have four clear blocks");
+        }
+        helper.assertTrue(!level.getBlockState(new BlockPos(operations.stream().filter(op->65+op.verticalOffset()==319).findFirst().orElseThrow().point().x(),319,
+                operations.stream().filter(op->65+op.verticalOffset()==319).findFirst().orElseThrow().point().z())).isAir(),"Crown was clipped at the world ceiling");helper.succeed();
+    }
+    @GameTest(template="empty",timeoutTicks=600)
     public static void distantRealStructureStartsSurviveReloadAndPlaceThroughThePersistentQueue(GameTestHelper helper) throws Exception {
         var level=helper.getLevel();
         // The harness world has only bedrock at minY; use a real raised flat generator
@@ -52,7 +84,7 @@ public final class LargeCityGameTests {
         var generator=new net.minecraft.world.level.levelgen.FlatLevelSource(flat);
         try(var resource=level.getServer().getResourceManager().getResource(ResourceLocation.parse("cities_arise:settlement_profiles/suburb.json")).orElseThrow().openAsReader()) {
             var profile=com.google.gson.JsonParser.parseReader(resource).getAsJsonObject();
-            helper.assertTrue(profile.getAsJsonObject("survey").get("width").getAsInt()==540,"Skyline pack was not loaded in the native test server");
+            helper.assertTrue(profile.getAsJsonObject("survey").get("width").getAsInt()==768,"Skyline pack was not loaded in the native test server");
         }
         var structure=level.registryAccess().registryOrThrow(Registries.STRUCTURE).get(ResourceLocation.parse("cities_arise:suburb"));
         var enabled=LargeCityGameTests.<Boolean>config("ENABLED");var modulo=LargeCityGameTests.<Integer>config("CANDIDATE_REGION_MODULO");
@@ -65,9 +97,9 @@ public final class LargeCityGameTests {
             helper.assertTrue(CitiesAriseWorldgenConfig.enabled() && CitiesAriseWorldgenConfig.candidateRegionModulo()==16,"Native config overrides did not take effect");
             var planning=MinecraftSuburbPlanningService.defaults(org.slf4j.LoggerFactory.getLogger(LargeCityGameTests.class));
             var context=planning.prepareLocateContext(level,generator).orElseThrow();
-            var selected=planning.planForWorldgen(context,new BlockPos(392,0,392));
+            var selected=planning.planForWorldgen(context,new BlockPos(520,0,520));
             helper.assertTrue(selected.successful(),"Explicit Skyline plan failed");
-            for(var chunk:List.of(new ChunkPos(24,24),new ChunkPos(8,8),new ChunkPos(32,32))) {
+            for(var chunk:List.of(new ChunkPos(32,32),new ChunkPos(16,24),new ChunkPos(48,40))) {
                 var ordinary=structure.generate(level.registryAccess(),generator,generator.getBiomeSource(),level.getChunkSource().randomState(),
                     level.getStructureManager(),level.getSeed(),chunk,0,level,structure.biomes()::contains);
                 helper.assertTrue(!ordinary.isValid(),"Exploration created an unrequested city");
@@ -89,6 +121,11 @@ public final class LargeCityGameTests {
         var reloaded=new CitiesAriseSuburbPiece(tag);
         helper.assertTrue(metadata.equals(reloaded.registryMetadata(level.dimension().location().toString())),"Parent metadata changed after piece reload");
         var snapshot=SuburbStructurePlacementSnapshot.load(tag);var blueprint=StructuralSupportBlueprint.load(tag.getCompound("StructuralBlueprint"));
+        for(var sample:snapshot.operations().stream().map(op->PlacementChunk.containing(op.point())).distinct().limit(3).toList()) {
+            var expected=snapshot.operations().stream().filter(op->sample.contains(op.point())).map(SuburbStructurePlacementSnapshot.Operation::toPlacementOperation).toList();
+            helper.assertTrue(reloaded.placementSlice(sample).operations().equals(expected),"Queued piece lost read-only lake-protection geometry after reload");
+            helper.assertTrue(reloaded.carvingProtectionSlice(sample).operations().isEmpty(),"Deferred city unexpectedly protected unfinished terrain from carving");
+        }
         helper.assertTrue(blueprint.ownership()!=null,"Local owner was not saved");
         var owner=blueprint.ownership();
         for(int z=(owner.minZ()>>4)-1;z<=(owner.maxZExclusive()>>4);z++)for(int x=(owner.minX()>>4)-1;x<=(owner.maxXExclusive()>>4);x++)level.getChunk(x,z);

@@ -7,6 +7,18 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CityPlanningAreaTest {
+    @Test void widerCitiesUseBoundedEightTileParentsWithoutMovingExistingCityAnchors() {
+        var old=new GridSize(540,540);assertEquals(new SettlementRegion(3,3),CityPlanningArea.parent(new SettlementRegion(1,1),old));
+        var size=new GridSize(768,768);assertEquals(8,CityPlanningArea.regionStride(size));
+        for(int n=-2;n<=2;n++) {
+            var anchor=new SettlementRegion(n*8+4,4);var area=CityPlanningArea.bounds(anchor,size);var owners=new HashSet<SettlementRegion>();
+            for(int z=area.minZ();z<area.maxZExclusive();z+=16)for(int x=area.minX();x<area.maxXExclusive();x+=16) {
+                assertEquals(anchor,CityPlanningArea.regionAt(x,z,size));owners.add(SettlementRegion.fromBlockPosition(x,z));
+            }
+            assertTrue(owners.size()<=64);for(var owner:owners)assertTrue(CityPlanningArea.reachable(anchor,size,owner.x()*8,owner.z()*8));
+            assertFalse(area.intersects(CityPlanningArea.bounds(new SettlementRegion(anchor.x()+8,anchor.z()),size)));
+        }
+    }
     @Test void partitionedCitiesHaveDisjointReservationsAndLocalOwnersInBothCoordinateSigns() {
         var size=new GridSize(540,540);
         for(int cluster=-2;cluster<=2;cluster++) {

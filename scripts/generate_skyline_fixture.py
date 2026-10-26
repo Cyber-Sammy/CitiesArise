@@ -358,6 +358,9 @@ write('data/skyline/road_layouts/arterial.json', overpass)
 write('data/cities_arise/worldgen/structure_set/suburb.json', dict(
     structures=[dict(structure='cities_arise:suburb', weight=1)],
     placement=dict(type='minecraft:random_spread', salt=184736291, spacing=8, separation=7)))
+# Apply the current high-rise authoring layer before packaging the base fixtures.
+import runpy
+runpy.run_path(str(ROOT / 'scripts/generate_skyline_towers.py'))
 archive = ROOT / 'build/distributions/skyline.zip'
 archive.parent.mkdir(parents=True, exist_ok=True)
 with ZipFile(archive, 'w', ZIP_DEFLATED) as output:

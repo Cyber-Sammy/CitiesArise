@@ -478,7 +478,7 @@ final class MinecraftSettlementProfileJsonParserTest {
         assertThrows(IllegalArgumentException.class, () -> parser.parse(id(), jsonWithPlanningValue("maxFillDepth", 17)));
         assertThrows(
                 IllegalArgumentException.class,
-                () -> parser.parse(id(), jsonWithPlanningValue("maxEarthworkVolume", 1_000_001L))
+                () -> parser.parse(id(), jsonWithPlanningValue("maxEarthworkVolume", 2_000_001L))
         );
     }
 

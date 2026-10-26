@@ -46,10 +46,10 @@ public final class SkylineGameTests {
                 "Local owner lost the parent's clearance allowance");
         Files.writeString(Path.of("skyline-recipe-size.txt"),"Stored characters: "+saved.getList("Json",8).stream().mapToInt(t->t.getAsString().length()).sum());
         var provider=new VanillaDebugBlockMaterialProvider();int offset=0;
-        for(var name:List.of("crown","metropolitan","regent","terrace","townhouse","pavilion")) {
+        for(var name:List.of("crown","metropolitan","regent","terrace","slender","loft","courtyard","landmark","townhouse","pavilion")) {
             var cfg=catalog.compositions().get("skyline:"+name);var floor=cfg.buildingSections().sections().getFirst().recipe().layout();
             var entry=floor.ports().stream().filter(p->p.id().equals("entry")).findFirst().orElseThrow();
-            var assembler=new CompositionAssembler();var plan=assembler.assemble(cfg,31,31,entry.at(),Face.NORTH,42);
+            var assembler=new CompositionAssembler();var plan=assembler.assemble(cfg,39,39,entry.at(),Face.NORTH,42);
             helper.assertTrue(plan.isPresent(),name+": "+assembler.failure());
             var base=helper.absolutePos(new BlockPos(offset,4,0));offset+=48;
             var palette=catalog.palettes().get("skyline:limestone");
@@ -71,13 +71,13 @@ public final class SkylineGameTests {
                 if(op.material().startsWith("minecraft:ladder"))helper.assertTrue(state.canSurvive(helper.getLevel(),pos),name+": floating ladder");
             }
             if(name.equals("terrace")) {
-                helper.assertTrue(cfg.buildingSections().sections().stream().mapToInt(BuildingSections.Section::floors).sum()==16,"Authored tower lost a floor range");
+                helper.assertTrue(cfg.buildingSections().sections().stream().mapToInt(BuildingSections.Section::floors).sum()==32,"Authored tower lost a floor range");
                 helper.assertTrue(plan.orElseThrow().modules().stream().filter(m->m.id().equals("skyline:terrace_core") && m.layout().equals("upper")).count()==4,"Upper section did not repeat its fixed core");
-                helper.assertTrue(helper.getLevel().getBlockState(base.offset(14,41,5)).is(net.minecraft.world.level.block.Blocks.OAK_DOOR),"Terrace has no native exit door");
-                helper.assertTrue(helper.getLevel().getBlockState(base.offset(2,41,2)).isAir(),"Terrace walking space is obstructed");
-                helper.assertTrue(!helper.getLevel().getBlockState(base.offset(0,41,2)).isAir(),"Terrace has no outer guard");
-                helper.assertTrue(helper.getLevel().getBlockState(base.offset(2,44,2)).isAir(),"An upper slab covered the terrace");
-                helper.assertTrue(plan.orElseThrow().modules().stream().anyMatch(m->m.id().equals("skyline:mansard_room") && m.origin().y()==60),"Missing authored mansard floor");
+                helper.assertTrue(helper.getLevel().getBlockState(base.offset(14,131,5)).is(net.minecraft.world.level.block.Blocks.OAK_DOOR),"Terrace has no native exit door");
+                helper.assertTrue(helper.getLevel().getBlockState(base.offset(2,131,2)).isAir(),"Terrace walking space is obstructed");
+                helper.assertTrue(!helper.getLevel().getBlockState(base.offset(0,131,2)).isAir(),"Terrace has no outer guard");
+                helper.assertTrue(helper.getLevel().getBlockState(base.offset(2,135,2)).isAir(),"An upper slab covered the terrace");
+                helper.assertTrue(plan.orElseThrow().modules().stream().anyMatch(m->m.id().equals("skyline:mansard_room") && m.origin().y()==155),"Missing authored mansard floor");
             }
         }
         helper.succeed();

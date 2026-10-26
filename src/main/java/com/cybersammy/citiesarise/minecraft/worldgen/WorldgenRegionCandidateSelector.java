@@ -12,8 +12,8 @@ final class WorldgenRegionCandidateSelector {
         if (regionModulo < 1) throw new IllegalArgumentException("regionModulo must be positive");
         // A partitioned parent already replaces 36 ordinary candidate regions.
         int area = com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.partitioned(surveySize)
-                ? com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.LARGE_REGION_STRIDE
-                    * com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.LARGE_REGION_STRIDE : 1;
+                ? com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.regionStride(surveySize)
+                    * com.cybersammy.citiesarise.minecraft.planning.CityPlanningArea.regionStride(surveySize) : 1;
         return isCandidate(worldSeed, region, Math.ceilDiv(regionModulo, area));
     }
 

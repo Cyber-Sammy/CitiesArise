@@ -11,7 +11,7 @@ Copy `road_topology.zip` into the world's `datapacks` directory and run `/reload
 
 The command uses your current block X/Z as the center, and the block under your feet as elevation zero. The example occupies X -100..100 and Z -36..36, with width extending seven blocks to each side of each road axis. The carriageway is 11 blocks (5 + 1 + 5), with two-block sidewalks on each side; outer sidewalk blocks carry guardrails. The upper deck is ten blocks above the lower pavement. Its two 80-block approaches include flat endpoint landings and a six-block minimum run per block of rise, materialized with bottom-slab terraces rising half a block every three blocks. The lower road and both lower sidewalks keep eight blocks of reserved clearance. Piers skip that entire envelope; the open span remains unfilled.
 
-The first implementation validates and places one bounded authored road node. Both crossing roads are separate graph components: passing above a road does not connect to it. The approaches connect the upper span to ground-level endpoints, not to the lower road. For automatic straight-arterial integration with city streets and parcel access, use the Skyline profile's `cityOverpasses` settings. This standalone command does not rebuild a surrounding city. Turning/interchange modules and tunnel excavation remain later stages; existing saved placements retain their behavior.
+The first implementation validates and places one bounded authored road node. Both crossing roads are separate graph components: passing above a road does not connect to it. The approaches connect the upper span to ground-level endpoints, not to the lower road. For automatic straight-arterial integration with city streets and parcel access, use the Skyline profile's `cityOverpasses` settings. This standalone command does not rebuild a surrounding city. Automatic turning-interchange integration and tunnel excavation remain later stages; existing saved placements retain their behavior.
 
 ## Resource format
 
@@ -19,7 +19,7 @@ Definitions live at `data/<namespace>/road_layouts/<path>.json`, version 1. See 
 
 - `nodes`: unique `id`, integer relative `x`, `y`, `z`. Up to 64 nodes, horizontal coordinates within ±256 and height within ±64. Coincident X/Z at different heights is allowed; duplicate 3D positions are rejected. Share a node ID only for a real junction.
 - `roads`: unique `id`, `from`, `to`, `elevated`. Up to 32 axis-aligned segments, length at most 256, no zero-length/vertical segments. Width derives from the full street reservation, not just the carriageway. Ground spans must be level and receive continuous foundations. Elevated spans receive spaced edge piers and may have graded approaches.
-- `streets`: the existing modular street schema, including section length, weighted sidewalk widths/materials, center material and verge material. This initial guarded-road stage requires carriageways and at least two reserved sidewalk blocks on each side in every module. Seeded variation is resolved before placement; the maximum configured width is reserved. Authored turns should be supplied as future junction modules; this example uses straight approaches and an over/under crossing.
+- `streets`: the existing modular street schema, including section length, weighted sidewalk widths/materials, center material and verge material. This initial guarded-road stage requires carriageways and at least two reserved sidewalk blocks on each side in every module. Seeded variation is resolved before placement; the maximum configured width is reserved. Authored turns can use the optional junction module masks below; the original overpass uses straight approaches and an over/under crossing.
 - `carriageway`: 3..16 blocks. Total corridor at most 32 blocks.
 - `deckDepth`: 1..4 solid layers. `clearance`: 3..12 air blocks above the walking envelope, including the raised ramp tread. An upper deck's underside must remain strictly above this envelope across the entire overlapping footprint.
 - `rampSurface`: `slabs` or `stairs`. Omission preserves legacy stairs. Slab ramps sample half-block heights in either direction; `runPerRise` still describes a full block of rise. Walking surfaces use bottom slabs; guardrails retain full-block backing curbs. Center markings use the road slab on half-height rows because vanilla has no yellow-concrete slab.
@@ -31,6 +31,23 @@ Preflight checks all terrain bearings, loaded chunks, world bounds, block entiti
 
 Limits: 65,536 surface columns, 262,144 final placement operations and 128 KiB per resource. This authored demonstration does not bypass natural city terrain validation or change city search performance.
 
-At a declared same-level junction, every incoming sidewalk must meet another incident sidewalk within the local node envelope. A bare right-angle elbow without its outer corner is rejected rather than placed with a broken pedestrian route. This is why authored turning/junction modules are listed as a later extension.
+At a declared same-level junction, every incoming sidewalk must meet another incident sidewalk within the local node envelope. A bare right-angle elbow without its outer corner is rejected rather than placed with a broken pedestrian route. The interchange example supplies explicit reusable corner masks for these turns.
 
 Updating this pack does not rebuild an already placed node. Undo the old placement before restarting (undo history is session-local), or place the updated node in another clear area. The taller, longer example needs its entire larger footprint loaded and checked again.
+
+## Four-ramp interchange
+
+`/citiesarise debug roads road_demo:interchange` places a separate authored module:
+21 road segments connect the upper arterial to the lower road through four slab ramps.
+The grade-separated centre remains unconnected; turning traffic uses the ramps.
+The footprint spans roughly 335 x 415 blocks including sidewalks, so it needs a
+large loaded clear site and the same preflight/undo rules as the original overpass.
+Automatic city selection of this turning interchange is a following stage.
+
+Optional `junctionModules` maps resource IDs to `footprint` row masks (`.` unused,
+`R` carriageway, `S` sidewalk) and `sidewalkMaterial`. Masks have odd dimensions up
+to 33 x 33. `junctions` contains `{ "node": "node-id", "module": "road_demo:paved_corner",
+"rotation": 0 }`, with quarter-turn rotations 0..3. Up to 16 definitions and 32
+placements are allowed. The mask fills missing same-level corner cells at a real
+incident-road node; existing road pavement wins. Unsupported corners reject, and
+rails follow the combined outer boundary rather than cutting across a junction.

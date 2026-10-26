@@ -31,7 +31,7 @@ public final class LargeResidentialGameTests {
         helper.assertTrue(stored<=1048576,"Residential frozen profile exceeds stored budget");
         System.out.println("Residential frozen profile characters="+stored);
         var oversized=saved.copy();var tooMany=new net.minecraft.nbt.ListTag();
-        for(int i=0;i<129;i++)tooMany.add(net.minecraft.nbt.StringTag.valueOf("x"));
+        for(int i=0;i<513;i++)tooMany.add(net.minecraft.nbt.StringTag.valueOf("x"));
         oversized.put("Json",tooMany);boolean rejected=false;
         try{FinalTerrainPlanningRecipe.load(oversized);}catch(IllegalArgumentException expected){rejected=true;}
         helper.assertTrue(rejected,"Oversized frozen profile was accepted");

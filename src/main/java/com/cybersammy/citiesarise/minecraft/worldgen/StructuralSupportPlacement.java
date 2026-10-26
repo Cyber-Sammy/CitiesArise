@@ -23,7 +23,11 @@ public final class StructuralSupportPlacement {
                 if(blueprint.recipe()==null)return new Resolution(Optional.empty(),"MISSING_RAVINE_RECIPE",0,0);
                 return FinalTerrainReplanning.resolve(original,blueprint,FinalTerrainSnapshot.capture(level,blueprint.recipe().bounds()));
             }
-            return resolve(original,blueprint,new StructuralSupportPlanner.Ground() {
+            return resolve(original,blueprint,new FinalTerrainClearance.ExistingContent() {
+                public boolean matches(DebugBlockPlacementOperation op) {
+                    var pos=new net.minecraft.core.BlockPos(op.point().x(),op.platformY().orElseThrow()+op.verticalOffset(),op.point().z());
+                    return PendingStructuralPlacement.loadedChunk(level,pos.getX(),pos.getZ()).getBlockState(pos).equals(new VanillaDebugBlockMaterialProvider().blockState(op));
+                }
                 public boolean solid(int x,int y,int z) {return PendingStructuralPlacement.solid(level,x,y,z);}
                 public boolean fluid(int x,int y,int z) {return !PendingStructuralPlacement.loadedChunk(level,x,z).getFluidState(new net.minecraft.core.BlockPos(x,y,z)).isEmpty();}
             });

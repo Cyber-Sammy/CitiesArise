@@ -10,8 +10,12 @@ public record SuburbPlanningRequest(
         TerrainSurvey survey,
         long seed,
         SuburbPlanningSettings settings,
-        TerrainResponsePolicy terrainResponsePolicy
+        TerrainResponsePolicy terrainResponsePolicy,
+        int maximumBuildHeight
 ) {
+    public SuburbPlanningRequest(PlanElementId id,TerrainSurvey survey,long seed,SuburbPlanningSettings settings,TerrainResponsePolicy policy) {
+        this(id,survey,seed,settings,policy,Integer.MAX_VALUE);
+    }
     public SuburbPlanningRequest(
             PlanElementId settlementId,
             TerrainSurvey survey,

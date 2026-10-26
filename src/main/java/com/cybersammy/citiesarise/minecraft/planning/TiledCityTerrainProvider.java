@@ -11,6 +11,7 @@ final class TiledCityTerrainProvider implements WorldgenTerrainSurveyProvider {
     private TerrainSurvey latest;
     Optional<TerrainSurvey> latestSurvey() {return Optional.ofNullable(latest);}
     TiledCityTerrainProvider(WorldgenTerrainSurveyProvider delegate) {this.delegate=Objects.requireNonNull(delegate);}
+    public int maximumBuildHeight(){return delegate.maximumBuildHeight();}
     public TerrainSurvey sample(GridBounds bounds) {return collect(bounds,null).orElseThrow();}
     public Optional<TerrainSurvey> sampleWithExactWaterMask(GridBounds bounds,Set<GridPoint> points) {return collect(bounds,points);}
     public Optional<TerrainPreparationColumn> unsupportedColumn(TerrainPreparationPlan plan) {return delegate.unsupportedColumn(plan);}

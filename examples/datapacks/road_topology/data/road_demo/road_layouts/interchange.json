@@ -1,0 +1,362 @@
+{
+  "version": 1,
+  "carriageway": 11,
+  "deckDepth": 2,
+  "clearance": 8,
+  "rampSurface": "slabs",
+  "runPerRise": 6,
+  "pierSpacing": 8,
+  "maximumSpan": 24,
+  "maximumSupportDepth": 16,
+  "materials": {
+    "road": "minecraft:polished_deepslate",
+    "deck": "minecraft:stone_bricks",
+    "pier": "minecraft:stone_bricks",
+    "rail": "minecraft:stone_brick_wall",
+    "stair": "minecraft:stone_brick_stairs",
+    "slab": "minecraft:polished_deepslate_slab",
+    "sidewalkSlab": "minecraft:smooth_stone_slab"
+  },
+  "streets": {
+    "sectionLength": 32,
+    "centerMaterial": "minecraft:yellow_concrete",
+    "vergeMaterial": "minecraft:smooth_stone",
+    "modules": [
+      {
+        "id": "road_demo:sidewalk",
+        "weight": 1,
+        "leftWidth": 2,
+        "rightWidth": 2,
+        "material": "minecraft:smooth_stone"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "road_demo:west",
+      "x": -160,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "id": "road_demo:west_deck",
+      "x": -60,
+      "y": 10,
+      "z": 0
+    },
+    {
+      "id": "road_demo:west_junction",
+      "x": -30,
+      "y": 10,
+      "z": 0
+    },
+    {
+      "id": "road_demo:east_junction",
+      "x": 30,
+      "y": 10,
+      "z": 0
+    },
+    {
+      "id": "road_demo:east_deck",
+      "x": 60,
+      "y": 10,
+      "z": 0
+    },
+    {
+      "id": "road_demo:east",
+      "x": 160,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "id": "road_demo:south",
+      "x": 0,
+      "y": 0,
+      "z": -200
+    },
+    {
+      "id": "road_demo:south_junction",
+      "x": 0,
+      "y": 0,
+      "z": -140
+    },
+    {
+      "id": "road_demo:lower_middle",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "id": "road_demo:north_junction",
+      "x": 0,
+      "y": 0,
+      "z": 140
+    },
+    {
+      "id": "road_demo:north",
+      "x": 0,
+      "y": 0,
+      "z": 200
+    },
+    {
+      "id": "road_demo:west_south_corner",
+      "x": -30,
+      "y": 10,
+      "z": -40
+    },
+    {
+      "id": "road_demo:west_south_landing",
+      "x": -30,
+      "y": 0,
+      "z": -140
+    },
+    {
+      "id": "road_demo:west_north_corner",
+      "x": -30,
+      "y": 10,
+      "z": 40
+    },
+    {
+      "id": "road_demo:west_north_landing",
+      "x": -30,
+      "y": 0,
+      "z": 140
+    },
+    {
+      "id": "road_demo:east_south_corner",
+      "x": 30,
+      "y": 10,
+      "z": -40
+    },
+    {
+      "id": "road_demo:east_south_landing",
+      "x": 30,
+      "y": 0,
+      "z": -140
+    },
+    {
+      "id": "road_demo:east_north_corner",
+      "x": 30,
+      "y": 10,
+      "z": 40
+    },
+    {
+      "id": "road_demo:east_north_landing",
+      "x": 30,
+      "y": 0,
+      "z": 140
+    }
+  ],
+  "roads": [
+    {
+      "id": "road_demo:west_approach",
+      "from": "road_demo:west",
+      "to": "road_demo:west_deck",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:west_span",
+      "from": "road_demo:west_deck",
+      "to": "road_demo:west_junction",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:span",
+      "from": "road_demo:west_junction",
+      "to": "road_demo:east_junction",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:east_span",
+      "from": "road_demo:east_junction",
+      "to": "road_demo:east_deck",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:east_approach",
+      "from": "road_demo:east_deck",
+      "to": "road_demo:east",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:lower_south",
+      "from": "road_demo:south",
+      "to": "road_demo:south_junction",
+      "elevated": false
+    },
+    {
+      "id": "road_demo:lower_south_span",
+      "from": "road_demo:south_junction",
+      "to": "road_demo:lower_middle",
+      "elevated": false
+    },
+    {
+      "id": "road_demo:lower_north_span",
+      "from": "road_demo:lower_middle",
+      "to": "road_demo:north_junction",
+      "elevated": false
+    },
+    {
+      "id": "road_demo:lower_north",
+      "from": "road_demo:north_junction",
+      "to": "road_demo:north",
+      "elevated": false
+    },
+    {
+      "id": "road_demo:west_south_upper",
+      "from": "road_demo:west_junction",
+      "to": "road_demo:west_south_corner",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:west_south_ramp",
+      "from": "road_demo:west_south_corner",
+      "to": "road_demo:west_south_landing",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:west_south_ground",
+      "from": "road_demo:west_south_landing",
+      "to": "road_demo:south_junction",
+      "elevated": false
+    },
+    {
+      "id": "road_demo:west_north_upper",
+      "from": "road_demo:west_junction",
+      "to": "road_demo:west_north_corner",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:west_north_ramp",
+      "from": "road_demo:west_north_corner",
+      "to": "road_demo:west_north_landing",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:west_north_ground",
+      "from": "road_demo:west_north_landing",
+      "to": "road_demo:north_junction",
+      "elevated": false
+    },
+    {
+      "id": "road_demo:east_south_upper",
+      "from": "road_demo:east_junction",
+      "to": "road_demo:east_south_corner",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:east_south_ramp",
+      "from": "road_demo:east_south_corner",
+      "to": "road_demo:east_south_landing",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:east_south_ground",
+      "from": "road_demo:east_south_landing",
+      "to": "road_demo:south_junction",
+      "elevated": false
+    },
+    {
+      "id": "road_demo:east_north_upper",
+      "from": "road_demo:east_junction",
+      "to": "road_demo:east_north_corner",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:east_north_ramp",
+      "from": "road_demo:east_north_corner",
+      "to": "road_demo:east_north_landing",
+      "elevated": true
+    },
+    {
+      "id": "road_demo:east_north_ground",
+      "from": "road_demo:east_north_landing",
+      "to": "road_demo:north_junction",
+      "elevated": false
+    }
+  ],
+  "junctionModules": {
+    "road_demo:paved_corner": {
+      "footprint": [
+        "SSSSSSSSSSSSSSS",
+        "SSSSSSSSSSSSSSS",
+        "SSRRRRRRRRRRRSS",
+        "SSRRRRRRRRRRRSS",
+        "SSRRRRRRRRRRRSS",
+        "SSRRRRRRRRRRRSS",
+        "SSRRRRRRRRRRRSS",
+        "SSRRRRRRRRRRRSS",
+        "SSRRRRRRRRRRRSS",
+        "SSRRRRRRRRRRRSS",
+        "SSRRRRRRRRRRRSS",
+        "SSRRRRRRRRRRRSS",
+        "SSRRRRRRRRRRRSS",
+        "SSSSSSSSSSSSSSS",
+        "SSSSSSSSSSSSSSS"
+      ],
+      "sidewalkMaterial": "minecraft:smooth_stone"
+    }
+  },
+  "junctions": [
+    {
+      "node": "road_demo:west_south_corner",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:west_south_landing",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:west_north_corner",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:west_north_landing",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:east_south_corner",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:east_south_landing",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:east_north_corner",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:east_north_landing",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:west_junction",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:east_junction",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:south_junction",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    },
+    {
+      "node": "road_demo:north_junction",
+      "module": "road_demo:paved_corner",
+      "rotation": 0
+    }
+  ]
+}

@@ -43,7 +43,7 @@ class BuildingSectionsCatalogTest {
                 case "policy"->c.getAsJsonObject("compositions").getAsJsonObject("zoning:section_floor_b").addProperty("damageSeverity",99);
                 case "port"->section.addProperty("up","entrance");
                 case "cap"->recipe.addProperty("topCap","minecraft:air");
-                case "count"->section.addProperty("floors",17);
+                case "count"->section.addProperty("floors",65);
                 case "duplicate"->recipe.getAsJsonArray("sections").get(1).getAsJsonObject().addProperty("id","ground");
             }
             assertThrows(RuntimeException.class,()->parser().parse(c),fault);

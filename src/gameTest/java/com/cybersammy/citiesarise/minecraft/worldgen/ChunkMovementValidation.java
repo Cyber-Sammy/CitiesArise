@@ -23,6 +23,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 @EventBusSubscriber(modid="cities_arise")
 public final class ChunkMovementValidation {
     private static final Gson JSON=new GsonBuilder().setPrettyPrinting().create();
+    private static long observedHeapPeak;
     private static JsonObject report;private static ServerPlayer player;private static SinkHandler handler;
     private static long began,lastPost,packets;private static volatile long pre;private static double maxPacket,maxInterval,maxTick;
     private static java.util.concurrent.ScheduledExecutorService watch;
@@ -108,6 +109,7 @@ public final class ChunkMovementValidation {
                 }
             }
             long now=System.nanoTime();maxTick=Math.max(maxTick,(now-pre)/1e6);
+            observedHeapPeak=Math.max(observedHeapPeak,Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory());report.addProperty("observedHeapPeakBytes",observedHeapPeak);
             if(lastPost!=0){long interval=now-lastPost;maxInterval=Math.max(maxInterval,interval/1e6);histogram[(int)Math.min(histogram.length-1,interval/5_000_000)]++;ticks++;}lastPost=now;
             if(handler.pendingTeleport>=0){handler.handleAcceptTeleportPacket(new ServerboundAcceptTeleportationPacket(handler.pendingTeleport));handler.pendingTeleport=-1;}
             handler.tick();

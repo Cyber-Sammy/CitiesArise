@@ -21,7 +21,7 @@ final class PartitionedCityPlacement {
             minX=Math.min(minX,op.point().x());minZ=Math.min(minZ,op.point().z());maxX=Math.max(maxX,op.point().x());maxZ=Math.max(maxZ,op.point().z());
             chunks.add(net.minecraft.world.level.ChunkPos.asLong(Math.floorDiv(op.point().x(),16),Math.floorDiv(op.point().z(),16)));
         }
-        if(groups.size()>36)throw new IllegalArgumentException("Partitioned city exceeds 36 local owners");
+        if(groups.size()>PlacementQueueBudget.MAX_OWNERS)throw new IllegalArgumentException("Partitioned city exceeds64 local owners");
         metadata=new Metadata("cities_arise:unbound",profile,city,x,z,minX,minZ,maxX,maxZ,chunks);
         var result=new LinkedHashMap<SettlementRegion,Part>();
         for(var entry:groups.entrySet()) {

@@ -44,6 +44,7 @@ public final class MinecraftWorldgenTerrainProvider implements WorldgenTerrainSu
         });
     }
 
+    @Override public int maximumBuildHeight(){return levelHeight.getMaxBuildHeight();}
     BatchedNoiseTerrain batchedNoise() { return cells; }
     @Override public boolean parallelSamples(){return cells!=null;}
 

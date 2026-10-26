@@ -27,7 +27,7 @@ public record MinecraftSettlementProfileLimits(
             8,
             16,
             16,
-            1_000_000L
+            2_000_000L
     );
 
     public MinecraftSettlementProfileLimits {

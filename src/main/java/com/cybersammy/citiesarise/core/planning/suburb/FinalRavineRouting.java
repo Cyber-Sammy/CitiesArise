@@ -15,6 +15,9 @@ public final class FinalRavineRouting {
         return plan(profile,finalSurvey,seed,id,previousRoad,RavineObservation.detect(finalSurvey,profile.ravineRoads()));
     }
     public static Result plan(SettlementProfile profile,TerrainSurvey finalSurvey,long seed,String id,Set<GridPoint> previousRoad,RavineObservation observation) {
+        return plan(profile,finalSurvey,seed,id,previousRoad,observation,Integer.MAX_VALUE);
+    }
+    public static Result plan(SettlementProfile profile,TerrainSurvey finalSurvey,long seed,String id,Set<GridPoint> previousRoad,RavineObservation observation,int maximumBuildHeight) {
         var survey=observation.routingSurvey(finalSurvey);var previous=profile.terrainResponsePolicy();
         var responses=new EnumMap<TerrainFeatureType,TerrainResponse>(TerrainFeatureType.class);responses.putAll(previous.responses());
         // The explicit ravine reservation is projected into the router's hard barrier layer.
@@ -32,7 +35,7 @@ public final class FinalRavineRouting {
         }
         for(int attempt=0;attempt<profile.ravineRoads().maximumRoutingAttempts();attempt++) {
             long candidateSeed=seed+attempt*0x6A09E667F3BCC909L;
-            var request=new SuburbPlanningRequest(new PlanElementId(id),survey,candidateSeed,profile.suburbPlanningSettings(),policy);
+            var request=new SuburbPlanningRequest(new PlanElementId(id),survey,candidateSeed,profile.suburbPlanningSettings(),policy,maximumBuildHeight);
             var result=SuburbPlanner.defaults().plan(request,(r,candidate)-> {
                 var prep=candidate.terrainPreparationPlan().orElseThrow();
                 if(prep.columns().stream().anyMatch(c->observation.reserved().contains(c.point())))

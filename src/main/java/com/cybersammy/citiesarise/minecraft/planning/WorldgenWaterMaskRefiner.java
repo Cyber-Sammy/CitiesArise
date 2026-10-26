@@ -100,7 +100,7 @@ final class WorldgenWaterMaskRefiner {
                 refinedSurvey,
                 initialRequest.seed(),
                 initialRequest.settings(),
-                initialRequest.terrainResponsePolicy()
+                initialRequest.terrainResponsePolicy(),initialRequest.maximumBuildHeight()
         );
     }
 

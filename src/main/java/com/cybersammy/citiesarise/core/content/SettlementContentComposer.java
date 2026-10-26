@@ -13,11 +13,17 @@ public final class SettlementContentComposer {
     public static ResolvedSettlementContent compose(SettlementPlan plan,TerrainPreparationPlan preparation,long seed,
             com.cybersammy.citiesarise.core.building.BuildingContentSettings settings,
             com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings layout) {
+        return compose(plan,preparation,seed,settings,layout,Integer.MAX_VALUE);
+    }
+    public static ResolvedSettlementContent compose(SettlementPlan plan,TerrainPreparationPlan preparation,long seed,
+            com.cybersammy.citiesarise.core.building.BuildingContentSettings settings,
+            com.cybersammy.citiesarise.core.parcel.ParcelLayoutSettings layout,int maximumBuildHeight) {
         Map<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingContent> buildings=new LinkedHashMap<>();
         var context=new com.cybersammy.citiesarise.core.building.BuildingSelectionContext(plan);
         var decisions=new LinkedHashMap<PlanElementId,com.cybersammy.citiesarise.core.building.BuildingSelection>();
         for(BuildingSlot slot:plan.buildingSlots()) {
-            var selection=com.cybersammy.citiesarise.core.building.BuildingSelector.select(slot,seed,settings,context.forSlot(slot));
+            var selection=com.cybersammy.citiesarise.core.building.BuildingSelector.select(slot,seed,settings,context.forSlot(slot),
+                    (int)Math.clamp((long)maximumBuildHeight-preparation.elevationPlan().requiredZone(slot.id()).targetElevation(),0L,Integer.MAX_VALUE));
             decisions.put(slot.id(),selection.selection());
             var selected=selection.content();
             if(selected.isEmpty()) continue;

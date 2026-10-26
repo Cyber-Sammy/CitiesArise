@@ -66,7 +66,7 @@ final class BuildingSectionAssembler {
                 }
                 incomingFacade.forEach(facade::putIfAbsent);
                 if(join!=null){for(var p:join.gapSpace())cells.put(p,new PlacedCell(p,cfg.airMaterial(),0));join.connector().forEach(c->cells.put(c.position(),c));joins.add(join);}
-                if(cells.size()>65536)return reject("Building cell budget exceeded");
+                if(cells.size()>262144)return reject("Building cell budget exceeded");
                 floors.add(new FloorPlan(f,plan,frame,count,section.id()+":"+index));
             }
         }
@@ -81,9 +81,12 @@ final class BuildingSectionAssembler {
                 || recipe.roof().isEmpty() && !cap(cells,floors.getLast(),floors.getLast().recipe().up(),recipe.topCap()))return reject("Terminal cap conflicts with provider payload");
         for(var join:joins){var error=join.validate(cells,cfg.materialRules(),cfg.airMaterial());if(error.isPresent())return reject(error.get());}
         var modules=new ArrayList<PlacedModule>();var connections=new ArrayList<String>();var caps=new ArrayList<String>();var damage=new ArrayList<String>();
+        var byHeight=new TreeMap<Integer,List<PlacedCell>>();
+        cells.values().forEach(c->byHeight.computeIfAbsent(c.position().y(),k->new ArrayList<>()).add(c));
         for(var floor:floors) {
             // Validate every room again after neighboring slabs, technical gaps and terminal caps have been applied.
-            var localCells=cells.values().stream().filter(c->floor.frame().mask.contains(new com.cybersammy.citiesarise.core.geometry.GridPoint(c.position().x(),c.position().z()))
+            var localCells=byHeight.subMap(floor.frame().origin.y(),true,floor.frame().origin.y()+floor.recipe().layout().size().y(),false)
+                    .values().stream().flatMap(List::stream).filter(c->floor.frame().mask.contains(new com.cybersammy.citiesarise.core.geometry.GridPoint(c.position().x(),c.position().z()))
                     && c.position().y()>=floor.frame().origin.y() && c.position().y()<floor.frame().origin.y()+floor.recipe().layout().size().y()).toList();
             var adjusted=new ResolvedComposition(floor.plan().modules(),localCells,floor.plan().connections(),floor.plan().cappedJoints(),floor.plan().damageDecisions());
             var closed=new HashSet<String>();if(floor==floors.getFirst() && recipe.basement().isEmpty())closed.add(floor.recipe().down());if(floor==floors.getLast() && recipe.roof().isEmpty())closed.add(floor.recipe().up());
@@ -96,7 +99,7 @@ final class BuildingSectionAssembler {
             connections.add("section:"+floor.owner()+"; strict=true; origin="+floor.frame().origin);
         }
         for(var terminal:terminals){modules.addAll(terminal.modules());connections.addAll(terminal.connections());caps.addAll(terminal.cappedJoints());damage.addAll(terminal.damageDecisions());}
-        if(modules.size()>cfg.maximumResolvedModules() || cells.size()>65536)return reject("Building nested module or cell budget exceeded");
+        if(modules.size()>cfg.maximumResolvedModules() || cells.size()>262144)return reject("Building nested module or cell budget exceeded");
         joins.forEach(j->connections.add(j.decision()));
         if(cells.keySet().stream().anyMatch(p->p.y()+world.origin.y()>=cfg.maximumHeight() || p.y()+world.origin.y()< -16))
             return reject("Final building exceeds height or basement depth budget");

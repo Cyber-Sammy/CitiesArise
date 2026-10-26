@@ -10,7 +10,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 
 /** Waits for existing FULL chunks, validates the entire blueprint, then persists exact resolved operations. */
 final class PendingStructuralPlacement extends SavedData {
-    private static final int MAX_PENDING=64,MAX_OPERATIONS=4000000;
+    private static final int MAX_PENDING=PlacementQueueBudget.MAX_OWNERS;
     private final Map<String,Entry> pending=new LinkedHashMap<>();
     private final Map<String,String> completed=new LinkedHashMap<>();
     private final Map<String,Long> constructionSpent=new HashMap<>();
@@ -25,9 +25,8 @@ final class PendingStructuralPlacement extends SavedData {
     boolean canAddAll(List<Submission> submissions) {
         var fresh=submissions.stream().filter(s->!pending.containsKey(s.id()) && !completed.containsKey(s.id())).toList();
         return fresh.stream().map(Submission::id).distinct().count()==fresh.size()
-                && pending.size()+fresh.size()<=MAX_PENDING
-                && pending.values().stream().mapToLong(e->e.original.operations().size()).sum()
-                    +fresh.stream().mapToLong(s->s.snapshot().operations().size()).sum()<=MAX_OPERATIONS;
+                && PlacementQueueBudget.fits(pending.size()+fresh.size(),pending.values().stream().mapToLong(e->e.original.operations().size()).sum()
+                    +fresh.stream().mapToLong(s->s.snapshot().operations().size()).sum());
     }
     void addAll(List<Submission> submissions) {
         if(!canAddAll(submissions))throw new IllegalStateException("City placement queue is full; no owners published");
@@ -84,7 +83,7 @@ final class PendingStructuralPlacement extends SavedData {
     void add(String profile,String id,int x,int z,SuburbStructurePlacementSnapshot snapshot,StructuralSupportBlueprint blueprint,SettlementIndex.Metadata parent) {
         if(completed.containsKey(id) || pending.containsKey(id)) return;
         long operations=pending.values().stream().mapToLong(e->e.original.operations().size()).sum();
-        if(pending.size()>=MAX_PENDING || operations+snapshot.operations().size()>MAX_OPERATIONS) {
+        if(!PlacementQueueBudget.fits(pending.size()+1,operations+snapshot.operations().size())) {
             LOG.warn("Structural placement queue full; settlement {} was not published",id);return;
         }
         var e=new Entry();e.profile=profile;e.id=id;e.centerX=x;e.centerZ=z;e.original=snapshot;e.blueprint=blueprint;e.parent=parent;
@@ -292,7 +291,7 @@ final class PendingStructuralPlacement extends SavedData {
             if(data.pending.size()>=MAX_PENDING) throw new IllegalArgumentException("Too many pending structural settlements");
             var row=(CompoundTag)item;var e=new Entry();e.id=row.getString("Id");e.profile=row.getString("Profile");
             e.centerX=row.getInt("X");e.centerZ=row.getInt("Z");e.original=SuburbStructurePlacementSnapshot.load(row.getCompound("Original"));
-            operations+=e.original.operations().size();if(operations>MAX_OPERATIONS) throw new IllegalArgumentException("Structural operation budget exceeded");
+            operations+=e.original.operations().size();if(!PlacementQueueBudget.fits(data.pending.size()+1,operations)) throw new IllegalArgumentException("Structural operation/memory budget exceeded");
             e.blueprint=StructuralSupportBlueprint.load(row.getCompound("Blueprint"));
             if(row.contains("ParentCity"))e.parent=SettlementRegistry.readMetadata(row.getCompound("ParentCity"));
             if(row.contains("ActiveChunk")) {

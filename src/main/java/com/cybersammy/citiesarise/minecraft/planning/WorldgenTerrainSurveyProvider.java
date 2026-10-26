@@ -15,6 +15,8 @@ import java.util.Set;
 public interface WorldgenTerrainSurveyProvider {
     TerrainSurvey sample(GridBounds bounds);
 
+    default int maximumBuildHeight(){return Integer.MAX_VALUE;}
+
     /** Opt in only when concurrent calls create independent samplers over immutable generator inputs. */
     default boolean parallelSamples(){return false;}
 

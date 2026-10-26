@@ -33,6 +33,26 @@ public final class LayeredRoadGameTests {
         }
         return origin;
     }
+    @GameTest(template="empty",timeoutTicks=600)
+    public static void interchangeConnectsFourSlabRampsWithSupportedCornersAndReversiblePlacement(GameTestHelper h) throws Exception {
+        JsonObject data;
+        try(var r=h.getLevel().getServer().getResourceManager().getResourceOrThrow(ResourceLocation.parse("road_demo:road_layouts/interchange.json")).openAsReader()) {data=JsonParser.parseReader(r).getAsJsonObject();}
+        var t=topology(data);var origin=ground(h,t,9600);var plan=LayeredRoadPlacement.prepare(t,h.getLevel(),origin);
+        h.assertTrue(plan.operations().size()<=262144,"Interchange exceeds construction budget");
+        var saved=new CompoundTag();SuburbStructurePlacementSnapshot.from(plan).save(saved);
+        h.assertTrue(plan.equals(SuburbStructurePlacementSnapshot.load(saved).toPlacementPlan()),"Interchange lost frozen geometry");
+        var debug=new DebugPlacementApplier();debug.apply(h.getLevel(),plan,true);
+        h.assertTrue(!h.getLevel().getBlockState(origin).isAir() && !h.getLevel().getBlockState(origin.above(10)).isAir(),"Missing crossing layers");
+        for(int y=1;y<=8;y++)h.assertTrue(h.getLevel().getBlockState(origin.above(y)).isAir(),"Interchange blocks lower headroom");
+        int corners=0,slabs=0;
+        for(var c:t.columns())if(c.patch() && !t.guardrail(c)) {
+            var p=origin.offset(c.point().x(),c.surfaceY(),c.point().z());
+            h.assertTrue(!h.getLevel().getBlockState(p).isAir() && h.getLevel().getBlockState(p.above()).isAir(),"Turning corner is missing or fenced off");corners++;
+        }
+        for(var op:plan.operations())if(op.role()==DebugPlacementRole.BRIDGE_STEP){h.assertTrue(h.getLevel().getBlockState(new BlockPos(op.point().x(),op.platformY().orElseThrow()+op.verticalOffset(),op.point().z())).getBlock() instanceof net.minecraft.world.level.block.SlabBlock,"Interchange ramp is not slabbed");slabs++;}
+        h.assertTrue(corners>10 && slabs>100,"Missing reusable junctions or graded ramps");
+        debug.undoLast(h.getLevel());h.assertTrue(h.getLevel().getBlockState(origin).isAir(),"Interchange undo left pavement behind");h.succeed();
+    }
     @GameTest(template="empty",timeoutTicks=400)
     public static void overpassKeepsBothDecksWalkingClearanceAndReverseChunkSnapshot(GameTestHelper h) throws Exception {
         var t=topology(json(h));var origin=ground(h,t,960);

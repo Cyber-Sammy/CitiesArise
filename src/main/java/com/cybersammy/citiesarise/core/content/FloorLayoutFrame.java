@@ -26,7 +26,10 @@ final class FloorLayoutFrame {
         if(!layout.rotations().contains(Math.floorMod(turn-rotation,4)) || at.y()!=origin.y()
                 || placed.stream().filter(m->m.id().equals(module.id())).count()>=layout.maximumCounts().getOrDefault(module.id(),16))return false;
         var size=CompositionAssembler.rotatedSize(module.size(),turn);
-        for(int x=at.x();x<at.x()+size.x();x++)for(int z=at.z();z<at.z()+size.z();z++)if(!mask.contains(new GridPoint(x,z)))return false;
+        for(var column:module.columnFootprint()) {
+            var p=CompositionAssembler.rotateCell(new Vec(column.x(),0,column.z()),module.size(),turn).add(at);
+            if(!mask.contains(new GridPoint(p.x(),p.z())))return false;
+        }
         return true;
     }
     private Vec position(Vec local) {return CompositionAssembler.rotateCell(local,layout.size(),rotation).add(origin);}
@@ -72,8 +75,10 @@ final class FloorLayoutFrame {
     }
     Optional<String> coverage(List<PlacedModule> modules,Map<String,ModuleDefinition> definitions) {
         var covered=new HashSet<GridPoint>();
-        for(var m:modules) {var size=CompositionAssembler.rotatedSize(definitions.get(m.id()).size(),m.rotation());
-            for(int x=m.origin().x();x<m.origin().x()+size.x();x++)for(int z=m.origin().z();z<m.origin().z()+size.z();z++)covered.add(new GridPoint(x,z));}
+        for(var m:modules) {var module=definitions.get(m.id());
+            for(var column:module.columnFootprint()) {
+                var p=CompositionAssembler.rotateCell(new Vec(column.x(),0,column.z()),module.size(),m.rotation()).add(m.origin());covered.add(new GridPoint(p.x(),p.z()));
+            }}
         if(!covered.equals(mask))return Optional.of("Floor footprint not completely packed");
         for(var p:layout.placements())if(modules.stream().noneMatch(m->matches(p,definitions.get(m.id()),m.origin(),m.rotation(),m.layout())))return Optional.of("Missing authored room placement: "+p.module()+" at "+p.at());
         for(var e:layout.minimumCounts().entrySet())if(modules.stream().filter(m->m.id().equals(e.getKey())).count()<e.getValue())return Optional.of("Missing required floor room: "+e.getKey());

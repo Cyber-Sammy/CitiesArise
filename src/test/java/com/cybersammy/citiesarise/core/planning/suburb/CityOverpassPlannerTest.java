@@ -16,7 +16,10 @@ class CityOverpassPlannerTest {
     static SuburbPlanningRequest request(long seed,boolean enabled) throws Exception {
         var json=JsonParser.parseString(Files.readString(Path.of("examples/datapacks/skyline/data/cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject();
         json.getAsJsonObject("survey").addProperty("width",440);json.getAsJsonObject("survey").addProperty("depth",240);
-        var p=json.getAsJsonObject("planning");p.remove("buildings");p.remove("cityOverpasses");p.addProperty("minimumParcelCount",8);p.addProperty("targetParcelCount",32);p.addProperty("maximumParcelCount",32);
+        var p=json.getAsJsonObject("planning");p.addProperty("parcelWidth",39);p.addProperty("parcelDepth",39);
+        p.getAsJsonObject("districts").getAsJsonArray("parcelSizes").get(0).getAsJsonObject().addProperty("width",39);
+        p.getAsJsonObject("districts").getAsJsonArray("parcelSizes").get(0).getAsJsonObject().addProperty("depth",39);
+        p.remove("buildings");p.remove("cityOverpasses");p.addProperty("minimumParcelCount",8);p.addProperty("targetParcelCount",32);p.addProperty("maximumParcelCount",32);
         p.getAsJsonObject("districts").getAsJsonObject("grid").addProperty("columns",4);
         p.getAsJsonObject("districts").getAsJsonObject("grid").addProperty("rows",2);
         var profile=new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("test:overpass"),json);

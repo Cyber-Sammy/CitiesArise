@@ -275,7 +275,7 @@ public final class MinecraftSuburbPlanningService {
                 profileId,
                 surveySize,
                 planningSettings,
-                terrainResponsePolicy
+                terrainResponsePolicy,terrainProvider.maximumBuildHeight()
         );
 
         return planCache.getOrCreate(
@@ -336,7 +336,7 @@ public final class MinecraftSuburbPlanningService {
                 survey,
                 seed,
                 planningSettings,
-                terrainResponsePolicy
+                terrainResponsePolicy,terrainProvider.maximumBuildHeight()
         );
         var terrainPlanner=planner.geometryOnly();
         SuburbPlanningResult result = terrainPlanner.plan(request);
@@ -352,7 +352,7 @@ public final class MinecraftSuburbPlanningService {
         if(refinedResult.successful() && planningSettings.terrainTransitions().cityOverpasses().enabled()
                 && terrainProvider instanceof TiledCityTerrainProvider tiled) {
             // The refiner already queried this footprint. Reuse its exact survey instead of sampling the city twice.
-            contentRequest=new SuburbPlanningRequest(request.settlementId(),tiled.latestSurvey().orElse(survey),seed,planningSettings,terrainResponsePolicy);
+            contentRequest=new SuburbPlanningRequest(request.settlementId(),tiled.latestSurvey().orElse(survey),seed,planningSettings,terrainResponsePolicy,request.maximumBuildHeight());
         }
         var finished=planner.finishContent(contentRequest,refinedResult,(candidateRequest,candidate)->TerrainSupportAcceptance.validate(overpassTerrain,candidateRequest.survey(),candidate));
         if(refinedResult.successful() && !finished.successful()) {

@@ -14,7 +14,7 @@ public interface RegionPlanCache {
         snapshot().forEach((key, result) -> {
             var expected = new RegionPlanCacheKey(context.dimensionId(), key.region(), context.worldSeed(),
                     TerrainSurveySource.WORLDGEN_BASE, context.profileId(), context.surveySize(),
-                    context.planningSettings(), context.terrainResponsePolicy());
+                    context.planningSettings(), context.terrainResponsePolicy(),context.terrainProvider().maximumBuildHeight());
             if (key.equals(expected) && result.successful()) matches.put(key.region(), result);
         });
         return java.util.Map.copyOf(matches);

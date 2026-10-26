@@ -26,7 +26,7 @@ public final class LayeredRoadPlacement {
             checkLoaded(level,origin.offset(c.point().x(),c.bottomY(),c.point().z()));
         }
         for (var c:surfaces.values()) {
-            boolean edge=c.edge() && topology.at(c.point()).stream().filter(n -> n.surfaceY()==c.surfaceY()).allMatch(LayeredRoadTopology.Column::edge);
+            boolean edge=topology.guardrail(c);
             surface(operations,c,layout,origin,edge);
         }
         // Ground roads bear continuously. Elevated roads bear only on authored spacing, outside other road envelopes.
@@ -77,7 +77,7 @@ public final class LayeredRoadPlacement {
         var operations=new LinkedHashMap<DebugPlacementPosition,DebugBlockPlacementOperation>();
         var unique=new LinkedHashMap<DebugPlacementPosition,LayeredRoadTopology.Column>();
         for(var c:topology.columns())unique.putIfAbsent(new DebugPlacementPosition(c.point(),c.surfaceY()),c);
-        for(var c:unique.values())surface(operations,c,layout,origin,c.edge() && !module.landing(c));
+        for(var c:unique.values())surface(operations,c,layout,origin,topology.guardrail(c) && !module.landing(c));
         for(var f:module.footings()) {
             var c=topology.at(f.point()).stream().filter(col->col.road().id().equals(f.road())).findFirst().orElseThrow();
             for(int y=f.bottomY();y<=f.topY();y++)put(operations,c,f.point(),y,layout.pierMaterial(),DebugPlacementRole.BRIDGE_PIER,origin);
@@ -144,6 +144,7 @@ public final class LayeredRoadPlacement {
         var full=new ArrayList<>(List.of(layout.roadMaterial(),layout.deckMaterial(),layout.pierMaterial(),layout.streets().vergeMaterial()));
         if (!layout.streets().centerMaterial().isEmpty()) full.add(layout.streets().centerMaterial());
         layout.streets().modules().forEach(m -> full.add(m.material()));
+        layout.junctions().forEach(j -> full.add(j.sidewalkMaterial()));
         for (String material:full) {
             var state=MinecraftContentMaterials.resolve(material,0);
             if (!state.isCollisionShapeFullBlock(EmptyBlockGetter.INSTANCE,BlockPos.ZERO) || !state.getFluidState().isEmpty() || state.hasBlockEntity())

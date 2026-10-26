@@ -41,13 +41,13 @@ public record BuildingSections(List<Section> sections,String bottomCap,String to
     }
     public record Section(String id,int floors,Floor recipe) {
         public Section {Objects.requireNonNull(id);Objects.requireNonNull(recipe);
-            if(id.isBlank() || id.length()>128 || floors<1 || floors>16)throw new IllegalArgumentException("Invalid building section");}
+            if(id.isBlank() || id.length()>128 || floors<1 || floors>64)throw new IllegalArgumentException("Invalid building section");}
     }
     public BuildingSections {
         basement=basement==null?"":basement;roof=roof==null?"":roof;
         sections=List.copyOf(sections);Objects.requireNonNull(bottomCap);Objects.requireNonNull(topCap);
         if(sections.isEmpty() || sections.size()>8 || sections.stream().map(Section::id).distinct().count()!=sections.size()
-                || sections.stream().mapToInt(Section::floors).sum()>16 || bottomCap.isBlank() || topCap.isBlank())
+                || sections.stream().mapToInt(Section::floors).sum()>64 || bottomCap.isBlank() || topCap.isBlank())
             throw new IllegalArgumentException("Invalid building sections or terminal caps");
         var base=sections.getFirst().recipe().layout();
         if(base.ports().stream().filter(p->p.id().equals(base.entrance())).findFirst().orElseThrow().face().ordinal()>=4)

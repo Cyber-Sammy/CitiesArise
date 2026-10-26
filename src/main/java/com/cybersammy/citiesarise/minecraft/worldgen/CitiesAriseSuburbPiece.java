@@ -21,6 +21,9 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
     private final SuburbStructurePlacementSnapshot snapshot;
     private final DebugChunkPlacementIndex placementIndex;
     private final WorldgenVegetationCleanupIndex vegetationCleanupIndex;
+    // Structural pieces are queued, not applied by postProcess. Keep only snapshot references
+    // for read-only lake protection instead of two expanded placement/vegetation copies.
+    private final java.util.Map<PlacementChunk,java.util.List<SuburbStructurePlacementSnapshot.Operation>> structuralSlices;
     private final String profileId;
     private final String planId;
     private final int centerX;
@@ -54,8 +57,9 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
         this.snapshot = Objects.requireNonNull(snapshot, "snapshot");
         this.sharedParent=parent;
         this.registryTemplate = parent==null?createRegistryTemplate():parent;
-        this.placementIndex = createPlacementIndex(snapshot);
-        this.vegetationCleanupIndex = createVegetationCleanupIndex(snapshot);
+        this.placementIndex = requiresFinalTerrain()?null:createPlacementIndex(snapshot);
+        this.vegetationCleanupIndex = requiresFinalTerrain()?null:createVegetationCleanupIndex(snapshot);
+        this.structuralSlices = requiresFinalTerrain()?snapshotSlices(snapshot):java.util.Map.of();
     }
 
     CitiesAriseSuburbPiece(CompoundTag tag) {
@@ -68,8 +72,9 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
         this.centerZ = tag.contains("SettlementCenterZ") ? tag.getInt("SettlementCenterZ") : boundingBox.getCenter().getZ();
         this.sharedParent=tag.contains("ParentCity")?SettlementRegistry.readMetadata(tag.getCompound("ParentCity")):null;
         this.registryTemplate = sharedParent==null?createRegistryTemplate():sharedParent;
-        this.placementIndex = createPlacementIndex(snapshot);
-        this.vegetationCleanupIndex = createVegetationCleanupIndex(snapshot);
+        this.placementIndex = requiresFinalTerrain()?null:createPlacementIndex(snapshot);
+        this.vegetationCleanupIndex = requiresFinalTerrain()?null:createVegetationCleanupIndex(snapshot);
+        this.structuralSlices = requiresFinalTerrain()?snapshotSlices(snapshot):java.util.Map.of();
     }
 
     @Override
@@ -138,7 +143,8 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
     }
 
     DebugChunkPlacementPlan placementSlice(PlacementChunk chunk) {
-        return placementIndex.slice(chunk);
+        return placementIndex!=null?placementIndex.slice(chunk):new DebugChunkPlacementPlan(chunk,
+                structuralSlices.getOrDefault(chunk,java.util.List.of()).stream().map(SuburbStructurePlacementSnapshot.Operation::toPlacementOperation).toList());
     }
 
     private Metadata createRegistryTemplate() {
@@ -147,6 +153,12 @@ public final class CitiesAriseSuburbPiece extends StructurePiece {
                 .collect(java.util.stream.Collectors.toSet());
         return new Metadata("cities_arise:unbound", profileId, planId, centerX, centerZ,
                 snapshot.minimumX(), snapshot.minimumZ(), snapshot.maximumX(), snapshot.maximumZ(), chunks);
+    }
+
+    private static java.util.Map<PlacementChunk,java.util.List<SuburbStructurePlacementSnapshot.Operation>> snapshotSlices(SuburbStructurePlacementSnapshot snapshot) {
+        var groups=snapshot.operations().stream().collect(java.util.stream.Collectors.groupingBy(op->PlacementChunk.containing(op.point()),
+                java.util.stream.Collectors.collectingAndThen(java.util.stream.Collectors.toList(),java.util.List::copyOf)));
+        return java.util.Map.copyOf(groups);
     }
 
     private static DebugChunkPlacementIndex createPlacementIndex(SuburbStructurePlacementSnapshot snapshot) {

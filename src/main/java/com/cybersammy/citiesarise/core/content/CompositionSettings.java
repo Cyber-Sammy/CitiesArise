@@ -38,7 +38,7 @@ public record CompositionSettings(Map<String,ModuleDefinition> modules, List<Str
         maximumResolvedModules=maximumResolvedModules==null?64:maximumResolvedModules;
         if(maximumResolvedModules<1 || maximumResolvedModules>128 || (buildingSections==null && maximumResolvedModules!=64))
             throw new IllegalArgumentException("Invalid resolved building module budget");
-        if(minimumModules<1 || maximumModules<minimumModules || maximumModules>(buildingSections==null?16:64) || maximumHeight<1 || maximumHeight>128
+        if(minimumModules<1 || maximumModules<minimumModules || maximumModules>(buildingSections==null?16:64) || maximumHeight<1 || maximumHeight>320
                 || damageSeverity<0 || damageSeverity>100) throw new IllegalArgumentException("Invalid composition budgets");
         if(entranceJoint==null || entranceJoint.isBlank() || airMaterial==null || airMaterial.isBlank()) throw new IllegalArgumentException("Missing entrance or air material");
         if(floorLayout!=null) {

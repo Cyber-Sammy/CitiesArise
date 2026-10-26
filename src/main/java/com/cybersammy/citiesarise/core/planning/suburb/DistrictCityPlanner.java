@@ -68,7 +68,7 @@ final class DistrictCityPlanner {
         // A small survey may not fit subdivisions. Preserve the existing single-district option.
         var fallback = new SuburbPlanningRequest(request.settlementId(), request.survey(), request.seed(),
                 settings.withDistricts(settings.districts().parcelSizes().isEmpty()?DistrictPlanningSettings.single().withElevation(settings.districts().elevation()):
-                        new DistrictPlanningSettings(1,settings.districts().targetParcels(),settings.districts().maxConnectionAttempts(),settings.districts().zoning(),settings.districts().parcelSizes(),settings.districts().parcelSizeFallback(),settings.districts().elevation())), request.terrainResponsePolicy());
+                        new DistrictPlanningSettings(1,settings.districts().targetParcels(),settings.districts().maxConnectionAttempts(),settings.districts().zoning(),settings.districts().parcelSizes(),settings.districts().parcelSizeFallback(),settings.districts().elevation())), request.terrainResponsePolicy(),request.maximumBuildHeight());
         return planner.plan(fallback, acceptance);
     }
 
@@ -114,7 +114,7 @@ final class DistrictCityPlanner {
                     region.points().contains(point) && !excluded.contains(point) ? cell : new com.cybersammy.citiesarise.core.terrain.TerrainCell(
                             point, cell.height(), cell.water(), cell.slope(), cell.biomeCategory(), com.cybersammy.citiesarise.core.terrain.TerrainCategory.BLOCKED)));
             var localRequest = new SuburbPlanningRequest(request.settlementId().child("district-"+index), survey,
-                    request.seed(), settings, localPolicy);
+                    request.seed(), settings, localPolicy,request.maximumBuildHeight());
             var result = planner.planDistrict(localRequest, acceptance,
                     outer.size().width()>128 || outer.size().depth()>128,coordinateElevation);
 

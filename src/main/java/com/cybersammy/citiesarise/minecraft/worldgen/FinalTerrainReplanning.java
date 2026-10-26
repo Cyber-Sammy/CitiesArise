@@ -39,7 +39,7 @@ final class FinalTerrainReplanning {
         boolean affected=previousRoad.stream().anyMatch(observation.reserved()::contains)
                 || original.operations().stream().anyMatch(op->roadSources.contains(op.sourceElementId()) && observation.reserved().contains(op.point()));
         if(!affected) return StructuralSupportPlacement.resolve(original,blueprint,captured);
-        var routed=FinalRavineRouting.plan(recipe.profile(),captured.survey(),recipe.seed(),recipe.settlementId(),previousRoad,observation);
+        var routed=FinalRavineRouting.plan(recipe.profile(),captured.survey(),recipe.seed(),recipe.settlementId(),previousRoad,observation,captured.maximumBuildHeight());
         if(routed.plan().isEmpty()) return new StructuralSupportPlacement.Resolution(Optional.empty(),routed.reason(),0,0);
         var result=new SuburbPlanTransformService(TransformPipeline.of(LightDecayTransform.defaults())).apply(routed.plan().orElseThrow(),recipe.seed());
         if(!result.successful()) return new StructuralSupportPlacement.Resolution(Optional.empty(),"INVALID_RAVINE_EDGE_TRANSFORM",0,0);

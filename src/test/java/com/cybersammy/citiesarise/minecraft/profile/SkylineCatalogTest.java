@@ -20,13 +20,33 @@ class SkylineCatalogTest {
             JsonParser.parseString(Files.readString(DATA.resolve("cities_arise/settlement_profiles/suburb.json"))).getAsJsonObject(),
             (id,dir,ext)->{var parts=id.split(":",2);return Files.newInputStream(DATA.resolve(parts[0]).resolve(dir).resolve(parts[1]+ext));});
     }
+    @Test void towerChoiceRespectsAvailableHeightWithoutClippingOrLowRiseSubstitution() throws Exception {
+        var cfg=profile().suburbPlanningSettings().buildings();
+        var slot=new BuildingSlot(new PlanElementId("test:height"),new PlanElementId("test:parcel"),new GridBounds(new GridPoint(0,0),new GridSize(39,39)),Set.of(),PlanProperties.empty());
+        var context=new MetadataSelector(Set.of(),PlanProperties.empty());var heights=new HashSet<Integer>();
+        for(int index=0;index<512;index++) {
+            long seed=index*0x9e3779b97f4a7c15L;
+            var full=com.cybersammy.citiesarise.core.building.BuildingSelector.select(slot,seed,cfg,context,255).content().orElseThrow();heights.add(full.asset().height());
+            var low=com.cybersammy.citiesarise.core.building.BuildingSelector.select(slot,seed,cfg,context,160).content().orElseThrow();
+            assertTrue(low.asset().height()<=160 && low.asset().height()>=100);
+            assertEquals(low,com.cybersammy.citiesarise.core.building.BuildingSelector.select(slot,seed,cfg,context,160).content().orElseThrow());
+        }
+        assertTrue(heights.contains(255));assertTrue(heights.size()>=7);
+        assertThrows(IllegalArgumentException.class,()->com.cybersammy.citiesarise.core.building.BuildingSelector.select(slot,1,cfg,context,100));
+    }
+    @Test void nonRectangularModulesHaveAnExplicitMaskAndCannotPlaceContentInTheCourtyard() throws Exception {
+        var json=JsonParser.parseString(Files.readString(DATA.resolve("skyline/content_catalogs/city.json"))).getAsJsonObject();
+        var cells=json.getAsJsonObject("modules").getAsJsonObject("skyline:floor_u").getAsJsonArray("fills");
+        cells.add(JsonParser.parseString("{\"from\":[18,1,20],\"to\":[18,1,20],\"material\":\"wall\"}"));
+        assertThrows(IllegalArgumentException.class,()->new ContentCatalogParser((id,dir,ext)->{throw new java.io.IOException();}).parse(json));
+    }
     @Test void frozenProfileFitsTheExistingExpandedBudget() throws Exception {
         var gson=new GsonBuilder().serializeNulls().enableComplexMapKeySerialization().registerTypeHierarchyAdapter(Optional.class,
             (JsonSerializer<Optional<?>>)(value,type,context)->value.isPresent()?context.serialize(value.orElseThrow()):JsonNull.INSTANCE).create();
         var serialized=gson.toJson(profile());var length=serialized.length();
         Files.writeString(Path.of("build/skyline-expanded-profile.json"),serialized);
         Files.writeString(Path.of("build/skyline-expanded-size.txt"),Integer.toString(length));
-        assertTrue(length+512<2097152,"Expanded profile: "+length);
+        assertTrue(length+512<8388608,"Expanded profile: "+length);
     }
     @Test void towerWindowsHaveTwoGlazedRowsAndUpperFloorsCloseTheLobby() throws Exception {
         var cfg=profile().suburbPlanningSettings().buildings().compositions().get("skyline:crown");
@@ -40,31 +60,31 @@ class SkylineCatalogTest {
         for(int y:List.of(1,2))assertEquals("wall",cells.get(new Vec(14,y,1)));
         assertTrue(module.jointsFor("base","upper").stream().noneMatch(j->j.id().equals("entry")));
     }
-    @Test void broadTowersAssembleInAllOrientationsWithContinuousBackedAccessAndFourBlockStoreys() throws Exception {
+    @Test void broadTowersAssembleInAllOrientationsWithContinuousBackedAccessAndFiveBlockStoreys() throws Exception {
         var buildings=profile().suburbPlanningSettings().buildings();
-        for(var name:List.of("crown","metropolitan","regent","terrace","townhouse","pavilion")) {
+        for(var name:List.of("crown","metropolitan","regent","terrace","slender","loft","courtyard","landmark")) {
             var cfg=buildings.compositions().get("skyline:"+name);
             var base=cfg.buildingSections().sections().getFirst().recipe().layout();
             var access=base.ports().stream().filter(p->p.id().equals("entry")).findFirst().orElseThrow();
             int floors=cfg.buildingSections().sections().stream().mapToInt(BuildingSections.Section::floors).sum();
-            assertEquals(floors*4+(name.equals("terrace")?1:5),cfg.maximumHeight());
+            assertEquals(floors*5+(cfg.buildingSections().roof().isEmpty()?1:5),cfg.maximumHeight());
             if(floors>=10)assertTrue(base.size().x()>=27 && base.size().z()>=25);
             for(int turn=0;turn<4;turn++) {
                 var entry=CompositionAssembler.rotate(new Joint("entry",access.type(),Set.of(),access.at(),Face.NORTH,1,2,false,true,""),
                     new Vec(base.size().x(),cfg.maximumHeight(),base.size().z()),turn);
                 var assembler=new CompositionAssembler();
-                var resolved=assembler.assemble(cfg,31,31,entry.position(),entry.face(),42);
+                var resolved=assembler.assemble(cfg,39,39,entry.position(),entry.face(),42);
                 assertTrue(resolved.isPresent(),name+" rotation "+turn+": "+assembler.failure());
                 var plan=resolved.orElseThrow();
                 assertEquals(cfg.minimumModules(),plan.modules().size());
                 assertTrue(plan.cells().stream().mapToInt(c->c.position().y()).max().orElseThrow()<cfg.maximumHeight());
                 var cells=new HashMap<Vec,String>();plan.cells().forEach(c->cells.put(c.position(),c.material()));
-                assertEquals(plan.cells().size(),cells.size());assertTrue(cells.size()<65536);
+                assertEquals(plan.cells().size(),cells.size());assertTrue(cells.size()<262144);
                 var backing=CompositionAssembler.rotateCell(new Vec(1,0,0),new Vec(3,3,3),turn)
                     .subtract(CompositionAssembler.rotateCell(new Vec(0,0,0),new Vec(3,3,3),turn));
                 for(var cell:plan.cells())if(cell.material().startsWith("minecraft:ladder"))
                     assertEquals("wall",cells.get(cell.position().add(backing)),name+" ladder backing");
-                assertEquals(plan,new CompositionAssembler().assemble(cfg,31,31,entry.position(),entry.face(),42).orElseThrow());
+                assertEquals(plan,new CompositionAssembler().assemble(cfg,39,39,entry.position(),entry.face(),42).orElseThrow());
             }
         }
     }
@@ -77,9 +97,12 @@ class SkylineCatalogTest {
         var result=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(new PlanElementId("test:skyline"),survey,42,settings,profile.terrainResponsePolicy()));
         assertTrue(result.successful(),result.toString());
         var city=result.plan().orElseThrow();
-        assertEquals(80,city.parcels().size());
-        assertEquals(20,city.districts().size());
+        assertEquals(96,city.parcels().size());
+        assertEquals(24,city.districts().size());
         assertTrue(city.buildingSlots().stream().allMatch(s->s.bounds().size().width()>=31 && s.bounds().size().depth()>=31));
+        long cells=result.content().buildings().values().stream().mapToLong(b->b.resolved().orElseThrow().cells().size()).sum();
+        Files.writeString(Path.of("build/ramps-scale/city-cells.txt"),"Resolved cells="+cells+"; heap used="+java.lang.management.ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed());
+        assertTrue(cells<12000000,"Content cannot fit source-operation admission: "+cells);
         var counts=new TreeMap<String,Long>();
         result.content().selections().values().forEach(s->counts.merge(s.asset(),1L,Long::sum));
         assertTrue(result.content().buildings().values().stream().allMatch(b->b.resolved().isPresent()));
@@ -88,7 +111,7 @@ class SkylineCatalogTest {
         for(var building:result.content().buildings().values())for(var entry:building.resolvedEntrances())
             assertTrue(entry.composition().modules().stream().noneMatch(m->building.composition().orElseThrow().modules().containsKey(m.id())),"Entrance module belongs to a floor recipe");
         long low=result.content().selections().values().stream().filter(s->s.rule().equals("skyline:lowrise")).count();
-        assertEquals(2,low,counts.toString());
+        assertEquals(0,low,counts.toString());
         var hosted=result.content().props().stream().filter(p->p.zonePlacement().isPresent()).toList();
         var kinds=hosted.stream().map(p->p.zonePlacement().orElseThrow().host()).collect(java.util.stream.Collectors.toSet());
         assertTrue(kinds.contains(PlacementZoneRule.Host.PARCEL),"No hosted kiosks");

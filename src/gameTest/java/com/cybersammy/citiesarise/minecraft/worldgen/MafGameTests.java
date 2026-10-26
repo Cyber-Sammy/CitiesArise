@@ -37,7 +37,7 @@ public final class MafGameTests {
         for(int i=0;i<encoded.length();i+=8192)parts.add(net.minecraft.nbt.StringTag.valueOf(encoded.substring(i,Math.min(i+8192,encoded.length()))));
         malicious.put("Json",parts);boolean rejected=false;
         try {FinalTerrainPlanningRecipe.load(malicious);}catch(IllegalArgumentException expected){rejected=expected.getMessage().contains("Expanded final terrain recipe too large");}
-        helper.assertTrue(rejected,"Repeated references bypassed the unchanged two-MiB expanded limit");helper.succeed();
+        helper.assertTrue(rejected,"Repeated references bypassed the eight-MiB expanded limit");helper.succeed();
     }
     @GameTest(template="empty",timeoutTicks=200)
     public static void hostedModulesKeepTheirFloorsDoorsAccessAndHostOwnershipAfterFrozenReverseChunks(GameTestHelper helper) throws Exception {

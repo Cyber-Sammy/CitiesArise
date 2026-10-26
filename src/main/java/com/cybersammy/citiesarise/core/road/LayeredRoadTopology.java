@@ -10,9 +10,9 @@ public final class LayeredRoadTopology {
     public record Crossing(PlanElementId first, PlanElementId second, CrossingKind kind) { }
     public record Column(RoadSegment road, GridPoint point, int distance, int lateral, int length,
             int surfaceY, int bottomY, boolean step, int uphillX, int uphillZ,
-            StreetSectionGeometry.Cell surface) {
+            StreetSectionGeometry.Cell surface,boolean patch,boolean boundary) {
         public int walkingY() { return surfaceY + (step ? 1 : 0); }
-        public boolean edge() { return lateral == -road.width()/2 || lateral == road.width()-road.width()/2-1; }
+        public boolean edge() { return patch?boundary:lateral == -road.width()/2 || lateral == road.width()-road.width()/2-1; }
     }
     private final LayeredRoadLayout layout;
     private final List<Column> columns;
@@ -59,12 +59,13 @@ public final class LayeredRoadTopology {
                 for (int lateral=-road.width()/2;lateral<road.width()-road.width()/2;lateral++) {
                     var p = new GridPoint(a.point().x()+dx*d+(dx==0?lateral:0),a.point().z()+dz*d+(dz==0?lateral:0));
                     var c = new Column(road,p,d,lateral,length,y,y-layout.deckDepth()+1,step,
-                            dx*Integer.signum(by-ay),dz*Integer.signum(by-ay),sections.get(road.id()).sample(p));
+                            dx*Integer.signum(by-ay),dz*Integer.signum(by-ay),sections.get(road.id()).sample(p),false,false);
                     all.add(c); points.computeIfAbsent(p,k -> new ArrayList<>()).add(c);
                     if (all.size()>65536) throw new IllegalArgumentException("Layered road column budget exceeded");
                 }
             }
         }
+        addJunctions(nodes,all,points);
         var contacts = new TreeMap<String,Crossing>();
         for (var at : points.values()) for (int i=0;i<at.size();i++) for (int j=i+1;j<at.size();j++) {
             var a=at.get(i); var b=at.get(j); CrossingKind kind;
@@ -90,6 +91,38 @@ public final class LayeredRoadTopology {
     }
 
     private record Walking(GridPoint point,int y) { }
+    private void addJunctions(Map<PlanElementId,RoadNode> nodes,List<Column> all,Map<GridPoint,List<Column>> points) {
+        for(var junction:layout.junctions().stream().sorted(Comparator.comparing(j->j.node().value())).toList()) {
+            var node=nodes.get(junction.node());
+            if(node==null)throw new IllegalArgumentException("Unknown road junction node: "+junction.node());
+            var incident=layout.graph().segments().stream().filter(r->r.startNodeId().equals(node.id()) || r.endNodeId().equals(node.id()))
+                    .sorted(Comparator.comparing(r->r.id().value())).toList();
+            if(incident.size()<2)throw new IllegalArgumentException("Junction module requires at least two incident roads");
+            var owner=incident.getFirst();int y=LayeredRoadLayout.elevation(node),radius=owner.width()/2;
+            if(junction.footprint().size()>2*radius+1 || junction.footprint().getFirst().length()>2*radius+1)
+                throw new IllegalArgumentException("Junction module exceeds reserved node corridor");
+            var source=all.stream().filter(c->c.road().id().equals(owner.id()) && c.point().equals(node.point())).findFirst().orElseThrow();
+            for(int z=0;z<junction.footprint().size();z++)for(int x=0;x<junction.footprint().getFirst().length();x++) {
+                char cell=junction.footprint().get(z).charAt(x);if(cell=='.')continue;
+                var d=junction.offset(x,z);var p=new GridPoint(node.point().x()+d.x(),node.point().z()+d.z());
+                // Fill only missing corners. An authored patch cannot erase an existing carriageway or sidewalk.
+                if(points.getOrDefault(p,List.of()).stream().anyMatch(c->c.surfaceY()==y))continue;
+                var surface=new StreetSectionGeometry.Cell(cell=='S'?StreetSectionGeometry.Kind.SIDEWALK:StreetSectionGeometry.Kind.CARRIAGEWAY,
+                        "junction:"+node.id().value(),cell=='S'?junction.sidewalkMaterial():"");
+                boolean boundary=Math.abs(d.x())==radius || Math.abs(d.z())==radius;
+                var c=new Column(owner,p,source.distance(),source.lateral(),source.length(),y,y-layout.deckDepth()+1,false,0,0,surface,true,boundary);
+                all.add(c);points.computeIfAbsent(p,k->new ArrayList<>()).add(c);
+                if(all.size()>65536)throw new IllegalArgumentException("Layered road column budget exceeded");
+            }
+        }
+    }
+    /** Suppress inner guardrails where an authored corner joins the old pavement. */
+    public boolean guardrail(Column c) {
+        if(!c.edge() || c.surface().kind()!=StreetSectionGeometry.Kind.SIDEWALK
+                || at(c.point()).stream().filter(n->n.surfaceY()==c.surfaceY()).anyMatch(n->!n.edge()))return false;
+        return List.of(new GridPoint(1,0),new GridPoint(-1,0),new GridPoint(0,1),new GridPoint(0,-1)).stream()
+                .anyMatch(d->at(new GridPoint(c.point().x()+d.x(),c.point().z()+d.z())).stream().noneMatch(n->n.surfaceY()==c.surfaceY()));
+    }
     /** Every sidewalk arriving at a shared node must physically meet another incident sidewalk there. */
     private void validatePedestrianJunctions(Map<PlanElementId,RoadNode> nodes) {
         var actual=new HashMap<Walking,Column>();
@@ -98,7 +131,7 @@ public final class LayeredRoadTopology {
             if(old==null || c.surface().kind().ordinal()>old.surface().kind().ordinal())actual.put(key,c);
         }
         var walking=new HashSet<Walking>();
-        actual.values().stream().filter(c -> !c.edge() && c.surface().kind()==StreetSectionGeometry.Kind.SIDEWALK)
+        actual.values().stream().filter(c -> !guardrail(c) && c.surface().kind()==StreetSectionGeometry.Kind.SIDEWALK)
                 .forEach(c -> walking.add(new Walking(c.point(),c.walkingY())));
         for(var node:nodes.values()) {
             var incident=layout.graph().segments().stream().filter(r -> r.startNodeId().equals(node.id()) || r.endNodeId().equals(node.id())).toList();
@@ -124,7 +157,7 @@ public final class LayeredRoadTopology {
             for(var road:incident)for(boolean left:List.of(true,false)) {
                 var components=new HashSet<Integer>();
                 for(var c:columns)if(c.road().id().equals(road.id()) && (c.lateral()<0)==left
-                        && c.surface().kind()==StreetSectionGeometry.Kind.SIDEWALK && !c.edge()) {
+                        && c.surface().kind()==StreetSectionGeometry.Kind.SIDEWALK && !guardrail(c)) {
                     var label=labels.get(new Walking(c.point(),c.walkingY()));if(label!=null)components.add(label);
                 }
                 if(components.isEmpty())throw new IllegalArgumentException("Missing pedestrian arrival at node: "+node.id());

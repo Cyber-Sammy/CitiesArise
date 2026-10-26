@@ -14,8 +14,13 @@ public record RegionPlanCacheKey(
         SettlementProfileId profileId,
         GridSize surveySize,
         SuburbPlanningSettings planningSettings,
-        TerrainResponsePolicy terrainResponsePolicy
+        TerrainResponsePolicy terrainResponsePolicy,
+        int maximumBuildHeight
 ) {
+    public RegionPlanCacheKey(String dimensionId,SettlementRegion region,long worldSeed,TerrainSurveySource source,
+            SettlementProfileId profileId,GridSize size,SuburbPlanningSettings settings,TerrainResponsePolicy policy) {
+        this(dimensionId,region,worldSeed,source,profileId,size,settings,policy,Integer.MAX_VALUE);
+    }
     public RegionPlanCacheKey(
             String dimensionId,
             SettlementRegion region,

@@ -8,6 +8,22 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FinalTerrainClearanceTest {
+    @Test void plannedCoordinatesAloneNeverBypassTheHeightLimitButExactReplayContentDoes() {
+        var source=new PlanElementId("test:replay");var point=new GridPoint(0,0);
+        var floor=new DebugBlockPlacementOperation(point,0,DebugPlacementRole.PARCEL_YARD,source,OptionalInt.of(64),"minecraft:grass_block",0);
+        for(var role:List.of(DebugPlacementRole.CONTENT_BLOCK,DebugPlacementRole.SUSPENDED_CONTENT)) {
+            var upper=new DebugBlockPlacementOperation(point,17,role,source,OptionalInt.of(64),"minecraft:stone_bricks",0);
+            var original=new DebugPlacementPlan(List.of(floor,upper));var operations=new LinkedHashMap<String,DebugBlockPlacementOperation>();
+            operations.put(FinalTerrainClearance.key(floor),floor);operations.put(FinalTerrainClearance.key(upper),upper);
+            assertEquals(-1,FinalTerrainClearance.add(operations,original,List.of(),(x,y,z)->y==81,16));
+            for(boolean exact:List.of(false,true)) {
+                var captured=new FinalTerrainClearance.ExistingContent(){public boolean solid(int x,int y,int z){return y==81;}
+                    public boolean matches(DebugBlockPlacementOperation op){return exact && op.equals(upper);}};
+                assertEquals(exact?0:-1,FinalTerrainClearance.add(operations,original,List.of(),captured,16));
+                assertSame(upper,operations.get(FinalTerrainClearance.key(upper)));
+            }
+        }
+    }
     @Test void deepTerracingClearsTheWholeCutAndStillRejectsAnOverheadMass() {
         var floor=new DebugBlockPlacementOperation(new GridPoint(0,0),0,DebugPlacementRole.ROAD_SURFACE,
                 new PlanElementId("test:road"),OptionalInt.of(64),"minecraft:stone_bricks",0);

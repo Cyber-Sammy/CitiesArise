@@ -12,7 +12,7 @@ public record FloorLayout(Vec size,List<GridPoint> footprint,List<String> rooms,
     public record Placement(String module,Vec at,int rotation,String layout) {
         public Placement {
             Objects.requireNonNull(module);Objects.requireNonNull(at);layout=layout==null?"":layout;
-            if(module.isBlank() || at.x()<0 || at.x()>31 || at.y()!=0 || at.z()<0 || at.z()>31 || rotation<0 || rotation>3)
+            if(module.isBlank() || at.x()<0 || at.x()>63 || at.y()!=0 || at.z()<0 || at.z()>63 || rotation<0 || rotation>3)
                 throw new IllegalArgumentException("Invalid authored room placement");
         }
     }
@@ -42,8 +42,8 @@ public record FloorLayout(Vec size,List<GridPoint> footprint,List<String> rooms,
         if(placements.size()>16 || terraces.size()>8 || mode==Mode.AUTOMATIC && !placements.isEmpty() || mode!=Mode.AUTOMATIC && placements.isEmpty()
                 || new HashSet<>(placements.stream().map(Placement::at).toList()).size()!=placements.size()
                 || terraces.stream().map(Terrace::id).distinct().count()!=terraces.size())throw new IllegalArgumentException("Invalid authored floor layout");
-        if(size.x()<1 || size.x()>32 || size.z()<1 || size.z()>32 || size.y()<3 || size.y()>16
-                || footprint.isEmpty() || footprint.size()>1024 || new HashSet<>(footprint).size()!=footprint.size()
+        if(size.x()<1 || size.x()>64 || size.z()<1 || size.z()>64 || size.y()<3 || size.y()>16
+                || footprint.isEmpty() || footprint.size()>4096 || new HashSet<>(footprint).size()!=footprint.size()
                 || rooms.isEmpty() || rooms.size()+fillers.size()>128 || ports.isEmpty() || ports.size()>32
                 || rotations.isEmpty() || rotations.size()>4 || new HashSet<>(rotations).size()!=rotations.size() || rotations.stream().anyMatch(r->r<0 || r>3))
             throw new IllegalArgumentException("Invalid floor layout budget");
@@ -87,8 +87,11 @@ public record FloorLayout(Vec size,List<GridPoint> footprint,List<String> rooms,
         for(var p:placements) {
             var m=modules.get(p.module());var extent=CompositionAssembler.rotatedSize(m.size(),p.rotation());
             if(!p.layout().isEmpty() && !p.layout().equals("base") && m.layouts().stream().noneMatch(l->l.id().equals(p.layout())))throw new IllegalArgumentException("Unknown authored room layout");
-            for(int x=p.at().x();x<p.at().x()+extent.x();x++)for(int z=p.at().z();z<p.at().z()+extent.z();z++)
-                if(!footprint.contains(new GridPoint(x,z)))throw new IllegalArgumentException("Authored room outside floor footprint");
+            if(p.at().x()+extent.x()>size.x() || p.at().z()+extent.z()>size.z())throw new IllegalArgumentException("Authored room outside floor envelope");
+            var effective=p.layout().isEmpty() || p.layout().equals("base")?m:m.forLayout(p.layout());
+            var mask=new HashSet<>(footprint);
+            for(var column:effective.columnFootprint()) {var q=CompositionAssembler.rotateCell(new Vec(column.x(),0,column.z()),m.size(),p.rotation()).add(p.at());
+                if(!mask.contains(new GridPoint(q.x(),q.z())))throw new IllegalArgumentException("Authored room outside floor footprint");}
             if(placements.stream().filter(q->q.module().equals(p.module())).count()>maximumCounts.getOrDefault(p.module(),16))throw new IllegalArgumentException("Authored room count exceeds maximum");
         }
     }

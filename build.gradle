@@ -138,8 +138,8 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.withType(Test).configureEach {
-    // Full skyline-grid acceptance constructs eighty broad buildings in one plan.
-    maxHeapSize = '2g'
+    // The opt-in large Skyline acceptance holds96 broad20–50-storey assemblies.
+    maxHeapSize = '6g'
     useJUnitPlatform()
     inputs.dir('examples/datapacks')
 }
@@ -175,4 +175,13 @@ tasks.named('processGameTestResources') {
 // Bounded placement regressions use an isolated namespace for short targeted runs.
 tasks.named('processGameTestResources') {
     from('src/gameTest/resources/data/cities_arise/structure') { into 'data/cities_arise_budget/structure' }
+}
+
+// Package the checked-in authored Skyline without regenerating resources during a running server.
+tasks.register('skylineDatapack', Zip) {
+    from('examples/datapacks/skyline')
+    archiveFileName = 'skyline.zip'
+    destinationDirectory = layout.buildDirectory.dir('distributions')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
 }

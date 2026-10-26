@@ -78,7 +78,7 @@ class BuildingSectionsTest {
         assertTrue(assembler.assemble(expanding,5,3,new Vec(1,1,0),Face.NORTH,42).isEmpty());assertTrue(assembler.failure().contains("support"));
     }
     @Test void validatesSectionIdentityAndLimitsAndKeepsLegacyCatalogDefault() {
-        assertThrows(IllegalArgumentException.class,()->new BuildingSections(List.of(new BuildingSections.Section("A",9,floor(false,false,0,false)),new BuildingSections.Section("B",9,floor(true,false,0,false))),"floor","upper"));
+        assertThrows(IllegalArgumentException.class,()->new BuildingSections(List.of(new BuildingSections.Section("A",33,floor(false,false,0,false)),new BuildingSections.Section("B",33,floor(true,false,0,false))),"floor","upper"));
         assertThrows(IllegalArgumentException.class,()->new BuildingSections(List.of(new BuildingSections.Section("A",1,floor(false,false,0,false)),new BuildingSections.Section("A",1,floor(true,false,0,false))),"floor","upper"));
         var cfg=settings(false,0,false);assertNull(new CompositionSettings(cfg.modules(),cfg.roots(),cfg.attachments(),"entry",Set.of(),Set.of(),Set.of(),1,8,64,0,"air",RULES).buildingSections());
     }

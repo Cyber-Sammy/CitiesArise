@@ -9,8 +9,8 @@ import net.minecraft.nbt.*;
 
 /** Versioned, self-contained immutable profile/content inputs; no live reload/resource dependency. */
 public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bounds,long seed,String settlementId) {
-    private static final int MAX_MODULE_TABLES=24;
-    private static final int MAX_STORED_CHARACTERS=1048576;
+    private static final int MAX_MODULE_TABLES=64;
+    private static final int MAX_STORED_CHARACTERS=4194304;
     private static final int PART_SIZE=8192;
     private static final Gson JSON=new com.google.gson.GsonBuilder().enableComplexMapKeySerialization().serializeNulls()
             .registerTypeAdapterFactory(new OptionalCodec()).create();
@@ -40,7 +40,7 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
     }
     CompoundTag save() {
         var tree=JSON.toJsonTree(this);
-        if(tree.toString().length()>2097152)throw new IllegalArgumentException("Expanded final terrain recipe too large");
+        if(tree.toString().length()>8388608)throw new IllegalArgumentException("Expanded final terrain recipe too large");
         var tables=new com.google.gson.JsonArray();var indices=new java.util.HashMap<com.google.gson.JsonElement,Integer>();
         intern(tree,tables,indices,0);
         var definitions=new com.google.gson.JsonArray();var references=definitionReferences(tables,definitions);
@@ -84,7 +84,7 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
                 if(!value.has("id") || !value.get("id").isJsonPrimitive() || !value.getAsJsonPrimitive("id").isString() || !entry.getKey().equals(value.get("id").getAsString()))
                     throw new IllegalArgumentException("Final recipe definition identity mismatch");
                 bytes+=sizes.computeIfAbsent(index,i->value.toString().length());
-                if(bytes>2097152)throw new IllegalArgumentException("Expanded final terrain recipe too large");
+                if(bytes>8388608)throw new IllegalArgumentException("Expanded final terrain recipe too large");
                 table.add(entry.getKey(),value);
             }
             result.add(table);
@@ -122,7 +122,7 @@ public record FinalTerrainPlanningRecipe(SettlementProfile profile,GridBounds bo
                 int index=referenceIndex(object.remove(reference));
                 if(index<0 || index>=tables.size() || !tables.get(index).isJsonObject())throw new IllegalArgumentException("Unknown final recipe module table");
                 if(++budget[0]>1024)throw new IllegalArgumentException("Final recipe reference limit");
-                budget[1]+=tables.get(index).toString().length();if(budget[1]>2097152)throw new IllegalArgumentException("Expanded final terrain recipe too large");
+                budget[1]+=tables.get(index).toString().length();if(budget[1]>8388608)throw new IllegalArgumentException("Expanded final terrain recipe too large");
                 object.add(field,tables.get(index));
             }
             object.entrySet().stream().filter(e->!e.getKey().equals("modules") && !e.getKey().equals("definitions")).forEach(e->expand(e.getValue(),tables,budget,depth+1,props));

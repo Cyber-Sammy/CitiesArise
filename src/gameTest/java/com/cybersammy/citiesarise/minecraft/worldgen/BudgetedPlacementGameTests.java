@@ -15,6 +15,30 @@ import net.neoforged.neoforge.gametest.*;
 @PrefixGameTestTemplate(false)
 public final class BudgetedPlacementGameTests {
     @GameTest(template="empty",timeoutTicks=600)
+    public static void replayRecognizesOnlyExactAuthoredUpperFloorsAfterLostQueueProgress(GameTestHelper helper) {
+        var level=helper.getLevel();int cx=(helper.absolutePos(BlockPos.ZERO).getX()>>4)+19000;
+        for(int dz=-1;dz<=1;dz++)for(int dx=-1;dx<=1;dx++)level.getChunk(cx+dx,dz);
+        var point=new GridPoint(cx*16+8,8);var source=new PlanElementId("test:crash-replay");
+        for(int y=60;y<=64;y++)level.setBlock(new BlockPos(point.x(),y,point.z()),Blocks.STONE.defaultBlockState(),2);
+        var upper=new BlockPos(point.x(),81,point.z());level.setBlock(upper,Blocks.STONE_BRICKS.defaultBlockState(),2);
+        var original=new DebugPlacementPlan(List.of(
+            new DebugBlockPlacementOperation(point,0,DebugPlacementRole.PARCEL_YARD,source,OptionalInt.of(64),"minecraft:grass_block",0),
+            new DebugBlockPlacementOperation(point,17,DebugPlacementRole.CONTENT_BLOCK,source,OptionalInt.of(64),"minecraft:stone_bricks",0)));
+        var blueprint=new StructuralSupportBlueprint(new StructuralSupportSettings(true,32,12,4,10000),List.of(
+            new com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Envelope(source,
+                new com.cybersammy.citiesarise.core.geometry.GridBounds(point,new com.cybersammy.citiesarise.core.geometry.GridSize(1,1)),64,
+                com.cybersammy.citiesarise.core.earthwork.StructuralSupportPlanner.Kind.PARCEL)),Map.of(),10000,com.cybersammy.citiesarise.core.road.RavineRoadSettings.disabled(),null,null,16);
+        helper.assertTrue(StructuralSupportPlacement.resolveReady(level,original,blueprint).plan().isPresent(),"Authored floor mistaken for a cliff on replay");
+        level.setBlock(upper,Blocks.STONE.defaultBlockState(),2);
+        helper.assertTrue(StructuralSupportPlacement.resolveReady(level,original,blueprint).reason().equals("CLEARANCE_HEIGHT_LIMIT"),"Unmatched terrain bypassed the cut limit");
+        level.setBlock(upper,Blocks.STONE_BRICKS.defaultBlockState(),2);
+        var queue=new PendingStructuralPlacement();queue.add("test:crash",source.value(),point.x(),point.z(),SuburbStructurePlacementSnapshot.from(original),blueprint);
+        var restored=PendingStructuralPlacement.load(queue.save(new CompoundTag(),level.registryAccess()));
+        PlacementTestDrain.applyReady(restored,level);
+        helper.assertTrue(restored.save(new CompoundTag(),level.registryAccess()).getCompound("Completed").getString(source.value()).equals("PLACED"),"Snapshot worker replay did not complete");
+        helper.assertTrue(level.getBlockState(upper).is(Blocks.STONE_BRICKS),"Replay erased the authored upper floor");helper.succeed();
+    }
+    @GameTest(template="empty",timeoutTicks=600)
     public static void deferredTreesDoNotInvalidateAnAdmittedTerrainCapture(GameTestHelper helper) {
         var level=helper.getLevel();int x=(helper.absolutePos(BlockPos.ZERO).getX()>>4)+18500;
         for(int dz=-1;dz<=1;dz++)for(int dx=-1;dx<=1;dx++)level.getChunk(x+dx,dz);

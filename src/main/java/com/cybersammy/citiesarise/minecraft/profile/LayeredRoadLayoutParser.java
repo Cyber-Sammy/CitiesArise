@@ -27,12 +27,29 @@ public final class LayeredRoadLayoutParser {
                     PlanProperties.of(LayeredRoadLayout.ELEVATED,""+r.get("elevated").getAsBoolean())));
         }
         var m=json.getAsJsonObject("materials");
+        var junctions=new ArrayList<LayeredRoadJunction>();
+        var definitions=json.has("junctionModules")?json.getAsJsonObject("junctionModules"):new JsonObject();
+        if(definitions.size()>16)throw new IllegalArgumentException("Too many road junction module definitions");
+        if(json.has("junctions")) {
+            if(json.getAsJsonArray("junctions").size()>32)throw new IllegalArgumentException("Too many road junction placements");
+            for(var item:json.getAsJsonArray("junctions")) {
+                var placement=item.getAsJsonObject();var id=string(placement,"module");
+                if(!definitions.has(id))throw new IllegalArgumentException("Unknown road junction module: "+id);
+                var definition=definitions.getAsJsonObject(id);var footprint=new ArrayList<String>();
+                for(var row:definition.getAsJsonArray("footprint")) {
+                    if(!row.isJsonPrimitive() || !row.getAsJsonPrimitive().isString())throw new IllegalArgumentException("Junction mask rows must be strings");
+                    footprint.add(row.getAsString());
+                }
+                junctions.add(new LayeredRoadJunction(new PlanElementId(string(placement,"node")),footprint,
+                        placement.has("rotation")?integer(placement,"rotation"):0,string(definition,"sidewalkMaterial")));
+            }
+        }
         var result=new LayeredRoadLayout(new RoadGraph(nodes,roads),streets,carriageway,integer(json,"deckDepth"),
                 integer(json,"clearance"),integer(json,"runPerRise"),integer(json,"pierSpacing"),integer(json,"maximumSpan"),
                 integer(json,"maximumSupportDepth"),string(m,"road"),string(m,"deck"),string(m,"pier"),string(m,"rail"),string(m,"stair"),
                 json.has("rampSurface") ? LayeredRoadLayout.RampSurface.valueOf(string(json,"rampSurface").toUpperCase(Locale.ROOT)) : LayeredRoadLayout.RampSurface.STAIRS,
                 m.has("slab") ? string(m,"slab") : "minecraft:stone_brick_slab",
-                m.has("sidewalkSlab") ? string(m,"sidewalkSlab") : (m.has("slab") ? string(m,"slab") : "minecraft:smooth_stone_slab"));
+                m.has("sidewalkSlab") ? string(m,"sidewalkSlab") : (m.has("slab") ? string(m,"slab") : "minecraft:smooth_stone_slab"),junctions);
         new LayeredRoadTopology(result,0); // Reject invalid authored topology at load, before native world access.
         return result;
     }

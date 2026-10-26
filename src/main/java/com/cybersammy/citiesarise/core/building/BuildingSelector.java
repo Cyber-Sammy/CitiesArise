@@ -12,11 +12,15 @@ public final class BuildingSelector {
     public record Result(java.util.Optional<BuildingContent> content, BuildingSelection selection) { }
     public static Result select(BuildingSlot slot,long seed,BuildingContentSettings settings,
             com.cybersammy.citiesarise.core.model.MetadataSelector context) {
+        return select(slot,seed,settings,context,Integer.MAX_VALUE);
+    }
+    public static Result select(BuildingSlot slot,long seed,BuildingContentSettings settings,
+            com.cybersammy.citiesarise.core.model.MetadataSelector context,int maximumHeight) {
         var rule=settings.rules().stream().filter(r -> r.match().matches(context.tags(),context.properties())).findFirst();
         var pool=rule.map(BuildingContentRule::pool).orElse(settings.pool());
         var palettes=rule.map(BuildingContentRule::palettes).orElse(settings.palettes());
         var fallback=rule.map(BuildingContentRule::fallback).orElse(settings.fallback());
-        var candidates = pool.stream().filter(e -> e.asset().fits(slot.bounds().size())).toList();
+        var candidates = pool.stream().filter(e -> e.asset().fits(slot.bounds().size()) && e.asset().height()<=maximumHeight).toList();
         // Each slot has its own stream: unrelated slots and iteration order cannot affect selection.
         Random random = new Random(seed ^ ((long) slot.id().value().hashCode() << 32)
                 ^ ((long) slot.bounds().minX() * 341873128712L) ^ ((long) slot.bounds().minZ() * 132897987541L));
@@ -28,7 +32,7 @@ public final class BuildingSelector {
                 if (ticket < 0) { selected = entry.asset(); break; }
             }
         }
-        if (!selected.fits(slot.bounds().size())) {
+        if (!selected.fits(slot.bounds().size()) || selected.height()>maximumHeight) {
             throw new IllegalArgumentException("No building asset or fallback fits slot " + slot.id().value());
         }
         String palette=selected.provider().equals("placeholder") ? "" : palettes.get(random.nextInt(palettes.size()));

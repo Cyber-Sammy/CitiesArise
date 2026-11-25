@@ -4,7 +4,10 @@ import com.cybersammy.citiesarise.core.model.*;
 import java.util.*;
 
 /** Opt-in, bounded selection of authored three-span elevated city connections. */
-public record CityOverpassSettings(List<Module> modules, int maximumCandidateChecks, int maximumConstructionVolume) {
+public record CityOverpassSettings(List<Module> modules, int maximumCandidateChecks, int maximumConstructionVolume, boolean turningRamps) {
+    public CityOverpassSettings(List<Module> modules,int maximumCandidateChecks,int maximumConstructionVolume) {
+        this(modules,maximumCandidateChecks,maximumConstructionVolume,false);
+    }
     public record Module(String id, LayeredRoadLayout layout, PlanElementId start, PlanElementId end, int weight) {
         public Module {
             Objects.requireNonNull(id); Objects.requireNonNull(layout); Objects.requireNonNull(start); Objects.requireNonNull(end);

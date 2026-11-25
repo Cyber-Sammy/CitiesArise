@@ -170,7 +170,8 @@
       ]
     },
     "cityOverpasses": {
-      "maximumCandidateChecks": 4,
+      "turningRamps": true,
+      "maximumCandidateChecks": 8,
       "maximumConstructionVolume": 32768,
       "modules": [
         {

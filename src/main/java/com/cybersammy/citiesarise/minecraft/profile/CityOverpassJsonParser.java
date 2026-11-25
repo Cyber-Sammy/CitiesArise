@@ -30,7 +30,7 @@ final class CityOverpassJsonParser {
                         new PlanElementId(entry.get("end").getAsString()),integer(entry,"weight",1)));
             } catch(IOException error) {throw new IllegalArgumentException("Unable to load city overpass: "+id,error);}
         }
-        return new CityOverpassSettings(modules,integer(json,"maximumCandidateChecks",4),integer(json,"maximumConstructionVolume",32768));
+        return new CityOverpassSettings(modules,integer(json,"maximumCandidateChecks",4),integer(json,"maximumConstructionVolume",32768),json.has("turningRamps") && json.get("turningRamps").getAsBoolean());
     }
     private static int integer(JsonObject object,String name,int fallback) {
         if(!object.has(name))return fallback;

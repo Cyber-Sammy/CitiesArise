@@ -126,7 +126,8 @@ class SkylineCatalogTest {
         assertEquals(24,city.districts().size());
         assertTrue(city.buildingSlots().stream().allMatch(s->s.bounds().size().width()>=31 && s.bounds().size().depth()>=31));
         long cells=result.content().buildings().values().stream().mapToLong(b->b.resolved().orElseThrow().cells().size()).sum();
-        Files.writeString(Path.of("build/ramps-scale/city-cells.txt"),"Resolved cells="+cells+"; heap used="+java.lang.management.ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed());
+        var reportDirectory=Files.createDirectories(Path.of("build/ramps-scale"));
+        Files.writeString(reportDirectory.resolve("city-cells.txt"),"Resolved cells="+cells+"; heap used="+java.lang.management.ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed());
         assertTrue(cells<12000000,"Content cannot fit source-operation admission: "+cells);
         var counts=new TreeMap<String,Long>();
         result.content().selections().values().forEach(s->counts.merge(s.asset(),1L,Long::sum));

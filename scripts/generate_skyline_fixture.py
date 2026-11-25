@@ -334,7 +334,7 @@ p['buildings'] = dict(catalog='skyline:city',
 # Urban plazas instead of garden fences; preserve the proven road and terrain settings.
 p.pop('parcelLayout', None)
 
-p['cityOverpasses'] = dict(maximumCandidateChecks=4, maximumConstructionVolume=32768,
+p['cityOverpasses'] = dict(turningRamps=True, maximumCandidateChecks=8, maximumConstructionVolume=32768,
     modules=[dict(layout='skyline:arterial', start='skyline:west', end='skyline:east', weight=1)])
 overpass = json.loads((ROOT / 'examples/datapacks/road_topology/data/road_demo/road_layouts/overpass.json').read_text(encoding='utf-8'))
 for node in overpass['nodes']:

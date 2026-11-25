@@ -19,7 +19,7 @@ import net.neoforged.neoforge.gametest.*;
 @GameTestHolder("cities_arise_roads")
 @PrefixGameTestTemplate(false)
 public final class CityOverpassGameTests {
-    private static SettlementProfile profile(GameTestHelper h) throws Exception {
+    private static SettlementProfile profile(GameTestHelper h,boolean turning) throws Exception {
         JsonObject json;
         try(var stream=CityOverpassGameTests.class.getResourceAsStream("/fixtures/skyline/suburb.json")) {
             json=JsonParser.parseReader(new java.io.InputStreamReader(Objects.requireNonNull(stream),java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
@@ -27,18 +27,27 @@ public final class CityOverpassGameTests {
         json.getAsJsonObject("survey").addProperty("width",440);json.getAsJsonObject("survey").addProperty("depth",240);
         var p=json.getAsJsonObject("planning");p.remove("buildings");p.addProperty("parcelWidth",39);p.addProperty("parcelDepth",39);p.getAsJsonObject("districts").getAsJsonArray("parcelSizes").get(0).getAsJsonObject().addProperty("width",39);p.getAsJsonObject("districts").getAsJsonArray("parcelSizes").get(0).getAsJsonObject().addProperty("depth",39);p.addProperty("minimumParcelCount",8);p.addProperty("targetParcelCount",32);p.addProperty("maximumParcelCount",32);
         p.getAsJsonObject("districts").getAsJsonObject("grid").addProperty("columns",4);p.getAsJsonObject("districts").getAsJsonObject("grid").addProperty("rows",2);
+        if(!turning)p.getAsJsonObject("cityOverpasses").remove("turningRamps");
         return new MinecraftSettlementProfileJsonParser().parse(new SettlementProfileId("test:city-overpass"),json,
                 ContentResources.of(h.getLevel().getServer().getResourceManager()));
     }
     @GameTest(template="empty",timeoutTicks=800)
     public static void automaticCityOverpassSurvivesNativeTerrainResolutionSaveLoadAndReverseOwners(GameTestHelper h) throws Exception {
-        var profile=profile(h);var bounds=new GridBounds(new GridPoint(900,1900),profile.surveySize());
+        verifyCity(h,false,new GridPoint(900,1900));
+    }
+    @GameTest(template="empty",timeoutTicks=800)
+    public static void automaticTurningRampSurvivesNativePlacementAndReload(GameTestHelper h) throws Exception {
+        verifyCity(h,true,new GridPoint(1900,2900));
+    }
+    private static void verifyCity(GameTestHelper h,boolean turning,GridPoint origin) throws Exception {
+        var profile=profile(h,turning);var bounds=new GridBounds(origin,profile.surveySize());
         var survey=TerrainSurvey.sample(bounds,p->Optional.of(new TerrainCell(p,131,false,0,BiomeCategory.PLAINS,TerrainCategory.BUILDABLE)));
         var request=new SuburbPlanningRequest(new PlanElementId("test:native-overpass-city"),survey,42,profile.suburbPlanningSettings(),profile.terrainResponsePolicy());
         var result=SuburbPlanner.defaults().geometryOnly().plan(request);result=SuburbPlanner.defaults().finishContent(request,result);
         h.assertTrue(result.successful(),"City planning failed");
         var plan=result.plan().orElseThrow();h.assertTrue(plan.overpasses().size()==1,"Skyline module was not selected automatically");
         var module=plan.overpasses().getFirst();var topology=module.topology();
+        h.assertTrue(module.turningPort().isPresent()==turning,"Unexpected number of ground ports");
         h.assertTrue(plan.parcels().size()==32,"Overpass lost city parcels");
         var placement=new DebugPlacementPlanConverter().convert(plan,result.terrainPreparationPlan().orElseThrow(),result.content());
         var recipe=new FinalTerrainPlanningRecipe(profile,bounds,42,plan.id().value());
@@ -78,7 +87,11 @@ public final class CityOverpassGameTests {
         }
         var lower=result.terrainPreparationPlan().orElseThrow().columns().stream().filter(c->topology.at(new GridPoint(c.point().x()-module.origin().x(),c.point().z()-module.origin().z())).stream()
                 .anyMatch(col->module.baseY()+col.bottomY()>c.targetElevation()+module.layout().clearance())).toList();
-        h.assertTrue(!lower.isEmpty(),"No lower crossing verified");
+        if(turning) {
+            var port=plan.roadGraph().nodes().stream().filter(n->n.id().equals(module.rampPort())).findFirst().orElseThrow();
+            var at=new BlockPos(port.point().x(),module.baseY(),port.point().z());
+            h.assertTrue(!h.getLevel().getBlockState(at).isAir() && h.getLevel().getBlockState(at.above()).isAir(),"Turning ramp did not meet its ground street");
+        } else h.assertTrue(!lower.isEmpty(),"No lower crossing verified");
         for(var c:lower)for(int y=1;y<=module.layout().clearance();y++)h.assertTrue(h.getLevel().getBlockState(new BlockPos(c.point().x(),c.targetElevation()+y,c.point().z())).isAir(),"Lower circulation filled");
         h.succeed();
     }

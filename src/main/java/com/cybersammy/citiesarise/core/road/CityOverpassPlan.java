@@ -6,7 +6,12 @@ import java.util.*;
 
 /** Frozen 3D addition to the ground network; ground earthwork remains a separate 2D plan. */
 public record CityOverpassPlan(PlanElementId id, LayeredRoadLayout layout, GridPoint origin, int baseY,
-        PlanElementId startPort, PlanElementId endPort, long seed, List<Footing> footings) {
+        PlanElementId startPort, PlanElementId endPort, long seed, List<Footing> footings, PlanElementId rampPort) {
+    public CityOverpassPlan(PlanElementId id,LayeredRoadLayout layout,GridPoint origin,int baseY,PlanElementId startPort,
+            PlanElementId endPort,long seed,List<Footing> footings) {
+        this(id,layout,origin,baseY,startPort,endPort,seed,footings,null);
+    }
+    public Optional<PlanElementId> turningPort() { return Optional.ofNullable(rampPort); }
     public record Footing(PlanElementId road, GridPoint point, int bottomY, int topY) {
         public Footing {if(bottomY>topY+1 || (long)topY-bottomY>32)throw new IllegalArgumentException("Invalid overpass footing");}
     }
@@ -17,11 +22,12 @@ public record CityOverpassPlan(PlanElementId id, LayeredRoadLayout layout, GridP
     }
     public com.cybersammy.citiesarise.core.geometry.GridBounds bounds() {
         var nodes=layout.graph().nodes();int width=layout.streets().corridorWidth(layout.carriageway());
-        boolean alongX=nodes.getFirst().point().z()==nodes.getLast().point().z();
+        boolean alongX=nodes.stream().allMatch(n->n.point().z()==nodes.getFirst().point().z());
+        boolean alongZ=nodes.stream().allMatch(n->n.point().x()==nodes.getFirst().point().x());
         int minX=nodes.stream().mapToInt(n->n.point().x()).min().orElseThrow(),maxX=nodes.stream().mapToInt(n->n.point().x()).max().orElseThrow();
         int minZ=nodes.stream().mapToInt(n->n.point().z()).min().orElseThrow(),maxZ=nodes.stream().mapToInt(n->n.point().z()).max().orElseThrow();
-        return new com.cybersammy.citiesarise.core.geometry.GridBounds(world(new GridPoint(minX-(alongX?0:width/2),minZ-(alongX?width/2:0))),
-                new com.cybersammy.citiesarise.core.geometry.GridSize(alongX?maxX-minX+1:width,alongX?width:maxZ-minZ+1));
+        return new com.cybersammy.citiesarise.core.geometry.GridBounds(world(new GridPoint(minX-(alongX?0:width/2),minZ-(alongZ?0:width/2))),
+                new com.cybersammy.citiesarise.core.geometry.GridSize(maxX-minX+1+(alongX?0:width-1),maxZ-minZ+1+(alongZ?0:width-1)));
     }
     public GridPoint world(GridPoint p) {return new GridPoint(Math.addExact(origin.x(),p.x()),Math.addExact(origin.z(),p.z()));}
     public LayeredRoadTopology topology() {return new LayeredRoadTopology(layout,seed);}

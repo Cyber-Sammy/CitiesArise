@@ -157,13 +157,14 @@ The `skyline:terrace` tower now demonstrates a lobby and twenty-five base floors
 
 ## Automatic overpass selection
 
-This pack now enables `planning.cityOverpasses` in its settlement profile. Up to four feasible candidates are tried for one optional overpass per city. A three-span elevated module is loaded from `data/skyline/road_layouts/arterial.json`; `skyline:west` and `skyline:east` identify its ground ports. The module keeps the 11-block carriageway and reserves three sidewalk blocks per side, matching the city profile's maximum street corridor. Approaches use polished-deepslate slabs and smooth-stone sidewalk slabs. The upper deck rises ten blocks, leaving eight blocks of lower-road clearance with its two-layer deck.
+This pack now enables `planning.cityOverpasses` in its settlement profile. With `turningRamps: true`, the planner first tries to link the upper deck to a third ground street through a perpendicular ramp. The ground network and building access are rebuilt and revalidated. Skyline permits eight candidate checks, reserving one for a straight overpass if the turning sites fail. Profiles omitting the flag retain straight-only selection. A three-span elevated module is loaded from `data/skyline/road_layouts/arterial.json`; `skyline:west` and `skyline:east` identify its ground ports. The module keeps the 11-block carriageway and reserves three sidewalk blocks per side, matching the city profile's maximum street corridor. Approaches use polished-deepslate slabs and smooth-stone sidewalk slabs. The upper deck rises ten blocks, leaving eight blocks of lower-road clearance with its two-layer deck.
 
 The planner chooses existing straight arterial ports and lower crossing streets, adapts span lengths within the module's run/landing limits, and recalculates ground access to every parcel. It reserves actual 3D deck/headroom and footing space: pylons do not fill the lower roadway, sidewalks or hosted content. A city may have no overpass if no checked candidate passes these constraints. Search and city acceptance retain the valid ordinary city when optional overpass selection fails.
 
 ```json
 "cityOverpasses": {
-  "maximumCandidateChecks": 4,
+  "turningRamps": true,
+  "maximumCandidateChecks": 8,
   "maximumConstructionVolume": 32768,
   "modules": [
     {"layout": "skyline:arterial", "start": "skyline:west", "end": "skyline:east", "weight": 1}

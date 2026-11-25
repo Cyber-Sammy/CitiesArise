@@ -75,6 +75,19 @@ class CityOverpassPlannerTest {
         assertThrows(IllegalArgumentException.class,()->new CityOverpassSettings.Module(module.id(),module.layout(),new PlanElementId("test:missing"),module.end(),1));
     }
 
+    @Test void turningRampLinksTheDeckToARetainedStreet() throws Exception {
+        var r=request(42,true);
+        var policy=r.settings().terrainTransitions().cityOverpasses();
+        var settings=r.settings().withCityOverpasses(new CityOverpassSettings(policy.modules(),8,131072,true));
+        var result=SuburbPlanner.defaults().plan(new SuburbPlanningRequest(r.settlementId(),r.survey(),r.seed(),settings,r.terrainResponsePolicy()));
+        var plan=result.plan().orElseThrow();
+        var turn=plan.overpasses().getFirst();
+        assertTrue(turn.turningPort().isPresent());
+        assertTrue(new com.cybersammy.citiesarise.core.validation.PlanValidator().validate(plan).isEmpty());
+        var bounds=turn.bounds();
+        assertTrue(turn.topology().columns().stream().allMatch(c->bounds.contains(turn.world(c.point()))));
+    }
+
     @Test void enabledProfilesRequireFinalTerrainSupportValidation() throws Exception {
         var r=request(42,true);
         assertThrows(IllegalArgumentException.class,()->new SettlementProfile(new SettlementProfileId("test:unsafe-overpass"),

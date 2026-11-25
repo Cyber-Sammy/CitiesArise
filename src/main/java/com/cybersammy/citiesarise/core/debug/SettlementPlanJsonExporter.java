@@ -160,6 +160,7 @@ public final class SettlementPlanJsonExporter {
         json.arrayField("overpasses",()->plan.overpasses().forEach(module->json.arrayValue(()->{
             json.beginObject();json.stringField("id",module.id().value());
             json.stringField("startPort",module.startPort().value());json.stringField("endPort",module.endPort().value());
+            module.turningPort().ifPresent(p->json.stringField("turningPort",p.value()));
             json.numberField("baseY",module.baseY());json.numberField("clearance",module.layout().clearance());
             json.objectField("origin",()->writePoint(json,module.origin()));
             json.arrayField("nodes",()->writeRoadNodes(json,module.layout().graph().nodes()));

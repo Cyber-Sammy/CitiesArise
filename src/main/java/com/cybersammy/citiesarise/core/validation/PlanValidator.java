@@ -38,11 +38,11 @@ public final class PlanValidator {
             boolean valid=identities.add(module.id()) && nodes.containsKey(module.startPort()) && nodes.containsKey(module.endPort());
             var local=module.layout().graph().nodes();
             var ports=local.stream().filter(n->com.cybersammy.citiesarise.core.road.LayeredRoadLayout.elevation(n)==0).toList();
-            if(ports.size()!=2)valid=false;
-            else if(valid) {
-                var actual=Set.of(module.world(ports.getFirst().point()),module.world(ports.getLast().point()));
-                valid=actual.equals(Set.of(nodes.get(module.startPort()).point(),nodes.get(module.endPort()).point()));
-            }
+            var expected=new HashSet<com.cybersammy.citiesarise.core.geometry.GridPoint>();
+            var ids=new ArrayList<>(List.of(module.startPort(),module.endPort()));
+            module.turningPort().ifPresent(ids::add);
+            for(var id:ids) valid &= nodes.containsKey(id) && expected.add(nodes.get(id).point());
+            valid &= ports.size()==expected.size() && ports.stream().allMatch(n->expected.contains(module.world(n.point())));
             for(var n:local)valid&=identities.add(n.id());
             for(var e:module.layout().graph().segments())valid&=identities.add(e.id());
             if(!valid)errors.add(PlanValidationError.forElement(PlanValidationErrorCode.INVALID_DISTRICT,module.id(),"Invalid city overpass identity or ground ports"));

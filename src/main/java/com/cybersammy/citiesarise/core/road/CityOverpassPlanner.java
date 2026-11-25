@@ -11,6 +11,44 @@ import java.util.function.Function;
 public final class CityOverpassPlanner {
     private CityOverpassPlanner() { }
     private record Candidate(RoadNode a,RoadNode b,boolean alongX,int firstCross,int lastCross,List<RoadSegment> replaced) { }
+    private record Arm(int crossing, RoadNode port, List<RoadSegment> replaced) { }
+
+    private static List<Arm> turningArms(Candidate c, SettlementPlan plan, int run, int width,
+            Map<GridPoint,Integer> heights, int base) {
+        var nodes=new HashMap<PlanElementId,RoadNode>();
+        var adjacent=new HashMap<PlanElementId,List<RoadSegment>>();
+        plan.roadGraph().nodes().forEach(n->nodes.put(n.id(),n));
+        for(var road:plan.roadGraph().segments()) {
+            adjacent.computeIfAbsent(road.startNodeId(),k->new ArrayList<>()).add(road);
+            adjacent.computeIfAbsent(road.endNodeId(),k->new ArrayList<>()).add(road);
+        }
+        var arms=new ArrayList<Arm>();
+        for(var node:plan.roadGraph().nodes()) {
+            int at=coordinate(node.point(),c.alongX());
+            if(coordinate(node.point(),!c.alongX())!=coordinate(c.a().point(),!c.alongX())
+                    || at<c.firstCross() || at>c.lastCross())continue;
+            for(int sign:List.of(-1,1)) {
+                var current=node;var removed=new ArrayList<RoadSegment>();
+                while(true) {
+                    RoadNode next=null;
+                    for(var edge:adjacent.getOrDefault(current.id(),List.of())) {
+                        var other=nodes.get(edge.startNodeId().equals(current.id())?edge.endNodeId():edge.startNodeId());
+                        if(edge.width()==width && coordinate(other.point(),c.alongX())==at
+                                && Integer.compare(coordinate(other.point(),!c.alongX()),coordinate(current.point(),!c.alongX()))==sign) {
+                            next=other;removed.add(edge);break;
+                        }
+                    }
+                    if(next==null)break;
+                    int distance=Math.abs(coordinate(next.point(),!c.alongX())-coordinate(node.point(),!c.alongX()));
+                    if(distance>256)break;
+                    if(distance>=run && adjacent.get(next.id()).size()>1 && Objects.equals(heights.get(next.point()),base))
+                        {arms.add(new Arm(at,next,List.copyOf(removed)));break;}
+                    current=next;
+                }
+            }
+        }
+        return arms;
+    }
     public static SuburbPlanningResult attach(SuburbPlanningRequest request,SuburbPlanningResult original,
             Function<SettlementPlan,SuburbPlanningResult> rebuild, java.util.function.Predicate<SuburbPlanningResult> acceptance) {
         var settings=request.settings().terrainTransitions().cityOverpasses();
@@ -21,7 +59,10 @@ public final class CityOverpassPlanner {
         int checked=0;
         var modules=new ArrayList<>(settings.modules());
         modules.sort(Comparator.<CityOverpassSettings.Module>comparingDouble(m->-Math.log(unit(request.seed(),m.id()))/m.weight()).thenComparing(CityOverpassSettings.Module::id));
-        for(var candidate:candidates(plan,request.seed()))for(var module:modules) {
+        var sites=candidates(plan,request.seed());
+        for(boolean turning:settings.turningRamps()?List.of(true,false):List.of(false))
+        siteLoop: for(var candidate:sites)for(var module:modules) {
+            if(turning && checked>=settings.maximumCandidateChecks()-1)break siteLoop;
             var layout=module.layout();int width=layout.streets().corridorWidth(layout.carriageway()),half=width/2;
             int landing=half+1, run=module.rise()*layout.runPerRise()+2*landing;
             int start=coordinate(candidate.a().point(),candidate.alongX()),end=coordinate(candidate.b().point(),candidate.alongX());
@@ -29,22 +70,26 @@ public final class CityOverpassPlanner {
                     || candidate.replaced().stream().anyMatch(e->e.width()!=width))continue;
             var base=heights.get(candidate.a().point());
             if(base==null || !base.equals(heights.get(candidate.b().point())))continue;
-            if(++checked>settings.maximumCandidateChecks())return original;
-            var roads=plan.roadGraph().segments().stream().filter(e->!candidate.replaced().contains(e)).toList();
-            var used=new HashSet<PlanElementId>();roads.forEach(e->{used.add(e.startNodeId());used.add(e.endNodeId());});
-            plan.roadGraph().bridges().forEach(e->{used.add(e.startNodeId());used.add(e.endNodeId());});
-            if(!used.contains(candidate.a().id()) || !used.contains(candidate.b().id()))continue;
-            var ground=new SettlementPlan(plan.id(),new RoadGraph(plan.roadGraph().nodes().stream().filter(n->used.contains(n.id())).toList(),roads,plan.roadGraph().bridges()),
-                    plan.parcels(),plan.buildingSlots(),plan.tags(),plan.properties(),plan.districts());
-            var rebuilt=rebuild.apply(ground);
-            if(!rebuilt.successful() || rebuilt.terrainPreparationPlan().isEmpty())continue;
-            try {
-                var selected=fit(request,rebuilt,module,candidate,base);
-                var enriched=rebuilt.plan().orElseThrow().withOverpasses(List.of(selected));
-                var result=SuburbPlanningResult.success(enriched,rebuilt.terrainPreparationPlan().orElseThrow(),rebuilt.siteAssessment().orElseThrow());
-                result=result.withContent(rebuilt.content());
-                if(acceptance.test(result))return result;
-            } catch(IllegalArgumentException rejected) { /* Optional topology keeps the fully valid ground city on failure. */ }
+            var variants=turning?turningArms(candidate,plan,run,width,heights,base).stream().map(Optional::of).toList():List.of(Optional.<Arm>empty());
+            for(var variant:variants) {
+                if(turning && checked>=settings.maximumCandidateChecks()-1)break;
+                if(++checked>settings.maximumCandidateChecks())return original;
+                var roads=plan.roadGraph().segments().stream().filter(e->!candidate.replaced().contains(e) && variant.map(v->!v.replaced().contains(e)).orElse(true)).toList();
+                var used=new HashSet<PlanElementId>();roads.forEach(e->{used.add(e.startNodeId());used.add(e.endNodeId());});
+                plan.roadGraph().bridges().forEach(e->{used.add(e.startNodeId());used.add(e.endNodeId());});
+                if(!used.contains(candidate.a().id()) || !used.contains(candidate.b().id()) || variant.isPresent() && !used.contains(variant.get().port().id()))continue;
+                var ground=new SettlementPlan(plan.id(),new RoadGraph(plan.roadGraph().nodes().stream().filter(n->used.contains(n.id())).toList(),roads,plan.roadGraph().bridges()),
+                        plan.parcels(),plan.buildingSlots(),plan.tags(),plan.properties(),plan.districts());
+                var rebuilt=rebuild.apply(ground);
+                if(!rebuilt.successful() || rebuilt.terrainPreparationPlan().isEmpty())continue;
+                try {
+                    var selected=fit(request,rebuilt,module,candidate,base,variant);
+                    var enriched=rebuilt.plan().orElseThrow().withOverpasses(List.of(selected));
+                    var result=SuburbPlanningResult.success(enriched,rebuilt.terrainPreparationPlan().orElseThrow(),rebuilt.siteAssessment().orElseThrow());
+                    result=result.withContent(rebuilt.content());
+                    if(acceptance.test(result))return result;
+                } catch(IllegalArgumentException rejected) { /* Optional topology keeps the fully valid ground city on failure. */ }
+            }
         }
         return original;
     }
@@ -90,22 +135,30 @@ public final class CityOverpassPlanner {
         candidates.sort(Comparator.<Candidate>comparingDouble(c->unit(seed,c.a().id().value()+"/"+c.b().id().value())).thenComparing(c->c.a().id().value()).thenComparing(c->c.b().id().value()));
         return candidates.stream().limit(256).toList();
     }
-    private static CityOverpassPlan fit(SuburbPlanningRequest request,SuburbPlanningResult ground,CityOverpassSettings.Module module,Candidate c,int base) {
+    private static CityOverpassPlan fit(SuburbPlanningRequest request,SuburbPlanningResult ground,CityOverpassSettings.Module module,Candidate c,int base,Optional<Arm> arm) {
         var template=module.layout();int width=template.streets().corridorWidth(template.carriageway()),half=width/2,landing=half+1;
         int a=coordinate(c.a().point(),c.alongX()),b=coordinate(c.b().point(),c.alongX()),center=Math.floorDiv(a+b,2),cross=coordinate(c.a().point(),!c.alongX());
         var origin=c.alongX()?new GridPoint(center,cross):new GridPoint(cross,center);
         var id=request.settlementId().child("city-overpass");
-        int[] positions={a,c.firstCross()-landing,c.lastCross()+landing,b};
+        int[] positions=arm.isEmpty()?new int[]{a,c.firstCross()-landing,c.lastCross()+landing,b}:new int[]{a,c.firstCross()-landing,arm.get().crossing(),c.lastCross()+landing,b};
         var localNodes=new ArrayList<RoadNode>();var roads=new ArrayList<RoadSegment>();
-        for(int i=0;i<4;i++) {
+        for(int i=0;i<positions.length;i++) {
             var p=c.alongX()?new GridPoint(positions[i]-center,0):new GridPoint(0,positions[i]-center);
-            localNodes.add(new RoadNode(id.child("node-"+i),p,Set.of(),PlanProperties.of(LayeredRoadLayout.ELEVATION,""+(i==0 || i==3?0:module.rise()))));
+            localNodes.add(new RoadNode(id.child("node-"+i),p,Set.of(),PlanProperties.of(LayeredRoadLayout.ELEVATION,""+(i==0 || i==positions.length-1?0:module.rise()))));
             if(i>0)roads.add(new RoadSegment(id.child("span-"+i),localNodes.get(i-1).id(),localNodes.get(i).id(),width,Set.of(),PlanProperties.of(LayeredRoadLayout.ELEVATED,"true")));
+        }
+        if(arm.isPresent()) {
+            var endpoint=arm.get().port().point();
+            var port=new RoadNode(id.child("turn-port"),new GridPoint(endpoint.x()-origin.x(),endpoint.z()-origin.z()),
+                    Set.of(),PlanProperties.of(LayeredRoadLayout.ELEVATION,"0"));
+            roads.add(new RoadSegment(id.child("turn-ramp"),localNodes.get(2).id(),port.id(),width,Set.of(),
+                    PlanProperties.of(LayeredRoadLayout.ELEVATED,"true")));
+            localNodes.add(port);
         }
         var layout=new LayeredRoadLayout(new RoadGraph(localNodes,roads),template.streets(),template.carriageway(),template.deckDepth(),template.clearance(),
                 template.runPerRise(),template.pierSpacing(),template.maximumSpan(),template.maximumSupportDepth(),template.roadMaterial(),template.deckMaterial(),
                 template.pierMaterial(),template.railMaterial(),template.stairMaterial(),template.rampSurface(),template.slabMaterial(),template.sidewalkSlabMaterial());
-        var pending=new CityOverpassPlan(id,layout,origin,base,c.a().id(),c.b().id(),request.seed(),List.of());var topology=pending.topology();
+        var pending=new CityOverpassPlan(id,layout,origin,base,c.a().id(),c.b().id(),request.seed(),List.of(),arm.map(v->v.port().id()).orElse(null));var topology=pending.topology();
         var prepared=new HashMap<GridPoint,TerrainPreparationColumn>();ground.terrainPreparationPlan().orElseThrow().columns().forEach(p->prepared.put(p.point(),p));
         var parcels=ground.plan().orElseThrow().parcels();
         for(var bridge:ground.plan().orElseThrow().roadGraph().bridges())for(int d=0;d<=bridge.length();d++)for(int lateral=-bridge.width()/2;lateral<bridge.width()-bridge.width()/2;lateral++) {
@@ -153,7 +206,7 @@ public final class CityOverpassPlanner {
         if(volume>request.settings().terrainTransitions().cityOverpasses().maximumConstructionVolume()
                 || volume+ground.terrainPreparationPlan().orElseThrow().constructionVolume()>request.settings().maxEarthworkVolume())
             throw new IllegalArgumentException("Overpass construction budget");
-        return new CityOverpassPlan(id,layout,origin,base,c.a().id(),c.b().id(),request.seed(),footings);
+        return new CityOverpassPlan(id,layout,origin,base,c.a().id(),c.b().id(),request.seed(),footings,pending.rampPort());
     }
     static boolean conflictsWithGround(CityOverpassPlan module,LayeredRoadTopology.Column column,TerrainPreparationColumn old) {
         if(old==null)return false;
